@@ -48,14 +48,14 @@ class MemberCategoryRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Food', 'Lodging', 'Getting around', 'Uncategorised')
 
+    name: str
+    """The member's first name."""
+
     food: Money
     """What the member consumed in Food."""
 
     lodging: Money
     """What the member consumed in Lodging."""
-
-    name: str
-    """The member's first name."""
 
     transport: Money
     """What the member consumed in Getting around, which the group added as Transport."""
@@ -75,14 +75,14 @@ class StrategyRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Strategy', 'Computed by', 'Payments')
 
+    strategy: str
+    """The name of the strategy asked for."""
+
     computed_by: str
     """The name of the strategy the settlement names: the one asked for, or the one whose plan the adaptive strategy chose."""
 
     payments: int
     """The number of payments of the settlement's plan."""
-
-    strategy: str
-    """The name of the strategy asked for."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -101,7 +101,7 @@ def _add_up(currency: Currency, amounts: Iterable[Money]) -> Money:
         The sum, zero for no amounts.
 
     """
-    return functools.reduce(Money.plus, amounts, Money(currency, 0))
+    return functools.reduce(Money.plus, amounts, Money(0, currency))
 
 
 def _member_totals(summary: Summary, member: MemberId) -> MemberSummary:
@@ -168,9 +168,9 @@ def _consumption_row(member: Member, summary: Summary, categories: Categories, b
     """
     own = () if member.id is None else _by_category(summary, member.id)
     return MemberCategoryRow(
+        name=member.first_name,
         food=_total(own, categories.food) or zero,
         lodging=_total(own, categories.lodging) or zero,
-        name=member.first_name,
         transport=_total(own, categories.transport) or zero,
         uncategorised=_total(own, built_in) or zero,
     )
@@ -197,7 +197,7 @@ def summary(group: Group, people: People, categories: Categories) -> None:
     print_categories(group)
     print_lines("And each member's consumption per category:")
     built_in = built_in_category(group)
-    zero = Money(group.currency(), 0)
+    zero = Money(0, group.currency())
     print_table(MemberCategoryRow, [_consumption_row(member, summary, categories, built_in, zero) for member in group.members()], 1)
 
     assert summary.total_spent == eur('1222.90')
@@ -294,12 +294,12 @@ def _strategy_name(strategy: SettlementStrategy) -> str:
     match strategy:
         case SettlementStrategy.ADAPTIVE:
             return 'Adaptive'
-        case SettlementStrategy.DIRECT:
-            return 'Direct'
-        case SettlementStrategy.GREEDY:
-            return 'Greedy'
         case SettlementStrategy.MINIMUM_TRANSFERS:
             return 'MinimumTransfers'
+        case SettlementStrategy.GREEDY:
+            return 'Greedy'
+        case SettlementStrategy.DIRECT:
+            return 'Direct'
         case _:
             assert_never(strategy)
 
@@ -321,9 +321,9 @@ def settling_up(group: Group) -> None:
         assert settlement.strategy == computed_by
         counts.append(
             StrategyRow(
+                strategy=_strategy_name(strategy),
                 computed_by=_strategy_name(settlement.strategy),
                 payments=len(settlement.payments),
-                strategy=_strategy_name(strategy),
             )
         )
     print_lines(
@@ -337,11 +337,11 @@ def settling_up(group: Group) -> None:
     print_lines('The group follows the minimum plan:')
     print_table(
         PaymentRow,
-        [PaymentRow(amount=payment.amount, from_=name(group, payment.sender), to=name(group, payment.receiver)) for payment in plan.payments],
+        [PaymentRow(from_=name(group, payment.sender), to=name(group, payment.receiver), amount=payment.amount) for payment in plan.payments],
         2,
     )
     for payment in plan.payments:
-        group.add_transfer(Transfer(cost=LocalCost(payment.amount), date=october(7), receiver=payment.receiver, sender=payment.sender))
+        group.add_transfer(Transfer(sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=october(7)))
     print_lines('Each payment, once made, is recorded as a transfer, and every balance is settled:')
     print_balances(group)
 

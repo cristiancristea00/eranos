@@ -25,14 +25,6 @@ static inline void eranosCurrencyDetailsCode(EranosCurrencyDetails const *const 
     eranosDetailFinish(code);
 }
 
-/// How many decimal places its amounts have.
-///
-/// @param details The currency details
-/// @return How many decimal places its amounts have
-[[nodiscard]] static inline int32_t eranosCurrencyDetailsDecimalPlaces(EranosCurrencyDetails const *const details) {
-    return EranosCurrencyDetails_decimal_places(details);
-}
-
 /// The English name.
 ///
 /// @param details The currency details
@@ -49,6 +41,14 @@ static inline void eranosCurrencyDetailsName(EranosCurrencyDetails const *const 
 /// @return The ISO 4217 numeric code
 [[nodiscard]] static inline int32_t eranosCurrencyDetailsNumericCode(EranosCurrencyDetails const *const details) {
     return EranosCurrencyDetails_numeric_code(details);
+}
+
+/// How many decimal places its amounts have.
+///
+/// @param details The currency details
+/// @return How many decimal places its amounts have
+[[nodiscard]] static inline int32_t eranosCurrencyDetailsDecimalPlaces(EranosCurrencyDetails const *const details) {
+    return EranosCurrencyDetails_decimal_places(details);
 }
 
 /// The currency of the ISO 4217 code `code`.

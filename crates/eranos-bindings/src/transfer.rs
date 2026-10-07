@@ -14,18 +14,18 @@ pub struct Transfer {
     /// The identifier: absent for a transfer to add, present for one the
     /// group holds or one to replace.
     pub id: Option<String>,
-    /// What was paid.
-    pub cost: Cost,
-    /// The day it was paid.
-    pub date: CalendarDate,
     /// The member who paid, as their identifier.
     pub from: String,
     /// The member who was paid, as their identifier.
     pub to: String,
-    /// A note on the transfer.
-    pub note: Option<String>,
+    /// What was paid.
+    pub cost: Cost,
+    /// The day it was paid.
+    pub date: CalendarDate,
     /// The time of day it was paid.
     pub time: Option<TimeOfDay>,
+    /// A note on the transfer.
+    pub note: Option<String>,
 }
 
 impl Transfer {
@@ -33,12 +33,12 @@ impl Transfer {
     pub(crate) fn from_library(transfer: &library::Transfer) -> Self {
         Self {
             id: Some(transfer.id().to_string()),
-            cost: Cost::from_cost(transfer.cost()),
-            date: CalendarDate::from_library(transfer.date()),
             from: transfer.from().to_string(),
             to: transfer.to().to_string(),
-            note: transfer.note().map(str::to_owned),
+            cost: Cost::from_cost(transfer.cost()),
+            date: CalendarDate::from_library(transfer.date()),
             time: transfer.time().map(TimeOfDay::from_library),
+            note: transfer.note().map(str::to_owned),
         }
     }
 
@@ -53,10 +53,10 @@ impl Transfer {
     pub(crate) fn to_new(&self) -> Result<library::Transfer, EranosError> {
         check_new(self.id.as_deref())?;
         let builder = library::Transfer::builder(
-            self.cost.to_library()?,
-            self.date.to_library()?,
             identifier(&self.from)?,
             identifier(&self.to)?,
+            self.cost.to_library()?,
+            self.date.to_library()?,
         );
         Ok(self.with_optional_fields(builder)?.build()?)
     }
@@ -74,14 +74,14 @@ impl Transfer {
     ) -> Result<library::Transfer, EranosError> {
         let builder = existing
             .to_builder()
-            .cost(self.cost.to_library()?)
-            .date(self.date.to_library()?)
             .from(identifier(&self.from)?)
-            .to(identifier(&self.to)?);
+            .to(identifier(&self.to)?)
+            .cost(self.cost.to_library()?)
+            .date(self.date.to_library()?);
         Ok(self.with_optional_fields(builder)?.build()?)
     }
 
-    /// `builder` with the record's note and time, each cleared when the
+    /// `builder` with the record's time and note, each cleared when the
     /// record has none.
     fn with_optional_fields(
         &self,
@@ -89,8 +89,8 @@ impl Transfer {
     ) -> Result<library::TransferBuilder, EranosError> {
         let time = self.time.map(TimeOfDay::to_library).transpose()?;
         Ok(builder
-            .note(self.note.clone().unwrap_or_default())
-            .time(time))
+            .time(time)
+            .note(self.note.clone().unwrap_or_default()))
     }
 }
 

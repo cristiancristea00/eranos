@@ -91,14 +91,14 @@ struct MemberRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Member", "Email", "Phone", "Accounts"};
 
-    /// Their accounts, one per line.
-    std::string accounts;
-    /// Their email, or nothing.
-    std::string email;
     /// Their first and last name.
     std::string name;
+    /// Their email, or nothing.
+    std::string email;
     /// Their phone number, or nothing.
     std::string phone;
+    /// Their accounts, one per line.
+    std::string accounts;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -145,8 +145,6 @@ struct ShareRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<5> HEADERS{"Expense", "Split", "Member", "Paid", "Consumed"};
 
-    /// What each member consumed, one per line.
-    std::string consumed;
     /// The expense's name.
     std::string expense;
     /// How it divides, in a few words.
@@ -155,6 +153,8 @@ struct ShareRow final {
     std::string members;
     /// What each member paid, one per line, or nothing for one who paid nothing.
     std::string paid;
+    /// What each member consumed, one per line.
+    std::string consumed;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -167,16 +167,16 @@ struct ItemRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<5> HEADERS{"Item", "Shared by", "Quantity", "Unit price", "Line total"};
 
-    /// The quantity times the unit price.
-    std::string lineTotal;
     /// What was ordered.
     std::string name;
-    /// How many were ordered.
-    std::string quantity;
     /// Who shared it.
     std::string sharedBy;
+    /// How many were ordered.
+    std::string quantity;
     /// The price of one.
     std::string unitPrice;
+    /// The quantity times the unit price.
+    std::string lineTotal;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -190,16 +190,16 @@ struct EntryRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<5> HEADERS{"Entry", "Paid by", "Entered as", "Rate", "In the group currency"};
 
-    /// Its amount in the group currency.
-    std::string converted;
     /// What it was.
     std::string name;
-    /// Its amount as entered.
-    std::string original;
     /// Who paid it.
     std::string payer;
+    /// Its amount as entered.
+    std::string original;
     /// The rate it was entered at.
     std::string rate;
+    /// Its amount in the group currency.
+    std::string converted;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -212,10 +212,10 @@ struct EditRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<2> HEADERS{"Entry", "Edit"};
 
-    /// What happened to it.
-    std::string edit;
     /// The entry.
     std::string entry;
+    /// What happened to it.
+    std::string edit;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -228,18 +228,18 @@ struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<6> HEADERS{"Member", "Paid", "Consumed", "Sent", "Received", "Balance"};
 
-    /// What is left.
-    std::string balance;
-    /// What they consumed.
-    std::string consumed;
     /// Their first name.
     std::string name;
     /// What they paid.
     std::string paid;
-    /// What they received.
-    std::string received;
+    /// What they consumed.
+    std::string consumed;
     /// What they sent.
     std::string sent;
+    /// What they received.
+    std::string received;
+    /// What is left.
+    std::string balance;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -252,12 +252,12 @@ struct StatusRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<3> HEADERS{"Member", "Status", "Balance"};
 
-    /// Their balance.
-    std::string balance;
     /// Their first name.
     std::string name;
     /// Whether they are active or archived.
     std::string_view status;
+    /// Their balance.
+    std::string balance;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -270,10 +270,10 @@ struct CategoryRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<3> HEADERS{"Category", "Expenses", "Total"};
 
-    /// How many expenses it holds.
-    std::string expenses;
     /// Its name.
     std::string name;
+    /// How many expenses it holds.
+    std::string expenses;
     /// What its expenses came to.
     std::string total;
 
@@ -288,12 +288,12 @@ struct MemberCategoryRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<5> HEADERS{"Member", "Food", "Lodging", "Getting around", "Uncategorised"};
 
+    /// Their first name.
+    std::string name;
     /// What they consumed of Food.
     std::string food;
     /// What they consumed of Lodging.
     std::string lodging;
-    /// Their first name.
-    std::string name;
     /// What they consumed of Getting around.
     std::string transport;
     /// What they consumed of Uncategorised.
@@ -310,12 +310,12 @@ struct StrategyRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<3> HEADERS{"Strategy", "Computed by", "Payments"};
 
+    /// Its name.
+    std::string_view strategy;
     /// The name of the strategy whose plan it chose.
     std::string_view computedBy;
     /// How many payments the plan makes.
     std::string payments;
-    /// Its name.
-    std::string_view strategy;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -328,12 +328,12 @@ struct PaymentRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
-    /// How much is paid.
-    std::string amount;
     /// Who pays.
     std::string from;
     /// Who is paid.
     std::string to;
+    /// How much is paid.
+    std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -364,12 +364,12 @@ struct CurrencyRow final {
 
     /// Its ISO 4217 code.
     std::string code;
-    /// How many decimal places its minor unit has.
-    std::string decimalPlaces;
     /// Its name.
     std::string name;
     /// Its ISO 4217 number.
     std::string numericCode;
+    /// How many decimal places its minor unit has.
+    std::string decimalPlaces;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -400,7 +400,7 @@ struct ValueRow final {
 [[nodiscard]] Money ron(std::string_view const text) { return must(Money::parse(text, must(Currency::of("RON")))); }
 
 /// A date of the trip, in October 2026.
-[[nodiscard]] CalendarDate october(std::int32_t const day) { return must(CalendarDate::of(day, 10, 2026)); }
+[[nodiscard]] CalendarDate october(std::int32_t const day) { return must(CalendarDate::of(2026, 10, day)); }
 
 /// "valid: " and what @p shown writes of the value @p make returns, or "refused: " and the library's message.
 template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make const &make, Shown const &shown) {
@@ -421,7 +421,7 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
 
 /// The sum of @p amounts, all in @p currency.
 [[nodiscard]] Money sum(Currency const &currency, std::vector<Money> const &amounts) {
-    Money total(currency, 0);
+    Money total(0, currency);
     for (auto const &amount : amounts) {
         total = must(total.plus(amount));
     }
@@ -434,28 +434,28 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
 /// Prints what each member of @p group paid, consumed, sent, and received, and their balance.
 void printBalances(Group const &group) {
     auto const summary = group.summary();
-    auto const zero = Money(group.currency(), 0).toString();
+    auto const zero = Money(0, group.currency()).toString();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
         // The summary lists the members with a total; every total of the others is zero.
         auto const found = totalsOf(summary, member.id.value());
         if (found.has_value()) {
             rows.push_back({
-                .balance = toString(found->balance),
-                .consumed = found->share.toString(),
                 .name = member.firstName,
                 .paid = found->paid.toString(),
-                .received = found->received.toString(),
+                .consumed = found->share.toString(),
                 .sent = found->sent.toString(),
+                .received = found->received.toString(),
+                .balance = toString(found->balance),
             });
         } else {
             rows.push_back({
-                .balance = toString(SettledBalance{}),
-                .consumed = zero,
                 .name = member.firstName,
                 .paid = zero,
-                .received = zero,
+                .consumed = zero,
                 .sent = zero,
+                .received = zero,
+                .balance = toString(SettledBalance{}),
             });
         }
     }
@@ -472,8 +472,8 @@ void printCategories(Group const &group) {
         auto const count = std::count_if(expenses.begin(), expenses.end(),
                                          [&](Expense const &expense) { return total.category == expense.category.value_or(builtIn); });
         rows.push_back({
-            .expenses = std::to_string(count),
             .name = category.has_value() ? category->name : "?",
+            .expenses = std::to_string(count),
             .total = total.total.toString(),
         });
     }
@@ -482,17 +482,17 @@ void printCategories(Group const &group) {
 
 /// Prints every expense and transfer of @p group in a currency @p shown accepts, as entered and in the group currency.
 void printEntries(Group const &group, std::function<bool(Currency const &)> const &shown) {
-    auto const zero = Money(group.currency(), 0).toString();
+    auto const zero = Money(0, group.currency()).toString();
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
         if (shown(amountOf(expense.cost).currency)) {
             auto const shares = must(group.expenseShares(expense.id.value()));
             rows.push_back({
-                .converted = shares.has_value() ? shares->total.toString() : zero,
                 .name = expense.name,
-                .original = must(total(expense)).toString(),
                 .payer = names(group, must(participants(expense.payers))),
+                .original = must(total(expense)).toString(),
                 .rate = rateOf(expense.cost).toString(),
+                .converted = shares.has_value() ? shares->total.toString() : zero,
             });
         }
     }
@@ -500,11 +500,11 @@ void printEntries(Group const &group, std::function<bool(Currency const &)> cons
         if (shown(amountOf(transfer.cost).currency)) {
             auto const converted = must(group.transferAmount(transfer.id.value()));
             rows.push_back({
-                .converted = converted.has_value() ? converted->toString() : zero,
                 .name = std::format("Transfer to {}", firstName(group, transfer.to)),
-                .original = amountOf(transfer.cost).toString(),
                 .payer = firstName(group, transfer.from),
+                .original = amountOf(transfer.cost).toString(),
                 .rate = rateOf(transfer.cost).toString(),
+                .converted = converted.has_value() ? converted->toString() : zero,
             });
         }
     }
@@ -516,7 +516,7 @@ void printEntries(Group const &group, std::function<bool(Currency const &)> cons
 /// Creates the group, renames it, and prints its details.
 [[nodiscard]] Group theGroup() {
     section("1. The group");
-    auto group = must(Group::create(must(Currency::of("EUR")), "Lisbon",
+    auto group = must(Group::create("Lisbon", must(Currency::of("EUR")),
                                     GroupOptions{.description = "A week by the Atlantic", .language = must(Language::parse("pt-pt"))}));
     auto const blank = refusal(group.setName("   "));
     must(group.setName("Lisbon and Porto"));
@@ -562,10 +562,10 @@ void printMembers(Group const &group) {
             accounts.push_back(describe(account));
         }
         rows.push_back({
-            .accounts = cell(accounts),
-            .email = member.email.has_value() ? member.email->toString() : "",
             .name = member.lastName.has_value() ? std::format("{} {}", member.firstName, *member.lastName) : member.firstName,
+            .email = member.email.has_value() ? member.email->toString() : "",
             .phone = member.phone.has_value() ? member.phone->international() : "",
+            .accounts = cell(accounts),
         });
     }
     printTable(rows, 4);
@@ -619,8 +619,8 @@ void validation(Group &group) {
     section("2. Members");
     Member first("Ana");
     first.accounts = {
-        Account(IbanAccountDetails{must(Iban::parse("RO49 AAAA 1B31 0075 9384 0000"))}, "ING"),
-        Account(UsernameAccountDetails{must(Username::parse("@ana"))}, "Revolut"),
+        Account("ING", IbanAccountDetails{must(Iban::parse("RO49 AAAA 1B31 0075 9384 0000"))}),
+        Account("Revolut", UsernameAccountDetails{must(Username::parse("@ana"))}),
     };
     first.email = must(Email::parse("ana@example.com"));
     first.lastName = "Popescu";
@@ -743,7 +743,7 @@ void printShares(Group const &group, std::vector<ExpenseId> const &ids) {
             paid.push_back(0 == share.paid.minorUnits ? "" : share.paid.toString());
             consumed.push_back(share.share.toString());
         }
-        rows.push_back({.consumed = cell(consumed), .expense = expense.name, .how = how(expense), .members = cell(members), .paid = cell(paid)});
+        rows.push_back({.expense = expense.name, .how = how(expense), .members = cell(members), .paid = cell(paid), .consumed = cell(consumed)});
     }
     printTable(rows, 3);
 }
@@ -758,21 +758,21 @@ void printItems(Group const &group, ExpenseId const &id) {
     std::vector<ItemRow> rows;
     rows.reserve(itemised->items.size());
     for (auto const &item : itemised->items) {
-        Money const lineTotal(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity);
+        Money const lineTotal(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency);
         rows.push_back({
-            .lineTotal = lineTotal.toString(),
             .name = item.name,
-            .quantity = std::to_string(item.quantity),
             .sharedBy = names(group, must(participants(item.split))),
+            .quantity = std::to_string(item.quantity),
             .unitPrice = item.unitPrice.toString(),
+            .lineTotal = lineTotal.toString(),
         });
     }
     printTable(rows, 2);
 }
 
 /// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] Item line(std::string name, Split split, std::string_view const unitPrice, std::int32_t const quantity) {
-    Item item(std::move(name), std::move(split), eur(unitPrice));
+[[nodiscard]] Item line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
+    Item item(std::move(name), eur(unitPrice), std::move(split));
     item.quantity = quantity;
     return item;
 }
@@ -780,9 +780,9 @@ void printItems(Group const &group, ExpenseId const &id) {
 /// The receipt of the fado night: every line with its own split.
 [[nodiscard]] std::vector<Item> fadoItems(People const &people) {
     return {
-        line("Vinho verde", EqualSplit{{people.ana, people.bob, people.dan}}, "12.00", 2),
-        line("Bacalhau", EqualSplit{{people.carol}}, "18.00", 1),
-        line("Custard tarts",
+        line("Vinho verde", "12.00", EqualSplit{{people.ana, people.bob, people.dan}}, 2),
+        line("Bacalhau", "18.00", EqualSplit{{people.carol}}, 1),
+        line("Custard tarts", "1.50",
              PartsSplit{
                  {
                      MemberParts(people.ana, must(Parts::parse("1"))),
@@ -792,8 +792,8 @@ void printItems(Group const &group, ExpenseId const &id) {
                      MemberParts(people.eva, must(Parts::parse("2"))),
                  },
              },
-             "1.50", 6),
-        line("Juice", EqualSplit{{people.eva}}, "3.00", 1),
+             6),
+        line("Juice", "3.00", EqualSplit{{people.eva}}, 1),
     };
 }
 
@@ -817,38 +817,40 @@ void printItems(Group const &group, ExpenseId const &id) {
         MemberParts(people.eva, must(Parts::parse("0.5"))),
     };
     std::vector<MemberAmount> const tickets{
-        MemberAmount(eur("24.50"), people.ana),
-        MemberAmount(eur("24.50"), people.bob),
-        MemberAmount(eur("24.50"), people.carol),
-        MemberAmount(eur("15.00"), people.eva),
+        MemberAmount(people.ana, eur("24.50")),
+        MemberAmount(people.bob, eur("24.50")),
+        MemberAmount(people.carol, eur("24.50")),
+        MemberAmount(people.eva, eur("15.00")),
     };
-    Expense fadoNight(LocalCost{eur("54.00")}, october(4), "Fado night",
-                      AmountsSplit{{MemberAmount(eur("39.40"), people.carol), MemberAmount(eur("20.00"), people.dan)}},
-                      ItemisedExpenseSplit{fadoItems(people)});
+    Expense fadoNight("Fado night", LocalCost{eur("54.00")},
+                      AmountsSplit{{MemberAmount(people.carol, eur("39.40")), MemberAmount(people.dan, eur("20.00"))}},
+                      ItemisedExpenseSplit{fadoItems(people)}, october(4));
     fadoNight.category = categories.food;
     fadoNight.description = "Tasca do Chico";
     fadoNight.time = must(TimeOfDay::of(22, 15));
-    fadoNight.tip = Tip(TipDistribution::PROPORTIONAL, PercentageTipValue{must(Percentage::parse("10"))});
-    Expense ride(LocalCost{eur("45.00")}, october(5), "Tuk-tuk tour", EqualSplit{{people.dan}},
-                 WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan, people.eva}}});
+    fadoNight.tip = Tip(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
+    Expense ride("Tuk-tuk tour", LocalCost{eur("45.00")}, EqualSplit{{people.dan}},
+                 WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan, people.eva}}}, october(5));
     ride.category = categories.transport;
-    ride.tip = Tip(TipDistribution::EQUAL, FixedTipValue{eur("5.00")});
+    ride.tip = Tip(FixedTipValue{eur("5.00")}, TipDistribution::EQUAL);
     // The group gives each expense its identifier as it adds it: an initialiser of Expenses would add them in the order of
     // its fields, not this one.
-    auto const groceries = must(group.addExpense(inCategory(Expense(LocalCost{eur("10.00")}, october(1), "Groceries", EqualSplit{{people.ana}},
-                                                                    WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}),
-                                                            categories.food)));
+    auto const groceries =
+        must(group.addExpense(inCategory(Expense("Groceries", LocalCost{eur("10.00")}, EqualSplit{{people.ana}},
+                                                 WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}, october(1)),
+                                         categories.food)));
     auto const apartment = must(group.addExpense(
-        inCategory(Expense(LocalCost{eur("800.00")}, october(1), "Apartment", EqualSplit{{people.ana}}, WholeExpenseSplit{PercentagesSplit{rooms}}),
+        inCategory(Expense("Apartment", LocalCost{eur("800.00")}, EqualSplit{{people.ana}}, WholeExpenseSplit{PercentagesSplit{rooms}}, october(1)),
                    categories.lodging)));
     auto const seafood = must(group.addExpense(inCategory(
-        Expense(LocalCost{eur("90.00")}, october(2), "Seafood dinner", EqualSplit{{people.carol}}, WholeExpenseSplit{PartsSplit{portions}}),
+        Expense("Seafood dinner", LocalCost{eur("90.00")}, EqualSplit{{people.carol}}, WholeExpenseSplit{PartsSplit{portions}}, october(2)),
         categories.food)));
     auto const train = must(group.addExpense(
-        inCategory(Expense(LocalCost{eur("88.50")}, october(3), "Train to Porto", EqualSplit{{people.bob}}, WholeExpenseSplit{AmountsSplit{tickets}}),
+        inCategory(Expense("Train to Porto", LocalCost{eur("88.50")}, EqualSplit{{people.bob}}, WholeExpenseSplit{AmountsSplit{tickets}}, october(3)),
                    categories.transport)));
-    auto const museum = must(group.addExpense(Expense(LocalCost{eur("60.00")}, october(3), "Museum", EqualSplit{{people.ana, people.bob}},
-                                                      WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan}}})));
+    auto const museum =
+        must(group.addExpense(Expense("Museum", LocalCost{eur("60.00")}, EqualSplit{{people.ana, people.bob}},
+                                      WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan}}}, october(3))));
     auto const fado = must(group.addExpense(fadoNight));
     auto const tour = must(group.addExpense(ride));
     return {
@@ -924,10 +926,11 @@ void anotherCurrency(Group &group, People const &people, Categories const &categ
     section("5. Another currency");
     auto const euro = must(Currency::of("EUR"));
     auto const rate = must(ExchangeRate::parse("0.2"));
-    auto const parking = must(group.addExpense(inCategory(Expense(ConvertedCost{.amount = ron("250.00"), .rate = rate}, october(6), "Airport parking",
-                                                                  EqualSplit{{people.ana}}, WholeExpenseSplit{EqualSplit{{people.ana, people.bob}}}),
-                                                          categories.transport)));
-    Transfer repayment(ConvertedCost{.amount = ron("100.00"), .rate = rate}, october(6), people.bob, people.ana);
+    auto const parking =
+        must(group.addExpense(inCategory(Expense("Airport parking", ConvertedCost{.amount = ron("250.00"), .rate = rate}, EqualSplit{{people.ana}},
+                                                 WholeExpenseSplit{EqualSplit{{people.ana, people.bob}}}, october(6)),
+                                         categories.transport)));
+    Transfer repayment(people.bob, people.ana, ConvertedCost{.amount = ron("100.00"), .rate = rate}, october(6));
     repayment.note = "Cash for the parking";
     repayment.time = must(TimeOfDay::of(7, 40));
     auto const cash = must(group.addTransfer(repayment));
@@ -940,7 +943,7 @@ void anotherCurrency(Group &group, People const &people, Categories const &categ
     std::println("Bob's transfer, at {} (\"{}\"), counts as {}.\n"
                  "A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,\n"
                  "which becomes {}.",
-                 transfer.time.value().toString(), transfer.note.value_or(""), must(group.transferAmount(cash)).value_or(Money(euro, 0)).toString(),
+                 transfer.time.value().toString(), transfer.note.value_or(""), must(group.transferAmount(cash)).value_or(Money(0, euro)).toString(),
                  converted.toString());
 
     check(eur("50.28") == converted, "the conversion rounds to 50.28 EUR");
@@ -959,20 +962,20 @@ void anotherCurrency(Group &group, People const &people, Categories const &categ
     dinner.description = "Cervejaria Ramiro";
     auto const previous = must(group.replaceExpense(dinner));
     // Bob entered the coffee twice.
-    auto const coffee = inCategory(Expense(LocalCost{eur("6.00")}, october(5), "Coffee", EqualSplit{{people.bob}},
-                                           WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}),
+    auto const coffee = inCategory(Expense("Coffee", LocalCost{eur("6.00")}, EqualSplit{{people.bob}},
+                                           WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}, october(5)),
                                    categories.food);
     static_cast<void>(must(group.addExpense(coffee)));
     auto const copy = must(group.addExpense(coffee));
     auto const removed = must(group.removeExpense(copy));
     // Dan's part of the apartment was 120.00, not 100.00.
-    auto const first = must(group.addTransfer(Transfer(LocalCost{eur("100.00")}, october(5), people.dan, people.ana)));
+    auto const first = must(group.addTransfer(Transfer(people.dan, people.ana, LocalCost{eur("100.00")}, october(5))));
     auto stored = must(group.transfer(first)).value();
     stored.cost = LocalCost{eur("120.00")};
     stored.note = "Apartment";
     auto const replaced = must(group.replaceTransfer(stored));
     // Carol sent 10.00 to the wrong member.
-    auto const mistake = must(group.addTransfer(Transfer(LocalCost{eur("10.00")}, october(5), people.carol, people.bob)));
+    auto const mistake = must(group.addTransfer(Transfer(people.carol, people.bob, LocalCost{eur("10.00")}, october(5))));
     auto const undone = must(group.removeTransfer(mistake));
 
     check(eur("90.00") == amountOf(previous.cost), "the dinner was 90.00 EUR");
@@ -983,19 +986,19 @@ void anotherCurrency(Group &group, People const &people, Categories const &categ
     auto const apartment = must(group.transfer(first)).value();
     return {
         {
+            .entry = previous.name,
             .edit = std::format("{} became {}, at {}", amountOf(previous.cost).toString(), amountOf(corrected.cost).toString(),
                                 corrected.description.value_or("")),
-            .entry = previous.name,
         },
-        {.edit = std::format("entered twice; the copy of {} was removed", amountOf(removed.cost).toString()), .entry = removed.name},
+        {.entry = removed.name, .edit = std::format("entered twice; the copy of {} was removed", amountOf(removed.cost).toString())},
         {
+            .entry = std::format("{} to {}", firstName(group, people.dan), firstName(group, people.ana)),
             .edit = std::format("{} became {}, noted {}", amountOf(replaced.cost).toString(), amountOf(apartment.cost).toString(),
                                 apartment.note.value_or("")),
-            .entry = std::format("{} to {}", firstName(group, people.dan), firstName(group, people.ana)),
         },
         {
-            .edit = std::format("{} sent to the wrong member; removed", amountOf(undone.cost).toString()),
             .entry = std::format("{} to {}", firstName(group, people.carol), firstName(group, people.bob)),
+            .edit = std::format("{} sent to the wrong member; removed", amountOf(undone.cost).toString()),
         },
     };
 }
@@ -1016,10 +1019,10 @@ void edits(Group &group, People const &people, Categories const &categories, Exp
         MemberPercentage(people.bob, must(Percentage::parse("49.99"))),
     };
     auto const unbalanced = refusal(group.addExpense(
-        Expense(LocalCost{eur("30.00")}, october(6), "Taxi", EqualSplit{{people.ana}}, WholeExpenseSplit{PercentagesSplit{halves}})));
-    auto const toHerself = refusal(group.addTransfer(Transfer(LocalCost{eur("5.00")}, october(6), people.ana, people.ana)));
+        Expense("Taxi", LocalCost{eur("30.00")}, EqualSplit{{people.ana}}, WholeExpenseSplit{PercentagesSplit{halves}}, october(6))));
+    auto const toHerself = refusal(group.addTransfer(Transfer(people.ana, people.ana, LocalCost{eur("5.00")}, october(6))));
     auto const unrated = refusal(group.addExpense(
-        Expense(LocalCost{ron("40.00")}, october(6), "Souvenirs", EqualSplit{{people.ana}}, WholeExpenseSplit{EqualSplit{{people.ana}}})));
+        Expense("Souvenirs", LocalCost{ron("40.00")}, EqualSplit{{people.ana}}, WholeExpenseSplit{EqualSplit{{people.ana}}}, october(6))));
     printLine("A change that does not fit is refused, and the group stays as it was:");
     printTable<RefusalRow>(
         {
@@ -1048,8 +1051,9 @@ void comingsAndGoings(Group &group, People const &people) {
     section("7. Members come and go");
     auto const removed = must(group.removeMember(people.filip));
     must(group.archiveMember(people.dan));
-    auto const farewell = refusal(group.addExpense(Expense(LocalCost{eur("40.00")}, october(6), "Farewell dinner", EqualSplit{{people.ana}},
-                                                           WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan}}})));
+    auto const farewell =
+        refusal(group.addExpense(Expense("Farewell dinner", LocalCost{eur("40.00")}, EqualSplit{{people.ana}},
+                                         WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan}}}, october(6))));
     auto const inUse = refusal(group.removeMember(people.dan));
     std::println("{} was never part of an entry, so removing him leaves no trace. Dan flew home\n"
                  "early and was archived: his history and his balance stay, but a new expense\n"
@@ -1061,9 +1065,9 @@ void comingsAndGoings(Group &group, People const &people) {
         auto const found = totalsOf(summary, member.id.value());
         if (found.has_value()) {
             rows.push_back({
-                .balance = toString(found->balance),
                 .name = member.firstName,
                 .status = must(group.isArchived(member.id.value())) ? "archived" : "active",
+                .balance = toString(found->balance),
             });
         }
     }
@@ -1111,14 +1115,14 @@ void summary(Group const &group, People const &people, Categories const &categor
     printCategories(group);
     printLine("And each member's consumption per category:");
     auto const builtIn = builtInCategory(group);
-    Money const zero(group.currency(), 0);
+    Money const zero(0, group.currency());
     std::vector<MemberCategoryRow> rows;
     for (auto const &member : group.members()) {
         auto const own = byCategory(totals, member.id.value());
         rows.push_back({
+            .name = member.firstName,
             .food = totalOf(own, categories.food).value_or(zero).toString(),
             .lodging = totalOf(own, categories.lodging).value_or(zero).toString(),
-            .name = member.firstName,
             .transport = totalOf(own, categories.transport).value_or(zero).toString(),
             .uncategorised = totalOf(own, builtIn).value_or(zero).toString(),
         });
@@ -1207,12 +1211,12 @@ void newCurrency(Group &group, People const &people) {
     switch (strategy) {
     case SettlementStrategy::ADAPTIVE:
         return "Adaptive";
-    case SettlementStrategy::DIRECT:
-        return "Direct";
-    case SettlementStrategy::GREEDY:
-        return "Greedy";
     case SettlementStrategy::MINIMUM_TRANSFERS:
         return "MinimumTransfers";
+    case SettlementStrategy::GREEDY:
+        return "Greedy";
+    case SettlementStrategy::DIRECT:
+        return "Direct";
     }
     std::unreachable();
 }
@@ -1222,15 +1226,15 @@ void settlingUp(Group &group) {
     section("11. Settling up");
     std::vector<StrategyRow> counts;
     for (auto const strategy :
-         {SettlementStrategy::ADAPTIVE, SettlementStrategy::DIRECT, SettlementStrategy::GREEDY, SettlementStrategy::MINIMUM_TRANSFERS}) {
+         {SettlementStrategy::ADAPTIVE, SettlementStrategy::MINIMUM_TRANSFERS, SettlementStrategy::GREEDY, SettlementStrategy::DIRECT}) {
         auto const settlement = must(group.settlement(strategy));
         // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
         auto const computedBy = SettlementStrategy::ADAPTIVE == strategy ? SettlementStrategy::MINIMUM_TRANSFERS : strategy;
         check(computedBy == settlement.strategy, "the settlement names the strategy whose plan it is");
         counts.push_back({
+            .strategy = strategyName(strategy),
             .computedBy = strategyName(settlement.strategy),
             .payments = std::to_string(settlement.payments.size()),
-            .strategy = strategyName(strategy),
         });
     }
     printLine("Each strategy turns the balances into payments: the direct one pays back every\n"
@@ -1243,11 +1247,11 @@ void settlingUp(Group &group) {
     std::vector<PaymentRow> payments;
     payments.reserve(plan.payments.size());
     for (auto const &payment : plan.payments) {
-        payments.push_back({.amount = payment.amount.toString(), .from = firstName(group, payment.from), .to = firstName(group, payment.to)});
+        payments.push_back({.from = firstName(group, payment.from), .to = firstName(group, payment.to), .amount = payment.amount.toString()});
     }
     printTable(payments, 2);
     for (auto const &payment : plan.payments) {
-        static_cast<void>(must(group.addTransfer(Transfer(LocalCost{payment.amount}, october(7), payment.from, payment.to))));
+        static_cast<void>(must(group.addTransfer(Transfer(payment.from, payment.to, LocalCost{payment.amount}, october(7)))));
     }
     printLine("Each payment, once made, is recorded as a transfer, and every balance is settled:");
     printBalances(group);
@@ -1321,9 +1325,9 @@ void currencies() {
         auto const currency = must(Currency::of(code));
         rows.push_back({
             .code = currency.code(),
-            .decimalPlaces = std::to_string(currency.decimalPlaces()),
             .name = currency.name(),
             .numericCode = std::to_string(currency.numericCode()),
+            .decimalPlaces = std::to_string(currency.decimalPlaces()),
         });
     }
     auto const unknown = refusal(Currency::of("XYZ"));
@@ -1340,8 +1344,8 @@ void amounts() {
     auto const change = must(eur("5.00").minus(eur("7.50")));
     auto const mixed = refusal(eur("1.00").plus(ron("1.00")));
     auto const yen = must(Money::parse("1500", must(Currency::of("JPY"))));
-    Money const dinars(must(Currency::of("BHD")), 1'234);
-    Money const nothing(must(Currency::of("RON")), 0);
+    Money const dinars(1'234, must(Currency::of("BHD")));
+    Money const nothing(0, must(Currency::of("RON")));
     ConvertedCost const cost{.amount = eur("10.00"), .rate = must(ExchangeRate::parse("4.9765"))};
     ConvertedCost const doubled{.amount = eur("20.00"), .rate = cost.rate};
     printLine("Amounts are exact minor units in their currency:");
@@ -1402,7 +1406,7 @@ void datesAndIdentifiers(Group const &group, People const &people) {
     printTable<ValueRow>(
         {
             {.input = "2026-10-01", .result = std::format("{}: day {}, month {}, year {}", date.toString(), date.day(), date.month(), date.year())},
-            {.input = "29 February 2027", .result = message(refusal(CalendarDate::of(29, 2, 2027)))},
+            {.input = "29 February 2027", .result = message(refusal(CalendarDate::of(2027, 2, 29)))},
             {.input = "22:15", .result = std::format("{}: hour {}, minute {}", time.toString(), time.hour(), time.minute())},
             {.input = "24:00", .result = message(refusal(TimeOfDay::of(24, 0)))},
             {
@@ -1439,8 +1443,8 @@ void sharing(Group &group, People const &people) {
     auto &other = group;
     std::vector<MemberId> const everyone{people.ana, people.bob, people.carol, people.dan, people.eva};
     static_cast<void>(must(other
-                               .addExpenseAsync(Expense(LocalCost{ron("75.00")}, october(8), "Airport coffee", EqualSplit{{people.bob}},
-                                                        WholeExpenseSplit{EqualSplit{everyone}}))
+                               .addExpenseAsync(Expense("Airport coffee", LocalCost{ron("75.00")}, EqualSplit{{people.bob}},
+                                                        WholeExpenseSplit{EqualSplit{everyone}}, october(8)))
                                .get()));
     auto const plan = must(group.settlementAsync(SettlementStrategy::MINIMUM_TRANSFERS).get());
     printLine("An app shares the group between its tasks and threads through a SharedGroup,\n"
@@ -1453,9 +1457,9 @@ void sharing(Group &group, People const &people) {
         rows.reserve(plan.payments.size());
         for (auto const &payment : plan.payments) {
             rows.push_back({
-                .amount = payment.amount.toString(),
                 .from = must(reader.member(payment.from)).value().firstName,
                 .to = must(reader.member(payment.to)).value().firstName,
+                .amount = payment.amount.toString(),
             });
         }
         printTable(rows, 2);

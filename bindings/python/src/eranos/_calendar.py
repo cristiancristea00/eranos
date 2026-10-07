@@ -1,7 +1,6 @@
 """Hold dates and times of day, without a time zone, which the library checks when they are made."""
 
 import dataclasses
-import functools
 from typing import final, override
 
 from eranos._errors import library_errors
@@ -9,8 +8,7 @@ from eranos._internal import eranos as generated
 
 
 @final
-@functools.total_ordering
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True, order=True)
 class CalendarDate:
     """
     A day of the calendar, without a time zone: the day an entry happened, wherever it happened.
@@ -19,14 +17,14 @@ class CalendarDate:
     ``CalendarError.InvalidDate``, in a ``CalendarError``. Dates order by day.
     """
 
-    day: int
-    """The day of the month, from 1."""
+    year: int
+    """The year, from 1 to 9999."""
 
     month: int
     """The month, from 1 for January."""
 
-    year: int
-    """The year, from 1 to 9999."""
+    day: int
+    """The day of the month, from 1."""
 
     def __post_init__(self) -> None:
         """Check the date with the library."""
@@ -50,19 +48,6 @@ class CalendarDate:
         with library_errors():
             return date_of(generated.calendar_date_parse(text))
 
-    def __lt__(self, other: CalendarDate) -> bool:
-        """
-        Tell whether this date comes before other.
-
-        Args:
-            other: The date to compare.
-
-        Returns:
-            Whether this one is earlier.
-
-        """
-        return (self.year, self.month, self.day) < (other.year, other.month, other.day)
-
     @override
     def __str__(self) -> str:
         """
@@ -76,8 +61,7 @@ class CalendarDate:
 
 
 @final
-@functools.total_ordering
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True, slots=True, order=True)
 class TimeOfDay:
     """
     A time of day, to the minute, without a time zone.
@@ -114,19 +98,6 @@ class TimeOfDay:
         with library_errors():
             return time_of(generated.time_of_day_parse(text))
 
-    def __lt__(self, other: TimeOfDay) -> bool:
-        """
-        Tell whether this time comes before other.
-
-        Args:
-            other: The time to compare.
-
-        Returns:
-            Whether this one is earlier.
-
-        """
-        return (self.hour, self.minute) < (other.hour, other.minute)
-
     @override
     def __str__(self) -> str:
         """
@@ -150,7 +121,7 @@ def date_of(value: generated.CalendarDate) -> CalendarDate:
         The date.
 
     """
-    return CalendarDate(value.day, value.month, value.year)
+    return CalendarDate(value.year, value.month, value.day)
 
 
 def generated_date(date: CalendarDate) -> generated.CalendarDate:
@@ -164,7 +135,7 @@ def generated_date(date: CalendarDate) -> generated.CalendarDate:
         The generated date.
 
     """
-    return generated.CalendarDate(day=date.day, month=date.month, year=date.year)
+    return generated.CalendarDate(year=date.year, month=date.month, day=date.day)
 
 
 def time_of(value: generated.TimeOfDay) -> TimeOfDay:

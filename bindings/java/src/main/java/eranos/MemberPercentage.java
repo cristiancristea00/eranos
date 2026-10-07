@@ -37,6 +37,6 @@ public record MemberPercentage(MemberId member, Percentage percentage) {
      * @return the generated share
      */
     eranos.internal.MemberPercentage generated() {
-        return new eranos.internal.MemberPercentage(percentage.basisPoints(), member.value());
+        return new eranos.internal.MemberPercentage(member.value(), percentage.basisPoints());
     }
 }

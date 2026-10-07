@@ -7,10 +7,10 @@ import Report
 struct ShareRow: TableRow {
     static let headers = ["Member", "Rule", "Paid", "Consumed"]
 
-    let consumed: Money
     let name: String
-    let paid: Money
     let rule: String
+    let paid: Money
+    let consumed: Money
 
     var cells: [String] {
         [name, rule, "\(paid)", "\(consumed)"]
@@ -20,10 +20,10 @@ struct ShareRow: TableRow {
 struct TotalRow: TableRow {
     static let headers = ["Member", "Paid", "Consumed", "Balance"]
 
-    let balance: String
-    let consumed: Money
     let name: String
     let paid: Money
+    let consumed: Money
+    let balance: String
 
     var cells: [String] {
         [name, "\(paid)", "\(consumed)", balance]
@@ -44,7 +44,7 @@ func report(_ group: Group, _ id: Expense.ID, _ rules: [Member.ID: String]) thro
     print("\(expense.name), \(shares.total):")
     printTable(
         try shares.members.map { share throws(EranosError) in
-            ShareRow(consumed: share.share, name: try names(group, [share.member]), paid: share.paid, rule: rules[share.member] ?? "(payer only)")
+            ShareRow(name: try names(group, [share.member]), rule: rules[share.member] ?? "(payer only)", paid: share.paid, consumed: share.share)
         },
         numbersFrom: 2
     )
@@ -54,8 +54,8 @@ func report(_ group: Group, _ id: Expense.ID, _ rules: [Member.ID: String]) thro
 struct Family {
     let ana: Member.ID
     let bob: Member.ID
-    let day: CalendarDate
     let mia: Member.ID
+    let day: CalendarDate
 
     /// The rule of an expense shared equally by the three.
     var thirds: [Member.ID: String] {
@@ -72,11 +72,11 @@ func equally(_ group: Group, _ family: Family) throws(EranosError) {
         """)
     let taxi = try group.add(
         Expense(
-            cost: .local(try eur("10.00")),
-            date: family.day,
             name: "Taxi",
+            cost: .local(try eur("10.00")),
             payers: .equal([family.ana]),
-            split: .whole(.equal([family.ana, family.bob, family.mia]))
+            split: .whole(.equal([family.ana, family.bob, family.mia])),
+            date: family.day
         )
     )
     try report(group, taxi, family.thirds)
@@ -90,9 +90,8 @@ func byPercentage(_ group: Group, _ family: Family) throws(EranosError) {
         """)
     let rent = try group.add(
         Expense(
-            cost: .local(try eur("500.00")),
-            date: family.day,
             name: "Flat",
+            cost: .local(try eur("500.00")),
             payers: .equal([family.bob]),
             split: .whole(
                 .percentages([
@@ -100,7 +99,8 @@ func byPercentage(_ group: Group, _ family: Family) throws(EranosError) {
                     MemberPercentage(member: family.bob, percentage: try Percentage(parsing: "40")),
                     MemberPercentage(member: family.mia, percentage: try Percentage(parsing: "20"))
                 ])
-            )
+            ),
+            date: family.day
         )
     )
     try report(group, rent, [family.ana: "40%", family.bob: "40%", family.mia: "20%"])
@@ -114,9 +114,8 @@ func byParts(_ group: Group, _ family: Family) throws(EranosError) -> Expense.ID
         """)
     let food = try group.add(
         Expense(
-            cost: .local(try eur("125.00")),
-            date: family.day,
             name: "Food",
+            cost: .local(try eur("125.00")),
             payers: .equal([family.ana]),
             split: .whole(
                 .parts([
@@ -124,7 +123,8 @@ func byParts(_ group: Group, _ family: Family) throws(EranosError) -> Expense.ID
                     MemberParts(member: family.bob, parts: try Parts(parsing: "1")),
                     MemberParts(member: family.mia, parts: try Parts(parsing: "0.5"))
                 ])
-            )
+            ),
+            date: family.day
         )
     )
     try report(group, food, [family.ana: "1 part", family.bob: "1 part", family.mia: "0.5 parts"])
@@ -139,17 +139,17 @@ func byAmounts(_ group: Group, _ family: Family) throws(EranosError) {
         """)
     let tickets = try group.add(
         Expense(
-            cost: .local(try eur("35.00")),
-            date: family.day,
             name: "Museum",
+            cost: .local(try eur("35.00")),
             payers: .equal([family.bob]),
             split: .whole(
                 .amounts([
-                    MemberAmount(amount: try eur("15.00"), member: family.ana),
-                    MemberAmount(amount: try eur("15.00"), member: family.bob),
-                    MemberAmount(amount: try eur("5.00"), member: family.mia)
+                    MemberAmount(member: family.ana, amount: try eur("15.00")),
+                    MemberAmount(member: family.bob, amount: try eur("15.00")),
+                    MemberAmount(member: family.mia, amount: try eur("5.00"))
                 ])
-            )
+            ),
+            date: family.day
         )
     )
     try report(group, tickets, [family.ana: "15.00 EUR", family.bob: "15.00 EUR", family.mia: "5.00 EUR"])
@@ -163,14 +163,14 @@ func severalPayers(_ group: Group, _ family: Family) throws(EranosError) {
         """)
     let dinner = try group.add(
         Expense(
-            cost: .local(try eur("90.00")),
-            date: family.day,
             name: "Dinner",
+            cost: .local(try eur("90.00")),
             payers: .amounts([
-                MemberAmount(amount: try eur("50.00"), member: family.ana),
-                MemberAmount(amount: try eur("40.00"), member: family.bob)
+                MemberAmount(member: family.ana, amount: try eur("50.00")),
+                MemberAmount(member: family.bob, amount: try eur("40.00"))
             ]),
-            split: .whole(.equal([family.ana, family.bob, family.mia]))
+            split: .whole(.equal([family.ana, family.bob, family.mia])),
+            date: family.day
         )
     )
     try report(group, dinner, family.thirds)
@@ -180,16 +180,16 @@ func mistakes(_ group: Group, _ family: Family) throws(EranosError) {
     section("6. Mistakes are refused")
     print("A percentage split that adds up to 90 % is refused when the expense is built:")
     let invalid = Expense(
-        cost: .local(try eur("10.00")),
-        date: family.day,
         name: "Invalid",
+        cost: .local(try eur("10.00")),
         payers: .equal([family.ana]),
         split: .whole(
             .percentages([
                 MemberPercentage(member: family.ana, percentage: try Percentage(parsing: "60")),
                 MemberPercentage(member: family.bob, percentage: try Percentage(parsing: "30"))
             ])
-        )
+        ),
+        date: family.day
     )
     do {
         _ = try group.add(invalid)
@@ -206,7 +206,7 @@ func printTotals(_ group: Group) throws(EranosError) {
     printTable(
         try group.members().compactMap { member in
             member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
-                TotalRow(balance: "\(totals.balance)", consumed: totals.share, name: member.firstName, paid: totals.paid)
+                TotalRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: "\(totals.balance)")
             }
         },
         numbersFrom: 1
@@ -214,12 +214,12 @@ func printTotals(_ group: Group) throws(EranosError) {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(currency: euro, name: "Family holiday")
+    let group = try Group(name: "Family holiday", currency: euro)
     let family = Family(
         ana: try group.add(Member(firstName: "Ana")),
         bob: try group.add(Member(firstName: "Bob")),
-        day: try CalendarDate(day: 14, month: 7, year: 2026),
-        mia: try group.add(Member(firstName: "Mia"))
+        mia: try group.add(Member(firstName: "Mia")),
+        day: try CalendarDate(year: 2026, month: 7, day: 14)
     )
 
     print("Family holiday: every way to split an expense")

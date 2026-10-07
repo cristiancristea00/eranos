@@ -3,7 +3,7 @@ package eranos;
 import java.util.List;
 
 /**
- * How an amount divides among members: equally, by exact amounts, by parts, or by percentages.
+ * How an amount divides among members: equally, by parts, by percentages, or by exact amounts.
  *
  * <p>The library divides every amount so that the shares add up to it exactly, and gives any minor
  * unit left over by the rounding to a member it picks from the expense's identifier.
@@ -15,27 +15,6 @@ public sealed interface Split {
      * @return the members
      */
     List<MemberId> members();
-
-    /**
-     * Every member pays an exact amount; the amounts add up to what they divide.
-     *
-     * @param shares what every member pays
-     */
-    record Amounts(List<MemberAmount> shares) implements Split {
-        /**
-         * The split of {@code shares}, which it copies.
-         *
-         * @param shares what every member pays
-         */
-        public Amounts {
-            shares = List.copyOf(shares);
-        }
-
-        @Override
-        public List<MemberId> members() {
-            return shares.stream().map(MemberAmount::member).toList();
-        }
-    }
 
     /**
      * Every member pays the same.
@@ -92,6 +71,27 @@ public sealed interface Split {
         @Override
         public List<MemberId> members() {
             return shares.stream().map(MemberPercentage::member).toList();
+        }
+    }
+
+    /**
+     * Every member pays an exact amount; the amounts add up to what they divide.
+     *
+     * @param shares what every member pays
+     */
+    record Amounts(List<MemberAmount> shares) implements Split {
+        /**
+         * The split of {@code shares}, which it copies.
+         *
+         * @param shares what every member pays
+         */
+        public Amounts {
+            shares = List.copyOf(shares);
+        }
+
+        @Override
+        public List<MemberId> members() {
+            return shares.stream().map(MemberAmount::member).toList();
         }
     }
 }

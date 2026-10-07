@@ -29,11 +29,11 @@ import eranos.examples.section
 import eranos.examples.title
 
 private data class LineRow(
-    val lineTotal: Money,
     val name: String,
     val participants: String,
     val quantity: Int,
     val unitPrice: Money,
+    val lineTotal: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, participants, "$quantity", "$unitPrice", "$lineTotal")
@@ -44,12 +44,12 @@ private data class LineRow(
 }
 
 private data class TipRow(
-    val equalTip: Money,
-    val equalTotal: Money,
     val name: String,
+    val subtotal: Money,
     val proportionalTip: Money,
     val proportionalTotal: Money,
-    val subtotal: Money,
+    val equalTip: Money,
+    val equalTotal: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, "$subtotal", "$proportionalTip", "$proportionalTotal", "$equalTip", "$equalTotal")
@@ -69,14 +69,14 @@ private fun receipt(
     carol: MemberId,
 ): List<Item> =
     listOf(
-        Item("Ciorbă", Split.Equal(listOf(ana)), eur("8.00")),
-        Item("Sarmale", Split.Equal(listOf(bob, carol)), eur("14.00"), quantity = 2),
+        Item("Ciorbă", eur("8.00"), Split.Equal(listOf(ana))),
+        Item("Sarmale", eur("14.00"), Split.Equal(listOf(bob, carol)), quantity = 2),
         Item(
             "Papanași",
-            Split.Parts(listOf(MemberParts(ana, Parts.ofHundredths(hundredths = 100)), MemberParts(carol, Parts.ofHundredths(hundredths = 200)))),
             eur("9.00"),
+            Split.Parts(listOf(MemberParts(ana, Parts.ofHundredths(hundredths = 100)), MemberParts(carol, Parts.ofHundredths(hundredths = 200)))),
         ),
-        Item("Lemonade", Split.Equal(listOf(ana, bob, carol)), eur("3.00"), quantity = 3),
+        Item("Lemonade", eur("3.00"), Split.Equal(listOf(ana, bob, carol)), quantity = 3),
     )
 
 /**
@@ -96,11 +96,11 @@ private fun consumed(
 
 /** Prints the report of the dinner. */
 fun main() {
-    Group(Currency.of("EUR"), "Dinner at Caru' cu Bere").use { group ->
+    Group("Dinner at Caru' cu Bere", Currency.of("EUR")).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val carol = group.addBlocking(Member("Carol"))
-        val day = CalendarDate.of(day = 23, month = 9, year = 2026)
+        val day = CalendarDate.of(year = 2026, month = 9, day = 23)
 
         title("${group.nameBlocking()}: an itemised bill")
         println(
@@ -115,11 +115,11 @@ fun main() {
             LineRow.HEADERS,
             receipt(ana, bob, carol).map { item ->
                 LineRow(
-                    lineTotal = Money(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity),
                     name = item.name,
                     participants = names(group, item.split.members),
                     quantity = item.quantity,
                     unitPrice = item.unitPrice,
+                    lineTotal = Money(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency),
                 )
             },
             numbersFrom = 2,
@@ -135,15 +135,15 @@ fun main() {
         // The dinner, its tip of 10 % shared by `distribution`.
         val bill = { distribution: TipDistribution ->
             Expense(
-                Cost.Local(eur("54.00")),
-                day,
                 "Dinner",
+                Cost.Local(eur("54.00")),
                 Split.Equal(listOf(ana)),
                 ExpenseSplit.Itemised(receipt(ana, bob, carol)),
+                day,
                 tip = Tip(TipValue.Percentage(Percentage.parse("10")), distribution),
             )
         }
-        val untipped = Expense(Cost.Local(eur("54.00")), day, "Dinner", Split.Equal(listOf(ana)), ExpenseSplit.Itemised(receipt(ana, bob, carol)))
+        val untipped = Expense("Dinner", Cost.Local(eur("54.00")), Split.Equal(listOf(ana)), ExpenseSplit.Itemised(receipt(ana, bob, carol)), day)
         val ordered = preview(group, untipped)
         val proportional = group.addBlocking(bill(TipDistribution.PROPORTIONAL))
         val byConsumption = group.expenseSharesBlocking(proportional)
@@ -160,12 +160,12 @@ fun main() {
                 val proportionalTotal = checkNotNull(consumed(byConsumption, member)) { "every member ordered" }
                 val equalTotal = checkNotNull(consumed(even, member)) { "every member ordered" }
                 TipRow(
-                    equalTip = equalTotal - subtotal,
-                    equalTotal = equalTotal,
                     name = names(group, listOf(member)),
+                    subtotal = subtotal,
                     proportionalTip = proportionalTotal - subtotal,
                     proportionalTotal = proportionalTotal,
-                    subtotal = subtotal,
+                    equalTip = equalTotal - subtotal,
+                    equalTotal = equalTotal,
                 )
             }
         printTable(TipRow.HEADERS, rows, numbersFrom = 1)
@@ -179,7 +179,7 @@ fun main() {
         section("3. A total that does not match is refused")
         try {
             group.addBlocking(
-                Expense(Cost.Local(eur("55.00")), day, "Dinner", Split.Equal(listOf(ana)), ExpenseSplit.Itemised(receipt(ana, bob, carol))),
+                Expense("Dinner", Cost.Local(eur("55.00")), Split.Equal(listOf(ana)), ExpenseSplit.Itemised(receipt(ana, bob, carol)), day),
             )
             error("the mismatch must be refused")
         } catch (refusal: EranosException) {

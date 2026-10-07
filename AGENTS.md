@@ -301,22 +301,32 @@ test in `crates/xtask` checks every root.
   a record. Tuples stay only where a standard API hands them out and the
   code takes them apart on the spot (`zip`, `enumerate`, a map's entries,
   `split_once`), where one `let` binds several names at once, and in
-  single-field newtypes. A struct used as a sort or
-  map key gets a hand-written `Ord`, since its fields are in alphabetical
-  order rather than the order it sorts by.
+  single-field newtypes. A struct used as a sort or map key derives `Ord`
+  when its fields are declared in the order it sorts by, and writes it out
+  otherwise.
 - **Fields follow one order.** Named fields, in structs and in enum
-  variants, start with `format` (the saved group's version) and `id`, then
-  list the required fields, then the optional ones, each alphabetically. A
-  field is optional when the caller may leave it out: an `Option`, or a
-  field with a default, such as a quantity of 1 or no accounts. Generated
-  and derived fields, such as an expense's total, count as required. Struct
-  literals, struct patterns, serialised keys, and the arguments of a
-  constructor that takes fields follow the same order: `CalendarDate::new(day,
-  month, year)`, `Money::from_minor_units(currency, minor_units)`,
-  `Expense::builder(cost, date, name, payer, split)`; a `parse` takes its
-  text first. No field order carries meaning: `Currency`, `CalendarDate`,
-  and `TimeOfDay` write their ordering out by hand, and a table row in the examples
-  fixes its columns with `#[tabled(order = N)]`.
+  variants, start with `format` (the saved group's version) and `id`. Where
+  a standard or the established convention of the domain fixes an order,
+  the fields follow it: a date is year, month, and day, as ISO 8601 writes
+  it; a time of day is hour and minute; an amount comes before its
+  currency. Otherwise the required fields come in the order a sentence
+  describing the value names them: what it is, how much, who, how, and
+  when (`Expense::builder(name, cost, payer, split, date)`,
+  `Transfer::builder(from, to, cost, date)`). A concept takes the same
+  place in every type that holds it, and a derived field, such as an
+  expense's total, comes directly after the field it is derived from. The
+  optional fields follow the required ones, in the same order among
+  themselves; a field is optional when the caller may leave it out: an
+  `Option`, or a field with a default, such as a quantity of 1 or no
+  accounts. The collections a type holds, such as a group's members and
+  expenses, come after every field that describes the type, required or
+  optional. Fields this leaves without an order are in alphabetical order.
+  Struct literals, struct patterns, serialised keys, the arguments of a
+  constructor that takes fields, and the columns of a table row in the
+  examples follow the declaration: `CalendarDate::new(year, month, day)`,
+  `Money::from_minor_units(minor_units, currency)`; a `parse` takes its
+  text first. A type whose declaration order is its sort order derives
+  `Ord`.
 - **Accessors follow their fields.** An `impl` starts with its
   constructors and associated constants, then lists the getters and
   setters in field order: for each field, the method named after it, then
@@ -324,12 +334,17 @@ test in `crates/xtask` checks every root.
   sits beside it (`tip_amount` after `tip`, `paid_by` before `payers`),
   and methods that read several fields, such as `build`, come last.
   `Group` heads each field's methods with a section comment.
-- **Variants are alphabetical.** Enum variants are declared in
-  alphabetical order, and so are the arms of a `match` over them, the
-  alternatives of an or-pattern, and the methods of the enum's conversion
-  trait; a catch-all arm stays last. A list of
-  every variant, such as `SettlementStrategy::all`, follows the
-  declaration.
+- **Variants follow the domain.** Enum variants are declared in the order
+  the domain presents them where it has one, otherwise the default or the
+  simplest case first: `Split` is equal, parts, percentages, then amounts,
+  and `Cost` local, then converted. The arms of a `match` over them, the
+  alternatives of an or-pattern, the methods of the enum's conversion
+  trait, and a list of every variant, such as `SettlementStrategy::all`,
+  follow the declaration; a catch-all arm stays last. Error variants are
+  grouped by the subject they report on, the groups in the field order of
+  the value they check and a range failure last, and a conversion method
+  takes what its variant holds, then the message; the bindings' error
+  kinds follow the crates from the bottom up.
 - **Serialised data outlives releases.** A new field gets
   `#[serde(default)]`; a type with invariants deserialises through its
   validating constructor, in a written-out `Deserialize` impl that reads a

@@ -74,16 +74,6 @@ export class GroupReader implements Disposable {
     }
 
     /**
-     * The group currency, which every total is in.
-     *
-     * @returns The currency
-     * @throws `TypeError` after {@link GroupReader.release}
-     */
-    currency(): Currency {
-        return Currency.known(calling(() => this.handle.currency()));
-    }
-
-    /**
      * The group's name.
      *
      * @returns The text
@@ -91,6 +81,16 @@ export class GroupReader implements Disposable {
      */
     name(): string {
         return calling(() => this.handle.name());
+    }
+
+    /**
+     * The group currency, which every total is in.
+     *
+     * @returns The currency
+     * @throws `TypeError` after {@link GroupReader.release}
+     */
+    currency(): Currency {
+        return Currency.known(calling(() => this.handle.currency()));
     }
 
     /**

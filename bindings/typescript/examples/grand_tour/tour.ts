@@ -47,9 +47,9 @@ export const refusalColumns: Columns<RefusalRow> = [
 
 /** A payment of a plan, as the tables of payments print it. */
 export interface PaymentRow {
-    readonly amount: Money;
     readonly from: string;
     readonly to: string;
+    readonly amount: Money;
 }
 
 export const paymentColumns: Columns<PaymentRow> = [
@@ -60,11 +60,11 @@ export const paymentColumns: Columns<PaymentRow> = [
 
 /** An expense or a transfer, as entered and in the group currency, as the table of entries prints it. */
 interface EntryRow {
-    readonly converted: Money;
     readonly name: string;
-    readonly original: Money;
     readonly payer: string;
+    readonly original: Money;
     readonly rate: ExchangeRate;
+    readonly converted: Money;
 }
 
 const entryColumns: Columns<EntryRow> = [
@@ -77,12 +77,12 @@ const entryColumns: Columns<EntryRow> = [
 
 /** A member's totals, as the table of balances prints them. */
 interface BalanceRow {
-    readonly balance: Balance;
-    readonly consumed: Money;
     readonly name: string;
     readonly paid: Money;
-    readonly received: Money;
+    readonly consumed: Money;
     readonly sent: Money;
+    readonly received: Money;
+    readonly balance: Balance;
 }
 
 const balanceColumns: Columns<BalanceRow> = [
@@ -96,8 +96,8 @@ const balanceColumns: Columns<BalanceRow> = [
 
 /** A category's expenses and total, as the table of categories prints them. */
 interface CategoryRow {
-    readonly expenses: number;
     readonly name: string;
+    readonly expenses: number;
     readonly total: Money;
 }
 
@@ -117,7 +117,7 @@ export function ron(text: string): Money {
 
 /** A date of the trip, in October 2026. */
 export function october(date: number): CalendarDate {
-    return CalendarDate.of(date, 10, 2026);
+    return CalendarDate.of(2026, 10, date);
 }
 
 export function name(group: Group, member: MemberId): string {
@@ -140,7 +140,7 @@ export function outcome<Value>(make: () => Value, shown: (value: Value) => strin
 
 /** The sum of `amounts`, all in `currency`. */
 export function sum(currency: Currency, amounts: readonly Money[]): Money {
-    return amounts.reduce((total, amount) => total.plus(amount), new Money(currency, 0n));
+    return amounts.reduce((total, amount) => total.plus(amount), new Money(0n, currency));
 }
 
 /** The rate `cost` was entered at: 1 for a cost in the group currency. */
@@ -155,21 +155,21 @@ export function builtInCategory(group: Group): CategoryId | undefined {
 
 export function printBalances(group: Group): void {
     const summary = group.summarySync();
-    const zero = new Money(group.currencySync(), 0n);
+    const zero = new Money(0n, group.currencySync());
     printTable(
         balanceColumns,
         group.membersSync().map((member): BalanceRow => {
             // The summary lists the members with a total; every total of the others is zero.
             const found = undefined === member.id ? undefined : totals(member.id, summary);
             return undefined === found
-                ? { balance: { kind: 'settled' }, consumed: zero, name: member.firstName, paid: zero, received: zero, sent: zero }
+                ? { name: member.firstName, paid: zero, consumed: zero, sent: zero, received: zero, balance: { kind: 'settled' } }
                 : {
-                      balance: found.balance,
-                      consumed: found.share,
                       name: member.firstName,
                       paid: found.paid,
-                      received: found.received,
+                      consumed: found.share,
                       sent: found.sent,
+                      received: found.received,
+                      balance: found.balance,
                   };
         }),
         1,
@@ -182,8 +182,8 @@ export function printCategories(group: Group): void {
     printTable(
         categoryColumns,
         group.summarySync().categoryTotals.map((total) => ({
-            expenses: expenses.filter((expense) => (expense.category ?? builtIn) === total.category).length,
             name: group.categorySync(total.category)?.name ?? '?',
+            expenses: expenses.filter((expense) => (expense.category ?? builtIn) === total.category).length,
             total: total.total,
         })),
         1,
@@ -192,26 +192,26 @@ export function printCategories(group: Group): void {
 
 /** Every expense and transfer in a currency `shown` accepts, as entered and in the group currency. */
 export function printEntries(group: Group, shown: (currency: Currency) => boolean): void {
-    const zero = new Money(group.currencySync(), 0n);
+    const zero = new Money(0n, group.currencySync());
     const expenses = group
         .expensesSync()
         .filter((expense) => shown(expense.cost.amount.currency))
         .map((expense): EntryRow => ({
-            converted: (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total ?? zero,
             name: expense.name,
-            original: expenseTotal(expense),
             payer: names(group, splitMembers(expense.payers)),
+            original: expenseTotal(expense),
             rate: rate(expense.cost),
+            converted: (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total ?? zero,
         }));
     const transfers = group
         .transfersSync()
         .filter((transfer) => shown(transfer.cost.amount.currency))
         .map((transfer): EntryRow => ({
-            converted: (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id)) ?? zero,
             name: `Transfer to ${name(group, transfer.to)}`,
-            original: transfer.cost.amount,
             payer: name(group, transfer.from),
+            original: transfer.cost.amount,
             rate: rate(transfer.cost),
+            converted: (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id)) ?? zero,
         }));
     printTable(entryColumns, [...expenses, ...transfers], 2);
 }

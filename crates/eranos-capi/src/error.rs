@@ -13,22 +13,30 @@ pub mod ffi {
     #[derive(Debug)]
     #[diplomat::enum_convert(eranos_bindings::ErrorKind)]
     pub enum EranosErrorKind {
+        /// An `IdError`, about an identifier.
+        Id,
         /// An `AccountError`, about a payment account: its IBAN, username, or label.
         Account,
         /// A `CalendarError`, about a date or a time of day.
         Calendar,
-        /// The call was cancelled through its `Cancellation`, before it changed anything.
-        Cancelled,
         /// A `CategoryError`, about a category.
         Category,
         /// A `ContactError`, about an email address or a phone number.
         Contact,
+        /// A `MoneyError`, about an amount, a currency, a rate, or a ratio.
+        Money,
+        /// A `MemberError`, about a member.
+        Member,
         /// An `ExpenseError`, about an expense: its amount, split, items, or tip.
         Expense,
+        /// A `SettlementError`, about a settlement.
+        Settlement,
+        /// A `TransferError`, about a transfer.
+        Transfer,
         /// A `GroupError`, about how an entry fits the group, or the group's lock.
         Group,
-        /// An `IdError`, about an identifier.
-        Id,
+        /// A `LanguageError`, about a language tag.
+        Language,
         /// An entry to add carried an identifier; the group gives a new entry its own.
         IdentifierGiven,
         /// An entry to replace carried no identifier to find it by.
@@ -37,30 +45,24 @@ pub mod ffi {
         InvalidJson,
         /// Text that is not UTF-8, which the C and C++ APIs refuse before the library sees it.
         InvalidText,
-        /// A `LanguageError`, about a language tag.
-        Language,
-        /// A `MemberError`, about a member.
-        Member,
-        /// A `MoneyError`, about an amount, a currency, a rate, or a ratio.
-        Money,
+        /// The call was cancelled through its `Cancellation`, before it changed anything.
+        Cancelled,
         /// The read handle was released, so it reads the group no more.
         Released,
-        /// A `SettlementError`, about a settlement.
-        Settlement,
-        /// A `TransferError`, about a transfer.
-        Transfer,
     }
 
     /// The failure within its module, named after the module and the failure.
     #[derive(Debug)]
     #[diplomat::enum_convert(eranos_bindings::FailureKind)]
     pub enum EranosFailure {
+        /// Text that is not a UUID.
+        IdInvalidId,
         /// An account whose name is blank.
         AccountEmptyName,
-        /// A username that is blank.
-        AccountEmptyUsername,
         /// An IBAN that failed validation, and why.
         AccountInvalidIban,
+        /// A username that is blank.
+        AccountEmptyUsername,
         /// A calendar date that does not exist, is outside years 1 to 9999, or is not ISO 8601
         /// text.
         CalendarInvalidDate,
@@ -74,85 +76,14 @@ pub mod ffi {
         /// A phone number that does not start with `+`, holds a letter or an extension, or is not
         /// valid in its country's numbering plan.
         ContactInvalidPhoneNumber,
-        /// The amounts of a split do not add up to the amount being split.
-        ExpenseAmountsDoNotAddUp,
-        /// An amount inside the expense is in a different currency.
-        ExpenseCurrencyMismatch,
-        /// A member appears more than once in one split.
-        ExpenseDuplicateMember,
-        /// An item whose name is blank.
-        ExpenseEmptyItemName,
-        /// An expense whose name is blank.
-        ExpenseEmptyName,
-        /// A split lists no member.
-        ExpenseEmptySplit,
-        /// The item line totals do not add up to the expense amount.
-        ExpenseItemsDoNotAddUp,
-        /// A fixed tip below zero.
-        ExpenseNegativeTip,
-        /// An itemised expense without items.
-        ExpenseNoItems,
-        /// The amount or unit price is zero or negative.
-        ExpenseNonPositiveAmount,
-        /// A member's percentage or amount is zero or negative.
-        ExpenseNonPositiveShare,
-        /// A total that does not fit the range of an amount.
-        ExpenseOverflow,
-        /// The percentages of a split do not add up to exactly 100 %.
-        ExpensePercentagesDoNotAddUp,
-        /// An item quantity of zero.
-        ExpenseZeroQuantity,
-        /// An archived member cannot join a new expense.
-        GroupArchivedMember,
-        /// The built-in Uncategorised category cannot be renamed or removed.
-        GroupBuiltInCategory,
-        /// A shared group's lock was asked for without waiting, while another call held it.
-        GroupBusy,
-        /// A category with this ID already exists.
-        GroupDuplicateCategory,
-        /// Another category already has this name, compared by Unicode canonical caseless matching.
-        GroupDuplicateCategoryName,
-        /// The same currency appears twice among the rates of a currency change.
-        GroupDuplicateExchangeRate,
-        /// An expense with this ID already exists.
-        GroupDuplicateExpense,
-        /// A member with this ID already exists.
-        GroupDuplicateMember,
-        /// A transfer with this ID already exists.
-        GroupDuplicateTransfer,
-        /// A group name that is blank.
-        GroupEmptyName,
-        /// The member is still referenced and cannot be removed; archive it instead.
-        GroupMemberInUse,
-        /// An entry in another currency than the group's has no exchange rate into the group
-        /// currency: its cost is local, or a currency change gave no rate for its currency.
-        GroupMissingExchangeRate,
-        /// A total would leave the range of an amount.
-        GroupOverflow,
-        /// An entry in the group currency has a converted cost; only a local cost is in the group
-        /// currency.
-        GroupUnexpectedExchangeRate,
-        /// No category with this ID.
-        GroupUnknownCategory,
-        /// No expense with this ID.
-        GroupUnknownExpense,
-        /// No member with this ID.
-        GroupUnknownMember,
-        /// No transfer with this ID.
-        GroupUnknownTransfer,
-        /// A saved group in a format this version does not read: a newer one, whose fields it would
-        /// drop, or an earlier one.
-        GroupUnsupportedFormat,
-        /// Text that is not a UUID.
-        IdInvalidId,
-        /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
-        LanguageInvalidLanguage,
-        /// A first name that is blank.
-        MemberEmptyFirstName,
-        /// Arithmetic between amounts of two different currencies.
-        MoneyCurrencyMismatch,
         /// An amount that is not a decimal number.
         MoneyInvalidAmount,
+        /// An amount with more decimal places than its currency has.
+        MoneyTooManyDecimals,
+        /// Arithmetic between amounts of two different currencies.
+        MoneyCurrencyMismatch,
+        /// A currency code that is not an active ISO 4217 code.
+        MoneyUnknownCurrency,
         /// An exchange rate that is not a positive decimal number with at most 18 decimal places.
         MoneyInvalidExchangeRate,
         /// A number of parts that is not a positive decimal number with at most two decimal places.
@@ -161,17 +92,86 @@ pub mod ffi {
         MoneyInvalidPercentage,
         /// A number or a result that does not fit its range.
         MoneyOverflow,
-        /// An amount with more decimal places than its currency has.
-        MoneyTooManyDecimals,
-        /// A currency code that is not an active ISO 4217 code.
-        MoneyUnknownCurrency,
+        /// A first name that is blank.
+        MemberEmptyFirstName,
+        /// An expense whose name is blank.
+        ExpenseEmptyName,
+        /// The amount or unit price is zero or negative.
+        ExpenseNonPositiveAmount,
+        /// An amount inside the expense is in a different currency.
+        ExpenseCurrencyMismatch,
+        /// A split lists no member.
+        ExpenseEmptySplit,
+        /// A member appears more than once in one split.
+        ExpenseDuplicateMember,
+        /// A member's percentage or amount is zero or negative.
+        ExpenseNonPositiveShare,
+        /// The amounts of a split do not add up to the amount being split.
+        ExpenseAmountsDoNotAddUp,
+        /// The percentages of a split do not add up to exactly 100 %.
+        ExpensePercentagesDoNotAddUp,
+        /// An itemised expense without items.
+        ExpenseNoItems,
+        /// An item whose name is blank.
+        ExpenseEmptyItemName,
+        /// An item quantity of zero.
+        ExpenseZeroQuantity,
+        /// The item line totals do not add up to the expense amount.
+        ExpenseItemsDoNotAddUp,
+        /// A fixed tip below zero.
+        ExpenseNegativeTip,
+        /// A total that does not fit the range of an amount.
+        ExpenseOverflow,
         /// The exact solver needs 2ⁿ bytes for `n` open balances, and that table does not fit in
         /// the address space or the allocator refused it.
         SettlementOutOfMemory,
-        /// The amount is zero or negative.
-        TransferNonPositiveAmount,
         /// The sender and the recipient are the same member.
         TransferSameMember,
+        /// The amount is zero or negative.
+        TransferNonPositiveAmount,
+        /// A saved group in a format this version does not read: a newer one, whose fields it would
+        /// drop, or an earlier one.
+        GroupUnsupportedFormat,
+        /// A group name that is blank.
+        GroupEmptyName,
+        /// An entry in another currency than the group's has no exchange rate into the group
+        /// currency: its cost is local, or a currency change gave no rate for its currency.
+        GroupMissingExchangeRate,
+        /// An entry in the group currency has a converted cost; only a local cost is in the group
+        /// currency.
+        GroupUnexpectedExchangeRate,
+        /// The same currency appears twice among the rates of a currency change.
+        GroupDuplicateExchangeRate,
+        /// A member with this ID already exists.
+        GroupDuplicateMember,
+        /// No member with this ID.
+        GroupUnknownMember,
+        /// An archived member cannot join a new expense.
+        GroupArchivedMember,
+        /// The member is still referenced and cannot be removed; archive it instead.
+        GroupMemberInUse,
+        /// A category with this ID already exists.
+        GroupDuplicateCategory,
+        /// Another category already has this name, compared by Unicode canonical caseless matching.
+        GroupDuplicateCategoryName,
+        /// No category with this ID.
+        GroupUnknownCategory,
+        /// The built-in Uncategorised category cannot be renamed or removed.
+        GroupBuiltInCategory,
+        /// An expense with this ID already exists.
+        GroupDuplicateExpense,
+        /// No expense with this ID.
+        GroupUnknownExpense,
+        /// A transfer with this ID already exists.
+        GroupDuplicateTransfer,
+        /// No transfer with this ID.
+        GroupUnknownTransfer,
+        /// A shared group's lock was asked for without waiting, while another call held it.
+        GroupBusy,
+        /// A total would leave the range of an amount.
+        GroupOverflow,
+        /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
+        LanguageInvalidLanguage,
     }
 
     /// Why an IBAN was refused.
@@ -180,18 +180,18 @@ pub mod ffi {
     pub enum EranosIbanReason {
         /// A character other than an ASCII letter, a digit, or whitespace (which is dropped).
         InvalidCharacter,
-        /// The check digits are 00, 01, or 99, which ISO 13616 never issues, or the ISO 7064 mod-97
-        /// check failed: the number contains a typo.
-        InvalidChecksum,
         /// Not two letters followed by two check digits.
         InvalidFormat,
-        /// A letter where the country's account number has a digit, or a digit where it has a
-        /// letter, by the BBAN structure of the SWIFT IBAN registry.
-        InvalidStructure,
         /// A country code without an entry in the SWIFT IBAN registry.
         UnknownCountry,
         /// The wrong number of characters for the country.
         WrongLength,
+        /// A letter where the country's account number has a digit, or a digit where it has a
+        /// letter, by the BBAN structure of the SWIFT IBAN registry.
+        InvalidStructure,
+        /// The check digits are 00, 01, or 99, which ISO 13616 never issues, or the ISO 7064 mod-97
+        /// check failed: the number contains a typo.
+        InvalidChecksum,
     }
 
     /// A failure a call reports: its kind, the failure within its module, the library's message,

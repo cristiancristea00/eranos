@@ -24,7 +24,7 @@ struct Flat {
 }
 
 fn flat() -> Flat {
-    let mut group = Group::builder(Currency::EUR, "Flat").build().unwrap();
+    let mut group = Group::builder("Flat", Currency::EUR).build().unwrap();
     let ana = group
         .add_member(eranos::Member::builder("Ana").build().unwrap())
         .unwrap();
@@ -34,16 +34,16 @@ fn flat() -> Flat {
     let food = group
         .add_category(eranos::Category::new("Food").unwrap())
         .unwrap();
-    let day = eranos::CalendarDate::new(23, 9, 2026).unwrap();
-    let cost = eranos::Money::from_minor_units(Currency::EUR, 3_000);
+    let day = eranos::CalendarDate::new(2026, 9, 23).unwrap();
+    let cost = eranos::Money::from_minor_units(3_000, Currency::EUR);
     let split = eranos::Split::equal([ana, bob]);
-    let dinner = eranos::Expense::builder(cost, day, "Dinner", ana, split)
+    let dinner = eranos::Expense::builder("Dinner", cost, ana, split, day)
         .category(food)
         .build()
         .unwrap();
     let dinner = group.add_expense(dinner).unwrap();
-    let paid = eranos::Money::from_minor_units(Currency::EUR, 1_000);
-    let repayment = eranos::Transfer::builder(paid, day, bob, ana)
+    let paid = eranos::Money::from_minor_units(1_000, Currency::EUR);
+    let repayment = eranos::Transfer::builder(bob, ana, paid, day)
         .build()
         .unwrap();
     let repayment = group.add_transfer(repayment).unwrap();

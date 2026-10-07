@@ -38,20 +38,20 @@ class EntryRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency')
 
-    converted: Money
-    """The entry's amount in the group currency."""
-
     name: str
     """What the entry was."""
-
-    original: Money
-    """The entry's amount as entered."""
 
     payer: str
     """Who paid it."""
 
+    original: Money
+    """The entry's amount as entered."""
+
     rate: ExchangeRate
     """The rate the entry was entered at."""
+
+    converted: Money
+    """The entry's amount in the group currency."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -65,23 +65,23 @@ class BalanceRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance')
 
-    balance: Balance
-    """Where the member stands."""
-
-    consumed: Money
-    """What the member consumed."""
-
     name: str
     """The member's first name."""
 
     paid: Money
     """What the member paid."""
 
-    received: Money
-    """What the member received in transfers."""
+    consumed: Money
+    """What the member consumed."""
 
     sent: Money
     """What the member sent in transfers."""
+
+    received: Money
+    """What the member received in transfers."""
+
+    balance: Balance
+    """Where the member stands."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -100,10 +100,10 @@ def rate(cost: Cost) -> ExchangeRate:
 
     """
     match cost:
-        case ConvertedCost(rate=converted):
-            return converted
         case LocalCost():
             return ExchangeRate('1')
+        case ConvertedCost(rate=converted):
+            return converted
         case _:
             assert_never(cost)
 
@@ -132,24 +132,24 @@ def print_entries(group: Group) -> None:
         group: The group.
 
     """
-    zero = Money(group.currency(), 0)
+    zero = Money(0, group.currency())
     expenses = [
         EntryRow(
-            converted=shares.total if expense.id is not None and (shares := group.expense_shares(expense.id)) is not None else zero,
             name=expense.name,
-            original=expense.total(),
             payer=names(group, expense.payers.members),
+            original=expense.total(),
             rate=rate(expense.cost),
+            converted=shares.total if expense.id is not None and (shares := group.expense_shares(expense.id)) is not None else zero,
         )
         for expense in group.expenses()
     ]
     transfers = [
         EntryRow(
-            converted=amount if transfer.id is not None and (amount := group.transfer_amount(transfer.id)) is not None else zero,
             name=f'Transfer to {names(group, (transfer.receiver,))}',
-            original=transfer.cost.amount,
             payer=names(group, (transfer.sender,)),
+            original=transfer.cost.amount,
             rate=rate(transfer.cost),
+            converted=amount if transfer.id is not None and (amount := group.transfer_amount(transfer.id)) is not None else zero,
         )
         for transfer in group.transfers()
     ]
@@ -169,12 +169,12 @@ def print_balances(group: Group) -> None:
         BalanceRow,
         [
             BalanceRow(
-                balance=found.balance,
-                consumed=found.share,
                 name=member.first_name,
                 paid=found.paid,
-                received=found.received,
+                consumed=found.share,
                 sent=found.sent,
+                received=found.received,
+                balance=found.balance,
             )
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
@@ -197,29 +197,29 @@ def expenses(group: Group, ana: MemberId, bob: MemberId) -> None:
     both = WholeExpenseSplit(EqualSplit((ana, bob)))
     group.add_expense(
         Expense(
-            cost=ConvertedCost(Money.parse('400.00', Currency('RON')), ExchangeRate('0.2')),
-            date=CalendarDate(1, 8, 2026),
             name='Fuel',
+            cost=ConvertedCost(Money.parse('400.00', Currency('RON')), ExchangeRate('0.2')),
             payers=EqualSplit((ana,)),
             split=both,
+            date=CalendarDate(2026, 8, 1),
         )
     )
     group.add_expense(
         Expense(
-            cost=ConvertedCost(Money.parse('24000.00', Currency('HUF')), ExchangeRate('0.0025')),
-            date=CalendarDate(2, 8, 2026),
             name='Dinner',
+            cost=ConvertedCost(Money.parse('24000.00', Currency('HUF')), ExchangeRate('0.0025')),
             payers=EqualSplit((bob,)),
             split=both,
+            date=CalendarDate(2026, 8, 2),
         )
     )
     group.add_expense(
         Expense(
-            cost=LocalCost(Money.parse('60.00', Currency('EUR'))),
-            date=CalendarDate(3, 8, 2026),
             name='Ferry',
+            cost=LocalCost(Money.parse('60.00', Currency('EUR'))),
             payers=EqualSplit((bob,)),
             split=both,
+            date=CalendarDate(2026, 8, 3),
         )
     )
     print_entries(group)
@@ -241,10 +241,10 @@ def repayment(group: Group, ana: MemberId, bob: MemberId) -> None:
     """
     section('3. A repayment in cash, in another currency')
     cash = Transfer(
-        cost=ConvertedCost(Money.parse('100.00', Currency('RON')), ExchangeRate('0.2')),
-        date=CalendarDate(4, 8, 2026),
-        receiver=bob,
         sender=ana,
+        receiver=bob,
+        cost=ConvertedCost(Money.parse('100.00', Currency('RON')), ExchangeRate('0.2')),
+        date=CalendarDate(2026, 8, 4),
         note='Cash at the border',
     )
     group.add_transfer(cash)
@@ -281,7 +281,7 @@ def new_currency(group: Group) -> None:
 def main() -> None:
     """Print the report, checking its key numbers."""
     euro = Currency('EUR')
-    group = Group.create(euro, 'Danube road trip')
+    group = Group.create('Danube road trip', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
 

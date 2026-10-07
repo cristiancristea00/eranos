@@ -12,14 +12,11 @@ public struct Expense: Hashable, Sendable {
     /// The identifier: absent for an expense to add, present for one the group holds.
     public private(set) var id: ID?
 
-    /// What it cost.
-    public var cost: Cost
-
-    /// The day it was bought.
-    public var date: CalendarDate
-
     /// What was bought.
     public var name: String
+
+    /// What it cost.
+    public var cost: Cost
 
     /// Who paid the total, amount and tip, and how much each.
     public var payers: Split
@@ -27,69 +24,81 @@ public struct Expense: Hashable, Sendable {
     /// How the amount is shared.
     public var split: ExpenseSplit
 
+    /// The day it was bought.
+    public var date: CalendarDate
+
+    /// The tip on top of the amount.
+    public var tip: Tip?
+
+    /// The time of day it was bought.
+    public var time: TimeOfDay?
+
     /// The category; absent for the built-in one.
     public var category: Category.ID?
 
     /// A longer description.
     public var description: String?
 
-    /// The time of day it was bought.
-    public var time: TimeOfDay?
-
-    /// The tip on top of the amount.
-    public var tip: Tip?
-
     var generated: EranosGenerated.Expense {
         .init(
             id: id?.rawValue,
-            cost: cost.generated,
-            date: date.generated,
             name: name,
+            cost: cost.generated,
             payers: payers.generated,
             split: split.generated,
-            category: category?.rawValue,
-            description: description,
+            date: date.generated,
+            tip: tip?.generated,
             time: time?.generated,
-            tip: tip?.generated
+            category: category?.rawValue,
+            description: description
         )
     }
 
-    /// An expense to add, of `cost` on `date`, that `payers` paid and `split` shares.
+    /// An expense to add, of `cost`, that `payers` paid and `split` shares, on `date`.
     public init(
-        cost: Cost,
-        date: CalendarDate,
         name: String,
+        cost: Cost,
         payers: Split,
         split: ExpenseSplit,
-        category: Category.ID? = nil,
-        description: String? = nil,
+        date: CalendarDate,
+        tip: Tip? = nil,
         time: TimeOfDay? = nil,
-        tip: Tip? = nil
+        category: Category.ID? = nil,
+        description: String? = nil
     ) {
-        self.cost = cost
-        self.date = date
         self.name = name
+        self.cost = cost
         self.payers = payers
         self.split = split
+        self.date = date
+        self.tip = tip
+        self.time = time
         self.category = category
         self.description = description
-        self.time = time
-        self.tip = tip
     }
 
     init(_ expense: EranosGenerated.Expense) {
         self.init(
-            cost: Cost(expense.cost),
-            date: CalendarDate(expense.date),
             name: expense.name,
+            cost: Cost(expense.cost),
             payers: Split(expense.payers),
             split: ExpenseSplit(expense.split),
-            category: expense.category.map { Category.ID(rawValue: $0) },
-            description: expense.description,
+            date: CalendarDate(expense.date),
+            tip: expense.tip.map(Tip.init),
             time: expense.time.map(TimeOfDay.init),
-            tip: expense.tip.map(Tip.init)
+            category: expense.category.map { Category.ID(rawValue: $0) },
+            description: expense.description
         )
         id = expense.id.map { ID(rawValue: $0) }
+    }
+
+    /// The total, amount and tip, in the expense's own currency: what its payers paid.
+    ///
+    /// - Throws: As ``tipAmount()`` does, and ``EranosError/money(_:detail:)`` with
+    ///   ``MoneyFailure/overflow`` for a total out of range.
+    public func total() throws(EranosError) -> Money {
+        let total = try converting { try EranosGenerated.expenseTotal(expense: generated) }
+        return Money(total)
     }
 
     /// The tip, in the expense's own currency.
@@ -100,15 +109,6 @@ public struct Expense: Hashable, Sendable {
     public func tipAmount() throws(EranosError) -> Money {
         let amount = try converting { try EranosGenerated.expenseTipAmount(expense: generated) }
         return Money(amount)
-    }
-
-    /// The total, amount and tip, in the expense's own currency: what its payers paid.
-    ///
-    /// - Throws: As ``tipAmount()`` does, and ``EranosError/money(_:detail:)`` with
-    ///   ``MoneyFailure/overflow`` for a total out of range.
-    public func total() throws(EranosError) -> Money {
-        let total = try converting { try EranosGenerated.expenseTotal(expense: generated) }
-        return Money(total)
     }
 
     /// Every member the expense involves, as a payer or a participant, in identifier order.
@@ -124,64 +124,64 @@ public struct Expense: Hashable, Sendable {
 /// What an entry cost: an amount in the group currency, or one in another currency with the rate
 /// that converts it into the group currency.
 public enum Cost: Hashable, Sendable {
-    /// An amount in another currency than the group's, converted at `rate`.
-    case converted(Money, rate: ExchangeRate)
-
     /// An amount in the group currency.
     case local(Money)
+
+    /// An amount in another currency than the group's, converted at `rate`.
+    case converted(Money, rate: ExchangeRate)
 
     /// The amount, in its own currency.
     public var amount: Money {
         switch self {
-        case let .converted(amount, _):
-            amount
         case let .local(amount):
+            amount
+        case let .converted(amount, _):
             amount
         }
     }
 
     var generated: EranosGenerated.Cost {
         switch self {
-        case let .converted(amount, rate):
-            .converted(amount: amount.generated, rate: rate.description)
         case let .local(amount):
             .local(amount: amount.generated)
+        case let .converted(amount, rate):
+            .converted(amount: amount.generated, rate: rate.description)
         }
     }
 
     init(_ cost: EranosGenerated.Cost) {
         switch cost {
-        case let .converted(amount, rate):
-            self = .converted(Money(amount), rate: ExchangeRate(known: rate))
         case let .local(amount):
             self = .local(Money(amount))
+        case let .converted(amount, rate):
+            self = .converted(Money(amount), rate: ExchangeRate(known: rate))
         }
     }
 }
 
 /// How an expense's cost is shared: as a whole, or line by line of an itemised bill.
 public enum ExpenseSplit: Hashable, Sendable {
-    /// Every line is divided by its own split; the lines add up to the amount.
-    case itemised([Item])
-
     /// The whole amount is divided by one split.
     case whole(Split)
 
+    /// Every line is divided by its own split; the lines add up to the amount.
+    case itemised([Item])
+
     var generated: EranosGenerated.ExpenseSplit {
         switch self {
-        case let .itemised(items):
-            .itemised(items: items.map(\.generated))
         case let .whole(split):
             .whole(split: split.generated)
+        case let .itemised(items):
+            .itemised(items: items.map(\.generated))
         }
     }
 
     init(_ split: EranosGenerated.ExpenseSplit) {
         switch split {
-        case let .itemised(items):
-            self = .itemised(items.map(Item.init))
         case let .whole(split):
             self = .whole(Split(split))
+        case let .itemised(items):
+            self = .itemised(items.map(Item.init))
         }
     }
 }
@@ -191,29 +191,29 @@ public struct Item: Hashable, Sendable {
     /// What was bought.
     public var name: String
 
-    /// How the line's total divides.
-    public var split: Split
-
     /// The price of one unit, in the expense's currency.
     public var unitPrice: Money
+
+    /// How the line's total divides.
+    public var split: Split
 
     /// How many units, from 1.
     public var quantity: Int32
 
     var generated: EranosGenerated.Item {
-        .init(name: name, split: split.generated, unitPrice: unitPrice.generated, quantity: quantity)
+        .init(name: name, unitPrice: unitPrice.generated, split: split.generated, quantity: quantity)
     }
 
     /// A line of `quantity` units of `name` at `unitPrice`, which `split` divides.
-    public init(name: String, split: Split, unitPrice: Money, quantity: Int32 = 1) {
+    public init(name: String, unitPrice: Money, split: Split, quantity: Int32 = 1) {
         self.name = name
-        self.split = split
         self.unitPrice = unitPrice
+        self.split = split
         self.quantity = quantity
     }
 
     init(_ item: EranosGenerated.Item) {
-        self.init(name: item.name, split: Split(item.split), unitPrice: Money(item.unitPrice), quantity: item.quantity)
+        self.init(name: item.name, unitPrice: Money(item.unitPrice), split: Split(item.split), quantity: item.quantity)
     }
 }
 
@@ -243,54 +243,54 @@ public struct Tip: Hashable, Sendable {
 
 /// How a tip is expressed.
 public enum TipValue: Hashable, Sendable {
-    /// A fixed amount in the expense's currency.
-    case fixed(Money)
-
     /// A percentage of the expense's amount.
     case percentage(Percentage)
 
+    /// A fixed amount in the expense's currency.
+    case fixed(Money)
+
     var generated: EranosGenerated.TipValue {
         switch self {
-        case let .fixed(amount):
-            .fixed(amount: amount.generated)
         case let .percentage(percentage):
             .percentage(basisPoints: percentage.basisPoints)
+        case let .fixed(amount):
+            .fixed(amount: amount.generated)
         }
     }
 
     init(_ value: EranosGenerated.TipValue) {
         switch value {
-        case let .fixed(amount):
-            self = .fixed(Money(amount))
         case let .percentage(basisPoints):
             self = .percentage(Percentage(known: basisPoints))
+        case let .fixed(amount):
+            self = .fixed(Money(amount))
         }
     }
 }
 
 /// How a tip is shared among an expense's participants.
 public enum TipDistribution: Hashable, Sendable, CaseIterable {
-    /// The same for every participant.
-    case equal
-
     /// In proportion to each participant's share of the amount.
     case proportional
 
+    /// The same for every participant.
+    case equal
+
     var generated: EranosGenerated.TipDistribution {
         switch self {
-        case .equal:
-            .equal
         case .proportional:
             .proportional
+        case .equal:
+            .equal
         }
     }
 
     init(_ distribution: EranosGenerated.TipDistribution) {
         switch distribution {
-        case .equal:
-            self = .equal
         case .proportional:
             self = .proportional
+        case .equal:
+            self = .equal
         }
     }
 }

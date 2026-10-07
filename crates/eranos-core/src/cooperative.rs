@@ -40,8 +40,8 @@ pub fn yield_now() -> impl Future<Output = ()> + Send {
 /// same points on every device, however fast.
 #[derive(Debug, Clone, Copy)]
 pub struct Pacer {
-    remaining: u64,
     units_per_yield: u64,
+    remaining: u64,
 }
 
 impl Pacer {
@@ -50,8 +50,8 @@ impl Pacer {
     #[must_use]
     pub const fn new(units_per_yield: u64) -> Self {
         Self {
-            remaining: units_per_yield,
             units_per_yield,
+            remaining: units_per_yield,
         }
     }
 

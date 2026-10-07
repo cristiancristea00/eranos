@@ -25,18 +25,18 @@ public class GroupReader internal constructor(
     public fun id(): GroupId = converting { GroupId(handle.id()) }
 
     /**
-     * The group currency, which every total is in.
-     *
-     * @throws IllegalStateException after [close].
-     */
-    public fun currency(): Currency = converting { Currency.known(handle.currency()) }
-
-    /**
      * The group's name.
      *
      * @throws IllegalStateException after [close].
      */
     public fun name(): String = converting { handle.name() }
+
+    /**
+     * The group currency, which every total is in.
+     *
+     * @throws IllegalStateException after [close].
+     */
+    public fun currency(): Currency = converting { Currency.known(handle.currency()) }
 
     /**
      * The group's description.

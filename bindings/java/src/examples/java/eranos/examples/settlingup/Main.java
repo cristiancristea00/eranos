@@ -40,7 +40,7 @@ public final class Main {
     private Main() {}
 
     /** An expense with who paid it and who shares it, a row of the expenses' table. */
-    private record ExpenseRow(Money amount, String name, String participants, String payer)
+    private record ExpenseRow(String name, String payer, String participants, Money amount)
             implements Row {
         static final List<String> HEADERS = List.of("Expense", "Paid by", "Shared by", "Amount");
 
@@ -51,7 +51,7 @@ public final class Main {
     }
 
     /** A member's totals, a row of the balances' table. */
-    private record BalanceRow(Balance balance, Money consumed, String name, Money paid)
+    private record BalanceRow(String name, Money paid, Money consumed, Balance balance)
             implements Row {
         static final List<String> HEADERS = List.of("Member", "Paid", "Consumed", "Balance");
 
@@ -62,7 +62,7 @@ public final class Main {
     }
 
     /** A payment of a plan, a row of the payments' table. */
-    private record PaymentRow(Money amount, String from, String to) implements Row {
+    private record PaymentRow(String from, String to, Money amount) implements Row {
         static final List<String> HEADERS = List.of("From", "To", "Amount");
 
         @Override
@@ -72,7 +72,7 @@ public final class Main {
     }
 
     /** A strategy with what it promises and what it costs, a row of the strategies' table. */
-    private record StrategyRow(String cost, String guarantee, int payments, String strategy)
+    private record StrategyRow(String strategy, String guarantee, String cost, int payments)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Strategy", "Guarantee", "Cost", "Payments here");
@@ -84,15 +84,15 @@ public final class Main {
     }
 
     /** The number of payments of each strategy's plan. */
-    private record Counts(int adaptive, int direct, int greedy, int minimum) {}
+    private record Counts(int adaptive, int minimum, int greedy, int direct) {}
 
     /** The name of {@code strategy} as the apps show it. */
     private static String strategyName(SettlementStrategy strategy) {
         return switch (strategy) {
             case ADAPTIVE -> "Adaptive";
-            case DIRECT -> "Direct";
-            case GREEDY -> "Greedy";
             case MINIMUM_TRANSFERS -> "MinimumTransfers";
+            case GREEDY -> "Greedy";
+            case DIRECT -> "Direct";
         };
     }
 
@@ -102,11 +102,11 @@ public final class Main {
             throws EranosException {
         group.addExpense(
                 Expense.builder(
-                                new Cost.Local(Money.parse(amount, Currency.of("EUR"))),
-                                CalendarDate.of(20, 9, 2026),
                                 name,
+                                new Cost.Local(Money.parse(amount, Currency.of("EUR"))),
                                 new Split.Equal(List.of(payer)),
-                                new ExpenseSplit.Whole(new Split.Equal(participants)))
+                                new ExpenseSplit.Whole(new Split.Equal(participants)),
+                                CalendarDate.of(2026, 9, 20))
                         .build());
     }
 
@@ -119,10 +119,10 @@ public final class Main {
                     totals ->
                             rows.add(
                                     new BalanceRow(
-                                            totals.balance(),
-                                            totals.share(),
                                             member.firstName(),
-                                            totals.paid())));
+                                            totals.paid(),
+                                            totals.share(),
+                                            totals.balance())));
         }
         printTable(BalanceRow.HEADERS, rows, 1);
     }
@@ -132,9 +132,9 @@ public final class Main {
         for (Payment payment : settlement.payments()) {
             rows.add(
                     new PaymentRow(
-                            payment.amount(),
                             names(group, List.of(payment.from())),
-                            names(group, List.of(payment.to()))));
+                            names(group, List.of(payment.to())),
+                            payment.amount()));
         }
         printTable(PaymentRow.HEADERS, rows, 2);
     }
@@ -193,31 +193,31 @@ public final class Main {
                 StrategyRow.HEADERS,
                 List.of(
                         new StrategyRow(
-                                "O(2ⁿ·n) for n open balances",
+                                "MinimumTransfers",
                                 "the fewest payments",
-                                minimum.payments().size(),
-                                "MinimumTransfers"),
+                                "O(2ⁿ·n) for n open balances",
+                                minimum.payments().size()),
                         new StrategyRow(
-                                "O(n log n)",
+                                "Greedy",
                                 "at most n − 1 payments",
-                                greedy.payments().size(),
-                                "Greedy"),
+                                "O(n log n)",
+                                greedy.payments().size()),
                         new StrategyRow(
-                                "O(pairs)",
+                                "Direct",
                                 "one payment per pair in debt",
-                                direct.payments().size(),
-                                "Direct"),
+                                "O(pairs)",
+                                direct.payments().size()),
                         new StrategyRow(
-                                "as MinimumTransfers, then Greedy",
+                                "Adaptive",
                                 "the fewest up to 20 balances",
-                                adaptive.payments().size(),
-                                "Adaptive")),
+                                "as MinimumTransfers, then Greedy",
+                                adaptive.payments().size())),
                 3);
         return new Counts(
                 adaptive.payments().size(),
-                direct.payments().size(),
+                minimum.payments().size(),
                 greedy.payments().size(),
-                minimum.payments().size());
+                direct.payments().size());
     }
 
     /**
@@ -226,7 +226,7 @@ public final class Main {
      */
     private static int festival() throws EranosException {
         section("8. A larger group");
-        try (Group group = Group.builder(Currency.of("EUR"), "Festival").build()) {
+        try (Group group = Group.builder("Festival", Currency.of("EUR")).build()) {
             List<MemberId> friends = new ArrayList<>();
             for (int number = 1; 21 >= number; number++) {
                 friends.add(group.addMember(Member.builder("Friend " + number).build()));
@@ -237,13 +237,13 @@ public final class Main {
             for (int number = 1; 21 >= number; number++) {
                 group.addExpense(
                         Expense.builder(
+                                        "Round",
                                         new Cost.Local(
                                                 new Money(
-                                                        Currency.of("EUR"), 21L * number * number)),
-                                        CalendarDate.of(18, 9, 2026),
-                                        "Round",
+                                                        21L * number * number, Currency.of("EUR"))),
                                         new Split.Equal(List.of(friends.get(number - 1))),
-                                        new ExpenseSplit.Whole(new Split.Equal(friends)))
+                                        new ExpenseSplit.Whole(new Split.Equal(friends)),
+                                        CalendarDate.of(2026, 9, 18))
                                 .build());
             }
             long open =
@@ -277,7 +277,7 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder(Currency.of("EUR"), "Ski week").build()) {
+        try (Group group = Group.builder("Ski week", Currency.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             MemberId carol = group.addMember(Member.builder("Carol").build());
@@ -303,10 +303,10 @@ public final class Main {
             for (Expense expense : group.expenses()) {
                 expenses.add(
                         new ExpenseRow(
-                                expense.total(),
                                 expense.name(),
+                                names(group, expense.payers().members()),
                                 names(group, participants(expense.split())),
-                                names(group, expense.payers().members())));
+                                expense.total()));
             }
             printTable(ExpenseRow.HEADERS, expenses, 3);
 
@@ -322,10 +322,10 @@ public final class Main {
             for (Payment payment : plan.payments()) {
                 group.addTransfer(
                         Transfer.builder(
-                                        new Cost.Local(payment.amount()),
-                                        CalendarDate.of(27, 9, 2026),
                                         payment.from(),
-                                        payment.to())
+                                        payment.to(),
+                                        new Cost.Local(payment.amount()),
+                                        CalendarDate.of(2026, 9, 27))
                                 .build());
             }
             System.out.print(
@@ -341,7 +341,7 @@ public final class Main {
             // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice,
             // and the adaptive plan is that one; greedy pays the largest amounts first and needs
             // five; the unsimplified debts between pairs need seven.
-            check(new Counts(4, 7, 5, 4).equals(payments));
+            check(new Counts(4, 4, 5, 7).equals(payments));
             // Greedy settles the festival's 21 balances in 19 payments.
             check(19 == festivalPayments);
             Summary summary = group.summary();

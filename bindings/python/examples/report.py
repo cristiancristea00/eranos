@@ -43,8 +43,8 @@ class Row(Protocol):
     """
     A row of a report's table, as the Rust example's row type derives it with tabled.
 
-    A row type names its columns once: HEADERS holds the headings the Rust type renames its fields to, in the order of their
-    ``order`` attributes, and cells writes the fields in that order.
+    A row type names its columns once: HEADERS holds the headings the Rust type renames its fields to, in the order the Rust
+    type declares them, and cells writes the fields in that order.
 
     """
 
@@ -122,10 +122,10 @@ def participants(split: ExpenseSplit) -> list[MemberId]:
 
     """
     match split:
-        case ItemisedExpenseSplit(items=items):
-            members = [member for item in items for member in item.split.members]
         case WholeExpenseSplit(split=whole):
             members = list(whole.members)
+        case ItemisedExpenseSplit(items=items):
+            members = [member for item in items for member in item.split.members]
         case _:
             assert_never(split)
     return sorted(set(members))

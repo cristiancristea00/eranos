@@ -47,7 +47,7 @@ final class Members {
     static Group theGroup() throws EranosException {
         section("1. The group");
         Group group =
-                Group.builder(Currency.of("EUR"), "Lisbon")
+                Group.builder("Lisbon", Currency.of("EUR"))
                         .description("A week by the Atlantic")
                         .language(Language.parse("pt-pt"))
                         .build();
@@ -93,11 +93,11 @@ final class Members {
         for (Member member : group.members()) {
             rows.add(
                     new MemberRow(
-                            cell(member.accounts().stream().map(Members::describe).toList()),
-                            member.email().map(Email::toString).orElse(""),
                             Stream.concat(Stream.of(member.firstName()), member.lastName().stream())
                                     .collect(Collectors.joining(" ")),
-                            member.phone().map(PhoneNumber::toString).orElse("")));
+                            member.email().map(Email::toString).orElse(""),
+                            member.phone().map(PhoneNumber::toString).orElse(""),
+                            cell(member.accounts().stream().map(Members::describe).toList())));
         }
         printTable(MemberRow.HEADERS, rows, 4);
     }
@@ -153,16 +153,16 @@ final class Members {
         section("2. Members");
         Account bank =
                 new Account(
-                        new AccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000")),
-                        "ING");
-        Account app = new Account(new AccountDetails.Username(Username.parse("@ana")), "Revolut");
+                        "ING",
+                        new AccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000")));
+        Account app = new Account("Revolut", new AccountDetails.Username(Username.parse("@ana")));
         MemberId ana =
                 group.addMember(
                         Member.builder("Ana")
-                                .accounts(List.of(bank, app))
-                                .email(Email.parse("ana@example.com"))
                                 .lastName("Popescu")
+                                .email(Email.parse("ana@example.com"))
                                 .phone(PhoneNumber.parse("+40 712 345 678"))
+                                .accounts(List.of(bank, app))
                                 .build());
         MemberId bob = group.addMember(Member.builder("Bob").build());
         MemberId carol = group.addMember(Member.builder("Carol").build());

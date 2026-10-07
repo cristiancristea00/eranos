@@ -18,10 +18,10 @@ use crate::settlement::{Settlement, SettlementStrategy};
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NewGroup {
-    /// The ISO 4217 code of the group currency, which every total is in.
-    pub currency: String,
     /// The group's name.
     pub name: String,
+    /// The ISO 4217 code of the group currency, which every total is in.
+    pub currency: String,
     /// A longer description.
     pub description: Option<String>,
     /// The language the apps show the group in, as a BCP 47 tag.
@@ -53,7 +53,7 @@ impl GroupHandle {
     /// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage).
     pub fn new(group: &NewGroup) -> Result<Self, EranosError> {
         let language = group.language.as_deref().map(Language::parse).transpose()?;
-        let group = Group::builder(currency(&group.currency)?, group.name.clone())
+        let group = Group::builder(group.name.clone(), currency(&group.currency)?)
             .description(group.description.clone().unwrap_or_default())
             .language(language)
             .build()?;

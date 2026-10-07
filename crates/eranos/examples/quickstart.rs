@@ -16,36 +16,36 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ExpenseRow {
-    #[tabled(rename = "Amount", order = 3)]
-    amount: Money,
-    #[tabled(rename = "Expense", order = 0)]
+    #[tabled(rename = "Expense")]
     name: String,
-    #[tabled(rename = "Shared by", order = 2)]
-    participants: String,
-    #[tabled(rename = "Paid by", order = 1)]
+    #[tabled(rename = "Paid by")]
     payers: String,
+    #[tabled(rename = "Shared by")]
+    participants: String,
+    #[tabled(rename = "Amount")]
+    amount: Money,
 }
 
 #[derive(Tabled)]
 struct MemberRow {
-    #[tabled(rename = "Balance", order = 3)]
-    balance: Balance,
-    #[tabled(rename = "Consumed", order = 2)]
-    consumed: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Paid", order = 1)]
+    #[tabled(rename = "Paid")]
     paid: Money,
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
 }
 
 #[derive(Tabled)]
 struct PaymentRow {
-    #[tabled(rename = "Amount", order = 2)]
-    amount: Money,
-    #[tabled(rename = "From", order = 0)]
+    #[tabled(rename = "From")]
     from: String,
-    #[tabled(rename = "To", order = 1)]
+    #[tabled(rename = "To")]
     to: String,
+    #[tabled(rename = "Amount")]
+    amount: Money,
 }
 
 /// Prints a section heading with a line under it.
@@ -73,7 +73,7 @@ fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder(Currency::EUR, "Weekend in Sinaia").build()?;
+    let mut group = Group::builder("Weekend in Sinaia", Currency::EUR).build()?;
     println!("{}", group.name());
     println!("{}", "═".repeat(group.name().chars().count()));
     println!(
@@ -98,19 +98,19 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Each expense records who paid and who shares it. Here everyone shares everything\n\
          equally."
     );
-    let friday = CalendarDate::new(25, 9, 2026)?;
+    let friday = CalendarDate::new(2026, 9, 25)?;
     let eur = |text| Money::parse(text, Currency::EUR);
     let everyone = Split::equal([ana, bob, carol]);
-    let cabin = Expense::builder(eur("240.00")?, friday, "Cabin", ana, everyone.clone());
-    let groceries = Expense::builder(eur("60.00")?, friday, "Groceries", bob, everyone);
+    let cabin = Expense::builder("Cabin", eur("240.00")?, ana, everyone.clone(), friday);
+    let groceries = Expense::builder("Groceries", eur("60.00")?, bob, everyone, friday);
     group.add_expense(cabin.build()?)?;
     group.add_expense(groceries.build()?)?;
     print_table(
         group.expenses().map(|expense| ExpenseRow {
-            amount: expense.total(),
             name: expense.name().to_owned(),
-            participants: names(&group, expense.split().participants()),
             payers: names(&group, expense.payers().members()),
+            participants: names(&group, expense.split().participants()),
+            amount: expense.total(),
         }),
         3,
     );
@@ -126,10 +126,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         group.members().map(|member| {
             let totals = summary.member(member.id());
             MemberRow {
-                balance: totals.balance(),
-                consumed: totals.share(),
                 name: member.first_name().to_owned(),
                 paid: totals.paid(),
+                consumed: totals.share(),
+                balance: totals.balance(),
             }
         }),
         1,
@@ -148,9 +148,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     print_table(
         settlement.payments().iter().map(|payment| PaymentRow {
-            amount: payment.amount(),
             from: names(&group, [payment.from()]),
             to: names(&group, [payment.to()]),
+            amount: payment.amount(),
         }),
         2,
     );

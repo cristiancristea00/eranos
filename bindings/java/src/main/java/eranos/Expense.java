@@ -15,43 +15,43 @@ import java.util.Optional;
  */
 public final class Expense {
     private final ExpenseId id;
-    private final Cost cost;
-    private final CalendarDate date;
     private final String name;
+    private final Cost cost;
     private final Split payers;
     private final ExpenseSplit split;
+    private final CalendarDate date;
+    private final Tip tip;
+    private final TimeOfDay time;
     private final CategoryId category;
     private final String description;
-    private final TimeOfDay time;
-    private final Tip tip;
 
     private Expense(Builder builder) {
         id = builder.id;
-        cost = builder.cost;
-        date = builder.date;
         name = builder.name;
+        cost = builder.cost;
         payers = builder.payers;
         split = builder.split;
+        date = builder.date;
+        tip = builder.tip;
+        time = builder.time;
         category = builder.category;
         description = builder.description;
-        time = builder.time;
-        tip = builder.tip;
     }
 
     /**
      * A builder of an expense to add, of {@code cost} on {@code date}, that {@code payers} paid and
      * {@code split} shares.
      *
-     * @param cost what it cost
-     * @param date the day it was bought
      * @param name what was bought
+     * @param cost what it cost
      * @param payers who paid the total, amount and tip, and how much each
      * @param split how the amount is shared
+     * @param date the day it was bought
      * @return the builder
      */
     public static Builder builder(
-            Cost cost, CalendarDate date, String name, Split payers, ExpenseSplit split) {
-        return new Builder(null, cost, date, name, payers, split);
+            String name, Cost cost, Split payers, ExpenseSplit split, CalendarDate date) {
+        return new Builder(null, name, cost, payers, split, date);
     }
 
     /**
@@ -61,11 +61,11 @@ public final class Expense {
      * @return the builder
      */
     public Builder toBuilder() {
-        return new Builder(id, cost, date, name, payers, split)
-                .category(category)
-                .description(description)
+        return new Builder(id, name, cost, payers, split, date)
+                .tip(tip)
                 .time(time)
-                .tip(tip);
+                .category(category)
+                .description(description);
     }
 
     /**
@@ -77,15 +77,15 @@ public final class Expense {
     static Expense converted(eranos.internal.Expense expense) {
         return new Builder(
                         null == expense.id() ? null : new ExpenseId(expense.id()),
-                        Conversions.converted(expense.cost()),
-                        CalendarDate.converted(expense.date()),
                         expense.name(),
+                        Conversions.converted(expense.cost()),
                         Conversions.converted(expense.payers()),
-                        Conversions.converted(expense.split()))
+                        Conversions.converted(expense.split()),
+                        CalendarDate.converted(expense.date()))
+                .tip(null == expense.tip() ? null : Tip.converted(expense.tip()))
+                .time(null == expense.time() ? null : TimeOfDay.converted(expense.time()))
                 .category(null == expense.category() ? null : new CategoryId(expense.category()))
                 .description(expense.description())
-                .time(null == expense.time() ? null : TimeOfDay.converted(expense.time()))
-                .tip(null == expense.tip() ? null : Tip.converted(expense.tip()))
                 .build();
     }
 
@@ -97,15 +97,15 @@ public final class Expense {
     eranos.internal.Expense generated() {
         return new eranos.internal.Expense(
                 null == id ? null : id.value(),
-                Conversions.generated(cost),
-                date.generated(),
                 name,
+                Conversions.generated(cost),
                 Conversions.generated(payers),
                 Conversions.generated(split),
-                null == category ? null : category.value(),
-                description,
+                date.generated(),
+                null == tip ? null : tip.generated(),
                 null == time ? null : time.generated(),
-                null == tip ? null : tip.generated());
+                null == category ? null : category.value(),
+                description);
     }
 
     /**
@@ -118,6 +118,15 @@ public final class Expense {
     }
 
     /**
+     * What was bought.
+     *
+     * @return the name
+     */
+    public String name() {
+        return name;
+    }
+
+    /**
      * What it cost.
      *
      * @return the cost
@@ -127,21 +136,14 @@ public final class Expense {
     }
 
     /**
-     * The day it was bought.
+     * The total, amount and tip, in the expense's own currency: what its payers paid.
      *
-     * @return the date
+     * @return the total
+     * @throws EranosException.Expense as {@link #tipAmount} does, and {@link EranosException.Money}
+     *     with {@link MoneyFailure.Overflow} for a total out of range
      */
-    public CalendarDate date() {
-        return date;
-    }
-
-    /**
-     * What was bought.
-     *
-     * @return the name
-     */
-    public String name() {
-        return name;
+    public Money total() throws EranosException {
+        return Converting.call(() -> Money.converted(Eranos.expenseTotal(generated())));
     }
 
     /**
@@ -163,30 +165,12 @@ public final class Expense {
     }
 
     /**
-     * The category.
+     * The day it was bought.
      *
-     * @return the category, empty for the built-in one
+     * @return the date
      */
-    public Optional<CategoryId> category() {
-        return Optional.ofNullable(category);
-    }
-
-    /**
-     * A longer description.
-     *
-     * @return the description, if the expense has one
-     */
-    public Optional<String> description() {
-        return Optional.ofNullable(description);
-    }
-
-    /**
-     * The time of day it was bought.
-     *
-     * @return the time, if the expense has one
-     */
-    public Optional<TimeOfDay> time() {
-        return Optional.ofNullable(time);
+    public CalendarDate date() {
+        return date;
     }
 
     /**
@@ -210,14 +194,30 @@ public final class Expense {
     }
 
     /**
-     * The total, amount and tip, in the expense's own currency: what its payers paid.
+     * The time of day it was bought.
      *
-     * @return the total
-     * @throws EranosException.Expense as {@link #tipAmount} does, and {@link EranosException.Money}
-     *     with {@link MoneyFailure.Overflow} for a total out of range
+     * @return the time, if the expense has one
      */
-    public Money total() throws EranosException {
-        return Converting.call(() -> Money.converted(Eranos.expenseTotal(generated())));
+    public Optional<TimeOfDay> time() {
+        return Optional.ofNullable(time);
+    }
+
+    /**
+     * The category.
+     *
+     * @return the category, empty for the built-in one
+     */
+    public Optional<CategoryId> category() {
+        return Optional.ofNullable(category);
+    }
+
+    /**
+     * A longer description.
+     *
+     * @return the description, if the expense has one
+     */
+    public Optional<String> description() {
+        return Optional.ofNullable(description);
     }
 
     /**
@@ -236,91 +236,69 @@ public final class Expense {
     public boolean equals(Object other) {
         return other instanceof Expense expense
                 && Objects.equals(id, expense.id)
-                && cost.equals(expense.cost)
-                && date.equals(expense.date)
                 && name.equals(expense.name)
+                && cost.equals(expense.cost)
                 && payers.equals(expense.payers)
                 && split.equals(expense.split)
-                && Objects.equals(category, expense.category)
-                && Objects.equals(description, expense.description)
+                && date.equals(expense.date)
+                && Objects.equals(tip, expense.tip)
                 && Objects.equals(time, expense.time)
-                && Objects.equals(tip, expense.tip);
+                && Objects.equals(category, expense.category)
+                && Objects.equals(description, expense.description);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, cost, date, name, payers, split, category, description, time, tip);
+        return Objects.hash(id, name, cost, payers, split, date, tip, time, category, description);
     }
 
     @Override
     public String toString() {
         return "Expense[id="
                 + id
-                + ", cost="
-                + cost
-                + ", date="
-                + date
                 + ", name="
                 + name
+                + ", cost="
+                + cost
                 + ", payers="
                 + payers
                 + ", split="
                 + split
+                + ", date="
+                + date
+                + ", tip="
+                + tip
+                + ", time="
+                + time
                 + ", category="
                 + category
                 + ", description="
                 + description
-                + ", time="
-                + time
-                + ", tip="
-                + tip
                 + "]";
     }
 
     /** A builder of an expense, whose every setter replaces what was set before. */
     public static final class Builder {
         private final ExpenseId id;
-        private Cost cost;
-        private CalendarDate date;
         private String name;
+        private Cost cost;
         private Split payers;
         private ExpenseSplit split;
+        private CalendarDate date;
+        private Tip tip;
+        private TimeOfDay time;
         private CategoryId category;
         private String description;
-        private TimeOfDay time;
-        private Tip tip;
 
         private Builder(
                 ExpenseId id,
-                Cost cost,
-                CalendarDate date,
                 String name,
+                Cost cost,
                 Split payers,
-                ExpenseSplit split) {
+                ExpenseSplit split,
+                CalendarDate date) {
             this.id = id;
-            cost(cost).date(date).name(name).payers(payers).split(split);
-        }
-
-        /**
-         * Sets what it cost.
-         *
-         * @param cost the cost
-         * @return this builder
-         */
-        public Builder cost(Cost cost) {
-            this.cost = Objects.requireNonNull(cost, "cost");
-            return this;
-        }
-
-        /**
-         * Sets the day it was bought.
-         *
-         * @param date the date
-         * @return this builder
-         */
-        public Builder date(CalendarDate date) {
-            this.date = Objects.requireNonNull(date, "date");
-            return this;
+            name(name).cost(cost).payers(payers).split(split).date(date);
         }
 
         /**
@@ -331,6 +309,17 @@ public final class Expense {
          */
         public Builder name(String name) {
             this.name = Objects.requireNonNull(name, "name");
+            return this;
+        }
+
+        /**
+         * Sets what it cost.
+         *
+         * @param cost the cost
+         * @return this builder
+         */
+        public Builder cost(Cost cost) {
+            this.cost = Objects.requireNonNull(cost, "cost");
             return this;
         }
 
@@ -357,6 +346,39 @@ public final class Expense {
         }
 
         /**
+         * Sets the day it was bought.
+         *
+         * @param date the date
+         * @return this builder
+         */
+        public Builder date(CalendarDate date) {
+            this.date = Objects.requireNonNull(date, "date");
+            return this;
+        }
+
+        /**
+         * Sets the tip; {@code null} leaves the expense without one.
+         *
+         * @param tip the tip, or {@code null}
+         * @return this builder
+         */
+        public Builder tip(Tip tip) {
+            this.tip = tip;
+            return this;
+        }
+
+        /**
+         * Sets the time of day it was bought; {@code null} leaves the expense without one.
+         *
+         * @param time the time, or {@code null}
+         * @return this builder
+         */
+        public Builder time(TimeOfDay time) {
+            this.time = time;
+            return this;
+        }
+
+        /**
          * Sets the category; {@code null} leaves the expense in the built-in one.
          *
          * @param category the category, or {@code null}
@@ -375,28 +397,6 @@ public final class Expense {
          */
         public Builder description(String description) {
             this.description = description;
-            return this;
-        }
-
-        /**
-         * Sets the time of day it was bought; {@code null} leaves the expense without one.
-         *
-         * @param time the time, or {@code null}
-         * @return this builder
-         */
-        public Builder time(TimeOfDay time) {
-            this.time = time;
-            return this;
-        }
-
-        /**
-         * Sets the tip; {@code null} leaves the expense without one.
-         *
-         * @param tip the tip, or {@code null}
-         * @return this builder
-         */
-        public Builder tip(Tip tip) {
-            this.tip = tip;
             return this;
         }
 

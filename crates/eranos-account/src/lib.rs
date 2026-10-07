@@ -30,18 +30,18 @@ pub use iban::Iban;
 /// ```
 /// use eranos::{Account, AccountKind, Iban, Username};
 ///
-/// let bank = Account::new(Iban::parse("RO49AAAA1B31007593840000")?, "ING")?;
+/// let bank = Account::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?;
 /// assert_eq!(bank.kind(), AccountKind::Iban);
 ///
-/// let app = Account::new(Username::new("@ana")?, "Revolut")?;
+/// let app = Account::new("Revolut", Username::new("@ana")?)?;
 /// assert_eq!(app.name(), "Revolut");
 /// # Ok::<(), eranos::error::AccountError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Account {
-    details: AccountDetails,
     name: String,
+    details: AccountDetails,
 }
 
 impl Account {
@@ -51,14 +51,20 @@ impl Account {
     ///
     /// [`AccountError::EmptyName`] when the name is blank.
     pub fn new(
-        details: impl Into<AccountDetails>,
         name: impl Into<String>,
+        details: impl Into<AccountDetails>,
     ) -> Result<Self, AccountError> {
         let name = text::required(name, AccountError::EmptyName)?;
         Ok(Self {
-            details: details.into(),
             name,
+            details: details.into(),
         })
+    }
+
+    /// The account's label, such as `"ING"` or `"Revolut"`.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// The account details.
@@ -71,12 +77,6 @@ impl Account {
     #[must_use]
     pub const fn kind(&self) -> AccountKind {
         self.details.kind()
-    }
-
-    /// The account's label, such as `"ING"` or `"Revolut"`.
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
     }
 }
 
@@ -198,8 +198,8 @@ impl FromStr for Username {
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct AccountRecord {
-    details: AccountDetails,
     name: String,
+    details: AccountDetails,
 }
 
 // Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
@@ -208,7 +208,7 @@ struct AccountRecord {
 impl<'de> serde::Deserialize<'de> for Account {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
         let record = AccountRecord::deserialize(deserialiser)?;
-        Self::new(record.details, record.name).map_err(serde::de::Error::custom)
+        Self::new(record.name, record.details).map_err(serde::de::Error::custom)
     }
 }
 

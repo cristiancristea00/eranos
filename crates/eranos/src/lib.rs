@@ -17,14 +17,14 @@
 //!     Split, Tip,
 //! };
 //!
-//! let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
+//! let mut group = Group::builder("Lisbon", Currency::EUR).build()?;
 //! let ana = group.add_member(Member::builder("Ana").build()?)?;
 //! let bob = group.add_member(Member::builder("Bob").build()?)?;
 //! let carol = group.add_member(Member::builder("Carol").build()?)?;
 //!
 //! // Ana paid dinner for three, plus a 10 % tip.
-//! let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-//! let dinner = Expense::builder(amount, day, "Dinner", ana, Split::equal([ana, bob, carol]))
+//! let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+//! let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), day)
 //!     .tip(Tip::percentage(Percentage::parse("10")?))
 //!     .build()?;
 //! group.add_expense(dinner)?;
@@ -83,13 +83,13 @@
 //!     Split,
 //! };
 //!
-//! let shared = SharedGroup::new(Group::builder(Currency::EUR, "Flat").build()?);
+//! let shared = SharedGroup::new(Group::builder("Flat", Currency::EUR).build()?);
 //! let ana = block_on(shared.add_member(Member::builder("Ana").build()?))?;
 //! let bob = block_on(shared.add_member(Member::builder("Bob").build()?))?;
 //!
 //! // Ana pays the rent; a clone shares the group, as another task would.
-//! let (amount, day) = (Money::parse("900.00", Currency::EUR)?, CalendarDate::new(1, 10, 2026)?);
-//! let rent = Expense::builder(amount, day, "Rent", ana, Split::equal([ana, bob])).build()?;
+//! let (amount, day) = (Money::parse("900.00", Currency::EUR)?, CalendarDate::new(2026, 10, 1)?);
+//! let rent = Expense::builder("Rent", amount, ana, Split::equal([ana, bob]), day).build()?;
 //! let other = shared.clone();
 //! block_on(other.add_expense(rent))?;
 //!

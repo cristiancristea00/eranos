@@ -10,7 +10,7 @@ use eranos_money::Currency;
 use super::*;
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 fn per_cent(text: &str) -> Percentage {
@@ -31,14 +31,14 @@ fn the_default_tip_is_none_at_all() {
 /// charging light eaters as much as heavy ones.
 #[test]
 fn tips_are_shared_proportionally_by_default() {
-    // Fixed tips.
-    let fixed = Tip::fixed(euros(500));
-    assert_eq!(fixed.value(), TipValue::Fixed(euros(500)));
-    assert_eq!(fixed.distribution(), TipDistribution::Proportional);
     // Percentage tips.
     let percentage = Tip::percentage(per_cent("10"));
     assert_eq!(percentage.value(), TipValue::Percentage(per_cent("10")));
     assert_eq!(percentage.distribution(), TipDistribution::Proportional);
+    // Fixed tips.
+    let fixed = Tip::fixed(euros(500));
+    assert_eq!(fixed.value(), TipValue::Fixed(euros(500)));
+    assert_eq!(fixed.distribution(), TipDistribution::Proportional);
     // The distribution's own default.
     assert_eq!(TipDistribution::default(), TipDistribution::Proportional);
 }
@@ -46,15 +46,15 @@ fn tips_are_shared_proportionally_by_default() {
 /// Choosing an equal distribution would also change the tip's value.
 #[test]
 fn distributed_changes_only_the_distribution() {
-    // Fixed tips.
-    let fixed = Tip::fixed(euros(500)).distributed(TipDistribution::Equal);
-    assert_eq!(fixed.value(), TipValue::Fixed(euros(500)));
-    assert_eq!(fixed.distribution(), TipDistribution::Equal);
     // Percentage tips, switched back and forth.
     let percentage = Tip::percentage(per_cent("10"))
         .distributed(TipDistribution::Equal)
         .distributed(TipDistribution::Proportional);
     assert_eq!(percentage, Tip::percentage(per_cent("10")));
+    // Fixed tips.
+    let fixed = Tip::fixed(euros(500)).distributed(TipDistribution::Equal);
+    assert_eq!(fixed.value(), TipValue::Fixed(euros(500)));
+    assert_eq!(fixed.distribution(), TipDistribution::Equal);
 }
 
 /// A percentage tip would charge another amount than the percentage says.
@@ -71,10 +71,10 @@ fn a_percentage_tip_is_that_share_of_the_amount() {
         Ok(euros(1_500))
     );
     // Currencies without decimals: 10 % of 1234 JPY is 123.4, so 123.
-    let yen = Money::from_minor_units(Currency::JPY, 1_234);
+    let yen = Money::from_minor_units(1_234, Currency::JPY);
     assert_eq!(
         Tip::percentage(per_cent("10")).amount_on(yen),
-        Ok(Money::from_minor_units(Currency::JPY, 123))
+        Ok(Money::from_minor_units(123, Currency::JPY))
     );
 }
 
@@ -117,19 +117,19 @@ fn a_fixed_tip_is_added_as_entered() {
 /// An expense with a tip of zero would be refused.
 #[test]
 fn zero_tips_are_allowed() {
-    // Fixed and percentage.
-    assert_eq!(Tip::fixed(euros(0)).amount_on(euros(9_000)), Ok(euros(0)));
+    // Percentage and fixed.
     assert_eq!(
         Tip::percentage(Percentage::ZERO).amount_on(euros(9_000)),
         Ok(euros(0))
     );
+    assert_eq!(Tip::fixed(euros(0)).amount_on(euros(9_000)), Ok(euros(0)));
 }
 
 /// A tip in dollars would be added to a euro expense as if it were euros.
 #[test]
 fn a_fixed_tip_in_another_currency_is_rejected() {
     // A dollar tip on a euro expense.
-    let dollars = Money::from_minor_units(Currency::USD, 500);
+    let dollars = Money::from_minor_units(500, Currency::USD);
     assert_eq!(
         Tip::fixed(dollars).amount_on(euros(9_000)),
         Err(ExpenseError::CurrencyMismatch {
@@ -138,7 +138,7 @@ fn a_fixed_tip_in_another_currency_is_rejected() {
         })
     );
     // The currency is checked before the sign.
-    let negative_dollars = Money::from_minor_units(Currency::USD, -500);
+    let negative_dollars = Money::from_minor_units(-500, Currency::USD);
     assert_eq!(
         Tip::fixed(negative_dollars).amount_on(euros(9_000)),
         Err(ExpenseError::CurrencyMismatch {
@@ -199,34 +199,34 @@ fn tips_round_trip_through_serde() {
 /// A tip's value as a crate outside this one converts it.
 #[derive(Debug, PartialEq, Eq)]
 enum ConvertedValue {
-    Fixed(Money),
     Percentage(Percentage),
+    Fixed(Money),
 }
 
 impl FromTipValue for ConvertedValue {
-    fn fixed(amount: Money) -> Self {
-        Self::Fixed(amount)
-    }
-
     fn percentage(percentage: Percentage) -> Self {
         Self::Percentage(percentage)
+    }
+
+    fn fixed(amount: Money) -> Self {
+        Self::Fixed(amount)
     }
 }
 
 /// A tip's distribution as a crate outside this one converts it.
 #[derive(Debug, PartialEq, Eq)]
 enum ConvertedDistribution {
-    Equal,
     Proportional,
+    Equal,
 }
 
 impl FromTipDistribution for ConvertedDistribution {
-    fn equal() -> Self {
-        Self::Equal
-    }
-
     fn proportional() -> Self {
         Self::Proportional
+    }
+
+    fn equal() -> Self {
+        Self::Equal
     }
 }
 
@@ -236,19 +236,19 @@ impl FromTipDistribution for ConvertedDistribution {
 #[test]
 fn a_tip_converts_through_the_methods_of_its_variants() {
     assert_eq!(
-        ConvertedValue::from_tip_value(TipValue::Fixed(euros(500))),
-        ConvertedValue::Fixed(euros(500))
-    );
-    assert_eq!(
         ConvertedValue::from_tip_value(TipValue::Percentage(per_cent("10"))),
         ConvertedValue::Percentage(per_cent("10"))
     );
     assert_eq!(
-        ConvertedDistribution::from_tip_distribution(TipDistribution::Equal),
-        ConvertedDistribution::Equal
+        ConvertedValue::from_tip_value(TipValue::Fixed(euros(500))),
+        ConvertedValue::Fixed(euros(500))
     );
     assert_eq!(
         ConvertedDistribution::from_tip_distribution(TipDistribution::Proportional),
         ConvertedDistribution::Proportional
+    );
+    assert_eq!(
+        ConvertedDistribution::from_tip_distribution(TipDistribution::Equal),
+        ConvertedDistribution::Equal
     );
 }

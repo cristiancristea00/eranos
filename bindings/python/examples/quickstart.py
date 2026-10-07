@@ -32,17 +32,17 @@ class ExpenseRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Expense', 'Paid by', 'Shared by', 'Amount')
 
-    amount: Money
-    """What the expense cost."""
-
     name: str
     """What the expense was."""
+
+    payers: str
+    """Who paid it."""
 
     participants: str
     """Who share it."""
 
-    payers: str
-    """Who paid it."""
+    amount: Money
+    """What the expense cost."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -56,17 +56,17 @@ class MemberRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Balance')
 
-    balance: Balance
-    """Where the member stands."""
-
-    consumed: Money
-    """What the member consumed."""
-
     name: str
     """The member's first name."""
 
     paid: Money
     """What the member paid."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    balance: Balance
+    """Where the member stands."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -80,14 +80,14 @@ class PaymentRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('From', 'To', 'Amount')
 
-    amount: Money
-    """What is paid."""
-
     from_: str
     """Who pays."""
 
     to: str
     """Who is paid."""
+
+    amount: Money
+    """What is paid."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -97,7 +97,7 @@ class PaymentRow(Row):
 def main() -> None:
     """Print the report, checking its key numbers."""
     euro = Currency('EUR')
-    group = Group.create(euro, 'Weekend in Sinaia')
+    group = Group.create('Weekend in Sinaia', euro)
     title(group.name())
     print_lines(
         f'Three friends rent a cabin and buy groceries. The group keeps its books in {group.currency()}, so',
@@ -112,18 +112,18 @@ def main() -> None:
 
     section('2. Expenses')
     print_lines('Each expense records who paid and who shares it. Here everyone shares everything', 'equally.')
-    friday = CalendarDate(25, 9, 2026)
+    friday = CalendarDate(2026, 9, 25)
     everyone = WholeExpenseSplit(EqualSplit((ana, bob, carol)))
-    group.add_expense(Expense(cost=LocalCost(Money.parse('240.00', euro)), date=friday, name='Cabin', payers=EqualSplit((ana,)), split=everyone))
-    group.add_expense(Expense(cost=LocalCost(Money.parse('60.00', euro)), date=friday, name='Groceries', payers=EqualSplit((bob,)), split=everyone))
+    group.add_expense(Expense(name='Cabin', cost=LocalCost(Money.parse('240.00', euro)), payers=EqualSplit((ana,)), split=everyone, date=friday))
+    group.add_expense(Expense(name='Groceries', cost=LocalCost(Money.parse('60.00', euro)), payers=EqualSplit((bob,)), split=everyone, date=friday))
     print_table(
         ExpenseRow,
         [
             ExpenseRow(
-                amount=expense.total(),
                 name=expense.name,
-                participants=names(group, participants(expense.split)),
                 payers=names(group, expense.payers.members),
+                participants=names(group, participants(expense.split)),
+                amount=expense.total(),
             )
             for expense in group.expenses()
         ],
@@ -139,7 +139,7 @@ def main() -> None:
     print_table(
         MemberRow,
         [
-            MemberRow(balance=found.balance, consumed=found.share, name=member.first_name, paid=found.paid)
+            MemberRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=found.balance)
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],
@@ -155,7 +155,7 @@ def main() -> None:
     print_table(
         PaymentRow,
         [
-            PaymentRow(amount=payment.amount, from_=names(group, (payment.sender,)), to=names(group, (payment.receiver,)))
+            PaymentRow(from_=names(group, (payment.sender,)), to=names(group, (payment.receiver,)), amount=payment.amount)
             for payment in settlement.payments
         ],
         2,

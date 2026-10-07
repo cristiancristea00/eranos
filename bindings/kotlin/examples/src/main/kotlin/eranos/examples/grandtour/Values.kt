@@ -19,9 +19,9 @@ import eranos.examples.section
 
 private data class CurrencyRow(
     val code: String,
-    val decimalPlaces: Int,
     val name: String,
     val numericCode: Int,
+    val decimalPlaces: Int,
 ) : Row {
     override val cells: List<String>
         get() = listOf(code, name, "$numericCode", "$decimalPlaces")
@@ -47,7 +47,7 @@ internal fun currencies() {
     val rows =
         listOf("EUR", "RON", "JPY", "BHD").map { code ->
             val currency = Currency.of(code)
-            CurrencyRow(code = currency.code, decimalPlaces = currency.decimalPlaces, name = currency.name, numericCode = currency.numericCode)
+            CurrencyRow(code = currency.code, name = currency.name, numericCode = currency.numericCode, decimalPlaces = currency.decimalPlaces)
         }
     val unknown = refusal { Currency.of("XYZ") }
     println(
@@ -65,8 +65,8 @@ internal fun amounts() {
     val change = eur("5.00") - eur("7.50")
     val mixed = refusal { eur("1.00") + ron("1.00") }
     val yen = Money.parse("1500", Currency.of("JPY"))
-    val dinars = Money(Currency.of("BHD"), 1_234)
-    val nothing = Money(Currency.of("RON"), 0)
+    val dinars = Money(1_234, Currency.of("BHD"))
+    val nothing = Money(0, Currency.of("RON"))
     val cost = Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"))
     val doubled = Cost.Converted(eur("20.00"), rate(cost))
     println("Amounts are exact minor units in their currency:")
@@ -128,7 +128,7 @@ internal fun datesAndIdentifiers(
         ValueRow.HEADERS,
         listOf(
             ValueRow("2026-10-01", "$date: day ${date.day}, month ${date.month}, year ${date.year}"),
-            ValueRow("29 February 2027", message(refusal { CalendarDate.of(29, 2, 2027) })),
+            ValueRow("29 February 2027", message(refusal { CalendarDate.of(2027, 2, 29) })),
             ValueRow("22:15", "$time: hour ${time.hour}, minute ${time.minute}"),
             ValueRow("24:00", message(refusal { TimeOfDay.of(24, 0) })),
             ValueRow("Ana's identifier", "$parsed, the same after a round trip: ${people.ana == found}"),

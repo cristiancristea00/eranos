@@ -61,16 +61,16 @@ const ENTRIES_PER_YIELD: u64 = 1_024;
 /// ```
 /// use eranos::{Currency, CalendarDate, Expense, Group, Member, Money, SettlementStrategy, Split};
 ///
-/// let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
+/// let mut group = Group::builder("Lisbon", Currency::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let carol = group.add_member(Member::builder("Carol").build()?)?;
 ///
-/// let day = CalendarDate::new(23, 9, 2026)?;
+/// let day = CalendarDate::new(2026, 9, 23)?;
 /// let eur = |text| Money::parse(text, Currency::EUR);
 /// let everyone = Split::equal([ana, bob, carol]);
-/// group.add_expense(Expense::builder(eur("300.00")?, day, "Hotel", ana, everyone.clone()).build()?)?;
-/// group.add_expense(Expense::builder(eur("60.00")?, day, "Dinner", bob, everyone).build()?)?;
+/// group.add_expense(Expense::builder("Hotel", eur("300.00")?, ana, everyone.clone(), day).build()?)?;
+/// group.add_expense(Expense::builder("Dinner", eur("60.00")?, bob, everyone, day).build()?)?;
 ///
 /// assert_eq!(group.summary().total_spent(), eur("360.00")?);
 /// // Everyone's share is 120.00: Ana gets back 180.00, Bob owes 60.00, Carol 120.00.
@@ -81,22 +81,22 @@ const ENTRIES_PER_YIELD: u64 = 1_024;
 #[derive(Debug, Clone)]
 pub struct Group {
     id: GroupId,
-    categories: BTreeMap<CategoryId, Category>,
-    currency: Currency,
-    expenses: BTreeMap<ExpenseId, ExpenseRecord>,
-    ledger: Ledger,
-    members: BTreeMap<MemberId, MemberRecord>,
     name: String,
-    settlements: Settlements,
-    transfers: BTreeMap<TransferId, TransferRecord>,
+    currency: Currency,
     description: Option<String>,
     language: Option<Language>,
+    members: BTreeMap<MemberId, MemberRecord>,
+    categories: BTreeMap<CategoryId, Category>,
+    expenses: BTreeMap<ExpenseId, ExpenseRecord>,
+    transfers: BTreeMap<TransferId, TransferRecord>,
+    ledger: Ledger,
+    settlements: Settlements,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct MemberRecord {
-    archived: bool,
     member: Member,
+    archived: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -115,38 +115,38 @@ struct Rerated<Resolution> {
 
 #[derive(Debug, Clone)]
 struct TransferRecord {
+    transfer: Transfer,
     /// The amount in the group currency, in minor units.
     amount: i64,
-    transfer: Transfer,
 }
 
 impl Group {
-    /// Starts a group with its required currency and name.
+    /// Starts a group with its required name and currency.
     ///
     /// Every total, balance, and settlement is in the group currency.
-    pub fn builder(currency: Currency, name: impl Into<String>) -> GroupBuilder {
-        GroupBuilder::new(currency, name.into())
+    pub fn builder(name: impl Into<String>, currency: Currency) -> GroupBuilder {
+        GroupBuilder::new(name.into(), currency)
     }
 
     fn new(
         id: GroupId,
-        currency: Currency,
         name: String,
+        currency: Currency,
         description: Option<String>,
         language: Option<Language>,
     ) -> Self {
         Self {
             id,
-            categories: BTreeMap::from([(CategoryId::UNCATEGORISED, Category::uncategorised())]),
-            currency,
-            expenses: BTreeMap::new(),
-            ledger: Ledger::new(currency),
-            members: BTreeMap::new(),
             name,
-            settlements: Settlements::default(),
-            transfers: BTreeMap::new(),
+            currency,
             description,
             language,
+            members: BTreeMap::new(),
+            categories: BTreeMap::from([(CategoryId::UNCATEGORISED, Category::uncategorised())]),
+            expenses: BTreeMap::new(),
+            transfers: BTreeMap::new(),
+            ledger: Ledger::new(currency),
+            settlements: Settlements::default(),
         }
     }
 
@@ -155,6 +155,344 @@ impl Group {
     /// The identifier.
     pub const fn id(&self) -> GroupId {
         self.id
+    }
+
+    // --- Name ----------------------------------------------------------------
+
+    /// The name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Renames the group.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::EmptyName`] when the name is blank.
+    pub fn set_name(&mut self, name: impl Into<String>) -> Result<(), GroupError> {
+        self.name = text::required(name, GroupError::EmptyName)?;
+        Ok(())
+    }
+
+    // --- Currency ------------------------------------------------------------
+
+    /// The currency of every total, balance, and settlement.
+    pub const fn currency(&self) -> Currency {
+        self.currency
+    }
+
+    /// Moves the group to another currency, re-converting every entry.
+    ///
+    /// `rates` must hold, for every currency the group's entries use other
+    /// than `currency`, its rate into `currency`; entries in the old group
+    /// currency count too. Every entry in such a currency gets a converted
+    /// cost at that rate, and entries in `currency` a local one. Everything is
+    /// recomputed, which takes time proportional to the number of entries;
+    /// on an error nothing changes. Moving to the current currency does
+    /// nothing.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::DuplicateExchangeRate`] when `rates` lists a currency
+    ///   twice.
+    /// - [`GroupError::MissingExchangeRate`] when a currency in use has no
+    ///   rate.
+    /// - [`GroupError::Overflow`] when a converted total leaves the range of
+    ///   an amount.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{
+    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, Group, Member, Money, Split,
+    /// };
+    ///
+    /// let mut group = Group::builder("Trip", Currency::EUR).build()?;
+    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
+    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// group.add_expense(Expense::builder("Museum", amount, ana, Split::equal([ana]), day).build()?)?;
+    ///
+    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
+    /// group.change_currency(Currency::RON, &[rate])?;
+    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn change_currency(
+        &mut self,
+        currency: Currency,
+        rates: &[CurrencyRate],
+    ) -> Result<(), GroupError> {
+        self.change_currency_async(currency, rates).complete()
+    }
+
+    /// Moves the group to another currency, as
+    /// [`change_currency`](Self::change_currency) does, yielding while it
+    /// re-converts the entries.
+    ///
+    /// It yields once per 1 024 entries and changes the group only after
+    /// its last yield, so a call dropped before it completes leaves the
+    /// group as it was.
+    ///
+    /// # Errors
+    ///
+    /// As for [`change_currency`](Self::change_currency).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::cooperative::block_on;
+    /// use eranos::{
+    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, Group, Member, Money, Split,
+    /// };
+    ///
+    /// let mut group = Group::builder("Trip", Currency::EUR).build()?;
+    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
+    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// group.add_expense(Expense::builder("Museum", amount, ana, Split::equal([ana]), day).build()?)?;
+    ///
+    /// // Awaited like any future; `block_on` runs it on this thread.
+    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
+    /// block_on(group.change_currency_async(Currency::RON, &[rate]))?;
+    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn change_currency_async(
+        &mut self,
+        currency: Currency,
+        rates: &[CurrencyRate],
+    ) -> Cooperative<impl Future<Output = Result<(), GroupError>> + Send> {
+        Cooperative::new(self.change_currency_paced(currency, rates))
+    }
+
+    /// The computation of
+    /// [`change_currency_async`](Self::change_currency_async).
+    async fn change_currency_paced(
+        &mut self,
+        currency: Currency,
+        rates: &[CurrencyRate],
+    ) -> Result<(), GroupError> {
+        if currency == self.currency {
+            return Ok(());
+        }
+        // A change names a rate for each of a few currencies, so scanning the
+        // list finds one sooner than a map keyed by currency would.
+        for (position, rate) in rates.iter().enumerate() {
+            if rates
+                .iter()
+                .take(position)
+                .any(|earlier| earlier.currency() == rate.currency())
+            {
+                return Err(GroupError::DuplicateExchangeRate {
+                    currency: rate.currency(),
+                });
+            }
+        }
+        let rate_for = |source: Currency| -> Result<Option<ExchangeRate>, GroupError> {
+            if source == currency {
+                Ok(None)
+            } else {
+                rates
+                    .iter()
+                    .find(|rate| rate.currency() == source)
+                    .map(|rate| Some(rate.rate()))
+                    .ok_or(GroupError::MissingExchangeRate { currency: source })
+            }
+        };
+
+        // `rate_for` gives every other currency its rate and `currency` none,
+        // so every cost has the kind `check_cost` asks for.
+        let mut pacer = Pacer::new(ENTRIES_PER_YIELD);
+        let mut delta = Delta::default();
+        let mut expenses = Vec::with_capacity(self.expenses.len());
+        for record in self.expenses.values() {
+            let rate = rate_for(record.expense.amount().currency())?;
+            let resolution = resolve_expense_at(&record.expense, rate, currency)
+                .map_err(|_| GroupError::Overflow)?;
+            delta.add_expense(&resolution, record.expense.category(), 1);
+            expenses.push(Rerated { rate, resolution });
+            pacer.advance(1).await;
+        }
+        let mut transfers = Vec::with_capacity(self.transfers.len());
+        for record in self.transfers.values() {
+            let rate = rate_for(record.transfer.amount().currency())?;
+            let resolution = resolve_transfer_at(&record.transfer, rate, currency)
+                .map_err(|_| GroupError::Overflow)?;
+            delta.add_transfer(pair(&record.transfer), resolution, 1);
+            transfers.push(Rerated { rate, resolution });
+            pacer.advance(1).await;
+        }
+        // Nothing is written before the last yield, so a call dropped at
+        // any of them leaves the group as it was.
+        let mut ledger = Ledger::new(currency);
+        ledger.apply(&delta).map_err(|_| GroupError::Overflow)?;
+
+        // Each entry is moved into its new record, in the same order as its
+        // resolution, rather than copied.
+        self.expenses = std::mem::take(&mut self.expenses)
+            .into_iter()
+            .zip(expenses)
+            .map(|((id, record), rerated)| {
+                let expense = record.expense.with_exchange_rate(rerated.rate);
+                let resolved = rerated.resolution;
+                (id, ExpenseRecord { expense, resolved })
+            })
+            .collect();
+        self.transfers = std::mem::take(&mut self.transfers)
+            .into_iter()
+            .zip(transfers)
+            .map(|((id, record), rerated)| {
+                let transfer = record.transfer.with_exchange_rate(rerated.rate);
+                let amount = rerated.resolution;
+                (id, TransferRecord { transfer, amount })
+            })
+            .collect();
+        self.currency = currency;
+        self.ledger = ledger;
+        self.invalidate_settlements();
+        Ok(())
+    }
+
+    // --- Description ---------------------------------------------------------
+
+    /// The description, if any.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    /// Sets the description; blank text clears it.
+    pub fn set_description(&mut self, description: impl Into<String>) {
+        self.description = text::optional(description);
+    }
+
+    // --- Language ------------------------------------------------------------
+
+    /// The language the apps show the group in, if set.
+    pub const fn language(&self) -> Option<&Language> {
+        self.language.as_ref()
+    }
+
+    /// Sets the language, or clears it with `None`.
+    pub fn set_language(&mut self, language: impl Into<Option<Language>>) {
+        self.language = language.into();
+    }
+
+    // --- Members -------------------------------------------------------------
+
+    /// Every member, archived ones included, in the order they were created;
+    /// each carries its identifier.
+    pub fn members(&self) -> impl ExactSizeIterator<Item = &Member> + '_ {
+        self.members.values().map(|record| &record.member)
+    }
+
+    /// The member with this identifier.
+    pub fn member(&self, id: MemberId) -> Option<&Member> {
+        self.members.get(&id).map(|record| &record.member)
+    }
+
+    /// Whether the member is archived; `false` for an unknown member.
+    pub fn is_archived(&self, id: MemberId) -> bool {
+        self.members.get(&id).is_some_and(|record| record.archived)
+    }
+
+    /// Adds a member under its identifier.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::DuplicateMember`] when the group already has a member
+    /// with this identifier.
+    pub fn add_member(&mut self, member: Member) -> Result<MemberId, GroupError> {
+        let id = member.id();
+        match self.members.entry(id) {
+            Entry::Occupied(_) => Err(GroupError::DuplicateMember(id)),
+            Entry::Vacant(slot) => {
+                slot.insert(MemberRecord {
+                    member,
+                    archived: false,
+                });
+                Ok(id)
+            }
+        }
+    }
+
+    /// Replaces the details of the member with the identifier of `member`,
+    /// returning the previous ones; an archived member stays archived.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::UnknownMember`] when there is no such member.
+    pub fn replace_member(&mut self, member: Member) -> Result<Member, GroupError> {
+        let id = member.id();
+        let record = self
+            .members
+            .get_mut(&id)
+            .ok_or(GroupError::UnknownMember(id))?;
+        Ok(std::mem::replace(&mut record.member, member))
+    }
+
+    /// Archives a member: they keep their history and balance, and can still
+    /// send and receive transfers, but cannot join new expenses. Archiving
+    /// an archived member does nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::UnknownMember`] when there is no such member.
+    pub fn archive_member(&mut self, id: MemberId) -> Result<(), GroupError> {
+        self.members
+            .get_mut(&id)
+            .ok_or(GroupError::UnknownMember(id))?
+            .archived = true;
+        Ok(())
+    }
+
+    /// Makes an archived member active again. Unarchiving an active member
+    /// does nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::UnknownMember`] when there is no such member.
+    pub fn unarchive_member(&mut self, id: MemberId) -> Result<(), GroupError> {
+        self.members
+            .get_mut(&id)
+            .ok_or(GroupError::UnknownMember(id))?
+            .archived = false;
+        Ok(())
+    }
+
+    /// Removes a member who appears in no expense and no transfer, returning
+    /// their details.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::UnknownMember`] when there is no such member.
+    /// - [`GroupError::MemberInUse`] listing the entries that still
+    ///   reference them; archive the member instead to keep that history.
+    pub fn remove_member(&mut self, id: MemberId) -> Result<Member, GroupError> {
+        if !self.members.contains_key(&id) {
+            return Err(GroupError::UnknownMember(id));
+        }
+        let expenses: Vec<ExpenseId> = self
+            .expenses
+            .iter()
+            .filter(|(_, record)| record.expense.members().contains(&id))
+            .map(|(&id, _)| id)
+            .collect();
+        let transfers: Vec<TransferId> = self
+            .transfers
+            .iter()
+            .filter(|(_, record)| record.transfer.from() == id || record.transfer.to() == id)
+            .map(|(&id, _)| id)
+            .collect();
+        if !expenses.is_empty() || !transfers.is_empty() {
+            return Err(GroupError::MemberInUse {
+                member: id,
+                expenses,
+                transfers,
+            });
+        }
+        self.members
+            .remove(&id)
+            .map(|record| record.member)
+            .ok_or(GroupError::UnknownMember(id))
     }
 
     // --- Categories ----------------------------------------------------------
@@ -257,184 +595,6 @@ impl Group {
             Some((&existing, _)) => Err(GroupError::DuplicateCategoryName { existing }),
             None => Ok(()),
         }
-    }
-
-    // --- Currency ------------------------------------------------------------
-
-    /// The currency of every total, balance, and settlement.
-    pub const fn currency(&self) -> Currency {
-        self.currency
-    }
-
-    /// Moves the group to another currency, re-converting every entry.
-    ///
-    /// `rates` must hold, for every currency the group's entries use other
-    /// than `currency`, its rate into `currency`; entries in the old group
-    /// currency count too. Every entry in such a currency gets a converted
-    /// cost at that rate, and entries in `currency` a local one. Everything is
-    /// recomputed, which takes time proportional to the number of entries;
-    /// on an error nothing changes. Moving to the current currency does
-    /// nothing.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::DuplicateExchangeRate`] when `rates` lists a currency
-    ///   twice.
-    /// - [`GroupError::MissingExchangeRate`] when a currency in use has no
-    ///   rate.
-    /// - [`GroupError::Overflow`] when a converted total leaves the range of
-    ///   an amount.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use eranos::{
-    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, Group, Member, Money, Split,
-    /// };
-    ///
-    /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
-    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
-    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-    /// group.add_expense(Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?)?;
-    ///
-    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
-    /// group.change_currency(Currency::RON, &[rate])?;
-    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn change_currency(
-        &mut self,
-        currency: Currency,
-        rates: &[CurrencyRate],
-    ) -> Result<(), GroupError> {
-        self.change_currency_async(currency, rates).complete()
-    }
-
-    /// Moves the group to another currency, as
-    /// [`change_currency`](Self::change_currency) does, yielding while it
-    /// re-converts the entries.
-    ///
-    /// It yields once per 1 024 entries and changes the group only after
-    /// its last yield, so a call dropped before it completes leaves the
-    /// group as it was.
-    ///
-    /// # Errors
-    ///
-    /// As for [`change_currency`](Self::change_currency).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use eranos::cooperative::block_on;
-    /// use eranos::{
-    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, Group, Member, Money, Split,
-    /// };
-    ///
-    /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
-    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
-    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-    /// group.add_expense(Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?)?;
-    ///
-    /// // Awaited like any future; `block_on` runs it on this thread.
-    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
-    /// block_on(group.change_currency_async(Currency::RON, &[rate]))?;
-    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn change_currency_async(
-        &mut self,
-        currency: Currency,
-        rates: &[CurrencyRate],
-    ) -> Cooperative<impl Future<Output = Result<(), GroupError>> + Send> {
-        Cooperative::new(self.change_currency_paced(currency, rates))
-    }
-
-    /// The computation of
-    /// [`change_currency_async`](Self::change_currency_async).
-    async fn change_currency_paced(
-        &mut self,
-        currency: Currency,
-        rates: &[CurrencyRate],
-    ) -> Result<(), GroupError> {
-        if currency == self.currency {
-            return Ok(());
-        }
-        // A change names a rate for each of a few currencies, so scanning the
-        // list finds one sooner than a map keyed by currency would.
-        for (position, rate) in rates.iter().enumerate() {
-            if rates
-                .iter()
-                .take(position)
-                .any(|earlier| earlier.currency() == rate.currency())
-            {
-                return Err(GroupError::DuplicateExchangeRate {
-                    currency: rate.currency(),
-                });
-            }
-        }
-        let rate_for = |source: Currency| -> Result<Option<ExchangeRate>, GroupError> {
-            if source == currency {
-                Ok(None)
-            } else {
-                rates
-                    .iter()
-                    .find(|rate| rate.currency() == source)
-                    .map(|rate| Some(rate.rate()))
-                    .ok_or(GroupError::MissingExchangeRate { currency: source })
-            }
-        };
-
-        // `rate_for` gives every other currency its rate and `currency` none,
-        // so every cost has the kind `check_cost` asks for.
-        let mut pacer = Pacer::new(ENTRIES_PER_YIELD);
-        let mut delta = Delta::default();
-        let mut expenses = Vec::with_capacity(self.expenses.len());
-        for record in self.expenses.values() {
-            let rate = rate_for(record.expense.amount().currency())?;
-            let resolution = resolve_expense_at(&record.expense, rate, currency)
-                .map_err(|_| GroupError::Overflow)?;
-            delta.add_expense(&resolution, record.expense.category(), 1);
-            expenses.push(Rerated { rate, resolution });
-            pacer.advance(1).await;
-        }
-        let mut transfers = Vec::with_capacity(self.transfers.len());
-        for record in self.transfers.values() {
-            let rate = rate_for(record.transfer.amount().currency())?;
-            let resolution = resolve_transfer_at(&record.transfer, rate, currency)
-                .map_err(|_| GroupError::Overflow)?;
-            delta.add_transfer(pair(&record.transfer), resolution, 1);
-            transfers.push(Rerated { rate, resolution });
-            pacer.advance(1).await;
-        }
-        // Nothing is written before the last yield, so a call dropped at
-        // any of them leaves the group as it was.
-        let mut ledger = Ledger::new(currency);
-        ledger.apply(&delta).map_err(|_| GroupError::Overflow)?;
-
-        // Each entry is moved into its new record, in the same order as its
-        // resolution, rather than copied.
-        self.expenses = std::mem::take(&mut self.expenses)
-            .into_iter()
-            .zip(expenses)
-            .map(|((id, record), rerated)| {
-                let expense = record.expense.with_exchange_rate(rerated.rate);
-                let resolved = rerated.resolution;
-                (id, ExpenseRecord { expense, resolved })
-            })
-            .collect();
-        self.transfers = std::mem::take(&mut self.transfers)
-            .into_iter()
-            .zip(transfers)
-            .map(|((id, record), rerated)| {
-                let amount = rerated.resolution;
-                let transfer = record.transfer.with_exchange_rate(rerated.rate);
-                (id, TransferRecord { amount, transfer })
-            })
-            .collect();
-        self.currency = currency;
-        self.ledger = ledger;
-        self.invalidate_settlements();
-        Ok(())
     }
 
     // --- Expenses ------------------------------------------------------------
@@ -547,148 +707,122 @@ impl Group {
             .ok_or(GroupError::UnknownExpense(id))
     }
 
+    // --- Transfers -----------------------------------------------------------
+
+    /// Every transfer, in the order they were created; each carries its
+    /// identifier.
+    pub fn transfers(&self) -> impl ExactSizeIterator<Item = &Transfer> + '_ {
+        self.transfers.values().map(|record| &record.transfer)
+    }
+
+    /// The transfer with this identifier.
+    pub fn transfer(&self, id: TransferId) -> Option<&Transfer> {
+        self.transfers.get(&id).map(|record| &record.transfer)
+    }
+
+    /// A transfer's amount in the group currency.
+    pub fn transfer_amount(&self, id: TransferId) -> Option<Money> {
+        self.transfers
+            .get(&id)
+            .map(|record| Money::from_minor_units(record.amount, self.currency))
+    }
+
+    /// Adds a transfer under its identifier.
+    ///
+    /// Archived members may send and receive transfers, so they can settle
+    /// up.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::DuplicateTransfer`] when the group already has a
+    ///   transfer with this identifier.
+    /// - [`GroupError::UnknownMember`] when the sender or the recipient is
+    ///   not a member.
+    /// - [`GroupError::MissingExchangeRate`] or
+    ///   [`GroupError::UnexpectedExchangeRate`] as for expenses.
+    /// - [`GroupError::Overflow`] when a total would leave the range of an
+    ///   amount.
+    pub fn add_transfer(&mut self, transfer: Transfer) -> Result<TransferId, GroupError> {
+        let id = transfer.id();
+        if self.transfers.contains_key(&id) {
+            return Err(GroupError::DuplicateTransfer(id));
+        }
+        self.check_transfer(&transfer)?;
+        let amount =
+            resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
+        let mut delta = Delta::default();
+        delta.add_transfer(pair(&transfer), amount, 1);
+        self.ledger
+            .apply(&delta)
+            .map_err(|_| GroupError::Overflow)?;
+        self.transfers
+            .insert(id, TransferRecord { transfer, amount });
+        self.invalidate_settlements();
+        Ok(id)
+    }
+
+    /// Replaces the transfer with the identifier of `transfer`, returning
+    /// the previous version.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::UnknownTransfer`] when there is no such transfer, and
+    /// the errors of [`add_transfer`](Self::add_transfer) about the transfer
+    /// itself.
+    pub fn replace_transfer(&mut self, transfer: Transfer) -> Result<Transfer, GroupError> {
+        let id = transfer.id();
+        let previous = self
+            .transfers
+            .get(&id)
+            .ok_or(GroupError::UnknownTransfer(id))?;
+        self.check_transfer(&transfer)?;
+        let amount =
+            resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
+        let mut delta = Delta::default();
+        delta.add_transfer(pair(&previous.transfer), previous.amount, -1);
+        delta.add_transfer(pair(&transfer), amount, 1);
+        self.ledger
+            .apply(&delta)
+            .map_err(|_| GroupError::Overflow)?;
+        let replaced = self
+            .transfers
+            .insert(id, TransferRecord { transfer, amount });
+        self.invalidate_settlements();
+        replaced
+            .map(|record| record.transfer)
+            .ok_or(GroupError::UnknownTransfer(id))
+    }
+
+    /// Removes a transfer, returning it.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::UnknownTransfer`] when there is no such transfer.
+    /// - [`GroupError::Overflow`] when the remaining totals would leave the
+    ///   range of an amount.
+    pub fn remove_transfer(&mut self, id: TransferId) -> Result<Transfer, GroupError> {
+        let record = self
+            .transfers
+            .get(&id)
+            .ok_or(GroupError::UnknownTransfer(id))?;
+        let mut delta = Delta::default();
+        delta.add_transfer(pair(&record.transfer), record.amount, -1);
+        self.ledger
+            .apply(&delta)
+            .map_err(|_| GroupError::Overflow)?;
+        self.invalidate_settlements();
+        self.transfers
+            .remove(&id)
+            .map(|removed| removed.transfer)
+            .ok_or(GroupError::UnknownTransfer(id))
+    }
+
     // --- Ledger --------------------------------------------------------------
 
     /// The group's totals: overall, per member, per category, and per member
     /// per category.
     pub const fn summary(&self) -> &Summary {
         self.ledger.summary()
-    }
-
-    // --- Members -------------------------------------------------------------
-
-    /// Every member, archived ones included, in the order they were created;
-    /// each carries its identifier.
-    pub fn members(&self) -> impl ExactSizeIterator<Item = &Member> + '_ {
-        self.members.values().map(|record| &record.member)
-    }
-
-    /// The member with this identifier.
-    pub fn member(&self, id: MemberId) -> Option<&Member> {
-        self.members.get(&id).map(|record| &record.member)
-    }
-
-    /// Whether the member is archived; `false` for an unknown member.
-    pub fn is_archived(&self, id: MemberId) -> bool {
-        self.members.get(&id).is_some_and(|record| record.archived)
-    }
-
-    /// Adds a member under its identifier.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::DuplicateMember`] when the group already has a member
-    /// with this identifier.
-    pub fn add_member(&mut self, member: Member) -> Result<MemberId, GroupError> {
-        let id = member.id();
-        match self.members.entry(id) {
-            Entry::Occupied(_) => Err(GroupError::DuplicateMember(id)),
-            Entry::Vacant(slot) => {
-                slot.insert(MemberRecord {
-                    archived: false,
-                    member,
-                });
-                Ok(id)
-            }
-        }
-    }
-
-    /// Replaces the details of the member with the identifier of `member`,
-    /// returning the previous ones; an archived member stays archived.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::UnknownMember`] when there is no such member.
-    pub fn replace_member(&mut self, member: Member) -> Result<Member, GroupError> {
-        let id = member.id();
-        let record = self
-            .members
-            .get_mut(&id)
-            .ok_or(GroupError::UnknownMember(id))?;
-        Ok(std::mem::replace(&mut record.member, member))
-    }
-
-    /// Archives a member: they keep their history and balance, and can still
-    /// send and receive transfers, but cannot join new expenses. Archiving
-    /// an archived member does nothing.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::UnknownMember`] when there is no such member.
-    pub fn archive_member(&mut self, id: MemberId) -> Result<(), GroupError> {
-        self.members
-            .get_mut(&id)
-            .ok_or(GroupError::UnknownMember(id))?
-            .archived = true;
-        Ok(())
-    }
-
-    /// Makes an archived member active again. Unarchiving an active member
-    /// does nothing.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::UnknownMember`] when there is no such member.
-    pub fn unarchive_member(&mut self, id: MemberId) -> Result<(), GroupError> {
-        self.members
-            .get_mut(&id)
-            .ok_or(GroupError::UnknownMember(id))?
-            .archived = false;
-        Ok(())
-    }
-
-    /// Removes a member who appears in no expense and no transfer, returning
-    /// their details.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::UnknownMember`] when there is no such member.
-    /// - [`GroupError::MemberInUse`] listing the entries that still
-    ///   reference them; archive the member instead to keep that history.
-    pub fn remove_member(&mut self, id: MemberId) -> Result<Member, GroupError> {
-        if !self.members.contains_key(&id) {
-            return Err(GroupError::UnknownMember(id));
-        }
-        let expenses: Vec<ExpenseId> = self
-            .expenses
-            .iter()
-            .filter(|(_, record)| record.expense.members().contains(&id))
-            .map(|(&id, _)| id)
-            .collect();
-        let transfers: Vec<TransferId> = self
-            .transfers
-            .iter()
-            .filter(|(_, record)| record.transfer.from() == id || record.transfer.to() == id)
-            .map(|(&id, _)| id)
-            .collect();
-        if !expenses.is_empty() || !transfers.is_empty() {
-            return Err(GroupError::MemberInUse {
-                expenses,
-                member: id,
-                transfers,
-            });
-        }
-        self.members
-            .remove(&id)
-            .map(|record| record.member)
-            .ok_or(GroupError::UnknownMember(id))
-    }
-
-    // --- Name ----------------------------------------------------------------
-
-    /// The name.
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Renames the group.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::EmptyName`] when the name is blank.
-    pub fn set_name(&mut self, name: impl Into<String>) -> Result<(), GroupError> {
-        self.name = text::required(name, GroupError::EmptyName)?;
-        Ok(())
     }
 
     // --- Settlements ---------------------------------------------------------
@@ -727,12 +861,12 @@ impl Group {
     /// use eranos::cooperative::block_on;
     /// use eranos::{CalendarDate, Currency, Group, Member, Money, SettlementStrategy, Transfer};
     ///
-    /// let mut group = Group::builder(Currency::EUR, "Flat").build()?;
+    /// let mut group = Group::builder("Flat", Currency::EUR).build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?)?;
     /// let bob = group.add_member(Member::builder("Bob").build()?)?;
-    /// let day = CalendarDate::new(23, 9, 2026)?;
+    /// let day = CalendarDate::new(2026, 9, 23)?;
     /// // Bob paid Ana 20.00 too much.
-    /// group.add_transfer(Transfer::builder(Money::parse("20.00", Currency::EUR)?, day, bob, ana).build()?)?;
+    /// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", Currency::EUR)?, day).build()?)?;
     ///
     /// // Awaited like any future; `block_on` runs it on this thread.
     /// let settlement = block_on(group.settlement_async(SettlementStrategy::MinimumTransfers))?;
@@ -748,140 +882,6 @@ impl Group {
 
     fn invalidate_settlements(&mut self) {
         self.settlements.clear();
-    }
-
-    // --- Transfers -----------------------------------------------------------
-
-    /// Every transfer, in the order they were created; each carries its
-    /// identifier.
-    pub fn transfers(&self) -> impl ExactSizeIterator<Item = &Transfer> + '_ {
-        self.transfers.values().map(|record| &record.transfer)
-    }
-
-    /// The transfer with this identifier.
-    pub fn transfer(&self, id: TransferId) -> Option<&Transfer> {
-        self.transfers.get(&id).map(|record| &record.transfer)
-    }
-
-    /// A transfer's amount in the group currency.
-    pub fn transfer_amount(&self, id: TransferId) -> Option<Money> {
-        self.transfers
-            .get(&id)
-            .map(|record| Money::from_minor_units(self.currency, record.amount))
-    }
-
-    /// Adds a transfer under its identifier.
-    ///
-    /// Archived members may send and receive transfers, so they can settle
-    /// up.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::DuplicateTransfer`] when the group already has a
-    ///   transfer with this identifier.
-    /// - [`GroupError::UnknownMember`] when the sender or the recipient is
-    ///   not a member.
-    /// - [`GroupError::MissingExchangeRate`] or
-    ///   [`GroupError::UnexpectedExchangeRate`] as for expenses.
-    /// - [`GroupError::Overflow`] when a total would leave the range of an
-    ///   amount.
-    pub fn add_transfer(&mut self, transfer: Transfer) -> Result<TransferId, GroupError> {
-        let id = transfer.id();
-        if self.transfers.contains_key(&id) {
-            return Err(GroupError::DuplicateTransfer(id));
-        }
-        self.check_transfer(&transfer)?;
-        let amount =
-            resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
-        let mut delta = Delta::default();
-        delta.add_transfer(pair(&transfer), amount, 1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| GroupError::Overflow)?;
-        self.transfers
-            .insert(id, TransferRecord { amount, transfer });
-        self.invalidate_settlements();
-        Ok(id)
-    }
-
-    /// Replaces the transfer with the identifier of `transfer`, returning
-    /// the previous version.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::UnknownTransfer`] when there is no such transfer, and
-    /// the errors of [`add_transfer`](Self::add_transfer) about the transfer
-    /// itself.
-    pub fn replace_transfer(&mut self, transfer: Transfer) -> Result<Transfer, GroupError> {
-        let id = transfer.id();
-        let previous = self
-            .transfers
-            .get(&id)
-            .ok_or(GroupError::UnknownTransfer(id))?;
-        self.check_transfer(&transfer)?;
-        let amount =
-            resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
-        let mut delta = Delta::default();
-        delta.add_transfer(pair(&previous.transfer), previous.amount, -1);
-        delta.add_transfer(pair(&transfer), amount, 1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| GroupError::Overflow)?;
-        let replaced = self
-            .transfers
-            .insert(id, TransferRecord { amount, transfer });
-        self.invalidate_settlements();
-        replaced
-            .map(|record| record.transfer)
-            .ok_or(GroupError::UnknownTransfer(id))
-    }
-
-    /// Removes a transfer, returning it.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::UnknownTransfer`] when there is no such transfer.
-    /// - [`GroupError::Overflow`] when the remaining totals would leave the
-    ///   range of an amount.
-    pub fn remove_transfer(&mut self, id: TransferId) -> Result<Transfer, GroupError> {
-        let record = self
-            .transfers
-            .get(&id)
-            .ok_or(GroupError::UnknownTransfer(id))?;
-        let mut delta = Delta::default();
-        delta.add_transfer(pair(&record.transfer), record.amount, -1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| GroupError::Overflow)?;
-        self.invalidate_settlements();
-        self.transfers
-            .remove(&id)
-            .map(|removed| removed.transfer)
-            .ok_or(GroupError::UnknownTransfer(id))
-    }
-
-    // --- Description ---------------------------------------------------------
-
-    /// The description, if any.
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
-    }
-
-    /// Sets the description; blank text clears it.
-    pub fn set_description(&mut self, description: impl Into<String>) {
-        self.description = text::optional(description);
-    }
-
-    // --- Language ------------------------------------------------------------
-
-    /// The language the apps show the group in, if set.
-    pub const fn language(&self) -> Option<&Language> {
-        self.language.as_ref()
-    }
-
-    /// Sets the language, or clears it with `None`.
-    pub fn set_language(&mut self, language: impl Into<Option<Language>>) {
-        self.language = language.into();
     }
 
     // --- Checks --------------------------------------------------------------
@@ -953,8 +953,8 @@ impl PartialEq for Group {
             );
         self.id == other.id
             && self.name == other.name
-            && self.description == other.description
             && self.currency == other.currency
+            && self.description == other.description
             && self.language == other.language
             && self.members == other.members
             && self.categories == other.categories

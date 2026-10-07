@@ -262,7 +262,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The currency of @p details.
 [[nodiscard]] inline Currency currencyOf(EranosCurrencyDetails const &details) {
     return Currency(
-        {.code = details.code(), .decimalPlaces = details.decimal_places(), .name = details.name(), .numericCode = details.numeric_code()});
+        {.code = details.code(), .name = details.name(), .numericCode = details.numeric_code(), .decimalPlaces = details.decimal_places()});
 }
 
 /// The currency of the ISO 4217 code @p code, which the library wrote.
@@ -273,12 +273,12 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The amount of @p value, which the library made. It reads the currency with known(), which converts no error: an error's amounts convert
 /// through this function, so converting an error here would make the two call each other.
-[[nodiscard]] inline Money fromDetail(EranosMoney const &value) { return {listedCurrency(value.currency()), value.minor_units()}; }
+[[nodiscard]] inline Money fromDetail(EranosMoney const &value) { return {value.minor_units(), listedCurrency(value.currency())}; }
 
 /// The generated amount of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) {
     // A currency's code is text the library wrote.
-    return known(EranosMoney::create(value.currency.code(), value.minorUnits));
+    return known(EranosMoney::create(value.minorUnits, value.currency.code()));
 }
 
 /// The rate written @p text, which the library wrote.
@@ -286,12 +286,12 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The date of @p date, which the library checked.
 [[nodiscard]] constexpr CalendarDate calendarDateOf(EranosCalendarDate const date) noexcept {
-    return CalendarDate({.day = date.day, .month = date.month, .year = date.year});
+    return CalendarDate({.year = date.year, .month = date.month, .day = date.day});
 }
 
 /// The generated date of @p date.
 [[nodiscard]] constexpr EranosCalendarDate toDetail(CalendarDate const date) noexcept {
-    return EranosCalendarDate{.day = date.day(), .month = date.month(), .year = date.year()};
+    return EranosCalendarDate{.year = date.year(), .month = date.month(), .day = date.day()};
 }
 
 /// The time of @p time, which the library checked.
@@ -388,21 +388,11 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline MemberAmount fromDetail(EranosMemberAmount const &value) {
-    return {detail::fromDetail(*value.amount()), MemberId(value.member())};
-}
-
-/// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value) {
-    return expectedOf(EranosMemberAmount::create(*detail::toDetail(value.amount), value.member.value()));
-}
-
-/// The record of @p value.
 [[nodiscard]] inline MemberParts fromDetail(EranosMemberParts const &value) { return {MemberId(value.member()), Parts{value.hundredths()}}; }
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberParts>, Error> toDetail(MemberParts const &value) {
-    return expectedOf(EranosMemberParts::create(value.parts.hundredths, value.member.value()));
+    return expectedOf(EranosMemberParts::create(value.member.value(), value.parts.hundredths));
 }
 
 /// The record of @p value.
@@ -412,29 +402,32 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberPercentage>, Error> toDetail(MemberPercentage const &value) {
-    return expectedOf(EranosMemberPercentage::create(value.percentage.basisPoints, value.member.value()));
+    return expectedOf(EranosMemberPercentage::create(value.member.value(), value.percentage.basisPoints));
+}
+
+/// The record of @p value.
+[[nodiscard]] inline MemberAmount fromDetail(EranosMemberAmount const &value) {
+    return {MemberId(value.member()), detail::fromDetail(*value.amount())};
+}
+
+/// The generated record of @p value.
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value) {
+    return expectedOf(EranosMemberAmount::create(value.member.value(), *detail::toDetail(value.amount)));
 }
 
 /// The alternative of @p value.
 [[nodiscard]] inline Split fromDetail(EranosSplit const &value) {
     switch (value.kind()) {
-    case EranosSplitKind::Amounts:
-        return AmountsSplit{detail::fromDetail(*value.amounts_shares())};
     case EranosSplitKind::Equal:
         return EqualSplit{detail::identifiers<MemberId>(*value.members())};
     case EranosSplitKind::Parts:
         return PartsSplit{detail::fromDetail(*value.parts_shares())};
     case EranosSplitKind::Percentages:
+        return PercentagesSplit{detail::fromDetail(*value.percentages_shares())};
+    case EranosSplitKind::Amounts:
         break;
     }
-    return PercentagesSplit{detail::fromDetail(*value.percentages_shares())};
-}
-
-/// The generated split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value) {
-    return listOf<EranosMemberAmountList>(value.shares).transform([](std::unique_ptr<EranosMemberAmountList> const &shares) {
-        return EranosSplit::create_amounts(*shares);
-    });
+    return AmountsSplit{detail::fromDetail(*value.amounts_shares())};
 }
 
 /// The generated split of @p value.
@@ -459,18 +452,15 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(Split const &value) {
-    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value) {
+    return listOf<EranosMemberAmountList>(value.shares).transform([](std::unique_ptr<EranosMemberAmountList> const &shares) {
+        return EranosSplit::create_amounts(*shares);
+    });
 }
 
-/// The records of @p list.
-[[nodiscard]] inline std::vector<MemberAmount> fromDetail(EranosMemberAmountList const &list) {
-    std::vector<MemberAmount> result;
-    result.reserve(list.len());
-    for (std::size_t index = 0; index < list.len(); ++index) {
-        result.push_back(fromDetail(*list.get(index)));
-    }
-    return result;
+/// The generated split of @p value.
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(Split const &value) {
+    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
 }
 
 /// The records of @p list.
@@ -493,9 +483,19 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     return result;
 }
 
+/// The records of @p list.
+[[nodiscard]] inline std::vector<MemberAmount> fromDetail(EranosMemberAmountList const &list) {
+    std::vector<MemberAmount> result;
+    result.reserve(list.len());
+    for (std::size_t index = 0; index < list.len(); ++index) {
+        result.push_back(fromDetail(*list.get(index)));
+    }
+    return result;
+}
+
 /// The record of @p value.
 [[nodiscard]] inline Item fromDetail(EranosItem const &value) {
-    Item result(value.name(), detail::fromDetail(*value.split()), detail::fromDetail(*value.unit_price()));
+    Item result(value.name(), detail::fromDetail(*value.unit_price()), detail::fromDetail(*value.split()));
     result.quantity = value.quantity();
     return result;
 }
@@ -504,7 +504,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosItem>, Error> toDetail(Item const &value) {
     return detail::toDetail(value.split)
         .and_then([&value](std::unique_ptr<EranosSplit> const &split) {
-            return expectedOf(EranosItem::create(value.name, *split, *detail::toDetail(value.unitPrice)));
+            return expectedOf(EranosItem::create(value.name, *detail::toDetail(value.unitPrice), *split));
         })
         .transform([&value](std::unique_ptr<EranosItem> result) {
             result->set_quantity(value.quantity);
@@ -515,18 +515,13 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The alternative of @p value.
 [[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value) {
     switch (value.kind()) {
-    case EranosTipValueKind::Fixed:
-        return FixedTipValue{detail::fromDetail(*value.amount())};
     case EranosTipValueKind::Percentage:
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
+        return PercentageTipValue{Percentage{value.basis_points().value()}};
+    case EranosTipValueKind::Fixed:
         break;
     }
-    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
-    return PercentageTipValue{Percentage{value.basis_points().value()}};
-}
-
-/// The generated tip value of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value) {
-    return EranosTipValue::create_fixed(*detail::toDetail(value.amount));
+    return FixedTipValue{detail::fromDetail(*value.amount())};
 }
 
 /// The generated tip value of @p value.
@@ -535,12 +530,17 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated tip value of @p value.
+[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value) {
+    return EranosTipValue::create_fixed(*detail::toDetail(value.amount));
+}
+
+/// The generated tip value of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(TipValue const &value) {
     return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Tip fromDetail(EranosTip const &value) { return {detail::fromDetail(value.distribution()), detail::fromDetail(*value.value())}; }
+[[nodiscard]] inline Tip fromDetail(EranosTip const &value) { return {detail::fromDetail(*value.value()), detail::fromDetail(value.distribution())}; }
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosTip> toDetail(Tip const &value) {
@@ -550,24 +550,24 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The alternative of @p value.
 [[nodiscard]] inline Cost fromDetail(EranosCost const &value) {
     switch (value.kind()) {
-    case EranosCostKind::Converted:
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
-        return ConvertedCost{.amount = detail::fromDetail(*value.amount()), .rate = detail::exchangeRateOf(value.rate().value())};
     case EranosCostKind::Local:
+        return LocalCost{detail::fromDetail(*value.amount())};
+    case EranosCostKind::Converted:
         break;
     }
-    return LocalCost{detail::fromDetail(*value.amount())};
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
+    return ConvertedCost{.amount = detail::fromDetail(*value.amount()), .rate = detail::exchangeRateOf(value.rate().value())};
+}
+
+/// The generated cost of @p value.
+[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value) {
+    return EranosCost::create_local(*detail::toDetail(value.amount));
 }
 
 /// The generated cost of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(ConvertedCost const &value) {
     // A rate is text the library wrote.
     return known(EranosCost::create_converted(*detail::toDetail(value.amount), value.rate.toString()));
-}
-
-/// The generated cost of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value) {
-    return EranosCost::create_local(*detail::toDetail(value.amount));
 }
 
 /// The generated cost of @p value.
@@ -578,19 +578,12 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The alternative of @p value.
 [[nodiscard]] inline ExpenseSplit fromDetail(EranosExpenseSplit const &value) {
     switch (value.kind()) {
-    case EranosExpenseSplitKind::Itemised:
-        return ItemisedExpenseSplit{detail::fromDetail(*value.items())};
     case EranosExpenseSplitKind::Whole:
+        return WholeExpenseSplit{detail::fromDetail(*value.split())};
+    case EranosExpenseSplitKind::Itemised:
         break;
     }
-    return WholeExpenseSplit{detail::fromDetail(*value.split())};
-}
-
-/// The generated expense split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value) {
-    return listOf<EranosItemList>(value.items).transform([](std::unique_ptr<EranosItemList> const &items) {
-        return EranosExpenseSplit::create_itemised(*items);
-    });
+    return ItemisedExpenseSplit{detail::fromDetail(*value.items())};
 }
 
 /// The generated expense split of @p value.
@@ -601,19 +594,26 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated expense split of @p value.
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value) {
+    return listOf<EranosItemList>(value.items).transform([](std::unique_ptr<EranosItemList> const &items) {
+        return EranosExpenseSplit::create_itemised(*items);
+    });
+}
+
+/// The generated expense split of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ExpenseSplit const &value) {
     return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
 [[nodiscard]] inline Expense fromDetail(EranosExpense const &value) {
-    Expense result(detail::fromDetail(*value.cost()), detail::calendarDateOf(value.date()), value.name(), detail::fromDetail(*value.payers()),
-                   detail::fromDetail(*value.split()));
+    Expense result(value.name(), detail::fromDetail(*value.cost()), detail::fromDetail(*value.payers()), detail::fromDetail(*value.split()),
+                   detail::calendarDateOf(value.date()));
     result.id = detail::optionalId<ExpenseId>(value.id());
+    result.tip = detail::optionalRecord<Tip>(value.tip());
+    result.time = detail::optionalTime(value.time());
     result.category = detail::optionalId<CategoryId>(value.category());
     result.description = value.description();
-    result.time = detail::optionalTime(value.time());
-    result.tip = detail::optionalRecord<Tip>(value.tip());
     return result;
 }
 
@@ -622,15 +622,15 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     return detail::toDetail(value.payers)
         .and_then([&value](std::unique_ptr<EranosSplit> const &payers) {
             return detail::toDetail(value.split).and_then([&value, &payers](std::unique_ptr<EranosExpenseSplit> const &split) {
-                return expectedOf(EranosExpense::create(*detail::toDetail(value.cost), detail::toDetail(value.date), value.name, *payers, *split));
+                return expectedOf(EranosExpense::create(value.name, *detail::toDetail(value.cost), *payers, *split, detail::toDetail(value.date)));
             });
         })
         .and_then([&value](std::unique_ptr<EranosExpense> result) {
-            if (value.time) {
-                result->set_time(detail::toDetail(*value.time));
-            }
             if (value.tip) {
                 result->set_tip(*detail::toDetail(*value.tip));
+            }
+            if (value.time) {
+                result->set_time(detail::toDetail(*value.time));
             }
             return setIfPresent(std::move(result), value.id, [](EranosExpense &record, ExpenseId const &id) { return record.set_id(id.value()); });
         })
@@ -667,37 +667,37 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The value of @p value.
 [[nodiscard]] constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept {
     switch (value) {
-    case EranosTipDistribution::Equal:
-        return TipDistribution::EQUAL;
     case EranosTipDistribution::Proportional:
+        return TipDistribution::PROPORTIONAL;
+    case EranosTipDistribution::Equal:
         break;
     }
-    return TipDistribution::PROPORTIONAL;
+    return TipDistribution::EQUAL;
 }
 
 /// The generated value of @p value.
 [[nodiscard]] constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept {
     switch (value) {
-    case TipDistribution::EQUAL:
-        return EranosTipDistribution::Equal;
     case TipDistribution::PROPORTIONAL:
+        return EranosTipDistribution::Proportional;
+    case TipDistribution::EQUAL:
         break;
     }
-    return EranosTipDistribution::Proportional;
+    return EranosTipDistribution::Equal;
 }
 
 /// The record of @p value.
 [[nodiscard]] inline Transfer fromDetail(EranosTransfer const &value) {
-    Transfer result(detail::fromDetail(*value.cost()), detail::calendarDateOf(value.date()), MemberId(value.from()), MemberId(value.to()));
+    Transfer result(MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.cost()), detail::calendarDateOf(value.date()));
     result.id = detail::optionalId<TransferId>(value.id());
-    result.note = value.note();
     result.time = detail::optionalTime(value.time());
+    result.note = value.note();
     return result;
 }
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosTransfer>, Error> toDetail(Transfer const &value) {
-    return expectedOf(EranosTransfer::create(*detail::toDetail(value.cost), detail::toDetail(value.date), value.from.value(), value.to.value()))
+    return expectedOf(EranosTransfer::create(value.from.value(), value.to.value(), *detail::toDetail(value.cost), detail::toDetail(value.date)))
         .and_then([&value](std::unique_ptr<EranosTransfer> result) {
             if (value.time) {
                 result->set_time(detail::toDetail(*value.time));
@@ -750,21 +750,21 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Account fromDetail(EranosAccount const &value) { return {detail::fromDetail(*value.details()), value.name()}; }
+[[nodiscard]] inline Account fromDetail(EranosAccount const &value) { return {value.name(), detail::fromDetail(*value.details())}; }
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosAccount>, Error> toDetail(Account const &value) {
-    return expectedOf(EranosAccount::create(*detail::toDetail(value.details), value.name));
+    return expectedOf(EranosAccount::create(value.name, *detail::toDetail(value.details)));
 }
 
 /// The record of @p value.
 [[nodiscard]] inline Member fromDetail(EranosMember const &value) {
     Member result(value.first_name());
     result.id = detail::optionalId<MemberId>(value.id());
-    result.accounts = detail::fromDetail(*value.accounts());
-    result.email = detail::optionalText<Email>(value.email(), detail::emailOf);
     result.lastName = value.last_name();
+    result.email = detail::optionalText<Email>(value.email(), detail::emailOf);
     result.phone = detail::optionalText<PhoneNumber>(value.phone(), detail::phoneNumberOf);
+    result.accounts = detail::fromDetail(*value.accounts());
     return result;
 }
 
@@ -781,12 +781,12 @@ template <typename Value, typename Argument, typename Start, typename Convert>
             return setIfPresent(std::move(result), value.id, [](EranosMember &record, MemberId const &id) { return record.set_id(id.value()); });
         })
         .and_then([&value](std::unique_ptr<EranosMember> result) {
-            return setIfPresent(std::move(result), value.email,
-                                [](EranosMember &record, Email const &email) { return record.set_email(email.toString()); });
-        })
-        .and_then([&value](std::unique_ptr<EranosMember> result) {
             return setIfPresent(std::move(result), value.lastName,
                                 [](EranosMember &record, std::string const &text) { return record.set_last_name(text); });
+        })
+        .and_then([&value](std::unique_ptr<EranosMember> result) {
+            return setIfPresent(std::move(result), value.email,
+                                [](EranosMember &record, Email const &email) { return record.set_email(email.toString()); });
         })
         .and_then([&value](std::unique_ptr<EranosMember> result) {
             return setIfPresent(std::move(result), value.phone,
@@ -841,19 +841,14 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The alternative of @p value.
 [[nodiscard]] inline Balance fromDetail(EranosBalance const &value) {
     switch (value.kind()) {
-    case EranosBalanceKind::GetsBack:
-        return GetsBackBalance{detail::fromDetail(*value.amount())};
     case EranosBalanceKind::Owes:
         return OwesBalance{detail::fromDetail(*value.amount())};
     case EranosBalanceKind::Settled:
+        return SettledBalance{};
+    case EranosBalanceKind::GetsBack:
         break;
     }
-    return SettledBalance{};
-}
-
-/// The generated balance of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value) {
-    return EranosBalance::create_gets_back(*detail::toDetail(value.amount));
+    return GetsBackBalance{detail::fromDetail(*value.amount())};
 }
 
 /// The generated balance of @p value.
@@ -865,16 +860,24 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 [[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(SettledBalance const & /* value */) { return EranosBalance::create_settled(); }
 
 /// The generated balance of @p value.
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value) {
+    return EranosBalance::create_gets_back(*detail::toDetail(value.amount));
+}
+
+/// The generated balance of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(Balance const &value) {
     return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
 [[nodiscard]] inline MemberSummary fromDetail(EranosMemberSummary const &value) {
-    return {detail::fromDetail(*value.balance()),  MemberId(value.member()),
-            detail::fromDetail(*value.net()),      detail::fromDetail(*value.paid()),
-            detail::fromDetail(*value.received()), detail::fromDetail(*value.sent()),
-            detail::fromDetail(*value.share())};
+    return {MemberId(value.member()),
+            detail::fromDetail(*value.paid()),
+            detail::fromDetail(*value.share()),
+            detail::fromDetail(*value.sent()),
+            detail::fromDetail(*value.received()),
+            detail::fromDetail(*value.net()),
+            detail::fromDetail(*value.balance())};
 }
 
 /// The record of @p value.
@@ -889,8 +892,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline Summary fromDetail(EranosSummary const &value) {
-    return {detail::fromDetail(*value.category_totals()), detail::fromDetail(*value.member_category_totals()), detail::fromDetail(*value.members()),
-            detail::fromDetail(*value.total_spent())};
+    return {detail::fromDetail(*value.total_spent()), detail::fromDetail(*value.members()), detail::fromDetail(*value.category_totals()),
+            detail::fromDetail(*value.member_category_totals())};
 }
 
 /// The record of @p value.
@@ -900,12 +903,12 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline ExpenseShares fromDetail(EranosExpenseShares const &value) {
-    return {detail::fromDetail(*value.members()), detail::fromDetail(*value.tip()), detail::fromDetail(*value.total())};
+    return {detail::fromDetail(*value.members()), detail::fromDetail(*value.total()), detail::fromDetail(*value.tip())};
 }
 
 /// The record of @p value.
 [[nodiscard]] inline Payment fromDetail(EranosPayment const &value) {
-    return {detail::fromDetail(*value.amount()), MemberId(value.from()), MemberId(value.to())};
+    return {MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.amount())};
 }
 
 /// The record of @p value.
@@ -968,14 +971,14 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     switch (value) {
     case EranosSettlementStrategy::Adaptive:
         return SettlementStrategy::ADAPTIVE;
-    case EranosSettlementStrategy::Direct:
-        return SettlementStrategy::DIRECT;
+    case EranosSettlementStrategy::MinimumTransfers:
+        return SettlementStrategy::MINIMUM_TRANSFERS;
     case EranosSettlementStrategy::Greedy:
         return SettlementStrategy::GREEDY;
-    case EranosSettlementStrategy::MinimumTransfers:
+    case EranosSettlementStrategy::Direct:
         break;
     }
-    return SettlementStrategy::MINIMUM_TRANSFERS;
+    return SettlementStrategy::DIRECT;
 }
 
 /// The generated value of @p value.
@@ -983,14 +986,14 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     switch (value) {
     case SettlementStrategy::ADAPTIVE:
         return EranosSettlementStrategy::Adaptive;
-    case SettlementStrategy::DIRECT:
-        return EranosSettlementStrategy::Direct;
+    case SettlementStrategy::MINIMUM_TRANSFERS:
+        return EranosSettlementStrategy::MinimumTransfers;
     case SettlementStrategy::GREEDY:
         return EranosSettlementStrategy::Greedy;
-    case SettlementStrategy::MINIMUM_TRANSFERS:
+    case SettlementStrategy::DIRECT:
         break;
     }
-    return EranosSettlementStrategy::MinimumTransfers;
+    return EranosSettlementStrategy::Direct;
 }
 
 /// The generated cancellation of @p cancellation, or none.

@@ -25,9 +25,9 @@ fn bob() -> String {
 
 fn date() -> CalendarDate {
     CalendarDate {
-        day: 25,
-        month: 9,
         year: 2026,
+        month: 9,
+        day: 25,
     }
 }
 
@@ -35,18 +35,18 @@ fn date() -> CalendarDate {
 fn repayment() -> Transfer {
     Transfer {
         id: None,
+        from: bob(),
+        to: ana(),
         cost: Cost::Converted {
             amount: Money {
-                currency: "RON".to_owned(),
                 minor_units: 10_000,
+                currency: "RON".to_owned(),
             },
             rate: "0.2".to_owned(),
         },
         date: date(),
-        from: bob(),
-        to: ana(),
-        note: Some("Cash".to_owned()),
         time: Some(TimeOfDay { hour: 9, minute: 5 }),
+        note: Some("Cash".to_owned()),
     }
 }
 
@@ -54,17 +54,17 @@ fn repayment() -> Transfer {
 fn payment() -> Transfer {
     Transfer {
         id: None,
+        from: ana(),
+        to: bob(),
         cost: Cost::Local {
             amount: Money {
-                currency: "EUR".to_owned(),
                 minor_units: 1_500,
+                currency: "EUR".to_owned(),
             },
         },
         date: date(),
-        from: ana(),
-        to: bob(),
-        note: None,
         time: None,
+        note: None,
     }
 }
 
@@ -85,8 +85,8 @@ fn refused_transfers() -> [Refusal; 6] {
             record: Transfer {
                 cost: Cost::Local {
                     amount: Money {
-                        currency: "XYZ".to_owned(),
                         minor_units: 1,
+                        currency: "XYZ".to_owned(),
                     },
                 },
                 ..payment()

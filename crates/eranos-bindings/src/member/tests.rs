@@ -16,10 +16,10 @@ struct Refusal {
 
 fn iban_account() -> Account {
     Account {
+        name: "Main account".to_owned(),
         details: AccountDetails::Iban {
             iban: "RO49AAAA1B31007593840000".to_owned(),
         },
-        name: "Main account".to_owned(),
     }
 }
 
@@ -28,18 +28,18 @@ fn ana() -> Member {
     Member {
         id: None,
         first_name: "Ana".to_owned(),
+        last_name: Some("Popescu".to_owned()),
+        email: Some("ana@example.com".to_owned()),
+        phone: Some("+40712345678".to_owned()),
         accounts: vec![
             iban_account(),
             Account {
+                name: "Payment app".to_owned(),
                 details: AccountDetails::Username {
                     username: "ana.pays".to_owned(),
                 },
-                name: "Payment app".to_owned(),
             },
         ],
-        email: Some("ana@example.com".to_owned()),
-        last_name: Some("Popescu".to_owned()),
-        phone: Some("+40712345678".to_owned()),
     }
 }
 
@@ -48,18 +48,18 @@ fn bob() -> Member {
     Member {
         id: None,
         first_name: "Bob".to_owned(),
-        accounts: Vec::new(),
-        email: None,
         last_name: None,
+        email: None,
         phone: None,
+        accounts: Vec::new(),
     }
 }
 
 fn with_account(details: AccountDetails, name: &str) -> Member {
     Member {
         accounts: vec![Account {
-            details,
             name: name.to_owned(),
+            details,
         }],
         ..ana()
     }
@@ -178,14 +178,14 @@ fn a_member_to_add_converts_both_ways() {
         );
     }
     let entered = Member {
+        email: Some(" ana@example.com ".to_owned()),
+        phone: Some("+40 712 345 678".to_owned()),
         accounts: vec![Account {
+            name: " Main account ".to_owned(),
             details: AccountDetails::Iban {
                 iban: "ro49 aaaa 1b31 0075 9384 0000".to_owned(),
             },
-            name: " Main account ".to_owned(),
         }],
-        email: Some(" ana@example.com ".to_owned()),
-        phone: Some("+40 712 345 678".to_owned()),
         ..ana()
     };
     let held = Member::from_library(&entered.to_new().unwrap());

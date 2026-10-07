@@ -7,16 +7,16 @@ settle them. Every amount is a whole number of minor units, and every division a
     from eranos import CalendarDate, Currency, EqualSplit, Expense, Group, LocalCost, Member, Money, WholeExpenseSplit
 
     euro = Currency('EUR')
-    group = Group.create(euro, 'Flat')
+    group = Group.create('Flat', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     group.add_expense(
         Expense(
-            cost=LocalCost(Money(euro, 3000)),
-            date=CalendarDate(23, 9, 2026),
             name='Dinner',
+            cost=LocalCost(Money(3000, euro)),
             payers=EqualSplit((ana,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob))),
+            date=CalendarDate(2026, 9, 23),
         )
     )
 

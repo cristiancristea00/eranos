@@ -5,38 +5,38 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case {
     error: CalendarError,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// A [`CalendarError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedCalendarError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromCalendarError for ConvertedCalendarError {
     fn invalid_date(message: String) -> Self {
         Self {
+            method: "invalid_date",
             held: String::new(),
             message,
-            method: "invalid_date",
         }
     }
 
     fn invalid_time(message: String) -> Self {
         Self {
+            method: "invalid_time",
             held: String::new(),
             message,
-            method: "invalid_time",
         }
     }
 }
@@ -49,22 +49,22 @@ fn every_failure_of_calendar_error_converts_through_the_method_of_its_variant() 
     let cases = [
         Case {
             error: CalendarError::InvalidDate,
-            held: String::new(),
             method: "invalid_date",
+            held: String::new(),
         },
         Case {
             error: CalendarError::InvalidTime,
-            held: String::new(),
             method: "invalid_time",
+            held: String::new(),
         },
     ];
     for case in cases {
         assert_eq!(
             ConvertedCalendarError::from_calendar_error(case.error),
             ConvertedCalendarError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }

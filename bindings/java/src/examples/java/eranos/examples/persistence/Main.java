@@ -39,7 +39,7 @@ public final class Main {
     private Main() {}
 
     /** A member's balance before saving and after loading, a row of the comparison's table. */
-    private record ComparisonRow(String after, String before, String name) implements Row {
+    private record ComparisonRow(String name, String before, String after) implements Row {
         static final List<String> HEADERS =
                 List.of("Member", "Balance before saving", "Balance after loading");
 
@@ -65,26 +65,26 @@ public final class Main {
      */
     public static void main(String[] arguments) throws EranosException {
         Currency euro = Currency.of("EUR");
-        CalendarDate day = CalendarDate.of(23, 9, 2026);
-        try (Group group = Group.builder(euro, "Road trip").build()) {
+        CalendarDate day = CalendarDate.of(2026, 9, 23);
+        try (Group group = Group.builder("Road trip", euro).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             ExpenseSplit both = new ExpenseSplit.Whole(new Split.Equal(List.of(ana, bob)));
             group.addExpense(
                     Expense.builder(
-                                    new Cost.Local(Money.parse("70.00", euro)),
-                                    day,
                                     "Fuel",
+                                    new Cost.Local(Money.parse("70.00", euro)),
                                     new Split.Equal(List.of(ana)),
-                                    both)
+                                    both,
+                                    day)
                             .build());
             group.addExpense(
                     Expense.builder(
-                                    new Cost.Local(Money.parse("30.00", euro)),
-                                    day,
                                     "Lunch",
+                                    new Cost.Local(Money.parse("30.00", euro)),
                                     new Split.Equal(List.of(bob)),
-                                    both)
+                                    both,
+                                    day)
                             .tip(new Tip(new TipValue.Percentage(Percentage.parse("10"))))
                             .build());
 
@@ -122,9 +122,9 @@ public final class Main {
                 for (MemberId member : List.of(ana, bob)) {
                     rows.add(
                             new ComparisonRow(
-                                    balance(member, after),
+                                    group.member(member).map(Member::firstName).orElse("?"),
                                     balance(member, before),
-                                    group.member(member).map(Member::firstName).orElse("?")));
+                                    balance(member, after)));
                 }
                 printTable(ComparisonRow.HEADERS, rows, 1);
                 Settlement plan = loaded.settlement(SettlementStrategy.GREEDY);
@@ -135,14 +135,14 @@ public final class Main {
                 section("3. A corrupted file is refused");
                 System.out.print(
                         """
-                        Here the fuel's payer was edited to an identifier no member has. Reading the file
-                        as a SavedGroup and loading it with into_group replays every entry through the
-                        same checks as adding it, and refuses the file instead of producing balances that
-                        do not add up:
+                        Here Ana's identifier was edited in her member entry, so the fuel's payer is an
+                        identifier no member has. Reading the file as a SavedGroup and loading it with
+                        into_group replays every entry through the same checks as adding it, and refuses
+                        the file instead of producing balances that do not add up:
                         """);
-                // The fuel is the first entry that names Ana: the expenses come before the members
-                // in
-                // the saved form.
+                // Ana's own entry is the first to name her: the members come before the expenses
+                // in the saved form, so the fuel she paid is left naming an identifier no member
+                // has.
                 String corrupted =
                         saved.replaceFirst(
                                 Pattern.quote(ana.value()), "0199a000-0000-7000-8000-00000000ffff");

@@ -35,48 +35,48 @@ pub use error::{FromTransferError, TransferError};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let repayment = Transfer::builder(Money::parse("30.00", Currency::EUR)?, CalendarDate::new(24, 9, 2026)?, bob, ana)
+/// let repayment = Transfer::builder(bob, ana, Money::parse("30.00", Currency::EUR)?, CalendarDate::new(2026, 9, 24)?)
 ///     .note("Dinner")
 ///     .build()?;
 /// assert_eq!(repayment.from(), bob);
-/// assert!(Transfer::builder(repayment.amount(), repayment.date(), ana, ana).build().is_err());
+/// assert!(Transfer::builder(ana, ana, repayment.amount(), repayment.date()).build().is_err());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Transfer {
     id: TransferId,
-    amount: Money,
-    date: CalendarDate,
     from: MemberId,
     to: MemberId,
+    amount: Money,
+    date: CalendarDate,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     exchange_rate: Option<ExchangeRate>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    note: Option<String>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     time: Option<TimeOfDay>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    note: Option<String>,
 }
 
 impl Transfer {
-    /// Starts a transfer of `cost` on `date`, from `from` to `to`.
+    /// Starts a transfer from `from` to `to` of `cost` on `date`.
     ///
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
     pub fn builder(
-        cost: impl Into<Cost>,
-        date: CalendarDate,
         from: MemberId,
         to: MemberId,
+        cost: impl Into<Cost>,
+        date: CalendarDate,
     ) -> TransferBuilder {
         TransferBuilder {
             id: None,
-            cost: cost.into(),
-            date,
             from,
             to,
-            note: None,
+            cost: cost.into(),
+            date,
             time: None,
+            note: None,
         }
     }
 
@@ -95,13 +95,13 @@ impl Transfer {
         );
         Self {
             id: TransferId::generate(),
-            amount: payment.amount(),
-            date,
             from: payment.from(),
             to: payment.to(),
+            amount: payment.amount(),
+            date,
             exchange_rate: None,
-            note: None,
             time: None,
+            note: None,
         }
     }
 
@@ -110,12 +110,12 @@ impl Transfer {
     pub fn to_builder(&self) -> TransferBuilder {
         TransferBuilder {
             id: Some(self.id),
-            cost: self.cost(),
-            date: self.date,
             from: self.from,
             to: self.to,
-            note: self.note.clone(),
+            cost: self.cost(),
+            date: self.date,
             time: self.time,
+            note: self.note.clone(),
         }
     }
 
@@ -123,6 +123,18 @@ impl Transfer {
     #[must_use]
     pub const fn id(&self) -> TransferId {
         self.id
+    }
+
+    /// The member who paid.
+    #[must_use]
+    pub const fn from(&self) -> MemberId {
+        self.from
+    }
+
+    /// The member who received the money.
+    #[must_use]
+    pub const fn to(&self) -> MemberId {
+        self.to
     }
 
     /// The amount, in the transfer's own currency.
@@ -144,18 +156,6 @@ impl Transfer {
         self.date
     }
 
-    /// The member who paid.
-    #[must_use]
-    pub const fn from(&self) -> MemberId {
-        self.from
-    }
-
-    /// The member who received the money.
-    #[must_use]
-    pub const fn to(&self) -> MemberId {
-        self.to
-    }
-
     /// The rate from the transfer's currency into its group's currency:
     /// [`ExchangeRate::ONE`] for a local cost.
     #[must_use]
@@ -174,8 +174,8 @@ impl Transfer {
     /// use eranos::id::MemberId;
     ///
     /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-    /// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(24, 9, 2026)?);
-    /// let repayment = Transfer::builder(amount, day, bob, ana).build()?;
+    /// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(2026, 9, 24)?);
+    /// let repayment = Transfer::builder(bob, ana, amount, day).build()?;
     /// let rate = ExchangeRate::parse("4.97")?;
     /// assert_eq!(repayment.with_exchange_rate(Some(rate)).cost(), amount.at(rate));
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -186,16 +186,16 @@ impl Transfer {
         self
     }
 
-    /// A note, if any.
-    #[must_use]
-    pub fn note(&self) -> Option<&str> {
-        self.note.as_deref()
-    }
-
     /// The time of day, if recorded.
     #[must_use]
     pub const fn time(&self) -> Option<TimeOfDay> {
         self.time
+    }
+
+    /// A note, if any.
+    #[must_use]
+    pub fn note(&self) -> Option<&str> {
+        self.note.as_deref()
     }
 }
 
@@ -205,12 +205,12 @@ impl Transfer {
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct TransferBuilder {
     id: Option<TransferId>,
-    cost: Cost,
-    date: CalendarDate,
     from: MemberId,
     to: MemberId,
-    note: Option<String>,
+    cost: Cost,
+    date: CalendarDate,
     time: Option<TimeOfDay>,
+    note: Option<String>,
 }
 
 impl TransferBuilder {
@@ -219,6 +219,18 @@ impl TransferBuilder {
     #[cfg(test)]
     pub(crate) const fn with_id(mut self, id: TransferId) -> Self {
         self.id = Some(id);
+        self
+    }
+
+    /// Replaces the member who paid.
+    pub const fn from(mut self, from: MemberId) -> Self {
+        self.from = from;
+        self
+    }
+
+    /// Replaces the member who received the money.
+    pub const fn to(mut self, to: MemberId) -> Self {
+        self.to = to;
         self
     }
 
@@ -238,27 +250,15 @@ impl TransferBuilder {
         self
     }
 
-    /// Replaces the member who paid.
-    pub const fn from(mut self, from: MemberId) -> Self {
-        self.from = from;
-        self
-    }
-
-    /// Replaces the member who received the money.
-    pub const fn to(mut self, to: MemberId) -> Self {
-        self.to = to;
+    /// Sets the time of day, or clears it with `None`.
+    pub fn time(mut self, time: impl Into<Option<TimeOfDay>>) -> Self {
+        self.time = time.into();
         self
     }
 
     /// Sets the note; blank text clears it.
     pub fn note(mut self, note: impl Into<String>) -> Self {
         self.note = Some(note.into());
-        self
-    }
-
-    /// Sets the time of day, or clears it with `None`.
-    pub fn time(mut self, time: impl Into<Option<TimeOfDay>>) -> Self {
-        self.time = time.into();
         self
     }
 
@@ -280,13 +280,13 @@ impl TransferBuilder {
         }
         Ok(Transfer {
             id: self.id.unwrap_or_else(TransferId::generate),
-            amount,
-            date: self.date,
             from: self.from,
             to: self.to,
+            amount,
+            date: self.date,
             exchange_rate: self.cost.conversion(),
-            note: self.note.and_then(text::optional),
             time: self.time,
+            note: self.note.and_then(text::optional),
         })
     }
 }
@@ -296,16 +296,16 @@ impl TransferBuilder {
 #[derive(serde::Deserialize)]
 struct TransferRecord {
     id: TransferId,
-    amount: Money,
-    date: CalendarDate,
     from: MemberId,
     to: MemberId,
+    amount: Money,
+    date: CalendarDate,
     #[serde(default)]
     exchange_rate: Option<ExchangeRate>,
     #[serde(default)]
-    note: Option<String>,
-    #[serde(default)]
     time: Option<TimeOfDay>,
+    #[serde(default)]
+    note: Option<String>,
 }
 
 /// Builds the transfer `record` describes, through the checks of the builder.
@@ -314,7 +314,7 @@ fn from_record(record: TransferRecord) -> Result<Transfer, TransferError> {
     let cost = Cost::from_parts(record.amount, record.exchange_rate);
     let builder = TransferBuilder {
         id: Some(record.id),
-        ..Transfer::builder(cost, record.date, record.from, record.to)
+        ..Transfer::builder(record.from, record.to, cost, record.date)
     }
     .time(record.time);
     match record.note {

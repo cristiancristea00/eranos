@@ -35,7 +35,7 @@ internal fun eur(text: String): Money = Money.parse(text, Currency.of("EUR"))
 internal fun ron(text: String): Money = Money.parse(text, Currency.of("RON"))
 
 /** A date of the trip, in October 2026. */
-internal fun october(date: Int): CalendarDate = CalendarDate.of(day = date, month = 10, year = 2026)
+internal fun october(date: Int): CalendarDate = CalendarDate.of(year = 2026, month = 10, day = date)
 
 internal fun name(
     group: Group,
@@ -72,11 +72,11 @@ internal fun message(refused: EranosException?): String = refused?.message ?: "a
 internal fun sum(
     currency: Currency,
     amounts: List<Money>,
-): Money = amounts.fold(Money(currency, 0)) { total, amount -> total + amount }
+): Money = amounts.fold(Money(0, currency)) { total, amount -> total + amount }
 
 /** The rate [cost] was entered at: 1 for a cost in the group currency. */
 internal fun rate(cost: Cost): ExchangeRate =
     when (cost) {
-        is Cost.Converted -> cost.rate
         is Cost.Local -> ExchangeRate.parse("1")
+        is Cost.Converted -> cost.rate
     }

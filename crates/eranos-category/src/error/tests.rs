@@ -5,30 +5,30 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case {
     error: CategoryError,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// A [`CategoryError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedCategoryError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromCategoryError for ConvertedCategoryError {
     fn empty_name(message: String) -> Self {
         Self {
+            method: "empty_name",
             held: String::new(),
             message,
-            method: "empty_name",
         }
     }
 }
@@ -40,16 +40,16 @@ impl FromCategoryError for ConvertedCategoryError {
 fn every_failure_of_category_error_converts_through_the_method_of_its_variant() {
     let cases = [Case {
         error: CategoryError::EmptyName,
-        held: String::new(),
         method: "empty_name",
+        held: String::new(),
     }];
     for case in cases {
         assert_eq!(
             ConvertedCategoryError::from_category_error(case.error),
             ConvertedCategoryError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }

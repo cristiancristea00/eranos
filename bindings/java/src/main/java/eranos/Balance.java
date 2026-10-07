@@ -5,32 +5,6 @@ import java.util.Objects;
 /** Where a member stands with the group; it prints as the library writes it, "owes 12.00 EUR". */
 public sealed interface Balance {
     /**
-     * The others owe the member {@code amount}.
-     *
-     * @param amount what the member gets back
-     */
-    record GetsBack(Money amount) implements Balance {
-        /**
-         * The balance of a member who gets {@code amount} back.
-         *
-         * @param amount what the member gets back
-         */
-        public GetsBack {
-            Objects.requireNonNull(amount, "amount");
-        }
-
-        /**
-         * The balance as the library writes it.
-         *
-         * @return the text: "gets back 12.00 EUR"
-         */
-        @Override
-        public String toString() {
-            return Conversions.formatted(this, "GetsBack[amount=" + amount + "]");
-        }
-    }
-
-    /**
      * The member owes the others {@code amount}.
      *
      * @param amount what the member owes
@@ -66,6 +40,32 @@ public sealed interface Balance {
         @Override
         public String toString() {
             return Conversions.formatted(this, "Settled[]");
+        }
+    }
+
+    /**
+     * The others owe the member {@code amount}.
+     *
+     * @param amount what the member gets back
+     */
+    record GetsBack(Money amount) implements Balance {
+        /**
+         * The balance of a member who gets {@code amount} back.
+         *
+         * @param amount what the member gets back
+         */
+        public GetsBack {
+            Objects.requireNonNull(amount, "amount");
+        }
+
+        /**
+         * The balance as the library writes it.
+         *
+         * @return the text: "gets back 12.00 EUR"
+         */
+        @Override
+        public String toString() {
+            return Conversions.formatted(this, "GetsBack[amount=" + amount + "]");
         }
     }
 }

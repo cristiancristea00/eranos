@@ -24,9 +24,9 @@ import eranos.examples.title
 import eranos.examples.totals
 
 private data class ComparisonRow(
-    val after: String,
-    val before: String,
     val name: String,
+    val before: String,
+    val after: String,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, before, after)
@@ -39,19 +39,19 @@ private data class ComparisonRow(
 /** Prints the report of the road trip saved and loaded. */
 fun main() {
     val euro = Currency.of("EUR")
-    val day = CalendarDate.of(day = 23, month = 9, year = 2026)
-    Group(euro, "Road trip").use { group ->
+    val day = CalendarDate.of(year = 2026, month = 9, day = 23)
+    Group("Road trip", euro).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val both = ExpenseSplit.Whole(Split.Equal(listOf(ana, bob)))
-        group.addBlocking(Expense(Cost.Local(Money.parse("70.00", euro)), day, "Fuel", Split.Equal(listOf(ana)), both))
+        group.addBlocking(Expense("Fuel", Cost.Local(Money.parse("70.00", euro)), Split.Equal(listOf(ana)), both, day))
         group.addBlocking(
             Expense(
-                Cost.Local(Money.parse("30.00", euro)),
-                day,
                 "Lunch",
+                Cost.Local(Money.parse("30.00", euro)),
                 Split.Equal(listOf(bob)),
                 both,
+                day,
                 tip = Tip(TipValue.Percentage(Percentage.parse("10"))),
             ),
         )
@@ -93,9 +93,9 @@ fun main() {
                 ComparisonRow.HEADERS,
                 listOf(ana, bob).map { member ->
                     ComparisonRow(
-                        after = totals(member, after)?.balance?.toString() ?: "?",
-                        before = totals(member, before)?.balance?.toString() ?: "?",
                         name = names(group, listOf(member)),
+                        before = totals(member, before)?.balance?.toString() ?: "?",
+                        after = totals(member, after)?.balance?.toString() ?: "?",
                     )
                 },
                 numbersFrom = 1,
@@ -106,13 +106,14 @@ fun main() {
             section("3. A corrupted file is refused")
             println(
                 """
-                Here the fuel's payer was edited to an identifier no member has. Reading the file
-                as a SavedGroup and loading it with into_group replays every entry through the
-                same checks as adding it, and refuses the file instead of producing balances that
-                do not add up:
+                Here Ana's identifier was edited in her member entry, so the fuel's payer is an
+                identifier no member has. Reading the file as a SavedGroup and loading it with
+                into_group replays every entry through the same checks as adding it, and refuses
+                the file instead of producing balances that do not add up:
                 """.trimIndent(),
             )
-            // The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
+            // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel
+            // she paid is left naming an identifier no member has.
             val corrupted = saved.replaceFirst(ana.value, "0199a000-0000-7000-8000-00000000ffff")
             try {
                 Group.loadBlocking(corrupted).close()

@@ -65,15 +65,15 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         const lei = Currency.of('RON');
 
         const price = Money.parse('12.5', euro);
-        assert.ok(price.equals(new Money(euro, 1_250n)));
-        assert.ok(!price.equals(new Money(euro, 1_251n)));
-        assert.ok(!price.equals(new Money(lei, 1_250n)));
+        assert.ok(price.equals(new Money(1_250n, euro)));
+        assert.ok(!price.equals(new Money(1_251n, euro)));
+        assert.ok(!price.equals(new Money(1_250n, lei)));
         assert.equal(price.toString(), '12.50 EUR');
-        assert.ok(price.plus(new Money(euro, 50n)).equals(new Money(euro, 1_300n)));
-        assert.ok(price.minus(new Money(euro, 50n)).equals(new Money(euro, 1_200n)));
-        assertRefused(() => price.plus(new Money(lei, 1n)), MoneyError, { kind: 'currencyMismatch', left: euro, right: lei });
-        assertRefused(() => new Money(euro, 9_223_372_036_854_775_807n).plus(new Money(euro, 1n)), MoneyError);
-        assertRefused(() => new Money(euro, -9_223_372_036_854_775_808n).minus(new Money(euro, 1n)), MoneyError);
+        assert.ok(price.plus(new Money(50n, euro)).equals(new Money(1_300n, euro)));
+        assert.ok(price.minus(new Money(50n, euro)).equals(new Money(1_200n, euro)));
+        assertRefused(() => price.plus(new Money(1n, lei)), MoneyError, { kind: 'currencyMismatch', left: euro, right: lei });
+        assertRefused(() => new Money(9_223_372_036_854_775_807n, euro).plus(new Money(1n, euro)), MoneyError);
+        assertRefused(() => new Money(-9_223_372_036_854_775_808n, euro).minus(new Money(1n, euro)), MoneyError);
         assertRefused(() => Money.parse('twelve', euro), MoneyError);
     });
 
@@ -85,9 +85,9 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.ok(!rate.equals(ExchangeRate.parse('5')));
         const lei = Currency.of('RON');
         const euro = Currency.of('EUR');
-        assert.ok(ExchangeRate.parse('0.25').convert(new Money(lei, 2n), euro).equals(new Money(euro, 1n)));
+        assert.ok(ExchangeRate.parse('0.25').convert(new Money(2n, lei), euro).equals(new Money(1n, euro)));
         assertRefused(() => ExchangeRate.parse('0'), MoneyError);
-        assertRefused(() => ExchangeRate.parse('2').convert(new Money(lei, 9_223_372_036_854_775_807n), euro), MoneyError);
+        assertRefused(() => ExchangeRate.parse('2').convert(new Money(9_223_372_036_854_775_807n, lei), euro), MoneyError);
 
         const percentage = Percentage.parse('12.5 %');
         assert.equal(percentage.basisPoints, 1_250);
@@ -108,15 +108,15 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
 
     /** A date or a time read or written another way than the library's, or one that does not exist, would put an entry on another day. */
     void it('reads and writes dates and times as the library does', () => {
-        const date = CalendarDate.of(23, 9, 2026);
+        const date = CalendarDate.of(2026, 9, 23);
         assert.equal(date.toString(), '2026-09-23');
-        assert.equal(date.day, 23);
-        assert.equal(date.month, 9);
         assert.equal(date.year, 2026);
+        assert.equal(date.month, 9);
+        assert.equal(date.day, 23);
         assert.ok(date.equals(CalendarDate.parse('2026-09-23')));
-        assert.ok(!date.equals(CalendarDate.of(24, 9, 2026)));
+        assert.ok(!date.equals(CalendarDate.of(2026, 9, 24)));
         assertRefused(
-            () => CalendarDate.of(30, 2, 2026),
+            () => CalendarDate.of(2026, 2, 30),
             CalendarError,
             { kind: 'invalidDate' },
             'invalid date: expected an existing ISO 8601 date between years 1 and 9999',
@@ -193,15 +193,15 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         const unlisted = Currency.known('XYZ');
         assert.equal(unlisted.code, 'XYZ');
         assert.equal(unlisted.name, 'XYZ');
-        assert.equal(unlisted.decimalPlaces, 0);
         assert.equal(unlisted.numericCode, 0);
-        assert.equal(new Money(unlisted, 5n).toString(), '5 XYZ');
+        assert.equal(unlisted.decimalPlaces, 0);
+        assert.equal(new Money(5n, unlisted).toString(), '5 XYZ');
         assert.equal(Percentage.known(-1).toString(), '-1 bp');
         assert.equal(Parts.known(0).toString(), '0/100');
-        assert.equal(CalendarDate.converted(internal.CalendarDate.create({ day: 30, month: 2, year: 2026 })).toString(), '2026/2/30');
+        assert.equal(CalendarDate.converted(internal.CalendarDate.create({ year: 2026, month: 2, day: 30 })).toString(), '2026/2/30');
         assert.equal(TimeOfDay.converted(internal.TimeOfDay.create({ hour: 25, minute: 0 })).toString(), '25h0');
         assert.equal(PhoneNumber.known('0712').toString(), '0712');
         assert.equal(Iban.known('XY').countryCode, 'XY');
-        assert.equal(formatBalance({ kind: 'owes', amount: new Money(unlisted, 1n) }), 'owes 1 XYZ');
+        assert.equal(formatBalance({ kind: 'owes', amount: new Money(1n, unlisted) }), 'owes 1 XYZ');
     });
 });

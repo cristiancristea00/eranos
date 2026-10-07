@@ -10,25 +10,25 @@ import * as internal from './internal/eranos.js';
 /** A day of the calendar, without a time zone: the day an entry happened wherever it happened. */
 export class CalendarDate {
     private constructor(
-        /** The day of the month, from 1. */
-        readonly day: number,
-        /** The month, from 1 for January. */
-        readonly month: number,
         /** The year, from 1 to 9999. */
         readonly year: number,
+        /** The month, from 1 for January. */
+        readonly month: number,
+        /** The day of the month, from 1. */
+        readonly day: number,
     ) {}
 
     /**
-     * The date of `day`, `month`, and `year`.
+     * The date of `year`, `month`, and `day`.
      *
-     * @param day - The day of the month, from 1
-     * @param month - The month, from 1 for January
      * @param year - The year, from 1 to 9999
+     * @param month - The month, from 1 for January
+     * @param day - The day of the month, from 1
      * @returns The date
      * @throws {@link CalendarError} with the failure `invalidDate` for a day that does not exist, such as 30 February
      */
-    static of(day: number, month: number, year: number): CalendarDate {
-        const date = new CalendarDate(day, month, year);
+    static of(year: number, month: number, day: number): CalendarDate {
+        const date = new CalendarDate(year, month, day);
         calling(() => internal.calendarDateFormat(date.generated()));
         return date;
     }
@@ -50,7 +50,7 @@ export class CalendarDate {
      * @internal
      */
     static converted(date: internal.CalendarDate): CalendarDate {
-        return new CalendarDate(date.day, date.month, date.year);
+        return new CalendarDate(date.year, date.month, date.day);
     }
 
     /**
@@ -59,7 +59,7 @@ export class CalendarDate {
      * @internal
      */
     generated(): internal.CalendarDate {
-        return internal.CalendarDate.create({ day: this.day, month: this.month, year: this.year });
+        return internal.CalendarDate.create({ year: this.year, month: this.month, day: this.day });
     }
 
     /**
@@ -69,7 +69,7 @@ export class CalendarDate {
      * @returns Whether the two are equal
      */
     equals(other: CalendarDate): boolean {
-        return this.day === other.day && this.month === other.month && this.year === other.year;
+        return this.year === other.year && this.month === other.month && this.day === other.day;
     }
 
     /**

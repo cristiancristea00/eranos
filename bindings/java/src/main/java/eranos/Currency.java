@@ -17,15 +17,15 @@ import java.util.stream.Collectors;
  */
 public final class Currency {
     private final String code;
-    private final int decimalPlaces;
     private final String name;
     private final int numericCode;
+    private final int decimalPlaces;
 
-    private Currency(String code, int decimalPlaces, String name, int numericCode) {
+    private Currency(String code, String name, int numericCode, int decimalPlaces) {
         this.code = code;
-        this.decimalPlaces = decimalPlaces;
         this.name = name;
         this.numericCode = numericCode;
+        this.decimalPlaces = decimalPlaces;
     }
 
     /** The library's list of currencies, read on first use. */
@@ -72,7 +72,7 @@ public final class Currency {
      */
     static Currency known(String code) {
         Currency listed = Listed.BY_CODE.get(code);
-        return null == listed ? new Currency(code, 0, code, 0) : listed;
+        return null == listed ? new Currency(code, code, 0, 0) : listed;
     }
 
     /**
@@ -83,7 +83,7 @@ public final class Currency {
      */
     static Currency converted(CurrencyDetails details) {
         return new Currency(
-                details.code(), details.decimalPlaces(), details.name(), details.numericCode());
+                details.code(), details.name(), details.numericCode(), details.decimalPlaces());
     }
 
     /**
@@ -93,15 +93,6 @@ public final class Currency {
      */
     public String code() {
         return code;
-    }
-
-    /**
-     * How many decimal places its minor unit has.
-     *
-     * @return 2 for the euro, 0 for the yen
-     */
-    public int decimalPlaces() {
-        return decimalPlaces;
     }
 
     /**
@@ -122,18 +113,27 @@ public final class Currency {
         return numericCode;
     }
 
+    /**
+     * How many decimal places its minor unit has.
+     *
+     * @return 2 for the euro, 0 for the yen
+     */
+    public int decimalPlaces() {
+        return decimalPlaces;
+    }
+
     @Override
     public boolean equals(Object other) {
         return other instanceof Currency currency
                 && code.equals(currency.code)
-                && decimalPlaces == currency.decimalPlaces
                 && name.equals(currency.name)
-                && numericCode == currency.numericCode;
+                && numericCode == currency.numericCode
+                && decimalPlaces == currency.decimalPlaces;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(code, decimalPlaces, name, numericCode);
+        return Objects.hash(code, name, numericCode, decimalPlaces);
     }
 
     /**

@@ -7,13 +7,13 @@ use eranos::{CalendarDate, Currency, Expense, Group, Member, Split, Transfer};
 use super::*;
 
 fn euros(minor_units: i64) -> eranos::Money {
-    eranos::Money::from_minor_units(Currency::EUR, minor_units)
+    eranos::Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 fn record(minor_units: i64) -> Money {
     Money {
-        currency: "EUR".to_owned(),
         minor_units,
+        currency: "EUR".to_owned(),
     }
 }
 
@@ -43,21 +43,21 @@ fn every_balance_converts_to_its_side() {
 /// member's or another category's numbers.
 #[test]
 fn the_summary_and_the_shares_keep_every_number() {
-    let mut group = Group::builder(Currency::EUR, "Flat").build().unwrap();
+    let mut group = Group::builder("Flat", Currency::EUR).build().unwrap();
     let ana = group
         .add_member(Member::builder("Ana").build().unwrap())
         .unwrap();
     let bob = group
         .add_member(Member::builder("Bob").build().unwrap())
         .unwrap();
-    let day = CalendarDate::new(1, 10, 2026).unwrap();
-    let rent = Expense::builder(euros(9_000), day, "Rent", ana, Split::equal([ana, bob]))
+    let day = CalendarDate::new(2026, 10, 1).unwrap();
+    let rent = Expense::builder("Rent", euros(9_000), ana, Split::equal([ana, bob]), day)
         .build()
         .unwrap();
     let rent = group.add_expense(rent).unwrap();
     group
         .add_transfer(
-            Transfer::builder(euros(1_000), day, bob, ana)
+            Transfer::builder(bob, ana, euros(1_000), day)
                 .build()
                 .unwrap(),
         )
@@ -77,26 +77,26 @@ fn the_summary_and_the_shares_keep_every_number() {
         summary.members,
         [
             MemberSummary {
+                member: ana.to_string(),
+                paid: record(9_000),
+                share: record(4_500),
+                sent: record(0),
+                received: record(1_000),
+                net: record(3_500),
                 balance: Balance::GetsBack {
                     amount: record(3_500)
                 },
-                member: ana.to_string(),
-                net: record(3_500),
-                paid: record(9_000),
-                received: record(1_000),
-                sent: record(0),
-                share: record(4_500),
             },
             MemberSummary {
+                member: bob.to_string(),
+                paid: record(0),
+                share: record(4_500),
+                sent: record(1_000),
+                received: record(0),
+                net: record(-3_500),
                 balance: Balance::Owes {
                     amount: record(3_500)
                 },
-                member: bob.to_string(),
-                net: record(-3_500),
-                paid: record(0),
-                received: record(0),
-                sent: record(1_000),
-                share: record(4_500),
             },
         ]
     );
@@ -127,8 +127,8 @@ fn the_summary_and_the_shares_keep_every_number() {
                     share: record(4_500),
                 },
             ],
-            tip: record(0),
             total: record(9_000),
+            tip: record(0),
         }
     );
 }

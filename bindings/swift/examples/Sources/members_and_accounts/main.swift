@@ -7,10 +7,10 @@ import Report
 struct MemberRow: TableRow {
     static let headers = ["Member", "Email", "Phone", "Accounts"]
 
-    let accounts: String
-    let email: String
     let name: String
+    let email: String
     let phone: String
+    let accounts: String
 
     var cells: [String] {
         [name, email, phone, accounts]
@@ -32,10 +32,10 @@ struct CheckRow: TableRow {
 struct BalanceRow: TableRow {
     static let headers = ["Member", "Status", "Consumed", "Balance"]
 
-    let balance: Balance
-    let consumed: Money
     let name: String
     let status: String
+    let consumed: Money
+    let balance: Balance
 
     var cells: [String] {
         [name, status, "\(consumed)", "\(balance)"]
@@ -74,10 +74,10 @@ func printMembers(_ group: Group) throws(EranosError) {
     printTable(
         try group.members().map { member in
             MemberRow(
-                accounts: member.accounts.map(describe).joined(separator: "\n"),
-                email: member.email?.description ?? "",
                 name: [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
-                phone: member.phone?.description ?? ""
+                email: member.email?.description ?? "",
+                phone: member.phone?.description ?? "",
+                accounts: member.accounts.map(describe).joined(separator: "\n")
             )
         },
         numbersFrom: 4
@@ -91,7 +91,7 @@ func printBalances(_ group: Group) throws(EranosError) {
         guard let id = member.id, let totals = totals(of: id, in: summary) else {
             continue
         }
-        rows.append(BalanceRow(balance: totals.balance, consumed: totals.share, name: member.firstName, status: try group.isArchived(id) ? "archived" : "active"))
+        rows.append(BalanceRow(name: member.firstName, status: try group.isArchived(id) ? "archived" : "active", consumed: totals.share, balance: totals.balance))
     }
     printTable(rows, numbersFrom: 2)
 }
@@ -101,13 +101,13 @@ func members(_ group: Group) throws(EranosError) -> Flatmates {
     let ana = try group.add(
         Member(
             firstName: "Ana",
-            accounts: [
-                Account(details: .iban(try IBAN("ro49 aaaa 1b31 0075 9384 0000")), name: "ING"),
-                Account(details: .username(try Username("@ana")), name: "Revolut")
-            ],
-            email: try Email("ana@example.com"),
             lastName: "Popescu",
-            phone: try PhoneNumber("+40 712 345 678")
+            email: try Email("ana@example.com"),
+            phone: try PhoneNumber("+40 712 345 678"),
+            accounts: [
+                Account(name: "ING", details: .iban(try IBAN("ro49 aaaa 1b31 0075 9384 0000"))),
+                Account(name: "Revolut", details: .username(try Username("@ana")))
+            ]
         )
     )
     let bob = try group.add(Member(firstName: "Bob"))
@@ -156,11 +156,11 @@ func movingOut(_ group: Group, _ flatmates: Flatmates) throws(EranosError) {
     let bob = flatmates.bob
     let rent = try group.add(
         Expense(
-            cost: .local(try Money(parsing: "900.00", in: euro)),
-            date: try CalendarDate(day: 1, month: 9, year: 2026),
             name: "Rent",
+            cost: .local(try Money(parsing: "900.00", in: euro)),
             payers: .equal([ana]),
-            split: .whole(.equal([ana, bob]))
+            split: .whole(.equal([ana, bob])),
+            date: try CalendarDate(year: 2026, month: 9, day: 1)
         )
     )
     try group.archive(bob)
@@ -171,11 +171,11 @@ func movingOut(_ group: Group, _ flatmates: Flatmates) throws(EranosError) {
     try printBalances(group)
 
     let utilities = Expense(
-        cost: .local(try Money(parsing: "60.00", in: euro)),
-        date: try CalendarDate(day: 1, month: 10, year: 2026),
         name: "Utilities",
+        cost: .local(try Money(parsing: "60.00", in: euro)),
         payers: .equal([ana]),
-        split: .whole(.equal([ana, bob]))
+        split: .whole(.equal([ana, bob])),
+        date: try CalendarDate(year: 2026, month: 10, day: 1)
     )
     let refused: EranosError
     do {
@@ -206,7 +206,7 @@ func movingOut(_ group: Group, _ flatmates: Flatmates) throws(EranosError) {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(currency: euro, name: "Flat 4B")
+    let group = try Group(name: "Flat 4B", currency: euro)
     print("Flat 4B: members and their accounts")
     print("═══════════════════════════════════")
     print("""

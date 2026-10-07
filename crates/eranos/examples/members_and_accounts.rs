@@ -18,36 +18,36 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct MemberRow {
-    #[tabled(rename = "Accounts", order = 3)]
-    accounts: String,
-    #[tabled(rename = "Email", order = 1)]
-    email: String,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Phone", order = 2)]
+    #[tabled(rename = "Email")]
+    email: String,
+    #[tabled(rename = "Phone")]
     phone: String,
+    #[tabled(rename = "Accounts")]
+    accounts: String,
 }
 
 #[derive(Tabled)]
 struct CheckRow {
-    #[tabled(rename = "Input", order = 0)]
+    #[tabled(rename = "Input")]
     input: &'static str,
-    #[tabled(rename = "Checked as", order = 1)]
+    #[tabled(rename = "Checked as")]
     kind: &'static str,
-    #[tabled(rename = "Result", order = 2)]
+    #[tabled(rename = "Result")]
     result: String,
 }
 
 #[derive(Tabled)]
 struct BalanceRow {
-    #[tabled(rename = "Balance", order = 3)]
-    balance: Balance,
-    #[tabled(rename = "Consumed", order = 2)]
-    consumed: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Status", order = 1)]
+    #[tabled(rename = "Status")]
     status: &'static str,
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
 }
 
 /// The two flatmates: Ana, who gives every detail, and Bob, who moves out.
@@ -95,21 +95,21 @@ fn outcome<Value, Error: std::fmt::Display>(
 fn print_members(group: &Group) {
     print_table(
         group.members().map(|member| MemberRow {
+            name: [Some(member.first_name()), member.last_name()]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" "),
+            email: member.email().map_or("", Email::as_str).to_owned(),
+            phone: member
+                .phone()
+                .map_or_else(String::new, PhoneNumber::international),
             accounts: member
                 .accounts()
                 .iter()
                 .map(describe)
                 .collect::<Vec<_>>()
                 .join("\n"),
-            email: member.email().map_or("", Email::as_str).to_owned(),
-            name: [Some(member.first_name()), member.last_name()]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>()
-                .join(" "),
-            phone: member
-                .phone()
-                .map_or_else(String::new, PhoneNumber::international),
         }),
         4,
     );
@@ -119,14 +119,14 @@ fn print_balances(group: &Group) {
     let summary = group.summary();
     print_table(
         group.members().map(|member| BalanceRow {
-            balance: summary.member(member.id()).balance(),
-            consumed: summary.member(member.id()).share(),
             name: member.first_name().to_owned(),
             status: if group.is_archived(member.id()) {
                 "archived"
             } else {
                 "active"
             },
+            consumed: summary.member(member.id()).share(),
+            balance: summary.member(member.id()).balance(),
         }),
         2,
     );
@@ -140,10 +140,10 @@ fn members(group: &mut Group) -> Result<Flatmates, Box<dyn Error>> {
             .email(Email::parse("ana@example.com")?)
             .phone(PhoneNumber::parse("+40 712 345 678")?)
             .account(Account::new(
-                Iban::parse("ro49 aaaa 1b31 0075 9384 0000")?,
                 "ING",
+                Iban::parse("ro49 aaaa 1b31 0075 9384 0000")?,
             )?)
-            .account(Account::new(Username::new("@ana")?, "Revolut")?)
+            .account(Account::new("Revolut", Username::new("@ana")?)?)
             .build()?,
     )?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
@@ -202,11 +202,11 @@ fn moving_out(group: &mut Group, flatmates: Flatmates) -> Result<(), Box<dyn Err
     section("3. A flatmate moves out");
     let Flatmates { ana, bob } = flatmates;
     let rent = Expense::builder(
-        Money::parse("900.00", Currency::EUR)?,
-        CalendarDate::new(1, 9, 2026)?,
         "Rent",
+        Money::parse("900.00", Currency::EUR)?,
         ana,
         Split::equal([ana, bob]),
+        CalendarDate::new(2026, 9, 1)?,
     )
     .build()?;
     let rent = group.add_expense(rent)?;
@@ -218,11 +218,11 @@ fn moving_out(group: &mut Group, flatmates: Flatmates) -> Result<(), Box<dyn Err
     print_balances(group);
 
     let utilities = Expense::builder(
-        Money::parse("60.00", Currency::EUR)?,
-        CalendarDate::new(1, 10, 2026)?,
         "Utilities",
+        Money::parse("60.00", Currency::EUR)?,
         ana,
         Split::equal([ana, bob]),
+        CalendarDate::new(2026, 10, 1)?,
     )
     .build()?;
     let refused = group.add_expense(utilities);
@@ -253,7 +253,7 @@ fn moving_out(group: &mut Group, flatmates: Flatmates) -> Result<(), Box<dyn Err
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder(Currency::EUR, "Flat 4B").build()?;
+    let mut group = Group::builder("Flat 4B", Currency::EUR).build()?;
     println!("Flat 4B: members and their accounts");
     println!("═══════════════════════════════════");
     println!(

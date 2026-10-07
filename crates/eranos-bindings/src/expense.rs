@@ -15,42 +15,36 @@ use crate::{EranosError, check_new, identifier};
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberAmount {
-    /// The amount.
-    pub amount: Money,
     /// The member, as their identifier.
     pub member: String,
+    /// The amount.
+    pub amount: Money,
 }
 
 /// The parts one member pays in proportion to.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberParts {
-    /// The parts, in hundredths: 50 for half a part.
-    pub hundredths: i32,
     /// The member, as their identifier.
     pub member: String,
+    /// The parts, in hundredths: 50 for half a part.
+    pub hundredths: i32,
 }
 
 /// The percentage one member pays.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberPercentage {
-    /// The percentage, in basis points: 2 500 for 25 %.
-    pub basis_points: i32,
     /// The member, as their identifier.
     pub member: String,
+    /// The percentage, in basis points: 2 500 for 25 %.
+    pub basis_points: i32,
 }
 
 /// How an amount divides among members.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Split {
-    /// Every member pays an exact amount; the amounts add up to what they
-    /// divide.
-    Amounts {
-        /// The amount of every member.
-        shares: Vec<MemberAmount>,
-    },
     /// Every member pays the same.
     Equal {
         /// The members, as identifiers.
@@ -65,6 +59,12 @@ pub enum Split {
     Percentages {
         /// The percentage of every member.
         shares: Vec<MemberPercentage>,
+    },
+    /// Every member pays an exact amount; the amounts add up to what they
+    /// divide.
+    Amounts {
+        /// The amount of every member.
+        shares: Vec<MemberAmount>,
     },
 }
 
@@ -83,17 +83,6 @@ impl Split {
     /// for a negative percentage.
     pub(crate) fn to_library(&self) -> Result<library::Split, EranosError> {
         Ok(match self {
-            Self::Amounts { shares } => library::Split::amounts(
-                shares
-                    .iter()
-                    .map(|share| {
-                        Ok(library::MemberAmount::new(
-                            share.amount.to_library()?,
-                            identifier(&share.member)?,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>, EranosError>>()?,
-            ),
             Self::Equal { members } => library::Split::equal(
                 members
                     .iter()
@@ -122,6 +111,17 @@ impl Split {
                     })
                     .collect::<Result<Vec<_>, EranosError>>()?,
             ),
+            Self::Amounts { shares } => library::Split::amounts(
+                shares
+                    .iter()
+                    .map(|share| {
+                        Ok(library::MemberAmount::new(
+                            identifier(&share.member)?,
+                            share.amount.to_library()?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>, EranosError>>()?,
+            ),
         })
     }
 
@@ -132,18 +132,6 @@ impl Split {
 }
 
 impl FromSplit for Split {
-    fn amounts(shares: &[library::MemberAmount]) -> Self {
-        Self::Amounts {
-            shares: shares
-                .iter()
-                .map(|share| MemberAmount {
-                    amount: Money::from_library(share.amount()),
-                    member: share.member().to_string(),
-                })
-                .collect(),
-        }
-    }
-
     fn equal(members: &[MemberId]) -> Self {
         Self::Equal {
             members: members.iter().map(ToString::to_string).collect(),
@@ -155,8 +143,8 @@ impl FromSplit for Split {
             shares: shares
                 .iter()
                 .map(|share| MemberParts {
-                    hundredths: count(share.parts().hundredths()),
                     member: share.member().to_string(),
+                    hundredths: count(share.parts().hundredths()),
                 })
                 .collect(),
         }
@@ -167,8 +155,20 @@ impl FromSplit for Split {
             shares: shares
                 .iter()
                 .map(|share| MemberPercentage {
-                    basis_points: count(share.percentage().basis_points()),
                     member: share.member().to_string(),
+                    basis_points: count(share.percentage().basis_points()),
+                })
+                .collect(),
+        }
+    }
+
+    fn amounts(shares: &[library::MemberAmount]) -> Self {
+        Self::Amounts {
+            shares: shares
+                .iter()
+                .map(|share| MemberAmount {
+                    member: share.member().to_string(),
+                    amount: Money::from_library(share.amount()),
                 })
                 .collect(),
         }
@@ -181,10 +181,10 @@ impl FromSplit for Split {
 pub struct Item {
     /// What was bought.
     pub name: String,
-    /// How the line total divides.
-    pub split: Split,
     /// The price of one unit, in the expense's currency.
     pub unit_price: Money,
+    /// How the line total divides.
+    pub split: Split,
     /// How many units, from 1.
     pub quantity: i32,
 }
@@ -194,8 +194,8 @@ impl Item {
     pub(crate) fn from_library(item: &library::Item) -> Self {
         Self {
             name: item.name().to_owned(),
-            split: Split::from_split(item.split()),
             unit_price: Money::from_library(item.unit_price()),
+            split: Split::from_split(item.split()),
             quantity: count(item.quantity()),
         }
     }
@@ -213,8 +213,8 @@ impl Item {
         let quantity = u32::try_from(self.quantity).map_err(|_| ExpenseError::ZeroQuantity)?;
         Ok(library::Item::builder_with_split(
             self.name.clone(),
-            self.split.to_library()?,
             self.unit_price.to_library()?,
+            self.split.to_library()?,
         )
         .quantity(quantity)
         .build()?)
@@ -225,28 +225,28 @@ impl Item {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ExpenseSplit {
-    /// Every item is divided by its own split.
-    Itemised {
-        /// The lines of the bill.
-        items: Vec<Item>,
-    },
     /// The whole amount is divided by one split.
     Whole {
         /// How the amount divides.
         split: Split,
     },
+    /// Every item is divided by its own split.
+    Itemised {
+        /// The lines of the bill.
+        items: Vec<Item>,
+    },
 }
 
 impl FromExpenseSplit for ExpenseSplit {
-    fn itemised(items: &[library::Item]) -> Self {
-        Self::Itemised {
-            items: items.iter().map(Item::from_library).collect(),
-        }
-    }
-
     fn whole(split: &library::Split) -> Self {
         Self::Whole {
             split: Split::from_split(split),
+        }
+    }
+
+    fn itemised(items: &[library::Item]) -> Self {
+        Self::Itemised {
+            items: items.iter().map(Item::from_library).collect(),
         }
     }
 }
@@ -255,28 +255,28 @@ impl FromExpenseSplit for ExpenseSplit {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TipValue {
-    /// A fixed amount in the expense's currency.
-    Fixed {
-        /// The amount.
-        amount: Money,
-    },
     /// A percentage of the expense's amount.
     Percentage {
         /// The percentage, in basis points: 1 000 for 10 %.
         basis_points: i32,
     },
+    /// A fixed amount in the expense's currency.
+    Fixed {
+        /// The amount.
+        amount: Money,
+    },
 }
 
 impl FromTipValue for TipValue {
-    fn fixed(amount: money::Money) -> Self {
-        Self::Fixed {
-            amount: Money::from_library(amount),
-        }
-    }
-
     fn percentage(percentage: money::Percentage) -> Self {
         Self::Percentage {
             basis_points: count(percentage.basis_points()),
+        }
+    }
+
+    fn fixed(amount: money::Money) -> Self {
+        Self::Fixed {
+            amount: Money::from_library(amount),
         }
     }
 }
@@ -285,29 +285,29 @@ impl FromTipValue for TipValue {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TipDistribution {
-    /// The same for every participant.
-    Equal,
     /// In proportion to each participant's share of the amount.
     Proportional,
+    /// The same for every participant.
+    Equal,
 }
 
 impl TipDistribution {
     /// The library's distribution.
     pub(crate) const fn to_library(self) -> library::TipDistribution {
         match self {
-            Self::Equal => library::TipDistribution::Equal,
             Self::Proportional => library::TipDistribution::Proportional,
+            Self::Equal => library::TipDistribution::Equal,
         }
     }
 }
 
 impl FromTipDistribution for TipDistribution {
-    fn equal() -> Self {
-        Self::Equal
-    }
-
     fn proportional() -> Self {
         Self::Proportional
+    }
+
+    fn equal() -> Self {
+        Self::Equal
     }
 }
 
@@ -340,10 +340,10 @@ impl Tip {
     /// for a negative percentage.
     pub(crate) fn to_library(&self) -> Result<library::Tip, EranosError> {
         let tip = match &self.value {
-            TipValue::Fixed { amount } => library::Tip::fixed(amount.to_library()?),
             TipValue::Percentage { basis_points } => {
                 library::Tip::percentage(percentage(*basis_points)?)
             }
+            TipValue::Fixed { amount } => library::Tip::fixed(amount.to_library()?),
         };
         Ok(tip.distributed(self.distribution.to_library()))
     }
@@ -356,24 +356,24 @@ pub struct Expense {
     /// The identifier: absent for an expense to add, present for one the
     /// group holds or one to replace.
     pub id: Option<String>,
-    /// What it cost.
-    pub cost: Cost,
-    /// The day it was bought.
-    pub date: CalendarDate,
     /// What was bought.
     pub name: String,
+    /// What it cost.
+    pub cost: Cost,
     /// Who paid the total, amount plus tip, and how much each.
     pub payers: Split,
     /// How the amount is shared.
     pub split: ExpenseSplit,
+    /// The day it was bought.
+    pub date: CalendarDate,
+    /// The tip on top of the amount.
+    pub tip: Option<Tip>,
+    /// The time of day it was bought.
+    pub time: Option<TimeOfDay>,
     /// The category, as its identifier; absent for the built-in one.
     pub category: Option<String>,
     /// A longer description.
     pub description: Option<String>,
-    /// The time of day it was bought.
-    pub time: Option<TimeOfDay>,
-    /// The tip on top of the amount.
-    pub tip: Option<Tip>,
 }
 
 impl Expense {
@@ -383,15 +383,15 @@ impl Expense {
         let tip = expense.tip();
         Self {
             id: Some(expense.id().to_string()),
-            cost: Cost::from_cost(expense.cost()),
-            date: CalendarDate::from_library(expense.date()),
             name: expense.name().to_owned(),
+            cost: Cost::from_cost(expense.cost()),
             payers: Split::from_split(expense.payers()),
             split: ExpenseSplit::from_expense_split(expense.split()),
+            date: CalendarDate::from_library(expense.date()),
+            tip: (tip != library::Tip::default()).then(|| Tip::from_library(tip)),
+            time: expense.time().map(TimeOfDay::from_library),
             category: (CategoryId::UNCATEGORISED != category).then(|| category.to_string()),
             description: expense.description().map(str::to_owned),
-            time: expense.time().map(TimeOfDay::from_library),
-            tip: (tip != library::Tip::default()).then(|| Tip::from_library(tip)),
         }
     }
 
@@ -404,25 +404,25 @@ impl Expense {
     /// [`ExpenseBuilder::build`](library::ExpenseBuilder::build).
     pub(crate) fn to_new(&self) -> Result<library::Expense, EranosError> {
         check_new(self.id.as_deref())?;
-        let (cost, date, payers) = (
+        let (cost, payers, date) = (
             self.cost.to_library()?,
-            self.date.to_library()?,
             self.payers.to_library()?,
+            self.date.to_library()?,
         );
         let builder = match &self.split {
-            ExpenseSplit::Itemised { items } => library::Expense::itemised_builder_with_payers(
-                cost,
-                date,
-                items_of(items)?,
-                self.name.clone(),
-                payers,
-            ),
             ExpenseSplit::Whole { split } => library::Expense::builder_with_payers(
-                cost,
-                date,
                 self.name.clone(),
+                cost,
                 payers,
                 split.to_library()?,
+                date,
+            ),
+            ExpenseSplit::Itemised { items } => library::Expense::itemised_builder_with_payers(
+                self.name.clone(),
+                cost,
+                payers,
+                items_of(items)?,
+                date,
             ),
         };
         Ok(self.with_optional_fields(builder)?.build()?)
@@ -441,37 +441,37 @@ impl Expense {
     ) -> Result<library::Expense, EranosError> {
         let builder = existing
             .to_builder()
-            .cost(self.cost.to_library()?)
-            .date(self.date.to_library()?)
             .name(self.name.clone())
-            .payers(self.payers.to_library()?);
+            .cost(self.cost.to_library()?)
+            .payers(self.payers.to_library()?)
+            .date(self.date.to_library()?);
         let builder = match &self.split {
-            ExpenseSplit::Itemised { items } => builder.items(items_of(items)?),
             ExpenseSplit::Whole { split } => builder.split(split.to_library()?),
+            ExpenseSplit::Itemised { items } => builder.items(items_of(items)?),
         };
         Ok(self.with_optional_fields(builder)?.build()?)
     }
 
-    /// `builder` with the record's category, description, time, and tip,
+    /// `builder` with the record's tip, time, category, and description,
     /// each cleared when the record has none.
     fn with_optional_fields(
         &self,
         builder: library::ExpenseBuilder,
     ) -> Result<library::ExpenseBuilder, EranosError> {
-        let category = match &self.category {
-            Some(category) => identifier(category)?,
-            None => CategoryId::UNCATEGORISED,
-        };
         let tip = match &self.tip {
             Some(tip) => tip.to_library()?,
             None => library::Tip::default(),
         };
         let time = self.time.map(TimeOfDay::to_library).transpose()?;
+        let category = match &self.category {
+            Some(category) => identifier(category)?,
+            None => CategoryId::UNCATEGORISED,
+        };
         Ok(builder
-            .category(category)
-            .description(self.description.clone().unwrap_or_default())
+            .tip(tip)
             .time(time)
-            .tip(tip))
+            .category(category)
+            .description(self.description.clone().unwrap_or_default()))
     }
 }
 

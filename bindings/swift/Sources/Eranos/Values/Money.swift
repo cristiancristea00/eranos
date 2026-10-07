@@ -5,11 +5,11 @@ internal import EranosGenerated
 /// An amount prints as the library writes it, "12.50 EUR", and adds and subtracts with its
 /// checks: both amounts in one currency, and the result within range.
 public struct Money: Hashable, Sendable, CustomStringConvertible {
-    /// The currency.
-    public let currency: Currency
-
     /// The amount in minor units: cents for the euro, none for the yen.
     public let minorUnits: Int64
+
+    /// The currency.
+    public let currency: Currency
 
     /// The amount as the library writes it: "12.50 EUR".
     public var description: String {
@@ -17,19 +17,19 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
     }
 
     var generated: EranosGenerated.Money {
-        .init(currency: currency.code, minorUnits: minorUnits)
+        .init(minorUnits: minorUnits, currency: currency.code)
     }
 
     /// The amount of `minorUnits` minor units of `currency`.
-    public init(currency: Currency, minorUnits: Int64) {
-        self.currency = currency
+    public init(minorUnits: Int64, currency: Currency) {
         self.minorUnits = minorUnits
+        self.currency = currency
     }
 
     /// The amount written `text` in `currency`: "12.50", "12.5", or "-3".
     ///
     /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/invalidAmount`` for text
-    ///   that is not a decimal number, and ``MoneyFailure/tooManyDecimals(allowed:currency:)``
+    ///   that is not a decimal number, and ``MoneyFailure/tooManyDecimals(currency:allowed:)``
     ///   for more decimal places than the currency has.
     public init(parsing text: String, in currency: Currency) throws(EranosError) {
         let money = try converting { try EranosGenerated.moneyParse(text: text, code: currency.code) }
@@ -37,7 +37,7 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
     }
 
     init(_ money: EranosGenerated.Money) {
-        self.init(currency: Currency(known: money.currency), minorUnits: money.minorUnits)
+        self.init(minorUnits: money.minorUnits, currency: Currency(known: money.currency))
     }
 
     /// This amount plus `other`.

@@ -23,11 +23,11 @@ library itself is plain Rust with no I/O and no async runtime.
 | Member       | `Member`      | A person: first name (required), last name, email, phone, payment accounts        |
 | Account      | `Account`     | Where a member can be paid: an IBAN or a payment-app username                     |
 | Category     | `Category`    | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
-| Expense      | `Expense`     | What was bought: cost, date, payers, split, optional tip and category             |
+| Expense      | `Expense`     | What was bought: name, cost, payers, split, date, optional tip and category       |
 | Cost         | `Cost`        | An amount in the group currency, or in another one at a fixed exchange rate       |
-| Split        | `Split`       | How an amount is divided: equally, by percentages, by parts, or by exact amounts  |
+| Split        | `Split`       | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
 | Item         | `Item`        | A receipt line of an itemised expense, with its own quantity and split            |
-| Tip          | `Tip`         | A fixed amount or a percentage on top, shared proportionally or equally           |
+| Tip          | `Tip`         | A percentage or a fixed amount on top, shared proportionally or equally           |
 | Transfer     | `Transfer`    | Money one member paid another, such as a repayment                                |
 | Summary      | `Summary`     | Spending, paid, consumed, balances, and totals per category, always current       |
 | Settlement   | `Settlement`  | The payments that bring every balance to zero                                     |
@@ -41,14 +41,14 @@ use eranos::{
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
+    let mut group = Group::builder("Lisbon", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     let carol = group.add_member(Member::builder("Carol").build()?)?;
 
     // Ana paid dinner for three, plus a 10 % tip.
-    let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-    let dinner = Expense::builder(amount, day, "Dinner", ana, Split::equal([ana, bob, carol]))
+    let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), day)
         .tip(Tip::percentage(Percentage::parse("10")?))
         .build()?;
     group.add_expense(dinner)?;

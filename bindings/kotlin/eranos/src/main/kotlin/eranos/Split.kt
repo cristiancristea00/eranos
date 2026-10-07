@@ -1,7 +1,7 @@
 package eranos
 
 /**
- * How an amount divides among members: equally, by exact amounts, by parts, or by percentages.
+ * How an amount divides among members: equally, by parts, by percentages, or by exact amounts.
  *
  * The library divides every amount so that the shares add up to it exactly, and gives any minor unit left over by the rounding
  * to a member it picks from the expense's identifier.
@@ -9,26 +9,6 @@ package eranos
 public sealed interface Split {
     /** The members the split divides among, in the order it lists them. */
     public val members: List<MemberId>
-
-    /** Every member pays an exact amount; the amounts add up to what they divide. */
-    public class Amounts(
-        shares: List<MemberAmount>,
-    ) : Split {
-        /** What every member pays. */
-        public val shares: List<MemberAmount> = shares.toList()
-
-        override val members: List<MemberId>
-            get() = shares.map { it.member }
-
-        /** Whether [other] is of the same class, with the same [shares]. */
-        override fun equals(other: Any?): Boolean = other is Amounts && shares == other.shares
-
-        /** A hash of what [equals] compares. */
-        override fun hashCode(): Int = shares.hashCode()
-
-        /** A description of every field, for logs. */
-        override fun toString(): String = "Amounts(shares=$shares)"
-    }
 
     /** Every member pays the same. */
     public class Equal(
@@ -85,50 +65,70 @@ public sealed interface Split {
         /** A description of every field, for logs. */
         override fun toString(): String = "Percentages(shares=$shares)"
     }
+
+    /** Every member pays an exact amount; the amounts add up to what they divide. */
+    public class Amounts(
+        shares: List<MemberAmount>,
+    ) : Split {
+        /** What every member pays. */
+        public val shares: List<MemberAmount> = shares.toList()
+
+        override val members: List<MemberId>
+            get() = shares.map { it.member }
+
+        /** Whether [other] is of the same class, with the same [shares]. */
+        override fun equals(other: Any?): Boolean = other is Amounts && shares == other.shares
+
+        /** A hash of what [equals] compares. */
+        override fun hashCode(): Int = shares.hashCode()
+
+        /** A description of every field, for logs. */
+        override fun toString(): String = "Amounts(shares=$shares)"
+    }
 }
 
 /** The split as the generated code holds it. */
 internal val Split.generated: eranos.internal.Split
     get() =
         when (this) {
-            is Split.Amounts -> eranos.internal.Split.Amounts(shares.map { it.generated })
             is Split.Equal -> eranos.internal.Split.Equal(members.map { it.value })
             is Split.Parts -> eranos.internal.Split.Parts(shares.map { it.generated })
             is Split.Percentages -> eranos.internal.Split.Percentages(shares.map { it.generated })
+            is Split.Amounts -> eranos.internal.Split.Amounts(shares.map { it.generated })
         }
 
 /** The split the generated code holds as [this]. */
 internal fun eranos.internal.Split.converted(): Split =
     when (this) {
-        is eranos.internal.Split.Amounts -> Split.Amounts(shares.map { it.converted() })
         is eranos.internal.Split.Equal -> Split.Equal(members.map(::MemberId))
         is eranos.internal.Split.Parts -> Split.Parts(shares.map { it.converted() })
         is eranos.internal.Split.Percentages -> Split.Percentages(shares.map { it.converted() })
+        is eranos.internal.Split.Amounts -> Split.Amounts(shares.map { it.converted() })
     }
 
 /** The exact amount one member pays of a split. */
 public class MemberAmount(
-    /** The amount. */
-    public val amount: Money,
     /** The member. */
     public val member: MemberId,
+    /** The amount. */
+    public val amount: Money,
 ) {
     /** The share as the generated code holds it. */
     internal val generated: eranos.internal.MemberAmount
-        get() = eranos.internal.MemberAmount(amount.generated, member.value)
+        get() = eranos.internal.MemberAmount(member.value, amount.generated)
 
-    /** Whether [other] is of the same class, with the same [amount] and [member]. */
-    override fun equals(other: Any?): Boolean = other is MemberAmount && amount == other.amount && member == other.member
+    /** Whether [other] is of the same class, with the same [member] and [amount]. */
+    override fun equals(other: Any?): Boolean = other is MemberAmount && member == other.member && amount == other.amount
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(amount, member)
+    override fun hashCode(): Int = hashOf(member, amount)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "MemberAmount(amount=$amount, member=$member)"
+    override fun toString(): String = "MemberAmount(member=$member, amount=$amount)"
 }
 
 /** The share the generated code holds as [this]. */
-internal fun eranos.internal.MemberAmount.converted(): MemberAmount = MemberAmount(amount.converted(), MemberId(member))
+internal fun eranos.internal.MemberAmount.converted(): MemberAmount = MemberAmount(MemberId(member), amount.converted())
 
 /** The parts one member pays in proportion to. */
 public class MemberParts(
@@ -139,7 +139,7 @@ public class MemberParts(
 ) {
     /** The share as the generated code holds it. */
     internal val generated: eranos.internal.MemberParts
-        get() = eranos.internal.MemberParts(parts.hundredths, member.value)
+        get() = eranos.internal.MemberParts(member.value, parts.hundredths)
 
     /** Whether [other] is of the same class, with the same [member] and [parts]. */
     override fun equals(other: Any?): Boolean = other is MemberParts && member == other.member && parts == other.parts
@@ -163,7 +163,7 @@ public class MemberPercentage(
 ) {
     /** The share as the generated code holds it. */
     internal val generated: eranos.internal.MemberPercentage
-        get() = eranos.internal.MemberPercentage(percentage.basisPoints, member.value)
+        get() = eranos.internal.MemberPercentage(member.value, percentage.basisPoints)
 
     /** Whether [other] is of the same class, with the same [member] and [percentage]. */
     override fun equals(other: Any?): Boolean = other is MemberPercentage && member == other.member && percentage == other.percentage

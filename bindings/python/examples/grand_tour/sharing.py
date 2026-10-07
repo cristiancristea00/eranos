@@ -56,11 +56,11 @@ async def sharing(group: Group, people: People) -> None:
     everyone = (people.ana, people.bob, people.carol, people.dan, people.eva)
     await other.add_expense_async(
         Expense(
-            cost=LocalCost(ron('75.00')),
-            date=october(8),
             name='Airport coffee',
+            cost=LocalCost(ron('75.00')),
             payers=EqualSplit((people.bob,)),
             split=WholeExpenseSplit(EqualSplit(everyone)),
+            date=october(8),
         )
     )
     plan = await group.settlement_async(SettlementStrategy.MINIMUM_TRANSFERS)
@@ -74,7 +74,7 @@ async def sharing(group: Group, people: People) -> None:
         print_table(
             PaymentRow,
             [
-                PaymentRow(amount=payment.amount, from_=_first_name(reader, payment.sender), to=_first_name(reader, payment.receiver))
+                PaymentRow(from_=_first_name(reader, payment.sender), to=_first_name(reader, payment.receiver), amount=payment.amount)
                 for payment in plan.payments
             ],
             2,

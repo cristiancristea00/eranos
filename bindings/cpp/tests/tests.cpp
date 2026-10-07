@@ -83,17 +83,17 @@ template <typename Identifier> void checkIdentifier(Check &check, std::string_vi
 class Flat final {
   public:
     Flat()
-        : euro(Currency::of("EUR").value()), day(CalendarDate::of(23, 9, 2026).value()),
-          group(Group::create(euro, "Flat", GroupOptions{.description = "Rent", .language = Language::parse("pt-pt").value()}).value()),
+        : euro(Currency::of("EUR").value()), day(CalendarDate::of(2026, 9, 23).value()),
+          group(Group::create("Flat", euro, GroupOptions{.description = "Rent", .language = Language::parse("pt-pt").value()}).value()),
           ana(group.addMember(Member("Ana")).value()), bob(group.addMember(Member("Bob")).value()), food(group.addCategory(Category("Food")).value()),
-          dinner(group.addExpense(dinnerExpense()).value()), repayment(group.addTransfer(Transfer(LocalCost{euros(1'000)}, day, bob, ana)).value()) {}
+          dinner(group.addExpense(dinnerExpense()).value()), repayment(group.addTransfer(Transfer(bob, ana, LocalCost{euros(1'000)}, day)).value()) {}
 
     /// @p minorUnits cents.
-    [[nodiscard]] Money euros(std::int64_t const minorUnits) const { return {euro, minorUnits}; }
+    [[nodiscard]] Money euros(std::int64_t const minorUnits) const { return {minorUnits, euro}; }
 
     /// An expense of 30.00 EUR, called @p name, that @p payer paid and @p members share equally.
     [[nodiscard]] Expense expense(std::string name, MemberId const &payer, std::vector<MemberId> members) const {
-        return {LocalCost{euros(3'000)}, day, std::move(name), EqualSplit{{payer}}, WholeExpenseSplit{EqualSplit{std::move(members)}}};
+        return {std::move(name), LocalCost{euros(3'000)}, EqualSplit{{payer}}, WholeExpenseSplit{EqualSplit{std::move(members)}}, day};
     }
 
     Currency euro;
@@ -152,7 +152,7 @@ void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) {
     auto const price = Money::parse("12.5", euro).value();
     check.that(price.currency == euro && 1'250 == price.minorUnits, "12.5 is 1250 cents");
     check.that("12.50 EUR" == price.toString(), "the amount formats with its currency");
-    checkValue(check, price, Money(euro, 1'250), Money(euro, 1'251), "amounts compare by currency and minor units");
+    checkValue(check, price, Money(1'250, euro), Money(1'251, euro), "amounts compare by minor units and currency");
     check.that(isFailure(refusal(Money::parse("twelve", euro)), ErrorKind::MONEY, Failure::MONEY_INVALID_AMOUNT), "a word is no amount");
     auto const precise = refusal(Money::parse("1.234", euro));
     check.that(isFailure(precise, ErrorKind::MONEY, Failure::MONEY_TOO_MANY_DECIMALS), "the euro has two decimal places");
@@ -164,13 +164,13 @@ void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) {
 void amountsInOneCurrencyAddAndSubtract(Check &check) {
     auto const euro = Currency::of("EUR").value();
     auto const lei = Currency::of("RON").value();
-    check.that(Money(euro, 1'000).plus(Money(euro, 250)) == Money(euro, 1'250), "10.00 EUR and 2.50 EUR make 12.50 EUR");
-    check.that(Money(euro, 1'000).minus(Money(euro, 250)) == Money(euro, 750), "10.00 EUR less 2.50 EUR is 7.50 EUR");
-    auto const mixed = refusal(Money(euro, 1).plus(Money(lei, 1)));
+    check.that(Money(1'000, euro).plus(Money(250, euro)) == Money(1'250, euro), "10.00 EUR and 2.50 EUR make 12.50 EUR");
+    check.that(Money(1'000, euro).minus(Money(250, euro)) == Money(750, euro), "10.00 EUR less 2.50 EUR is 7.50 EUR");
+    auto const mixed = refusal(Money(1, euro).plus(Money(1, lei)));
     check.that(isFailure(mixed, ErrorKind::MONEY, Failure::MONEY_CURRENCY_MISMATCH), "amounts in two currencies do not add");
     check.that(mixed.has_value() && "EUR" == mixed.value().left() && "RON" == mixed.value().right(), "the error names both currencies");
-    auto const largest = Money(euro, INT64_MAX);
-    check.that(isFailure(refusal(largest.plus(Money(euro, 1))), ErrorKind::MONEY, Failure::MONEY_OVERFLOW), "a sum out of range");
+    auto const largest = Money(INT64_MAX, euro);
+    check.that(isFailure(refusal(largest.plus(Money(1, euro))), ErrorKind::MONEY, Failure::MONEY_OVERFLOW), "a sum out of range");
 }
 
 /// A rate that parsed or converted otherwise than the library does would change the share of every converted expense.
@@ -180,10 +180,10 @@ void aRateParsesAndConvertsAsTheLibraryDoes(Check &check) {
     auto const rate = ExchangeRate::parse("4.970").value();
     check.that("4.97" == rate.toString(), "the rate is written without trailing zeros");
     checkValue(check, rate, ExchangeRate::parse("4.97").value(), ExchangeRate::parse("5").value(), "rates compare by value");
-    check.that(ExchangeRate::parse("0.25").value().convert(Money(lei, 2), euro) == Money(euro, 1),
+    check.that(ExchangeRate::parse("0.25").value().convert(Money(2, lei), euro) == Money(1, euro),
                "0.02 RON at 0.25 is 0.01 EUR, rounded half away from zero");
     check.that(isFailure(refusal(ExchangeRate::parse("0")), ErrorKind::MONEY, Failure::MONEY_INVALID_EXCHANGE_RATE), "a rate is positive");
-    auto const overflow = refusal(ExchangeRate::parse("2").value().convert(Money(lei, INT64_MAX), euro));
+    auto const overflow = refusal(ExchangeRate::parse("2").value().convert(Money(INT64_MAX, lei), euro));
     check.that(isFailure(overflow, ErrorKind::MONEY, Failure::MONEY_OVERFLOW), "a converted amount out of range");
 }
 
@@ -203,10 +203,10 @@ void percentagesAndPartsParseAndFormatAsTheLibraryDoes(Check &check) {
 
 /// A date or a time the calendar does not have, taken, would date an expense on a day that never was.
 void datesAndTimesAreCheckedWhenMade(Check &check) {
-    auto const date = CalendarDate::of(23, 9, 2026).value();
-    check.that(23 == date.day() && 9 == date.month() && 2026 == date.year() && "2026-09-23" == date.toString(), "the date's fields and text");
-    checkValue(check, date, CalendarDate::parse("2026-09-23").value(), CalendarDate::of(24, 9, 2026).value(), "dates compare by day");
-    check.that(isFailure(refusal(CalendarDate::of(30, 2, 2026)), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_DATE), "30 February");
+    auto const date = CalendarDate::of(2026, 9, 23).value();
+    check.that(2026 == date.year() && 9 == date.month() && 23 == date.day() && "2026-09-23" == date.toString(), "the date's fields and text");
+    checkValue(check, date, CalendarDate::parse("2026-09-23").value(), CalendarDate::of(2026, 9, 24).value(), "dates compare by day");
+    check.that(isFailure(refusal(CalendarDate::of(2026, 2, 30)), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_DATE), "30 February");
     check.that(isFailure(refusal(CalendarDate::parse("2026-02-30")), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_DATE), "parsed");
     auto const time = TimeOfDay::of(18, 30).value();
     check.that(18 == time.hour() && 30 == time.minute() && "18:30" == time.toString(), "the time's fields and text");
@@ -266,73 +266,73 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
     MemberId const ana("0199a000-0000-7000-8000-000000000001");
     MemberId const bob("0199a000-0000-7000-8000-000000000002");
     CategoryId const food("0199a000-0000-7000-8000-000000000003");
-    Money const one(euro, 100);
-    Money const two(euro, 200);
-    auto const day = CalendarDate::of(23, 9, 2026).value();
-    checkValue(check, MemberAmount(one, ana), MemberAmount(one, ana), MemberAmount(one, bob), "member amounts");
+    Money const one(100, euro);
+    Money const two(200, euro);
+    auto const day = CalendarDate::of(2026, 9, 23).value();
     checkValue(check, MemberParts(ana, Parts{100}), MemberParts(ana, Parts{100}), MemberParts(ana, Parts{50}), "member parts");
     checkValue(check, MemberPercentage(ana, Percentage{5'000}), MemberPercentage(ana, Percentage{5'000}), MemberPercentage(bob, Percentage{5'000}),
                "member percentages");
-    checkValue(check, AmountsSplit{{MemberAmount(one, ana)}}, AmountsSplit{{MemberAmount(one, ana)}}, AmountsSplit{{MemberAmount(two, ana)}},
-               "amounts");
+    checkValue(check, MemberAmount(ana, one), MemberAmount(ana, one), MemberAmount(bob, one), "member amounts");
     checkValue(check, EqualSplit{{ana}}, EqualSplit{{ana}}, EqualSplit{{ana, bob}}, "equal splits");
     checkValue(check, PartsSplit{{MemberParts(ana, Parts{100})}}, PartsSplit{{MemberParts(ana, Parts{100})}}, PartsSplit{{}}, "parts splits");
     checkValue(check, PercentagesSplit{{MemberPercentage(ana, Percentage{10'000})}}, PercentagesSplit{{MemberPercentage(ana, Percentage{10'000})}},
                PercentagesSplit{{}}, "percentage splits");
-    Item const pizza("Pizza", EqualSplit{{ana, bob}}, one);
+    checkValue(check, AmountsSplit{{MemberAmount(ana, one)}}, AmountsSplit{{MemberAmount(ana, one)}}, AmountsSplit{{MemberAmount(ana, two)}},
+               "amounts");
+    Item const pizza("Pizza", one, EqualSplit{{ana, bob}});
     auto twoPizzas = pizza;
     twoPizzas.quantity = 2;
-    checkValue(check, pizza, Item("Pizza", EqualSplit{{ana, bob}}, one), twoPizzas, "items compare by quantity too");
-    checkValue(check, FixedTipValue{one}, FixedTipValue{one}, FixedTipValue{two}, "fixed tips");
+    checkValue(check, pizza, Item("Pizza", one, EqualSplit{{ana, bob}}), twoPizzas, "items compare by quantity too");
     checkValue(check, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{500}},
                "percentage tips");
-    Tip const tip(TipDistribution::EQUAL, FixedTipValue{one});
-    checkValue(check, tip, Tip(TipDistribution::EQUAL, FixedTipValue{one}), Tip(TipDistribution::PROPORTIONAL, FixedTipValue{one}), "tips");
+    checkValue(check, FixedTipValue{one}, FixedTipValue{one}, FixedTipValue{two}, "fixed tips");
+    Tip const tip(FixedTipValue{one}, TipDistribution::EQUAL);
+    checkValue(check, tip, Tip(FixedTipValue{one}, TipDistribution::EQUAL), Tip(FixedTipValue{one}, TipDistribution::PROPORTIONAL), "tips");
+    checkValue(check, LocalCost{one}, LocalCost{one}, LocalCost{two}, "local costs");
     auto const rate = ExchangeRate::parse("0.2").value();
     checkValue(check, ConvertedCost{.amount = one, .rate = rate}, ConvertedCost{.amount = one, .rate = rate},
                ConvertedCost{.amount = one, .rate = ExchangeRate::parse("0.3").value()}, "converted costs");
-    checkValue(check, LocalCost{one}, LocalCost{one}, LocalCost{two}, "local costs");
-    checkValue(check, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{twoPizzas}}, "itemised splits");
     checkValue(check, WholeExpenseSplit{EqualSplit{{ana}}}, WholeExpenseSplit{EqualSplit{{ana}}}, WholeExpenseSplit{EqualSplit{{bob}}},
                "whole splits");
-    Expense const dinner(LocalCost{two}, day, "Dinner", EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}});
+    checkValue(check, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{twoPizzas}}, "itemised splits");
+    Expense const dinner("Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day);
     auto described = dinner;
     described.description = "At the corner";
-    checkValue(check, dinner, Expense(LocalCost{two}, day, "Dinner", EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}), described,
+    checkValue(check, dinner, Expense("Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day), described,
                "expenses compare by description too");
-    Transfer const repayment(LocalCost{one}, day, bob, ana);
+    Transfer const repayment(bob, ana, LocalCost{one}, day);
     auto noted = repayment;
     noted.note = "Cash";
-    checkValue(check, repayment, Transfer(LocalCost{one}, day, bob, ana), noted, "transfers compare by note too");
+    checkValue(check, repayment, Transfer(bob, ana, LocalCost{one}, day), noted, "transfers compare by note too");
     auto const iban = Iban::parse("RO49AAAA1B31007593840000").value();
     checkValue(check, IbanAccountDetails{iban}, IbanAccountDetails{iban}, IbanAccountDetails{Iban::parse("GB82WEST12345698765432").value()},
                "IBAN details");
     auto const username = Username::parse("ana.pays").value();
     checkValue(check, UsernameAccountDetails{username}, UsernameAccountDetails{username}, UsernameAccountDetails{Username::parse("bob.pays").value()},
                "username details");
-    checkValue(check, Account(IbanAccountDetails{iban}, "Bank"), Account(IbanAccountDetails{iban}, "Bank"),
-               Account(UsernameAccountDetails{username}, "App"), "accounts");
+    checkValue(check, Account("Bank", IbanAccountDetails{iban}), Account("Bank", IbanAccountDetails{iban}),
+               Account("App", UsernameAccountDetails{username}), "accounts");
     Member const member("Ana");
     auto withLastName = member;
     withLastName.lastName = "Pop";
     checkValue(check, member, Member("Ana"), withLastName, "members compare by last name too");
     checkValue(check, Category("Food"), Category("Food"), Category("Lodging"), "categories");
-    checkValue(check, GetsBackBalance{one}, GetsBackBalance{one}, GetsBackBalance{two}, "balances owed to a member");
     checkValue(check, OwesBalance{one}, OwesBalance{one}, OwesBalance{two}, "balances a member owes");
     check.that(SettledBalance{} == SettledBalance{} && !(SettledBalance{} != SettledBalance{}), "settled balances are all equal");
-    MemberSummary const summary(GetsBackBalance{one}, ana, one, two, one, one, one);
-    checkValue(check, summary, MemberSummary(GetsBackBalance{one}, ana, one, two, one, one, one),
-               MemberSummary(OwesBalance{one}, ana, one, two, one, one, one), "member summaries compare by balance too");
+    checkValue(check, GetsBackBalance{one}, GetsBackBalance{one}, GetsBackBalance{two}, "balances owed to a member");
+    MemberSummary const summary(ana, two, one, one, one, one, GetsBackBalance{one});
+    checkValue(check, summary, MemberSummary(ana, two, one, one, one, one, GetsBackBalance{one}),
+               MemberSummary(ana, two, one, one, one, one, OwesBalance{one}), "member summaries compare by balance too");
     CategoryTotal const total(food, one);
     checkValue(check, total, CategoryTotal(food, one), CategoryTotal(food, two), "category totals");
     checkValue(check, MemberCategoryTotals(ana, {total}), MemberCategoryTotals(ana, {total}), MemberCategoryTotals(ana, {}),
                "member category totals");
-    checkValue(check, Summary({total}, {}, {summary}, two), Summary({total}, {}, {summary}, two), Summary({}, {}, {summary}, two), "summaries");
+    checkValue(check, Summary(two, {summary}, {total}, {}), Summary(two, {summary}, {total}, {}), Summary(two, {summary}, {}, {}), "summaries");
     MemberShare const share(ana, two, one);
     checkValue(check, share, MemberShare(ana, two, one), MemberShare(ana, one, one), "member shares");
-    checkValue(check, ExpenseShares({share}, one, two), ExpenseShares({share}, one, two), ExpenseShares({share}, two, two), "expense shares");
-    Payment const payment(one, bob, ana);
-    checkValue(check, payment, Payment(one, bob, ana), Payment(one, ana, bob), "payments compare by direction");
+    checkValue(check, ExpenseShares({share}, two, one), ExpenseShares({share}, two, one), ExpenseShares({share}, two, two), "expense shares");
+    Payment const payment(bob, ana, one);
+    checkValue(check, payment, Payment(bob, ana, one), Payment(ana, bob, one), "payments compare by direction");
     checkValue(check, Settlement({payment}, SettlementStrategy::GREEDY), Settlement({payment}, SettlementStrategy::GREEDY),
                Settlement({payment}, SettlementStrategy::DIRECT), "settlements compare by strategy too");
     checkValue(check, CurrencyRate(euro, rate), CurrencyRate(euro, rate), CurrencyRate(Currency::of("RON").value(), rate), "currency rates");
@@ -344,21 +344,22 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
 void anExpenseReadsBackAsItWasAdded(Check &check) {
     Flat flat;
     auto const lei = Currency::of("RON").value();
-    Expense lunch(ConvertedCost{.amount = Money(lei, 5'000), .rate = ExchangeRate::parse("0.2").value()}, flat.day, "Lunch",
+    Expense lunch("Lunch", ConvertedCost{.amount = Money(5'000, lei), .rate = ExchangeRate::parse("0.2").value()},
                   PercentagesSplit{{MemberPercentage(flat.ana, Percentage{5'000}), MemberPercentage(flat.bob, Percentage{5'000})}},
-                  WholeExpenseSplit{PartsSplit{{MemberParts(flat.ana, Parts{100}), MemberParts(flat.bob, Parts{50})}}});
+                  WholeExpenseSplit{PartsSplit{{MemberParts(flat.ana, Parts{100}), MemberParts(flat.bob, Parts{50})}}}, flat.day);
+    lunch.tip = Tip(PercentageTipValue{Percentage{1'000}}, TipDistribution::PROPORTIONAL);
+    lunch.time = TimeOfDay::of(13, 15).value();
     lunch.category = flat.food;
     lunch.description = "By the sea";
-    lunch.time = TimeOfDay::of(13, 15).value();
-    lunch.tip = Tip(TipDistribution::PROPORTIONAL, PercentageTipValue{Percentage{1'000}});
     auto const lunchId = flat.group.addExpense(lunch).value();
     lunch.id = lunchId;
     check.that(flat.group.expense(lunchId) == lunch, "a converted expense with every detail reads back unchanged");
-    Item pizza("Pizza", EqualSplit{{flat.ana, flat.bob}}, flat.euros(1'200));
+    Item pizza("Pizza", flat.euros(1'200), EqualSplit{{flat.ana, flat.bob}});
     pizza.quantity = 2;
-    Expense receipt(LocalCost{flat.euros(3'000)}, flat.day, "Receipt", AmountsSplit{{MemberAmount(flat.euros(3'300), flat.bob)}},
-                    ItemisedExpenseSplit{{pizza, Item("Wine", PercentagesSplit{{MemberPercentage(flat.ana, Percentage{10'000})}}, flat.euros(600))}});
-    receipt.tip = Tip(TipDistribution::EQUAL, FixedTipValue{flat.euros(300)});
+    Expense receipt("Receipt", LocalCost{flat.euros(3'000)}, AmountsSplit{{MemberAmount(flat.bob, flat.euros(3'300))}},
+                    ItemisedExpenseSplit{{pizza, Item("Wine", flat.euros(600), PercentagesSplit{{MemberPercentage(flat.ana, Percentage{10'000})}})}},
+                    flat.day);
+    receipt.tip = Tip(FixedTipValue{flat.euros(300)}, TipDistribution::EQUAL);
     receipt.id = flat.group.addExpense(receipt).value();
     check.that(flat.group.expense(receipt.id.value()) == receipt, "an itemised receipt with a fixed tip reads back unchanged");
     auto const expenses = flat.group.expenses();
@@ -369,10 +370,10 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
 /// A transfer or a member that came back otherwise than it went in would move money to the wrong account after a save.
 void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
     Flat flat;
-    Transfer cash(ConvertedCost{.amount = Money(Currency::of("RON").value(), 1'000), .rate = ExchangeRate::parse("0.2").value()}, flat.day, flat.ana,
-                  flat.bob);
-    cash.note = "Cash";
+    Transfer cash(flat.ana, flat.bob, ConvertedCost{.amount = Money(1'000, Currency::of("RON").value()), .rate = ExchangeRate::parse("0.2").value()},
+                  flat.day);
     cash.time = TimeOfDay::of(9, 5).value();
+    cash.note = "Cash";
     cash.id = flat.group.addTransfer(cash).value();
     check.that(flat.group.transfer(cash.id.value()) == cash, "a converted transfer with a note and a time reads back unchanged");
     check.that(flat.group.transferAmount(cash.id.value()) == flat.euros(200), "the transfer is 2.00 EUR in the group currency");
@@ -380,13 +381,13 @@ void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
     check.that(!flat.group.transferAmount(TransferId("0199a000-0000-7000-8000-00000000ffff")).value().has_value(),
                "an absent transfer has no amount");
     Member carla("Carla");
-    carla.accounts = {
-        Account(IbanAccountDetails{Iban::parse("RO49AAAA1B31007593840000").value()}, "Bank"),
-        Account(UsernameAccountDetails{Username::parse("carla.pays").value()}, "App"),
-    };
-    carla.email = Email::parse("carla@example.com").value();
     carla.lastName = "Pop";
+    carla.email = Email::parse("carla@example.com").value();
     carla.phone = PhoneNumber::parse("+40712345678").value();
+    carla.accounts = {
+        Account("Bank", IbanAccountDetails{Iban::parse("RO49AAAA1B31007593840000").value()}),
+        Account("App", UsernameAccountDetails{Username::parse("carla.pays").value()}),
+    };
     carla.id = flat.group.addMember(carla).value();
     check.that(flat.group.member(carla.id.value()) == carla, "a member with every detail reads back unchanged");
     check.that(3 == flat.group.members().size(), "the group holds three members");
@@ -463,13 +464,13 @@ void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) {
     Split const split = EqualSplit{{flat.bob, flat.ana}};
     check.that(participants(split) == std::vector<MemberId>{flat.bob, flat.ana}, "a split's participants, in the order it lists them");
     auto dinner = flat.expense("Dinner", flat.ana, {flat.bob});
-    dinner.tip = Tip(TipDistribution::EQUAL, PercentageTipValue{Percentage{1'000}});
+    dinner.tip = Tip(PercentageTipValue{Percentage{1'000}}, TipDistribution::EQUAL);
     check.that(participants(dinner) == std::vector<MemberId>{flat.ana, flat.bob},
                "the payer and the participants, in the order of their identifiers");
     check.that(tipAmount(dinner) == flat.euros(300) && total(dinner) == flat.euros(3'300), "a tip of 10 % on 30.00 EUR");
-    check.that("gets back 12.00 EUR" == toString(Balance{GetsBackBalance{flat.euros(1'200)}}), "a balance owed to a member");
     check.that("owes 12.00 EUR" == toString(Balance{OwesBalance{flat.euros(1'200)}}), "a balance a member owes");
     check.that("settled" == toString(Balance{SettledBalance{}}), "a settled balance");
+    check.that("gets back 12.00 EUR" == toString(Balance{GetsBackBalance{flat.euros(1'200)}}), "a balance owed to a member");
     auto const unknown = refusal(participants(Split{EqualSplit{{MemberId("not an identifier")}}}));
     check.that(isFailure(unknown, ErrorKind::ID, Failure::ID_INVALID_ID), "an identifier that is not one");
 }
@@ -493,9 +494,9 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) {
     check.that(!flat.group.description().has_value() && !flat.group.language().has_value(), "the details cleared");
     check.that(isFailure(refusal(flat.group.setName(" ")), ErrorKind::GROUP, Failure::GROUP_EMPTY_NAME), "a blank name");
     check.that(isFailure(refusal(flat.group.setDescription("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a description that is not text");
-    auto const trip = Group::create(flat.euro, "Trip").value();
+    auto const trip = Group::create("Trip", flat.euro).value();
     check.that(!trip.description().has_value() && !trip.language().has_value(), "a group made without options has neither");
-    check.that(isFailure(refusal(Group::create(flat.euro, " ")), ErrorKind::GROUP, Failure::GROUP_EMPTY_NAME), "a group needs a name");
+    check.that(isFailure(refusal(Group::create(" ", flat.euro)), ErrorKind::GROUP, Failure::GROUP_EMPTY_NAME), "a group needs a name");
 }
 
 /// Totals that did not add up would tell a member they owe what they do not.
@@ -519,9 +520,9 @@ void theSummaryAndTheSharesAddUp(Check &check) {
 /// Every strategy, in the order they are declared.
 constexpr std::array STRATEGIES = {
     SettlementStrategy::ADAPTIVE,
-    SettlementStrategy::DIRECT,
-    SettlementStrategy::GREEDY,
     SettlementStrategy::MINIMUM_TRANSFERS,
+    SettlementStrategy::GREEDY,
+    SettlementStrategy::DIRECT,
 };
 
 /// A strategy that settled otherwise than the library would ask a member to pay twice.
@@ -532,9 +533,9 @@ void eachStrategySettlesEveryBalance(Check &check) {
         // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
         auto const computedBy = SettlementStrategy::ADAPTIVE == strategy ? SettlementStrategy::MINIMUM_TRANSFERS : strategy;
         check.that(settlement.strategy == computedBy, "the plan names the strategy whose plan it is");
-        check.that(settlement.payments == std::vector<Payment>{Payment(flat.euros(500), flat.bob, flat.ana)}, "Bob pays Ana 5.00");
+        check.that(settlement.payments == std::vector<Payment>{Payment(flat.bob, flat.ana, flat.euros(500))}, "Bob pays Ana 5.00");
     }
-    static_cast<void>(flat.group.addTransfer(Transfer(LocalCost{flat.euros(500)}, flat.day, flat.bob, flat.ana)).value());
+    static_cast<void>(flat.group.addTransfer(Transfer(flat.bob, flat.ana, LocalCost{flat.euros(500)}, flat.day)).value());
     auto const members = flat.group.summary().members;
     check.that(std::ranges::all_of(members, [](MemberSummary const &member) { return member.balance == Balance{SettledBalance{}}; }),
                "once Bob pays, every balance is settled");
@@ -564,12 +565,12 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
     auto const unexpected = refusal(flat.group.addExpense(converted));
     check.that(isFailure(unexpected, ErrorKind::GROUP, Failure::GROUP_UNEXPECTED_EXCHANGE_RATE), "an amount in the group currency has no rate");
     auto local = converted;
-    local.cost = LocalCost{Money(lei, 1'000)};
+    local.cost = LocalCost{Money(1'000, lei)};
     auto const unconverted = refusal(flat.group.addExpense(local));
     check.that(isFailure(unconverted, ErrorKind::GROUP, Failure::GROUP_MISSING_EXCHANGE_RATE) && "RON" == unconverted.value().currency(),
                "an amount in another currency needs a rate");
     flat.group.changeCurrency(lei, std::array{rate}).value();
-    check.that(flat.group.currency() == lei && flat.group.summary().totalSpent == Money(lei, 15'000), "30.00 EUR at 5 is 150.00 RON");
+    check.that(flat.group.currency() == lei && flat.group.summary().totalSpent == Money(15'000, lei), "30.00 EUR at 5 is 150.00 RON");
 }
 
 /// A saved group that loaded otherwise than it was saved would lose entries between two runs of an app.
@@ -592,13 +593,13 @@ void aSavedGroupLoadsAsItWasSaved(Check &check) {
 void everyErrorHoldsWhatItsFailureHolds(Check &check) {
     Flat flat;
     auto uneven = flat.expense("Uneven", flat.ana, {});
-    uneven.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.euros(1'000), flat.ana)}}};
+    uneven.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.ana, flat.euros(1'000))}}};
     auto const amounts = refusal(flat.group.addExpense(uneven));
     check.that(isFailure(amounts, ErrorKind::EXPENSE, Failure::EXPENSE_AMOUNTS_DO_NOT_ADD_UP) && amounts.value().actual() == flat.euros(1'000) &&
                    amounts.value().expectedAmount() == flat.euros(3'000),
                "the amounts and what they should add up to");
     auto foreign = uneven;
-    foreign.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(Money(Currency::of("RON").value(), 3'000), flat.ana)}}};
+    foreign.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.ana, Money(3'000, Currency::of("RON").value()))}}};
     auto const currencies = refusal(flat.group.addExpense(foreign));
     check.that(isFailure(currencies, ErrorKind::EXPENSE, Failure::EXPENSE_CURRENCY_MISMATCH) && "EUR" == currencies.value().expectedCurrency() &&
                    "RON" == currencies.value().foundCurrency(),
@@ -662,7 +663,7 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) {
     renamed.name = "Brunch";
     check.that("Lunch" == group.replaceExpenseAsync(renamed).get().value().name && group.removeExpenseAsync(lunch).get() == renamed,
                "an expense's life");
-    auto const cash = group.addTransferAsync(Transfer(LocalCost{flat.euros(100)}, flat.day, flat.ana, flat.bob)).get().value();
+    auto const cash = group.addTransferAsync(Transfer(flat.ana, flat.bob, LocalCost{flat.euros(100)}, flat.day)).get().value();
     auto noted = group.transfer(cash).value().value();
     noted.note = "Coins";
     check.that(!group.replaceTransferAsync(noted).get().value().note.has_value() && group.removeTransferAsync(cash).get() == noted,

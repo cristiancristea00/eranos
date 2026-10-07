@@ -25,22 +25,22 @@ fn bob() -> MemberId {
 
 fn euros(minor_units: i64) -> Money {
     Money {
-        currency: "EUR".to_owned(),
         minor_units,
+        currency: "EUR".to_owned(),
     }
 }
 
 fn lei(minor_units: i64) -> Money {
     Money {
-        currency: "RON".to_owned(),
         minor_units,
+        currency: "RON".to_owned(),
     }
 }
 
 fn unknown_money() -> Money {
     Money {
-        currency: "XYZ".to_owned(),
         minor_units: 3_000,
+        currency: "XYZ".to_owned(),
     }
 }
 
@@ -153,12 +153,12 @@ fn splits() -> [Split; 4] {
         Split::Amounts {
             shares: vec![
                 MemberAmount {
-                    amount: euros(1_000),
                     member: ana().to_string(),
+                    amount: euros(1_000),
                 },
                 MemberAmount {
-                    amount: euros(2_000),
                     member: bob().to_string(),
+                    amount: euros(2_000),
                 },
             ],
         },
@@ -166,24 +166,24 @@ fn splits() -> [Split; 4] {
         Split::Parts {
             shares: vec![
                 MemberParts {
-                    hundredths: 100,
                     member: ana().to_string(),
+                    hundredths: 100,
                 },
                 MemberParts {
-                    hundredths: 50,
                     member: bob().to_string(),
+                    hundredths: 50,
                 },
             ],
         },
         Split::Percentages {
             shares: vec![
                 MemberPercentage {
-                    basis_points: 6_000,
                     member: ana().to_string(),
+                    basis_points: 6_000,
                 },
                 MemberPercentage {
-                    basis_points: 4_000,
                     member: bob().to_string(),
+                    basis_points: 4_000,
                 },
             ],
         },
@@ -194,8 +194,8 @@ fn splits() -> [Split; 4] {
 fn fare() -> Item {
     Item {
         name: "Fare".to_owned(),
-        split: equal(&[ana(), bob()]),
         unit_price: lei(2_500),
+        split: equal(&[ana(), bob()]),
         quantity: 2,
     }
 }
@@ -205,36 +205,36 @@ fn fare() -> Item {
 fn dinner() -> Expense {
     Expense {
         id: None,
+        name: "Dinner".to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
         },
-        date: CalendarDate {
-            day: 23,
-            month: 9,
-            year: 2026,
-        },
-        name: "Dinner".to_owned(),
         payers: Split::Amounts {
             shares: vec![MemberAmount {
-                amount: euros(3_300),
                 member: ana().to_string(),
+                amount: euros(3_300),
             }],
         },
         split: ExpenseSplit::Whole {
             split: equal(&[ana(), bob()]),
         },
-        category: Some(CategoryId::from_bytes([3; 16]).to_string()),
-        description: Some("A birthday".to_owned()),
-        time: Some(TimeOfDay {
-            hour: 20,
-            minute: 15,
-        }),
+        date: CalendarDate {
+            year: 2026,
+            month: 9,
+            day: 23,
+        },
         tip: Some(Tip {
             value: TipValue::Percentage {
                 basis_points: 1_000,
             },
             distribution: TipDistribution::Proportional,
         }),
+        time: Some(TimeOfDay {
+            hour: 20,
+            minute: 15,
+        }),
+        category: Some(CategoryId::from_bytes([3; 16]).to_string()),
+        description: Some("A birthday".to_owned()),
     }
 }
 
@@ -242,24 +242,24 @@ fn dinner() -> Expense {
 fn taxi() -> Expense {
     Expense {
         id: None,
+        name: "Taxi".to_owned(),
         cost: Cost::Converted {
             amount: lei(5_000),
             rate: "0.2".to_owned(),
         },
-        date: CalendarDate {
-            day: 24,
-            month: 9,
-            year: 2026,
-        },
-        name: "Taxi".to_owned(),
         payers: equal(&[bob()]),
         split: ExpenseSplit::Itemised {
             items: vec![fare()],
         },
+        date: CalendarDate {
+            year: 2026,
+            month: 9,
+            day: 24,
+        },
+        tip: None,
+        time: None,
         category: None,
         description: None,
-        time: None,
-        tip: None,
     }
 }
 
@@ -278,9 +278,9 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
         Refusal {
             record: Expense {
                 date: CalendarDate {
-                    day: 31,
-                    month: 9,
                     year: 2026,
+                    month: 9,
+                    day: 31,
                 },
                 ..dinner()
             },
@@ -378,8 +378,8 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Amounts {
                 shares: vec![MemberAmount {
-                    amount: unknown_money(),
                     member: ana().to_string(),
+                    amount: unknown_money(),
                 }],
             },
             is_expected: unknown_currency,
@@ -387,8 +387,8 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Amounts {
                 shares: vec![MemberAmount {
-                    amount: euros(1),
                     member: "nobody".to_owned(),
+                    amount: euros(1),
                 }],
             },
             is_expected: invalid_id,
@@ -400,8 +400,8 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Parts {
                 shares: vec![MemberParts {
+                    member: ana().to_string(),
                     hundredths: -1,
-                    member: ana().to_string(),
                 }],
             },
             is_expected: invalid_parts,
@@ -409,8 +409,8 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Parts {
                 shares: vec![MemberParts {
+                    member: ana().to_string(),
                     hundredths: 0,
-                    member: ana().to_string(),
                 }],
             },
             is_expected: invalid_parts,
@@ -418,8 +418,8 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Parts {
                 shares: vec![MemberParts {
-                    hundredths: 100,
                     member: "nobody".to_owned(),
+                    hundredths: 100,
                 }],
             },
             is_expected: invalid_id,
@@ -427,8 +427,8 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Percentages {
                 shares: vec![MemberPercentage {
-                    basis_points: -1,
                     member: ana().to_string(),
+                    basis_points: -1,
                 }],
             },
             is_expected: invalid_percentage,
@@ -436,8 +436,8 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Percentages {
                 shares: vec![MemberPercentage {
-                    basis_points: 100,
                     member: "nobody".to_owned(),
+                    basis_points: 100,
                 }],
             },
             is_expected: invalid_id,

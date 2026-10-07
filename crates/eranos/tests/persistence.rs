@@ -29,21 +29,21 @@ fn eur(text: &str) -> Money {
 }
 
 fn day() -> CalendarDate {
-    CalendarDate::new(23, 9, 2026).unwrap()
+    CalendarDate::new(2026, 9, 23).unwrap()
 }
 
 /// The group of `trip`, with Ana, who gives every member detail, and Carol,
 /// who is archived.
 struct Trip {
+    group: Group,
     ana: MemberId,
     carol: MemberId,
-    group: Group,
 }
 
 /// A group using every serialised feature, and the two members the tests
 /// look up.
 fn trip() -> Trip {
-    let mut group = Group::builder(Currency::EUR, "Lisbon")
+    let mut group = Group::builder("Lisbon", Currency::EUR)
         .description("Autumn trip")
         .language(Language::parse("pt-PT").unwrap())
         .build()
@@ -55,9 +55,9 @@ fn trip() -> Trip {
                 .email(Email::parse("ana@example.com").unwrap())
                 .phone(PhoneNumber::parse("+40712345678").unwrap())
                 .account(
-                    Account::new(Iban::parse("RO49AAAA1B31007593840000").unwrap(), "ING").unwrap(),
+                    Account::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap()).unwrap(),
                 )
-                .account(Account::new(Username::new("@ana").unwrap(), "Revolut").unwrap())
+                .account(Account::new("Revolut", Username::new("@ana").unwrap()).unwrap())
                 .build()
                 .unwrap(),
         )
@@ -71,26 +71,26 @@ fn trip() -> Trip {
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
 
     let bill = Expense::itemised_builder(
+        "Bill",
         eur("21.00"),
-        day(),
+        bob,
         [
-            Item::builder([ana], "Bacalhau", eur("12.00"))
+            Item::builder("Bacalhau", eur("12.00"), [ana])
                 .build()
                 .unwrap(),
             Item::builder_with_split(
                 "Wine",
+                eur("4.50"),
                 Split::parts([
                     MemberParts::new(ana, Parts::ONE),
                     MemberParts::new(bob, Parts::parse("1.5").unwrap()),
                 ]),
-                eur("4.50"),
             )
             .quantity(2)
             .build()
             .unwrap(),
         ],
-        "Bill",
-        bob,
+        day(),
     )
     .description("Tasca")
     .time(TimeOfDay::new(20, 30).unwrap())
@@ -100,33 +100,33 @@ fn trip() -> Trip {
     .unwrap();
     group.add_expense(bill).unwrap();
     let tram = Expense::builder_with_payers(
+        "Tram",
         Money::parse("30.00", Currency::RON)
             .unwrap()
             .at(ExchangeRate::parse("0.2011").unwrap()),
-        day(),
-        "Tram",
         Split::amounts([
-            MemberAmount::new(Money::parse("20.00", Currency::RON).unwrap(), ana),
-            MemberAmount::new(Money::parse("10.00", Currency::RON).unwrap(), carol),
+            MemberAmount::new(ana, Money::parse("20.00", Currency::RON).unwrap()),
+            MemberAmount::new(carol, Money::parse("10.00", Currency::RON).unwrap()),
         ]),
         Split::percentages([
             MemberPercentage::new(ana, Percentage::parse("50").unwrap()),
             MemberPercentage::new(carol, Percentage::parse("50").unwrap()),
         ]),
+        day(),
     )
     .build()
     .unwrap();
     group.add_expense(tram).unwrap();
     group
         .add_transfer(
-            Transfer::builder(eur("5.00"), day(), ana, bob)
+            Transfer::builder(ana, bob, eur("5.00"), day())
                 .note("Wine")
                 .build()
                 .unwrap(),
         )
         .unwrap();
     group.archive_member(carol).unwrap();
-    Trip { ana, carol, group }
+    Trip { group, ana, carol }
 }
 
 fn json_of(group: &Group) -> Value {
@@ -137,7 +137,7 @@ fn json_of(group: &Group) -> Value {
 /// and the same plans; anything else silently changes what people owe.
 #[test]
 fn a_group_round_trips_through_json() {
-    let Trip { carol, group, .. } = trip();
+    let Trip { group, carol, .. } = trip();
     let text = serde_json::to_string(&group).unwrap();
     let loaded: Group = serde_json::from_str(&text).unwrap();
     assert_eq!(loaded, group);
@@ -157,18 +157,18 @@ fn a_group_round_trips_through_json() {
 /// would make every saved group unreadable.
 #[test]
 fn the_json_shape_is_pinned() {
-    let Trip { ana, carol, group } = trip();
+    let Trip { group, ana, carol } = trip();
     let value = json_of(&group);
     assert_eq!(value["format"], json!(2));
     assert_eq!(value["id"], json!(group.id().to_string()));
     assert_eq!(value["name"], json!("Lisbon"));
     assert_eq!(value["currency"], json!("EUR"));
     assert_eq!(value["language"], json!("pt-PT"));
-    // The version leads, then the identifier; every entry starts with its
-    // own identifier.
+    // The version leads, then the identifier, then what describes the group
+    // and what it holds; every entry starts with its own identifier.
     let text = serde_json::to_string(&group).unwrap();
     let start = format!(
-        r#"{{"format":2,"id":"{}","categories":[{{"id":"#,
+        r#"{{"format":2,"id":"{}","name":"Lisbon","currency":"EUR","description":"Autumn trip","language":"pt-PT","members":[{{"id":"#,
         group.id()
     );
     assert!(text.starts_with(&start), "{text}");
@@ -371,7 +371,7 @@ fn an_inconsistent_file_is_refused() {
 /// one.
 #[test]
 fn a_saved_group_names_why_the_group_refuses_it() {
-    let Trip { ana, group, .. } = trip();
+    let Trip { group, ana, .. } = trip();
     let load = |change: &dyn Fn(&mut Value)| {
         let mut value = json_of(&group);
         change(&mut value);
@@ -421,7 +421,7 @@ fn a_saved_group_names_why_the_group_refuses_it() {
 fn a_saved_group_loads_asynchronously() {
     // 3 members, 2 000 expenses, and 100 transfers: 2 103 steps, so the
     // load yields after the 1 024th and the 2 048th.
-    let mut group = Group::builder(Currency::EUR, "Club").build().unwrap();
+    let mut group = Group::builder("Club", Currency::EUR).build().unwrap();
     let members: Vec<MemberId> = ["Ana", "Bob", "Carol"]
         .into_iter()
         .map(|name| {
@@ -432,11 +432,11 @@ fn a_saved_group_loads_asynchronously() {
         .collect();
     let everyone = Split::equal(members.iter().copied());
     for _ in 0..2_000 {
-        let expense = Expense::builder(eur("3.00"), day(), "Coffee", members[0], everyone.clone());
+        let expense = Expense::builder("Coffee", eur("3.00"), members[0], everyone.clone(), day());
         group.add_expense(expense.build().unwrap()).unwrap();
     }
     for _ in 0..100 {
-        let transfer = Transfer::builder(eur("1.00"), day(), members[1], members[0]);
+        let transfer = Transfer::builder(members[1], members[0], eur("1.00"), day());
         group.add_transfer(transfer.build().unwrap()).unwrap();
     }
     let saved: SavedGroup = serde_json::from_value(json_of(&group)).unwrap();
@@ -462,7 +462,7 @@ fn a_saved_group_loads_asynchronously() {
 /// gaining any.
 #[test]
 fn a_bare_group_round_trips_through_json() {
-    let group = Group::builder(Currency::EUR, "Bare").build().unwrap();
+    let group = Group::builder("Bare", Currency::EUR).build().unwrap();
     let text = serde_json::to_string(&group).unwrap();
     assert!(!text.contains("description"), "{text}");
     let loaded: Group = serde_json::from_str(&text).unwrap();
@@ -475,7 +475,7 @@ fn a_bare_group_round_trips_through_json() {
 /// and print in full, like every other value.
 #[test]
 fn account_details_serialise_and_print_in_clear_text() {
-    let Trip { ana, group, .. } = trip();
+    let Trip { group, ana, .. } = trip();
     let text = serde_json::to_string(&group).unwrap();
     assert!(text.contains("RO49AAAA1B31007593840000"));
     let debug = format!("{:?}", group.member(ana).unwrap());

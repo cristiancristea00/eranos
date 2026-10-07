@@ -48,7 +48,7 @@ import {
     generatedStrategy,
 } from './totals.js';
 
-/** The details a new group can start with besides its currency and name. */
+/** The details a new group can start with besides its name and currency. */
 export interface GroupOptions {
     /** A longer description. */
     readonly description?: string;
@@ -73,7 +73,7 @@ export interface CurrencyRate {
  * page's one thread would never end:
  *
  * ```ts
- * const group = Group.create(Currency.of('EUR'), 'Flat');
+ * const group = Group.create('Flat', Currency.of('EUR'));
  * const ana = group.addMemberSync({ firstName: 'Ana' });
  * const bob = await group.addMember({ firstName: 'Bob' });
  * ```
@@ -90,16 +90,16 @@ export class Group implements Disposable {
     /**
      * A new group with no members and no entries, called `name`, whose totals are in `currency`.
      *
-     * @param currency - The group currency
      * @param name - The name
+     * @param currency - The group currency
      * @param options - The description and the language, if the group has them
      * @returns The group
      * @throws {@link GroupError} with the failure `emptyName` for a blank name
      */
-    static create(currency: Currency, name: string, options?: GroupOptions): Group {
+    static create(name: string, currency: Currency, options?: GroupOptions): Group {
         const group = internal.NewGroup.create({
-            currency: currency.code,
             name,
+            currency: currency.code,
             ...(undefined === options?.description ? {} : { description: options.description }),
             ...(undefined === options?.language ? {} : { language: options.language.toString() }),
         });
@@ -168,7 +168,7 @@ export class Group implements Disposable {
         return GroupReader.wrapping(calling(() => this.handle.read()));
     }
 
-    // The group's own details: its identifier, name, description, language, currency, and saved form.
+    // The group's own details: its identifier, name, currency, description, language, and saved form.
 
     /**
      * The group's identifier.
@@ -193,6 +193,62 @@ export class Group implements Disposable {
      */
     idSync(): GroupId {
         return groupId(calling(() => this.handle.id()));
+    }
+
+    /**
+     * The group's name.
+     *
+     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
+     * was, and rejects with the signal's reason. {@link Group.nameSync} does not wait.
+     *
+     * @param options - The call's signal
+     * @returns A promise of the text
+     */
+    async name(options?: CallOptions): Promise<string> {
+        return await awaiting((signal) => this.handle.nameAsync(undefined, signal), options);
+    }
+
+    /**
+     * The group's name.
+     *
+     * Does not wait for the group's lock: while another call holds it, it throws {@link GroupError} with the failure
+     * `busy`, since a wait on the page's one thread would never end. {@link Group.name} waits for it.
+     *
+     * @returns The text
+     */
+    nameSync(): string {
+        return calling(() => this.handle.name());
+    }
+
+    /**
+     * Renames the group.
+     *
+     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
+     * was, and rejects with the signal's reason. {@link Group.setNameSync} does not wait.
+     *
+     * Rejects with {@link GroupError} with the failure `emptyName` for a blank name.
+     *
+     * @param name - The new name
+     * @param options - The call's signal
+     * @returns A promise of the call's end
+     */
+    async setName(name: string, options?: CallOptions): Promise<void> {
+        await awaiting((signal) => this.handle.setNameAsync(name, undefined, signal), options);
+    }
+
+    /**
+     * Renames the group.
+     *
+     * Does not wait for the group's lock: while another call holds it, it throws {@link GroupError} with the failure
+     * `busy`, since a wait on the page's one thread would never end. {@link Group.setName} waits for it.
+     *
+     * @param name - The new name
+     * @throws {@link GroupError} with the failure `emptyName` for a blank name
+     */
+    setNameSync(name: string): void {
+        calling(() => {
+            this.handle.setName(name);
+        });
     }
 
     /**
@@ -254,62 +310,6 @@ export class Group implements Disposable {
     changeCurrencySync(currency: Currency, rates: readonly CurrencyRate[]): void {
         calling(() => {
             this.handle.changeCurrency(currency.code, generatedRates(rates));
-        });
-    }
-
-    /**
-     * The group's name.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link Group.nameSync} does not wait.
-     *
-     * @param options - The call's signal
-     * @returns A promise of the text
-     */
-    async name(options?: CallOptions): Promise<string> {
-        return await awaiting((signal) => this.handle.nameAsync(undefined, signal), options);
-    }
-
-    /**
-     * The group's name.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link GroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link Group.name} waits for it.
-     *
-     * @returns The text
-     */
-    nameSync(): string {
-        return calling(() => this.handle.name());
-    }
-
-    /**
-     * Renames the group.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link Group.setNameSync} does not wait.
-     *
-     * Rejects with {@link GroupError} with the failure `emptyName` for a blank name.
-     *
-     * @param name - The new name
-     * @param options - The call's signal
-     * @returns A promise of the call's end
-     */
-    async setName(name: string, options?: CallOptions): Promise<void> {
-        await awaiting((signal) => this.handle.setNameAsync(name, undefined, signal), options);
-    }
-
-    /**
-     * Renames the group.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link GroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link Group.setName} waits for it.
-     *
-     * @param name - The new name
-     * @throws {@link GroupError} with the failure `emptyName` for a blank name
-     */
-    setNameSync(name: string): void {
-        calling(() => {
-            this.handle.setName(name);
         });
     }
 

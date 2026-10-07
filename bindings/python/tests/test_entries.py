@@ -53,27 +53,27 @@ from eranos import (
 def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
     """An expense that came back from the group otherwise than it went in would change what an app shows after a save."""
     lunch = Expense(
-        cost=ConvertedCost(Money(Currency('RON'), 5000), ExchangeRate('0.2')),
-        date=flat.day,
         name='Lunch',
+        cost=ConvertedCost(Money(5000, Currency('RON')), ExchangeRate('0.2')),
         payers=PercentagesSplit((MemberPercentage(flat.ana, Percentage(5000)), MemberPercentage(flat.bob, Percentage(5000)))),
         split=WholeExpenseSplit(PartsSplit((MemberParts(flat.ana, Parts(100)), MemberParts(flat.bob, Parts(50))))),
+        date=flat.day,
+        tip=Tip(PercentageTip(Percentage(1000))),
+        time=TimeOfDay(13, 15),
         category=flat.food,
         description='By the sea',
-        time=TimeOfDay(13, 15),
-        tip=Tip(TipDistribution.PROPORTIONAL, PercentageTip(Percentage(1000))),
     )
     lunch_id = flat.group.add_expense(lunch)
     assert flat.group.expense(lunch_id) == copy.replace(lunch, id=lunch_id)
-    pizza = Item(name='Pizza', split=EqualSplit((flat.ana, flat.bob)), unit_price=flat.euros(1200), quantity=2)
-    wine = Item(name='Wine', split=PercentagesSplit((MemberPercentage(flat.ana, Percentage(10000)),)), unit_price=flat.euros(600))
+    pizza = Item(name='Pizza', unit_price=flat.euros(1200), split=EqualSplit((flat.ana, flat.bob)), quantity=2)
+    wine = Item(name='Wine', unit_price=flat.euros(600), split=PercentagesSplit((MemberPercentage(flat.ana, Percentage(10000)),)))
     receipt = Expense(
-        cost=LocalCost(flat.euros(3000)),
-        date=flat.day,
         name='Receipt',
-        payers=AmountsSplit((MemberAmount(flat.euros(3300), flat.bob),)),
+        cost=LocalCost(flat.euros(3000)),
+        payers=AmountsSplit((MemberAmount(flat.bob, flat.euros(3300)),)),
         split=ItemisedExpenseSplit((pizza, wine)),
-        tip=Tip(TipDistribution.EQUAL, FixedTip(flat.euros(300))),
+        date=flat.day,
+        tip=Tip(FixedTip(flat.euros(300)), TipDistribution.EQUAL),
     )
     receipt_id = flat.group.add_expense(receipt)
     assert flat.group.expense(receipt_id) == copy.replace(receipt, id=receipt_id)
@@ -84,12 +84,12 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
 def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> None:
     """A transfer or a member that came back otherwise than it went in would move money to the wrong account after a save."""
     cash = Transfer(
-        cost=ConvertedCost(Money(Currency('RON'), 1000), ExchangeRate('0.2')),
-        date=flat.day,
-        receiver=flat.bob,
         sender=flat.ana,
-        note='Cash',
+        receiver=flat.bob,
+        cost=ConvertedCost(Money(1000, Currency('RON')), ExchangeRate('0.2')),
+        date=flat.day,
         time=TimeOfDay(9, 5),
+        note='Cash',
     )
     cash = copy.replace(cash, id=flat.group.add_transfer(cash))
     assert cash.id is not None
@@ -99,13 +99,13 @@ def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> Non
     assert flat.group.transfer_amount(TransferId('0199a000-0000-7000-8000-00000000ffff')) is None
     carla = Member(
         first_name='Carla',
-        accounts=(
-            Account(IbanAccountDetails(Iban('RO49AAAA1B31007593840000')), 'Bank'),
-            Account(UsernameAccountDetails(Username('carla.pays')), 'App'),
-        ),
-        email=Email('carla@example.com'),
         last_name='Pop',
+        email=Email('carla@example.com'),
         phone=PhoneNumber('+40712345678'),
+        accounts=(
+            Account('Bank', IbanAccountDetails(Iban('RO49AAAA1B31007593840000'))),
+            Account('App', UsernameAccountDetails(Username('carla.pays'))),
+        ),
     )
     carla = copy.replace(carla, id=flat.group.add_member(carla))
     assert carla.id is not None
@@ -163,7 +163,7 @@ def test_a_member_in_use_is_not_removed(flat: Flat) -> None:
     """A member removed while entries name them would leave shares nobody owes."""
     with pytest.raises(GroupError) as refused:
         flat.group.remove_member(flat.ana)
-    assert refused.value.failure == GroupError.MemberInUse(expenses=(flat.dinner,), member=flat.ana, transfers=(flat.repayment,))
+    assert refused.value.failure == GroupError.MemberInUse(member=flat.ana, expenses=(flat.dinner,), transfers=(flat.repayment,))
 
 
 def test_an_archived_member_joins_no_new_expense(flat: Flat) -> None:
@@ -185,16 +185,21 @@ def test_an_archived_member_joins_no_new_expense(flat: Flat) -> None:
 def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:
     """A helper that read an entry otherwise than the library would show an app a total the group does not hold."""
     assert EqualSplit((flat.bob, flat.ana)).members == (flat.bob, flat.ana)
-    assert AmountsSplit((MemberAmount(flat.euros(100), flat.bob),)).members == (flat.bob,)
     assert PartsSplit((MemberParts(flat.ana, Parts(100)),)).members == (flat.ana,)
     assert PercentagesSplit((MemberPercentage(flat.bob, Percentage(10000)),)).members == (flat.bob,)
-    dinner = copy.replace(flat.expense('Dinner', flat.ana, (flat.bob,)), tip=Tip(TipDistribution.EQUAL, PercentageTip(Percentage(1000))))
-    assert dinner.members() == tuple(sorted((flat.ana, flat.bob)))
-    assert dinner.tip_amount() == flat.euros(300)
+    assert AmountsSplit((MemberAmount(flat.bob, flat.euros(100)),)).members == (flat.bob,)
+    dinner = copy.replace(flat.expense('Dinner', flat.ana, (flat.bob,)), tip=Tip(PercentageTip(Percentage(1000)), TipDistribution.EQUAL))
     assert dinner.total() == flat.euros(3300)
-    assert str(GetsBackBalance(flat.euros(1200))) == 'gets back 12.00 EUR'
+    assert dinner.tip_amount() == flat.euros(300)
+    assert dinner.members() == tuple(sorted((flat.ana, flat.bob)))
     assert str(OwesBalance(flat.euros(1200))) == 'owes 12.00 EUR'
     assert str(SettledBalance()) == 'settled'
+    assert str(GetsBackBalance(flat.euros(1200))) == 'gets back 12.00 EUR'
     with pytest.raises(IdError) as unknown:
         flat.expense('Snack', MemberId('not an identifier'), (flat.ana,)).members()
     assert unknown.value.failure == IdError.InvalidId()
+
+
+def test_a_tip_without_a_distribution_is_shared_in_proportion() -> None:
+    """A tip whose sharing defaulted otherwise than the library's would divide the same bill differently in a Python app."""
+    assert Tip(PercentageTip(Percentage(1000))).distribution is TipDistribution.PROPORTIONAL

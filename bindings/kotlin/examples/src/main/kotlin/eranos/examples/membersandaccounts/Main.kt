@@ -27,10 +27,10 @@ import eranos.examples.section
 import eranos.examples.totals
 
 private data class MemberRow(
-    val accounts: String,
-    val email: String,
     val name: String,
+    val email: String,
     val phone: String,
+    val accounts: String,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, email, phone, accounts)
@@ -54,10 +54,10 @@ private data class CheckRow(
 }
 
 private data class BalanceRow(
-    val balance: Balance,
-    val consumed: Money,
     val name: String,
     val status: String,
+    val consumed: Money,
+    val balance: Balance,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, status, "$consumed", "$balance")
@@ -99,10 +99,10 @@ private fun printMembers(group: Group) {
         MemberRow.HEADERS,
         group.membersBlocking().map { member ->
             MemberRow(
-                accounts = member.accounts.joinToString("\n", transform = ::describe),
-                email = member.email?.toString().orEmpty(),
                 name = listOfNotNull(member.firstName, member.lastName).joinToString(" "),
+                email = member.email?.toString().orEmpty(),
                 phone = member.phone?.toString().orEmpty(),
+                accounts = member.accounts.joinToString("\n", transform = ::describe),
             )
         },
         numbersFrom = 4,
@@ -116,10 +116,10 @@ private fun printBalances(group: Group) {
             member.id?.let { id ->
                 totals(id, summary)?.let { totals ->
                     BalanceRow(
-                        balance = totals.balance,
-                        consumed = totals.share,
                         name = member.firstName,
                         status = if (group.isArchivedBlocking(id)) "archived" else "active",
+                        consumed = totals.share,
+                        balance = totals.balance,
                     )
                 }
             }
@@ -133,14 +133,14 @@ private fun members(group: Group): Flatmates {
         group.addBlocking(
             Member(
                 "Ana",
+                lastName = "Popescu",
+                email = Email.parse("ana@example.com"),
+                phone = PhoneNumber.parse("+40 712 345 678"),
                 accounts =
                     listOf(
-                        Account(AccountDetails.Iban(Iban.parse("ro49 aaaa 1b31 0075 9384 0000")), "ING"),
-                        Account(AccountDetails.Username(Username.parse("@ana")), "Revolut"),
+                        Account("ING", AccountDetails.Iban(Iban.parse("ro49 aaaa 1b31 0075 9384 0000"))),
+                        Account("Revolut", AccountDetails.Username(Username.parse("@ana"))),
                     ),
-                email = Email.parse("ana@example.com"),
-                lastName = "Popescu",
-                phone = PhoneNumber.parse("+40 712 345 678"),
             ),
         )
     val bob = group.addBlocking(Member("Bob"))
@@ -209,11 +209,11 @@ private fun movingOut(
     val rent =
         group.addBlocking(
             Expense(
-                Cost.Local(Money.parse("900.00", euro)),
-                CalendarDate.of(day = 1, month = 9, year = 2026),
                 "Rent",
+                Cost.Local(Money.parse("900.00", euro)),
                 Split.Equal(listOf(ana)),
                 both,
+                CalendarDate.of(year = 2026, month = 9, day = 1),
             ),
         )
     group.archiveBlocking(bob)
@@ -227,11 +227,11 @@ private fun movingOut(
 
     val utilities =
         Expense(
-            Cost.Local(Money.parse("60.00", euro)),
-            CalendarDate.of(day = 1, month = 10, year = 2026),
             "Utilities",
+            Cost.Local(Money.parse("60.00", euro)),
             Split.Equal(listOf(ana)),
             both,
+            CalendarDate.of(year = 2026, month = 10, day = 1),
         )
     val refused = refusal { group.addBlocking(utilities) }
     println("October's utilities cannot include him:\n  error: ${refused.message}")
@@ -246,7 +246,7 @@ private fun movingOut(
 
 /** Prints the report of the flat's members. */
 fun main() {
-    Group(Currency.of("EUR"), "Flat 4B").use { group ->
+    Group("Flat 4B", Currency.of("EUR")).use { group ->
         println("Flat 4B: members and their accounts")
         println("═══════════════════════════════════")
         println(

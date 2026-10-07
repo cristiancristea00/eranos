@@ -82,8 +82,8 @@ class ConvertingTest {
                                 Converting.callUnfailing(
                                         () -> {
                                             throw new eranos.internal.EranosException.Group(
-                                                    "busy",
-                                                    new eranos.internal.GroupFailure.Busy());
+                                                    new eranos.internal.GroupFailure.Busy(),
+                                                    "busy");
                                         }));
         assertEquals("busy", call.getMessage());
         assertEquals(EranosException.Group.class, call.getCause().getClass());
@@ -94,8 +94,8 @@ class ConvertingTest {
                                 Converting.runUnfailing(
                                         () -> {
                                             throw new eranos.internal.EranosException.Group(
-                                                    "busy",
-                                                    new eranos.internal.GroupFailure.Busy());
+                                                    new eranos.internal.GroupFailure.Busy(),
+                                                    "busy");
                                         }));
         assertEquals("busy", run.getMessage());
         EranosException.Group refused =
@@ -105,8 +105,8 @@ class ConvertingTest {
                                 Converting.run(
                                         () -> {
                                             throw new eranos.internal.EranosException.Group(
-                                                    "busy",
-                                                    new eranos.internal.GroupFailure.Busy());
+                                                    new eranos.internal.GroupFailure.Busy(),
+                                                    "busy");
                                         }));
         assertEquals(new GroupFailure.Busy(), refused.failure());
     }

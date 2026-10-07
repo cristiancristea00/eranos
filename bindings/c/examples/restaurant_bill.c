@@ -24,8 +24,6 @@ typedef struct Friends {
 
 /// A row of the receipt: a line, who shared it, its quantity, its unit price, and its total.
 typedef struct LineRow {
-    /// The quantity times the unit price.
-    Line lineTotal;
     /// What was ordered.
     Line name;
     /// Who shared it.
@@ -34,6 +32,8 @@ typedef struct LineRow {
     Line quantity;
     /// The price of one.
     Line unitPrice;
+    /// The quantity times the unit price.
+    Line lineTotal;
 } LineRow;
 
 /// A table of the receipt's lines, its columns from @p numbersFrom on aligned to the right.
@@ -48,18 +48,18 @@ static void addLineRow(Table *const table, LineRow const *const row) {
 
 /// A row of the table of tips: what a friend ordered, and what they pay with the tip shared by consumption and equally.
 typedef struct TipRow {
-    /// Their part of the tip shared equally.
-    Line equalTip;
-    /// What they pay with the tip shared equally.
-    Line equalTotal;
     /// Their first name.
     Line name;
+    /// What they ordered.
+    Line subtotal;
     /// Their part of the tip shared by consumption.
     Line proportionalTip;
     /// What they pay with the tip shared by consumption.
     Line proportionalTotal;
-    /// What they ordered.
-    Line subtotal;
+    /// Their part of the tip shared equally.
+    Line equalTip;
+    /// What they pay with the tip shared equally.
+    Line equalTotal;
 } TipRow;
 
 /// A table of tips, its columns from @p numbersFrom on aligned to the right.
@@ -77,11 +77,12 @@ static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR")
 
 /// Adds the line @p name of the receipt to @p items: @p quantity of @p unitPrice euros, which @p split shares; destroys
 /// @p split.
-static void addItem(EranosItemList *const items, char const *const name, EranosSplit *const split, char const *const unitPrice,
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the unit price, in the order the library's constructor reads them.
+static void addItem(EranosItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
                     int32_t const quantity) {
     EranosMoney *const price = euros(unitPrice);
     EranosItem *item = nullptr;
-    must(eranosItemCreate(name, split, price, &item));
+    must(eranosItemCreate(name, price, split, &item));
     eranosItemSetQuantity(item, quantity);
     eranosItemListPush(items, item);
     eranosItemDestroy(item);
@@ -92,16 +93,16 @@ static void addItem(EranosItemList *const items, char const *const name, EranosS
 /// The receipt: every line with the members who had it.
 static EranosItemList *receipt(Friends const *const friends) {
     EranosItemList *const items = eranosItemListCreate();
-    addItem(items, "Ciorbă", soleSplit(friends->ana), "8.00", 1);
+    addItem(items, "Ciorbă", "8.00", soleSplit(friends->ana), 1);
     Members const sarmale = {.count = 2, .ids = {friends->bob, friends->carol}};
-    addItem(items, "Sarmale", equalSplit(&sarmale), "14.00", 2);
+    addItem(items, "Sarmale", "14.00", equalSplit(&sarmale), 2);
     Share const papanasi[] = {
         {.member = friends->ana, .value = "1"},
         {.member = friends->carol, .value = "2"},
     };
-    addItem(items, "Papanași", partsSplit(papanasi, 2), "9.00", 1);
+    addItem(items, "Papanași", "9.00", partsSplit(papanasi, 2), 1);
     Members const everyone = {.count = 3, .ids = {friends->ana, friends->bob, friends->carol}};
-    addItem(items, "Lemonade", equalSplit(&everyone), "3.00", 3);
+    addItem(items, "Lemonade", "3.00", equalSplit(&everyone), 3);
     return items;
 }
 
@@ -112,7 +113,7 @@ static EranosExpense *billOf(Friends const *const friends, char const *const amo
     EranosItemList *const items = receipt(friends);
     EranosExpenseSplit *const split = eranosExpenseSplitCreateItemised(items);
     EranosExpense *expense = nullptr;
-    must(eranosExpenseCreate(cost, friends->day, "Dinner", payers, split, &expense));
+    must(eranosExpenseCreate("Dinner", cost, payers, split, friends->day, &expense));
     eranosExpenseSplitDestroy(split);
     eranosItemListDestroy(items);
     eranosSplitDestroy(payers);
@@ -197,14 +198,14 @@ static void printReceipt(EranosGroup const *const group, Friends const *const fr
         int32_t const quantity = eranosItemQuantity(item);
         eranosMoneyCurrency(unitPrice, text);
         EranosMoney *total = nullptr;
-        must(eranosMoneyCreate(eranosTextData(text), eranosMoneyMinorUnits(unitPrice) * quantity, &total));
+        must(eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, eranosTextData(text), &total));
         eranosItemName(item, text);
         addLineRow(table, &(LineRow){
-                              .lineTotal = moneyLine(total),
                               .name = textLine(text),
                               .participants = names(group, &sharedBy),
                               .quantity = lineOf("%ld", (long)quantity),
                               .unitPrice = moneyLine(unitPrice),
+                              .lineTotal = moneyLine(total),
                           });
         eranosSplitDestroy(split);
         eranosItemDestroy(item);
@@ -228,12 +229,12 @@ static void printTips(EranosGroup const *const group, Friends const *const frien
         Line const proportionalTip = addedTo(proportionalTotal, subtotal);
         Line const equalTip = addedTo(equalTotal, subtotal);
         addTipRow(table, &(TipRow){
-                             .equalTip = equalTip,
-                             .equalTotal = moneyLine(equalTotal),
                              .name = firstName(group, members[index].text),
+                             .subtotal = moneyLine(subtotal),
                              .proportionalTip = proportionalTip,
                              .proportionalTotal = moneyLine(proportionalTotal),
-                             .subtotal = moneyLine(subtotal),
+                             .equalTip = equalTip,
+                             .equalTotal = moneyLine(equalTotal),
                          });
     }
     tablePrint(table);
@@ -241,14 +242,14 @@ static void printTips(EranosGroup const *const group, Friends const *const frien
 
 int main(void) {
     EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("EUR", "Dinner at Caru' cu Bere", &details));
+    must(eranosNewGroupCreate("Dinner at Caru' cu Bere", "EUR", &details));
     EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
     Id const carol = addMember(group, "Carol");
-    Friends const friends = {.ana = ana, .bob = bob, .carol = carol, .day = {.day = 23, .month = 9, .year = 2026}};
+    Friends const friends = {.ana = ana, .bob = bob, .carol = carol, .day = {.year = 2026, .month = 9, .day = 23}};
 
     EranosText *const name = eranosTextCreate();
     must(eranosGroupName(group, name));

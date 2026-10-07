@@ -48,11 +48,11 @@ final class Conversions {
      */
     static Balance converted(eranos.internal.Balance balance) {
         return switch (balance) {
-            case eranos.internal.Balance.GetsBack getsBack ->
-                    new Balance.GetsBack(Money.converted(getsBack.amount()));
             case eranos.internal.Balance.Owes owes ->
                     new Balance.Owes(Money.converted(owes.amount()));
             case eranos.internal.Balance.Settled _ -> new Balance.Settled();
+            case eranos.internal.Balance.GetsBack getsBack ->
+                    new Balance.GetsBack(Money.converted(getsBack.amount()));
         };
     }
 
@@ -64,10 +64,10 @@ final class Conversions {
      */
     static eranos.internal.Balance generated(Balance balance) {
         return switch (balance) {
-            case Balance.GetsBack getsBack ->
-                    new eranos.internal.Balance.GetsBack(getsBack.amount().generated());
             case Balance.Owes owes -> new eranos.internal.Balance.Owes(owes.amount().generated());
             case Balance.Settled _ -> new eranos.internal.Balance.Settled();
+            case Balance.GetsBack getsBack ->
+                    new eranos.internal.Balance.GetsBack(getsBack.amount().generated());
         };
     }
 
@@ -95,12 +95,12 @@ final class Conversions {
      */
     static Cost converted(eranos.internal.Cost cost) {
         return switch (cost) {
+            case eranos.internal.Cost.Local local ->
+                    new Cost.Local(Money.converted(local.amount()));
             case eranos.internal.Cost.Converted converted ->
                     new Cost.Converted(
                             Money.converted(converted.amount()),
                             ExchangeRate.known(converted.rate()));
-            case eranos.internal.Cost.Local local ->
-                    new Cost.Local(Money.converted(local.amount()));
         };
     }
 
@@ -112,10 +112,10 @@ final class Conversions {
      */
     static eranos.internal.Cost generated(Cost cost) {
         return switch (cost) {
+            case Cost.Local local -> new eranos.internal.Cost.Local(local.amount().generated());
             case Cost.Converted converted ->
                     new eranos.internal.Cost.Converted(
                             converted.amount().generated(), converted.rate().toString());
-            case Cost.Local local -> new eranos.internal.Cost.Local(local.amount().generated());
         };
     }
 
@@ -127,11 +127,11 @@ final class Conversions {
      */
     static ExpenseSplit converted(eranos.internal.ExpenseSplit split) {
         return switch (split) {
+            case eranos.internal.ExpenseSplit.Whole whole ->
+                    new ExpenseSplit.Whole(converted(whole.split()));
             case eranos.internal.ExpenseSplit.Itemised itemised ->
                     new ExpenseSplit.Itemised(
                             itemised.items().stream().map(Item::converted).toList());
-            case eranos.internal.ExpenseSplit.Whole whole ->
-                    new ExpenseSplit.Whole(converted(whole.split()));
         };
     }
 
@@ -143,11 +143,11 @@ final class Conversions {
      */
     static eranos.internal.ExpenseSplit generated(ExpenseSplit split) {
         return switch (split) {
+            case ExpenseSplit.Whole whole ->
+                    new eranos.internal.ExpenseSplit.Whole(generated(whole.split()));
             case ExpenseSplit.Itemised itemised ->
                     new eranos.internal.ExpenseSplit.Itemised(
                             itemised.items().stream().map(Item::generated).toList());
-            case ExpenseSplit.Whole whole ->
-                    new eranos.internal.ExpenseSplit.Whole(generated(whole.split()));
         };
     }
 
@@ -159,9 +159,6 @@ final class Conversions {
      */
     static Split converted(eranos.internal.Split split) {
         return switch (split) {
-            case eranos.internal.Split.Amounts amounts ->
-                    new Split.Amounts(
-                            amounts.shares().stream().map(MemberAmount::converted).toList());
             case eranos.internal.Split.Equal equal ->
                     new Split.Equal(equal.members().stream().map(MemberId::new).toList());
             case eranos.internal.Split.Parts parts ->
@@ -171,6 +168,9 @@ final class Conversions {
                             percentages.shares().stream()
                                     .map(MemberPercentage::converted)
                                     .toList());
+            case eranos.internal.Split.Amounts amounts ->
+                    new Split.Amounts(
+                            amounts.shares().stream().map(MemberAmount::converted).toList());
         };
     }
 
@@ -182,9 +182,6 @@ final class Conversions {
      */
     static eranos.internal.Split generated(Split split) {
         return switch (split) {
-            case Split.Amounts amounts ->
-                    new eranos.internal.Split.Amounts(
-                            amounts.shares().stream().map(MemberAmount::generated).toList());
             case Split.Equal equal ->
                     new eranos.internal.Split.Equal(
                             equal.members().stream().map(MemberId::value).toList());
@@ -196,6 +193,9 @@ final class Conversions {
                             percentages.shares().stream()
                                     .map(MemberPercentage::generated)
                                     .toList());
+            case Split.Amounts amounts ->
+                    new eranos.internal.Split.Amounts(
+                            amounts.shares().stream().map(MemberAmount::generated).toList());
         };
     }
 
@@ -207,10 +207,10 @@ final class Conversions {
      */
     static TipValue converted(eranos.internal.TipValue value) {
         return switch (value) {
-            case eranos.internal.TipValue.Fixed fixed ->
-                    new TipValue.Fixed(Money.converted(fixed.amount()));
             case eranos.internal.TipValue.Percentage percentage ->
                     new TipValue.Percentage(Percentage.known(percentage.basisPoints()));
+            case eranos.internal.TipValue.Fixed fixed ->
+                    new TipValue.Fixed(Money.converted(fixed.amount()));
         };
     }
 
@@ -222,10 +222,10 @@ final class Conversions {
      */
     static eranos.internal.TipValue generated(TipValue value) {
         return switch (value) {
-            case TipValue.Fixed fixed ->
-                    new eranos.internal.TipValue.Fixed(fixed.amount().generated());
             case TipValue.Percentage percentage ->
                     new eranos.internal.TipValue.Percentage(percentage.percentage().basisPoints());
+            case TipValue.Fixed fixed ->
+                    new eranos.internal.TipValue.Fixed(fixed.amount().generated());
         };
     }
 }

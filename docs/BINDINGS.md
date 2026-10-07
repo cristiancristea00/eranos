@@ -645,7 +645,7 @@ leaves it out:
 - Every entry has an identifier type of its own, a `NewType` over `str`
   (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
   checks is a class whose constructor checks it, as `datetime.date`'s
-  does (`Currency('EUR')`, `CalendarDate(23, 9, 2026)`,
+  does (`Currency('EUR')`, `CalendarDate(2026, 9, 23)`,
   `Email('ana@example.com')`), and prints the library's text. Amounts,
   entries, and totals are frozen dataclasses: an entry takes its fields by
   keyword and is edited with `copy.replace`, which keeps its identifier,

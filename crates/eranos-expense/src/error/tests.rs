@@ -5,134 +5,134 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case {
     error: ExpenseError,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// An [`ExpenseError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedExpenseError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromExpenseError for ConvertedExpenseError {
-    fn amounts_do_not_add_up(actual: Money, expected: Money, message: String) -> Self {
-        Self {
-            held: format!("{actual} {expected}"),
-            message,
-            method: "amounts_do_not_add_up",
-        }
-    }
-
-    fn currency_mismatch(expected: Currency, found: Currency, message: String) -> Self {
-        Self {
-            held: format!("{expected} {found}"),
-            message,
-            method: "currency_mismatch",
-        }
-    }
-
-    fn duplicate_member(member: MemberId, message: String) -> Self {
-        Self {
-            held: format!("{member}"),
-            message,
-            method: "duplicate_member",
-        }
-    }
-
-    fn empty_item_name(message: String) -> Self {
-        Self {
-            held: String::new(),
-            message,
-            method: "empty_item_name",
-        }
-    }
-
     fn empty_name(message: String) -> Self {
         Self {
-            held: String::new(),
-            message,
             method: "empty_name",
-        }
-    }
-
-    fn empty_split(message: String) -> Self {
-        Self {
             held: String::new(),
             message,
-            method: "empty_split",
-        }
-    }
-
-    fn items_do_not_add_up(actual: Money, expected: Money, message: String) -> Self {
-        Self {
-            held: format!("{actual} {expected}"),
-            message,
-            method: "items_do_not_add_up",
-        }
-    }
-
-    fn negative_tip(message: String) -> Self {
-        Self {
-            held: String::new(),
-            message,
-            method: "negative_tip",
-        }
-    }
-
-    fn no_items(message: String) -> Self {
-        Self {
-            held: String::new(),
-            message,
-            method: "no_items",
         }
     }
 
     fn non_positive_amount(message: String) -> Self {
         Self {
+            method: "non_positive_amount",
             held: String::new(),
             message,
-            method: "non_positive_amount",
+        }
+    }
+
+    fn currency_mismatch(expected: Currency, found: Currency, message: String) -> Self {
+        Self {
+            method: "currency_mismatch",
+            held: format!("{expected} {found}"),
+            message,
+        }
+    }
+
+    fn empty_split(message: String) -> Self {
+        Self {
+            method: "empty_split",
+            held: String::new(),
+            message,
+        }
+    }
+
+    fn duplicate_member(member: MemberId, message: String) -> Self {
+        Self {
+            method: "duplicate_member",
+            held: format!("{member}"),
+            message,
         }
     }
 
     fn non_positive_share(member: MemberId, message: String) -> Self {
         Self {
+            method: "non_positive_share",
             held: format!("{member}"),
             message,
-            method: "non_positive_share",
         }
     }
 
-    fn overflow(message: String) -> Self {
+    fn amounts_do_not_add_up(expected: Money, actual: Money, message: String) -> Self {
         Self {
-            held: String::new(),
+            method: "amounts_do_not_add_up",
+            held: format!("{expected} {actual}"),
             message,
-            method: "overflow",
         }
     }
 
-    fn percentages_do_not_add_up(message: String, total_basis_points: u64) -> Self {
+    fn percentages_do_not_add_up(total_basis_points: u64, message: String) -> Self {
         Self {
+            method: "percentages_do_not_add_up",
             held: format!("{total_basis_points}"),
             message,
-            method: "percentages_do_not_add_up",
+        }
+    }
+
+    fn no_items(message: String) -> Self {
+        Self {
+            method: "no_items",
+            held: String::new(),
+            message,
+        }
+    }
+
+    fn empty_item_name(message: String) -> Self {
+        Self {
+            method: "empty_item_name",
+            held: String::new(),
+            message,
         }
     }
 
     fn zero_quantity(message: String) -> Self {
         Self {
+            method: "zero_quantity",
             held: String::new(),
             message,
-            method: "zero_quantity",
+        }
+    }
+
+    fn items_do_not_add_up(expected: Money, actual: Money, message: String) -> Self {
+        Self {
+            method: "items_do_not_add_up",
+            held: format!("{expected} {actual}"),
+            message,
+        }
+    }
+
+    fn negative_tip(message: String) -> Self {
+        Self {
+            method: "negative_tip",
+            held: String::new(),
+            message,
+        }
+    }
+
+    fn overflow(message: String) -> Self {
+        Self {
+            method: "overflow",
+            held: String::new(),
+            message,
         }
     }
 }
@@ -142,100 +142,100 @@ impl FromExpenseError for ConvertedExpenseError {
 /// library's.
 #[test]
 fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
-    let actual = Money::from_minor_units(Currency::EUR, 100);
-    let expected_money = Money::from_minor_units(Currency::EUR, 200);
     let expected_currency = Currency::USD;
     let found = Currency::EUR;
     let member = MemberId::from_bytes([5; 16]);
+    let expected_money = Money::from_minor_units(200, Currency::EUR);
+    let actual = Money::from_minor_units(100, Currency::EUR);
     let total_basis_points = 9005;
     let cases = [
         Case {
-            error: ExpenseError::AmountsDoNotAddUp {
-                actual,
-                expected: expected_money,
-            },
-            held: format!("{actual} {expected_money}"),
-            method: "amounts_do_not_add_up",
+            error: ExpenseError::EmptyName,
+            method: "empty_name",
+            held: String::new(),
+        },
+        Case {
+            error: ExpenseError::NonPositiveAmount,
+            method: "non_positive_amount",
+            held: String::new(),
         },
         Case {
             error: ExpenseError::CurrencyMismatch {
                 expected: expected_currency,
                 found,
             },
-            held: format!("{expected_currency} {found}"),
             method: "currency_mismatch",
-        },
-        Case {
-            error: ExpenseError::DuplicateMember { member },
-            held: format!("{member}"),
-            method: "duplicate_member",
-        },
-        Case {
-            error: ExpenseError::EmptyItemName,
-            held: String::new(),
-            method: "empty_item_name",
-        },
-        Case {
-            error: ExpenseError::EmptyName,
-            held: String::new(),
-            method: "empty_name",
+            held: format!("{expected_currency} {found}"),
         },
         Case {
             error: ExpenseError::EmptySplit,
-            held: String::new(),
             method: "empty_split",
-        },
-        Case {
-            error: ExpenseError::ItemsDoNotAddUp {
-                actual,
-                expected: expected_money,
-            },
-            held: format!("{actual} {expected_money}"),
-            method: "items_do_not_add_up",
-        },
-        Case {
-            error: ExpenseError::NegativeTip,
             held: String::new(),
-            method: "negative_tip",
         },
         Case {
-            error: ExpenseError::NoItems,
-            held: String::new(),
-            method: "no_items",
-        },
-        Case {
-            error: ExpenseError::NonPositiveAmount,
-            held: String::new(),
-            method: "non_positive_amount",
+            error: ExpenseError::DuplicateMember { member },
+            method: "duplicate_member",
+            held: format!("{member}"),
         },
         Case {
             error: ExpenseError::NonPositiveShare { member },
-            held: format!("{member}"),
             method: "non_positive_share",
+            held: format!("{member}"),
         },
         Case {
-            error: ExpenseError::Overflow,
-            held: String::new(),
-            method: "overflow",
+            error: ExpenseError::AmountsDoNotAddUp {
+                expected: expected_money,
+                actual,
+            },
+            method: "amounts_do_not_add_up",
+            held: format!("{expected_money} {actual}"),
         },
         Case {
             error: ExpenseError::PercentagesDoNotAddUp { total_basis_points },
-            held: format!("{total_basis_points}"),
             method: "percentages_do_not_add_up",
+            held: format!("{total_basis_points}"),
+        },
+        Case {
+            error: ExpenseError::NoItems,
+            method: "no_items",
+            held: String::new(),
+        },
+        Case {
+            error: ExpenseError::EmptyItemName,
+            method: "empty_item_name",
+            held: String::new(),
         },
         Case {
             error: ExpenseError::ZeroQuantity,
-            held: String::new(),
             method: "zero_quantity",
+            held: String::new(),
+        },
+        Case {
+            error: ExpenseError::ItemsDoNotAddUp {
+                expected: expected_money,
+                actual,
+            },
+            method: "items_do_not_add_up",
+            held: format!("{expected_money} {actual}"),
+        },
+        Case {
+            error: ExpenseError::NegativeTip,
+            method: "negative_tip",
+            held: String::new(),
+        },
+        Case {
+            error: ExpenseError::Overflow,
+            method: "overflow",
+            held: String::new(),
         },
     ];
     for case in cases {
         assert_eq!(
             ConvertedExpenseError::from_expense_error(&case.error),
             ConvertedExpenseError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }

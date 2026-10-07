@@ -32,9 +32,9 @@ import {
 
 /** A member's consumption in each category, as the table of consumption per category prints it. */
 interface MemberCategoryRow {
+    readonly name: string;
     readonly food: Money;
     readonly lodging: Money;
-    readonly name: string;
     readonly transport: Money;
     readonly uncategorised: Money;
 }
@@ -49,9 +49,9 @@ const memberCategoryColumns: Columns<MemberCategoryRow> = [
 
 /** A strategy, the strategy whose plan it chose, and the number of payments of that plan, as the table of strategies prints them. */
 interface StrategyRow {
+    readonly strategy: string;
     readonly computedBy: string;
     readonly payments: number;
-    readonly strategy: string;
 }
 
 const strategyColumns: Columns<StrategyRow> = [
@@ -87,7 +87,7 @@ export function summary(group: Group, people: People, categories: Categories): v
     printCategories(group);
     printLines("And each member's consumption per category:");
     const builtIn = builtInCategory(group);
-    const zero = new Money(group.currencySync(), 0n);
+    const zero = new Money(0n, group.currencySync());
     printTable(
         memberCategoryColumns,
         group.membersSync().flatMap((member) => {
@@ -97,9 +97,9 @@ export function summary(group: Group, people: People, categories: Categories): v
             const own = byCategory(summary, member.id);
             return [
                 {
+                    name: member.firstName,
                     food: total(own, categories.food) ?? zero,
                     lodging: total(own, categories.lodging) ?? zero,
-                    name: member.firstName,
                     transport: total(own, categories.transport) ?? zero,
                     uncategorised: total(own, builtIn) ?? zero,
                 },
@@ -193,12 +193,12 @@ function strategyName(strategy: SettlementStrategy): string {
     switch (strategy) {
         case SettlementStrategy.ADAPTIVE:
             return 'Adaptive';
-        case SettlementStrategy.DIRECT:
-            return 'Direct';
-        case SettlementStrategy.GREEDY:
-            return 'Greedy';
         case SettlementStrategy.MINIMUM_TRANSFERS:
             return 'MinimumTransfers';
+        case SettlementStrategy.GREEDY:
+            return 'Greedy';
+        case SettlementStrategy.DIRECT:
+            return 'Direct';
     }
 }
 
@@ -208,7 +208,7 @@ export function settlingUp(group: Group): void {
         const settlement = group.settlementSync(strategy);
         // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
         assert.equal(settlement.strategy, SettlementStrategy.ADAPTIVE === strategy ? SettlementStrategy.MINIMUM_TRANSFERS : strategy);
-        return { computedBy: strategyName(settlement.strategy), payments: settlement.payments.length, strategy: strategyName(strategy) };
+        return { strategy: strategyName(strategy), computedBy: strategyName(settlement.strategy), payments: settlement.payments.length };
     });
     printLines(
         'Each strategy turns the balances into payments: the direct one pays back every',
@@ -221,11 +221,11 @@ export function settlingUp(group: Group): void {
     printLines('The group follows the minimum plan:');
     printTable(
         paymentColumns,
-        plan.payments.map((payment) => ({ amount: payment.amount, from: name(group, payment.from), to: name(group, payment.to) })),
+        plan.payments.map((payment) => ({ from: name(group, payment.from), to: name(group, payment.to), amount: payment.amount })),
         2,
     );
     for (const payment of plan.payments) {
-        group.addTransferSync({ cost: { kind: 'local', amount: payment.amount }, date: october(7), from: payment.from, to: payment.to });
+        group.addTransferSync({ from: payment.from, to: payment.to, cost: { kind: 'local', amount: payment.amount }, date: october(7) });
     }
     printLines('Each payment, once made, is recorded as a transfer, and every balance is settled:');
     printBalances(group);

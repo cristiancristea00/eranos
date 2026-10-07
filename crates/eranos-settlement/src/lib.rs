@@ -45,12 +45,12 @@ pub use error::{FromSettlementError, SettlementError};
 /// ```
 /// use eranos::{Currency, CalendarDate, Group, Member, Money, SettlementStrategy, Transfer};
 ///
-/// let mut group = Group::builder(Currency::EUR, "Flat").build()?;
+/// let mut group = Group::builder("Flat", Currency::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
-/// let day = CalendarDate::new(23, 9, 2026)?;
+/// let day = CalendarDate::new(2026, 9, 23)?;
 /// // Bob paid Ana 20.00 too much.
-/// group.add_transfer(Transfer::builder(Money::parse("20.00", Currency::EUR)?, day, bob, ana).build()?)?;
+/// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", Currency::EUR)?, day).build()?)?;
 ///
 /// for strategy in SettlementStrategy::all() {
 ///     let settlement = group.settlement(strategy)?;
@@ -81,24 +81,6 @@ pub enum SettlementStrategy {
     /// would give some groups other payments, so it changes only in a
     /// breaking release.
     Adaptive,
-    /// No simplification: everyone pays back the people who paid for them.
-    ///
-    /// Every participant owes every payer of each expense their share of what
-    /// that payer paid; the debts between each pair of members are netted
-    /// across all entries. Each payment traces back to shared expenses, at
-    /// the cost of the most payments. O(p) time for p pairs with a debt,
-    /// which the group keeps current as entries change.
-    Direct,
-    /// The largest debtor pays the largest creditor, repeatedly, after exact
-    /// opposites pay each other where that saves a payment.
-    ///
-    /// Two plans are computed: the largest debtor paying the largest creditor
-    /// throughout, and the same after every debtor who owes exactly what a
-    /// creditor is owed has paid them; the one with fewer payments is kept,
-    /// the first on a tie. O(n log n) time and at most n − 1 payments,
-    /// within 3/2 of [`MinimumTransfers`](Self::MinimumTransfers) and
-    /// usually as few, but not always.
-    Greedy,
     /// The fewest payments possible.
     ///
     /// Finding them is NP-hard, and this solves it exactly: exact opposite
@@ -112,6 +94,24 @@ pub enum SettlementStrategy {
     /// prefer [`Adaptive`](Self::Adaptive), which settles large groups
     /// greedily.
     MinimumTransfers,
+    /// The largest debtor pays the largest creditor, repeatedly, after exact
+    /// opposites pay each other where that saves a payment.
+    ///
+    /// Two plans are computed: the largest debtor paying the largest creditor
+    /// throughout, and the same after every debtor who owes exactly what a
+    /// creditor is owed has paid them; the one with fewer payments is kept,
+    /// the first on a tie. O(n log n) time and at most n − 1 payments,
+    /// within 3/2 of [`MinimumTransfers`](Self::MinimumTransfers) and
+    /// usually as few, but not always.
+    Greedy,
+    /// No simplification: everyone pays back the people who paid for them.
+    ///
+    /// Every participant owes every payer of each expense their share of what
+    /// that payer paid; the debts between each pair of members are netted
+    /// across all entries. Each payment traces back to shared expenses, at
+    /// the cost of the most payments. O(p) time for p pairs with a debt,
+    /// which the group keeps current as entries change.
+    Direct,
 }
 
 impl SettlementStrategy {
@@ -120,9 +120,9 @@ impl SettlementStrategy {
     pub const fn all() -> [Self; 4] {
         [
             Self::Adaptive,
-            Self::Direct,
-            Self::Greedy,
             Self::MinimumTransfers,
+            Self::Greedy,
+            Self::Direct,
         ]
     }
 }
@@ -132,23 +132,23 @@ pub trait FromSettlementStrategy: Sized {
     /// The value for the adaptive strategy.
     fn adaptive() -> Self;
 
-    /// The value for the direct strategy.
-    fn direct() -> Self;
+    /// The value for the strategy of the fewest payments.
+    fn minimum_transfers() -> Self;
 
     /// The value for the greedy strategy.
     fn greedy() -> Self;
 
-    /// The value for the strategy of the fewest payments.
-    fn minimum_transfers() -> Self;
+    /// The value for the direct strategy.
+    fn direct() -> Self;
 
     /// The value for `strategy`, from the method of its variant.
     #[must_use]
     fn from_settlement_strategy(strategy: SettlementStrategy) -> Self {
         match strategy {
             SettlementStrategy::Adaptive => Self::adaptive(),
-            SettlementStrategy::Direct => Self::direct(),
-            SettlementStrategy::Greedy => Self::greedy(),
             SettlementStrategy::MinimumTransfers => Self::minimum_transfers(),
+            SettlementStrategy::Greedy => Self::greedy(),
+            SettlementStrategy::Direct => Self::direct(),
         }
     }
 }
@@ -195,17 +195,11 @@ impl Settlement {
 /// One payment of a [`Settlement`]: `from` pays `amount` to `to`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Payment {
-    amount: Money,
     members: MemberPair,
+    amount: Money,
 }
 
 impl Payment {
-    /// The amount, in the group currency.
-    #[must_use]
-    pub const fn amount(&self) -> Money {
-        self.amount
-    }
-
     /// The member who pays.
     #[must_use]
     pub const fn from(&self) -> MemberId {
@@ -217,22 +211,28 @@ impl Payment {
     pub const fn to(&self) -> MemberId {
         self.members.to
     }
+
+    /// The amount, in the group currency.
+    #[must_use]
+    pub const fn amount(&self) -> Money {
+        self.amount
+    }
 }
 
 /// A payment in minor units, before it becomes a [`Payment`] in the group
 /// currency.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Flow {
-    amount: i64,
     members: MemberPair,
+    amount: i64,
 }
 
 impl Flow {
     /// The payment this flow makes, in `currency`.
     const fn into_payment(self, currency: Currency) -> Payment {
         Payment {
-            amount: Money::from_minor_units(currency, self.amount),
             members: self.members,
+            amount: Money::from_minor_units(self.amount, currency),
         }
     }
 }
@@ -264,9 +264,9 @@ struct OpenBalance {
 #[derive(Debug, Clone, Default)]
 pub struct Settlements {
     adaptive: OnceLock<Result<Settlement, SettlementError>>,
-    direct: OnceLock<Result<Settlement, SettlementError>>,
-    greedy: OnceLock<Result<Settlement, SettlementError>>,
     minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
+    greedy: OnceLock<Result<Settlement, SettlementError>>,
+    direct: OnceLock<Result<Settlement, SettlementError>>,
 }
 
 impl Settlements {
@@ -312,9 +312,9 @@ impl Settlements {
     /// Drops every kept settlement.
     pub fn clear(&mut self) {
         self.adaptive.take();
-        self.direct.take();
-        self.greedy.take();
         self.minimum_transfers.take();
+        self.greedy.take();
+        self.direct.take();
     }
 
     const fn slot(
@@ -323,9 +323,9 @@ impl Settlements {
     ) -> &OnceLock<Result<Settlement, SettlementError>> {
         match strategy {
             SettlementStrategy::Adaptive => &self.adaptive,
-            SettlementStrategy::Direct => &self.direct,
-            SettlementStrategy::Greedy => &self.greedy,
             SettlementStrategy::MinimumTransfers => &self.minimum_transfers,
+            SettlementStrategy::Greedy => &self.greedy,
+            SettlementStrategy::Direct => &self.direct,
         }
     }
 }
@@ -346,8 +346,8 @@ pub fn settle(
 
 /// Settles the balances of `ledger` with `strategy`, yielding as it works.
 ///
-/// The exact solver yields while it fills its table, for the fewest payments
-/// and for the adaptive strategy's exact plans; the direct and greedy
+/// The exact solver yields while it fills its table, for the adaptive
+/// strategy's exact plans and for the fewest payments; the greedy and direct
 /// strategies never yield.
 ///
 /// # Errors
@@ -370,16 +370,16 @@ async fn settle_paced(
         strategy: computed_by,
     } = match strategy {
         SettlementStrategy::Adaptive => adaptive::settle(&balances(ledger)).await,
-        SettlementStrategy::Direct => Plan {
-            flows: direct::settle(ledger.pairs()),
+        SettlementStrategy::MinimumTransfers => Plan {
+            flows: minimum::settle(&balances(ledger)).await?,
             strategy,
         },
         SettlementStrategy::Greedy => Plan {
             flows: greedy::settle(&balances(ledger)),
             strategy,
         },
-        SettlementStrategy::MinimumTransfers => Plan {
-            flows: minimum::settle(&balances(ledger)).await?,
+        SettlementStrategy::Direct => Plan {
+            flows: direct::settle(ledger.pairs()),
             strategy,
         },
     };

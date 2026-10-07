@@ -15,16 +15,16 @@ func summary(_ group: Group, _ people: People, _ categories: Categories) throws(
     try printCategories(group)
     print("And each member's consumption per category:")
     let builtIn = try builtInCategory(group)
-    let zero = Money(currency: try group.currency(), minorUnits: 0)
+    let zero = Money(minorUnits: 0, currency: try group.currency())
     printTable(
         try group.members().compactMap { member in
             member.id.map { id in
                 let totals = summary.memberCategoryTotals.first { totals in totals.member == id }?.totals ?? []
                 let total = { (category: Category.ID?) in totals.first { total in total.category == category }?.total ?? zero }
                 return MemberCategoryRow(
+                    name: member.firstName,
                     food: total(categories.food),
                     lodging: total(categories.lodging),
-                    name: member.firstName,
                     transport: total(categories.transport),
                     uncategorised: total(builtIn)
                 )
@@ -112,12 +112,12 @@ func strategyName(_ strategy: SettlementStrategy) -> String {
     switch strategy {
     case .adaptive:
         "Adaptive"
-    case .direct:
-        "Direct"
-    case .greedy:
-        "Greedy"
     case .minimumTransfers:
         "MinimumTransfers"
+    case .greedy:
+        "Greedy"
+    case .direct:
+        "Direct"
     }
 }
 
@@ -132,9 +132,9 @@ func settlingUp(_ group: Group) throws(EranosError) {
         precondition(computedBy == settlement.strategy, "a settlement names the strategy whose plan it is")
         counts.append(
             StrategyRow(
+                strategy: strategyName(strategy),
                 computedBy: strategyName(settlement.strategy),
-                payments: settlement.payments.count,
-                strategy: strategyName(strategy)
+                payments: settlement.payments.count
             )
         )
     }
@@ -148,11 +148,11 @@ func settlingUp(_ group: Group) throws(EranosError) {
     let plan = try group.settlement(by: .minimumTransfers)
     print("The group follows the minimum plan:")
     printTable(
-        try plan.payments.map { payment throws(EranosError) in PaymentRow(amount: payment.amount, from: try name(group, payment.from), to: try name(group, payment.to)) },
+        try plan.payments.map { payment throws(EranosError) in PaymentRow(from: try name(group, payment.from), to: try name(group, payment.to), amount: payment.amount) },
         numbersFrom: 2
     )
     for payment in plan.payments {
-        _ = try group.add(Transfer(cost: .local(payment.amount), date: try october(7), from: payment.from, to: payment.to))
+        _ = try group.add(Transfer(from: payment.from, to: payment.to, cost: .local(payment.amount), date: try october(7)))
     }
     print("Each payment, once made, is recorded as a transfer, and every balance is settled:")
     try printBalances(group)

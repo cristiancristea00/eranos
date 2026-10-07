@@ -24,7 +24,7 @@ const SIZES: [usize; 2] = [1_000, 10_000];
 /// A group of six with `size` expenses shared by everyone, every tenth of
 /// them in RON at a fixed rate, and a transfer for every tenth expense.
 fn group(size: usize) -> Group {
-    let mut group = Group::builder(Currency::EUR, "Benchmark")
+    let mut group = Group::builder("Benchmark", Currency::EUR)
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     let members: Vec<MemberId> = iter::repeat_with(|| {
@@ -37,16 +37,16 @@ fn group(size: usize) -> Group {
     })
     .take(6)
     .collect();
-    let day = CalendarDate::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
+    let day = CalendarDate::new(2026, 9, 23).unwrap_or_else(|error| panic!("{error}"));
     let rate = ExchangeRate::parse("0.2").unwrap_or_else(|error| panic!("{error}"));
     for (index, &payer) in (0_i64..).zip(members.iter().cycle()).take(size) {
         let minor_units = 100 + (index % 9_973) * 7;
         let cost = if 0 == index % 10 {
-            Money::from_minor_units(Currency::RON, minor_units).at(rate)
+            Money::from_minor_units(minor_units, Currency::RON).at(rate)
         } else {
-            Money::from_minor_units(Currency::EUR, minor_units).into()
+            Money::from_minor_units(minor_units, Currency::EUR).into()
         };
-        let expense = Expense::builder(cost, day, "Expense", payer, Split::equal(members.clone()))
+        let expense = Expense::builder("Expense", cost, payer, Split::equal(members.clone()), day)
             .build()
             .unwrap_or_else(|error| panic!("{error}"));
         group
@@ -59,10 +59,10 @@ fn group(size: usize) -> Group {
                 .unwrap_or(payer);
             if recipient != payer {
                 let transfer = Transfer::builder(
-                    Money::from_minor_units(Currency::EUR, minor_units / 2),
-                    day,
                     payer,
                     recipient,
+                    Money::from_minor_units(minor_units / 2, Currency::EUR),
+                    day,
                 )
                 .build()
                 .unwrap_or_else(|error| panic!("{error}"));

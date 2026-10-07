@@ -13,13 +13,13 @@ fn member(number: u8) -> MemberId {
 }
 
 /// A payment of `amount` from member `from` to member `to`.
-fn flow(amount: i64, from: u8, to: u8) -> Flow {
+fn flow(from: u8, to: u8, amount: i64) -> Flow {
     Flow {
-        amount,
         members: MemberPair {
             from: member(from),
             to: member(to),
         },
+        amount,
     }
 }
 
@@ -46,7 +46,7 @@ fn exact_opposites_pay_each_other_directly() {
     // Members 3 and 4 owe 5.00 each; 1 and 2 are owed 5.00 each.
     let open = balances(&[500, 500, -500, -500]);
     let Pairing { flows, rest } = pair_opposites(&open);
-    assert_eq!(flows, vec![flow(500, 3, 1), flow(500, 4, 2)]);
+    assert_eq!(flows, vec![flow(3, 1, 500), flow(4, 2, 500)]);
     assert!(rest.is_empty());
 }
 
@@ -67,7 +67,7 @@ fn balances_without_a_pair_are_left_without_a_copy() {
 fn a_surplus_of_one_amount_stays_unpaired() {
     let open = balances(&[5, 5, 0, -5, 3, -8, -3, -3]);
     let Pairing { flows, rest } = pair_opposites(&open);
-    assert_eq!(flows, vec![flow(5, 4, 1), flow(3, 7, 5)]);
+    assert_eq!(flows, vec![flow(4, 1, 5), flow(7, 5, 3)]);
     assert_eq!(rest, vec![balance(2, 5), balance(6, -8), balance(8, -3)]);
 }
 

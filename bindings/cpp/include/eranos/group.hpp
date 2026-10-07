@@ -62,7 +62,7 @@ struct CurrencyRate final {
     [[nodiscard]] friend bool operator==(CurrencyRate const &left, CurrencyRate const &right) noexcept = default;
 };
 
-/// The details a new group can start with besides its currency and name.
+/// The details a new group can start with besides its name and currency.
 struct GroupOptions final {
     /// A longer description.
     std::optional<std::string> description;
@@ -97,12 +97,12 @@ class Group final {
   public:
     /// A new group.
     ///
-    /// @param currency The group currency, which every total is in
     /// @param name The group's name
+    /// @param currency The group currency, which every total is in
     /// @param options The details it starts with besides
     /// @return The group, or an error of the kind ErrorKind::GROUP for a blank name, ErrorKind::LANGUAGE for a language that is not a tag, and
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static std::expected<Group, Error> create(Currency const &currency, std::string_view const name, GroupOptions const &options = {});
+    [[nodiscard]] static std::expected<Group, Error> create(std::string_view const name, Currency const &currency, GroupOptions const &options = {});
 
     /// The group saved as @p json, which save() wrote.
     ///
@@ -724,8 +724,8 @@ namespace detail {
 
 } // namespace detail
 
-inline std::expected<Group, Error> Group::create(Currency const &currency, std::string_view const name, GroupOptions const &options) {
-    return detail::expectedOf(detail::EranosNewGroup::create(currency.code(), name))
+inline std::expected<Group, Error> Group::create(std::string_view const name, Currency const &currency, GroupOptions const &options) {
+    return detail::expectedOf(detail::EranosNewGroup::create(name, currency.code()))
         .and_then([&options](std::unique_ptr<detail::EranosNewGroup> details) {
             return detail::setIfPresent(std::move(details), options.description,
                                         [](detail::EranosNewGroup &record, std::string const &text) { return record.set_description(text); });

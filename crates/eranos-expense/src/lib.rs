@@ -50,8 +50,8 @@ use eranos_money::{Cost, ExchangeRate, Money};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob, carol) = (MemberId::generate(), MemberId::generate(), MemberId::generate());
-/// let (amount, date) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-/// let dinner = Expense::builder(amount, date, "Dinner", ana, Split::equal([ana, bob, carol]))
+/// let (amount, date) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+/// let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), date)
 ///     .tip(Tip::percentage(Percentage::parse("10")?))
 ///     .build()?;
 /// assert_eq!(dinner.tip_amount(), Money::parse("9.00", Currency::EUR)?);
@@ -62,24 +62,24 @@ use eranos_money::{Cost, ExchangeRate, Money};
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Expense {
     id: ExpenseId,
-    amount: Money,
-    date: CalendarDate,
     name: String,
-    payers: Split,
-    split: ExpenseSplit,
+    amount: Money,
     // Derived from amount and tip by `build`, so never serialised.
     #[cfg_attr(feature = "serde", serde(skip))]
     total: Money,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_uncategorised"))]
-    category: CategoryId,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    description: Option<String>,
+    payers: Split,
+    split: ExpenseSplit,
+    date: CalendarDate,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_default_tip"))]
+    tip: Tip,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     exchange_rate: Option<ExchangeRate>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     time: Option<TimeOfDay>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_default_tip"))]
-    tip: Tip,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_uncategorised"))]
+    category: CategoryId,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    description: Option<String>,
 }
 
 impl Expense {
@@ -89,36 +89,18 @@ impl Expense {
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
     pub fn builder(
-        cost: impl Into<Cost>,
-        date: CalendarDate,
         name: impl Into<String>,
+        cost: impl Into<Cost>,
         payer: MemberId,
         split: Split,
+        date: CalendarDate,
     ) -> ExpenseBuilder {
         starting(
-            cost.into(),
-            date,
             name.into(),
+            cost.into(),
             Split::equal([payer]),
             ExpenseSplit::Whole(split),
-        )
-    }
-
-    /// Starts an expense that `payer` paid alone and whose amount is divided
-    /// item by item; the line totals must add up to the amount.
-    pub fn itemised_builder(
-        cost: impl Into<Cost>,
-        date: CalendarDate,
-        items: impl IntoIterator<Item = Item>,
-        name: impl Into<String>,
-        payer: MemberId,
-    ) -> ExpenseBuilder {
-        starting(
-            cost.into(),
             date,
-            name.into(),
-            Split::equal([payer]),
-            ExpenseSplit::Itemised(items.into_iter().collect()),
         )
     }
 
@@ -126,36 +108,54 @@ impl Expense {
     /// divides among the members who paid it, and whose amount `split`
     /// divides.
     pub fn builder_with_payers(
-        cost: impl Into<Cost>,
-        date: CalendarDate,
         name: impl Into<String>,
+        cost: impl Into<Cost>,
         payers: Split,
         split: Split,
+        date: CalendarDate,
     ) -> ExpenseBuilder {
         starting(
-            cost.into(),
-            date,
             name.into(),
+            cost.into(),
             payers,
             ExpenseSplit::Whole(split),
+            date,
+        )
+    }
+
+    /// Starts an expense that `payer` paid alone and whose amount is divided
+    /// item by item; the line totals must add up to the amount.
+    pub fn itemised_builder(
+        name: impl Into<String>,
+        cost: impl Into<Cost>,
+        payer: MemberId,
+        items: impl IntoIterator<Item = Item>,
+        date: CalendarDate,
+    ) -> ExpenseBuilder {
+        starting(
+            name.into(),
+            cost.into(),
+            Split::equal([payer]),
+            ExpenseSplit::Itemised(items.into_iter().collect()),
+            date,
         )
     }
 
     /// Starts an expense whose total `payers` divides among the members who
     /// paid it, and whose amount is divided item by item.
     pub fn itemised_builder_with_payers(
-        cost: impl Into<Cost>,
-        date: CalendarDate,
-        items: impl IntoIterator<Item = Item>,
         name: impl Into<String>,
+        cost: impl Into<Cost>,
         payers: Split,
+        items: impl IntoIterator<Item = Item>,
+        date: CalendarDate,
     ) -> ExpenseBuilder {
         starting(
-            cost.into(),
-            date,
             name.into(),
+            cost.into(),
             payers,
             ExpenseSplit::Itemised(items.into_iter().collect()),
+            date,
         )
     }
 
@@ -167,15 +167,15 @@ impl Expense {
     pub fn to_builder(&self) -> ExpenseBuilder {
         ExpenseBuilder {
             id: Some(self.id),
-            cost: self.cost(),
-            date: self.date,
             name: self.name.clone(),
+            cost: self.cost(),
             payers: self.payers.clone(),
             split: self.split.clone(),
+            date: self.date,
+            tip: self.tip,
+            time: self.time,
             category: self.category,
             description: self.description.clone(),
-            time: self.time,
-            tip: self.tip,
         }
     }
 
@@ -183,6 +183,12 @@ impl Expense {
     #[must_use]
     pub const fn id(&self) -> ExpenseId {
         self.id
+    }
+
+    /// The name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// The amount before the tip, in the expense's currency.
@@ -198,16 +204,10 @@ impl Expense {
         Cost::from_parts(self.amount, self.exchange_rate)
     }
 
-    /// The date of the expense.
+    /// The amount plus the tip: what the payers paid.
     #[must_use]
-    pub const fn date(&self) -> CalendarDate {
-        self.date
-    }
-
-    /// The name.
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
+    pub const fn total(&self) -> Money {
+        self.total
     }
 
     /// Who paid, and how much each.
@@ -222,46 +222,26 @@ impl Expense {
         &self.split
     }
 
-    /// The amount plus the tip: what the payers paid.
+    /// The date of the expense.
     #[must_use]
-    pub const fn total(&self) -> Money {
-        self.total
+    pub const fn date(&self) -> CalendarDate {
+        self.date
     }
 
-    /// The category: [`CategoryId::UNCATEGORISED`] unless another was set.
+    /// The tip: [`Tip::default`], no tip, unless another was set.
     #[must_use]
-    pub const fn category(&self) -> CategoryId {
-        self.category
+    pub const fn tip(&self) -> Tip {
+        self.tip
     }
 
-    /// The same expense in the category `category`, identifier included:
-    /// what a group does to the expenses of a category it removes.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use eranos::{CalendarDate, CategoryId, Currency, Expense, Money, Split};
-    /// use eranos::id::MemberId;
-    ///
-    /// let (ana, food) = (MemberId::generate(), CategoryId::generate());
-    /// let (amount, day) = (Money::parse("12.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-    /// let lunch = Expense::builder(amount, day, "Lunch", ana, Split::equal([ana]))
-    ///     .category(food)
-    ///     .build()?;
-    /// let moved = lunch.clone().with_category(CategoryId::UNCATEGORISED);
-    /// assert_eq!((moved.id(), moved.category()), (lunch.id(), CategoryId::UNCATEGORISED));
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
+    /// The tip as an amount in the expense's currency; zero without a tip.
     #[must_use]
-    pub const fn with_category(mut self, category: CategoryId) -> Self {
-        self.category = category;
-        self
-    }
-
-    /// The description, if any.
-    #[must_use]
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
+    pub const fn tip_amount(&self) -> Money {
+        // Both are in the expense currency and total = amount + tip.
+        Money::from_minor_units(
+            self.total.minor_units() - self.amount.minor_units(),
+            self.amount.currency(),
+        )
     }
 
     /// The rate from the expense's currency into its group's currency:
@@ -282,8 +262,8 @@ impl Expense {
     /// use eranos::id::MemberId;
     ///
     /// let ana = MemberId::generate();
-    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-    /// let museum = Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?;
+    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// let museum = Expense::builder("Museum", amount, ana, Split::equal([ana]), day).build()?;
     /// let rate = ExchangeRate::parse("4.97")?;
     /// assert_eq!(museum.with_exchange_rate(Some(rate)).cost(), amount.at(rate));
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -300,20 +280,40 @@ impl Expense {
         self.time
     }
 
-    /// The tip: [`Tip::default`], no tip, unless another was set.
+    /// The category: [`CategoryId::UNCATEGORISED`] unless another was set.
     #[must_use]
-    pub const fn tip(&self) -> Tip {
-        self.tip
+    pub const fn category(&self) -> CategoryId {
+        self.category
     }
 
-    /// The tip as an amount in the expense's currency; zero without a tip.
+    /// The same expense in the category `category`, identifier included:
+    /// what a group does to the expenses of a category it removes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CalendarDate, CategoryId, Currency, Expense, Money, Split};
+    /// use eranos::id::MemberId;
+    ///
+    /// let (ana, food) = (MemberId::generate(), CategoryId::generate());
+    /// let (amount, day) = (Money::parse("12.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// let lunch = Expense::builder("Lunch", amount, ana, Split::equal([ana]), day)
+    ///     .category(food)
+    ///     .build()?;
+    /// let moved = lunch.clone().with_category(CategoryId::UNCATEGORISED);
+    /// assert_eq!((moved.id(), moved.category()), (lunch.id(), CategoryId::UNCATEGORISED));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     #[must_use]
-    pub const fn tip_amount(&self) -> Money {
-        // Both are in the expense currency and total = amount + tip.
-        Money::from_minor_units(
-            self.amount.currency(),
-            self.total.minor_units() - self.amount.minor_units(),
-        )
+    pub const fn with_category(mut self, category: CategoryId) -> Self {
+        self.category = category;
+        self
+    }
+
+    /// The description, if any.
+    #[must_use]
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
     /// Every member the expense involves, as a payer or as a participant.
@@ -321,10 +321,10 @@ impl Expense {
     pub fn members(&self) -> BTreeSet<MemberId> {
         let mut members: BTreeSet<MemberId> = self.payers.members().collect();
         match &self.split {
+            ExpenseSplit::Whole(split) => members.extend(split.members()),
             ExpenseSplit::Itemised(items) => {
                 members.extend(items.iter().flat_map(|item| item.split().members()));
             }
-            ExpenseSplit::Whole(split) => members.extend(split.members()),
         }
         members
     }
@@ -339,10 +339,10 @@ impl Expense {
 )]
 #[non_exhaustive]
 pub enum ExpenseSplit {
-    /// Every [`Item`] is divided by its own split.
-    Itemised(Vec<Item>),
     /// The whole amount is divided by one [`Split`].
     Whole(Split),
+    /// Every [`Item`] is divided by its own split.
+    Itemised(Vec<Item>),
 }
 
 impl ExpenseSplit {
@@ -350,11 +350,11 @@ impl ExpenseSplit {
     #[must_use]
     pub fn participants(&self) -> BTreeSet<MemberId> {
         match self {
+            Self::Whole(split) => split.members().collect(),
             Self::Itemised(items) => items
                 .iter()
                 .flat_map(|item| item.split().members())
                 .collect(),
-            Self::Whole(split) => split.members().collect(),
         }
     }
 }
@@ -362,18 +362,18 @@ impl ExpenseSplit {
 /// Builds a value from an [`ExpenseSplit`], one method per way of sharing a
 /// cost.
 pub trait FromExpenseSplit: Sized {
-    /// The value for a cost shared item by item.
-    fn itemised(items: &[Item]) -> Self;
-
     /// The value for a cost shared as a whole by `split`.
     fn whole(split: &Split) -> Self;
+
+    /// The value for a cost shared item by item.
+    fn itemised(items: &[Item]) -> Self;
 
     /// The value for `expense_split`, from the method of its variant.
     #[must_use]
     fn from_expense_split(expense_split: &ExpenseSplit) -> Self {
         match expense_split {
-            ExpenseSplit::Itemised(items) => Self::itemised(items),
             ExpenseSplit::Whole(split) => Self::whole(split),
+            ExpenseSplit::Itemised(items) => Self::itemised(items),
         }
     }
 }
@@ -387,15 +387,15 @@ pub trait FromExpenseSplit: Sized {
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ExpenseBuilder {
     id: Option<ExpenseId>,
-    cost: Cost,
-    date: CalendarDate,
     name: String,
+    cost: Cost,
     payers: Split,
     split: ExpenseSplit,
+    date: CalendarDate,
+    tip: Tip,
+    time: Option<TimeOfDay>,
     category: CategoryId,
     description: Option<String>,
-    time: Option<TimeOfDay>,
-    tip: Tip,
 }
 
 impl ExpenseBuilder {
@@ -407,6 +407,12 @@ impl ExpenseBuilder {
         self
     }
 
+    /// Replaces the name.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
     /// Replaces the cost (before the tip).
     ///
     /// A [`Money`] amount makes the cost local; to change the amount of a
@@ -414,18 +420,6 @@ impl ExpenseBuilder {
     /// `expense.cost().with_amount(amount)`.
     pub fn cost(mut self, cost: impl Into<Cost>) -> Self {
         self.cost = cost.into();
-        self
-    }
-
-    /// Replaces the date.
-    pub const fn date(mut self, date: CalendarDate) -> Self {
-        self.date = date;
-        self
-    }
-
-    /// Replaces the name.
-    pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.name = name.into();
         self
     }
 
@@ -455,15 +449,15 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Replaces the category; [`CategoryId::UNCATEGORISED`] clears it.
-    pub const fn category(mut self, category: CategoryId) -> Self {
-        self.category = category;
+    /// Replaces the date.
+    pub const fn date(mut self, date: CalendarDate) -> Self {
+        self.date = date;
         self
     }
 
-    /// Sets the description; blank text clears it.
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    /// Replaces the tip; [`Tip::default`] removes it.
+    pub const fn tip(mut self, tip: Tip) -> Self {
+        self.tip = tip;
         self
     }
 
@@ -473,9 +467,15 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Replaces the tip; [`Tip::default`] removes it.
-    pub const fn tip(mut self, tip: Tip) -> Self {
-        self.tip = tip;
+    /// Replaces the category; [`CategoryId::UNCATEGORISED`] clears it.
+    pub const fn category(mut self, category: CategoryId) -> Self {
+        self.category = category;
+        self
+    }
+
+    /// Sets the description; blank text clears it.
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 
@@ -504,8 +504,8 @@ impl ExpenseBuilder {
         }
         let (payers, split) = (self.payers, self.split);
         match &split {
-            ExpenseSplit::Itemised(items) => validate_items(items, amount)?,
             ExpenseSplit::Whole(split) => split.validate(amount)?,
+            ExpenseSplit::Itemised(items) => validate_items(items, amount)?,
         }
         let tip_amount = self.tip.amount_on(amount)?;
         let total = amount
@@ -514,17 +514,17 @@ impl ExpenseBuilder {
         payers.validate(total)?;
         Ok(Expense {
             id: self.id.unwrap_or_else(ExpenseId::generate),
-            amount,
-            date: self.date,
             name,
+            amount,
+            total,
             payers,
             split,
-            total,
-            category: self.category,
-            description: self.description.and_then(text::optional),
+            date: self.date,
+            tip: self.tip,
             exchange_rate: self.cost.conversion(),
             time: self.time,
-            tip: self.tip,
+            category: self.category,
+            description: self.description.and_then(text::optional),
         })
     }
 }
@@ -551,31 +551,31 @@ fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
     }
     let actual = i64::try_from(sum).map_err(|_| ExpenseError::Overflow)?;
     Err(ExpenseError::ItemsDoNotAddUp {
-        actual: Money::from_minor_units(amount.currency(), actual),
         expected: amount,
+        actual: Money::from_minor_units(actual, amount.currency()),
     })
 }
 
 /// A builder with the required fields set and every optional one at its
 /// default; the constructors and the serialised form start here.
 fn starting(
-    cost: Cost,
-    date: CalendarDate,
     name: String,
+    cost: Cost,
     payers: Split,
     split: ExpenseSplit,
+    date: CalendarDate,
 ) -> ExpenseBuilder {
     ExpenseBuilder {
         id: None,
-        cost,
-        date,
         name,
+        cost,
         payers,
         split,
+        date,
+        tip: Tip::default(),
+        time: None,
         category: CategoryId::UNCATEGORISED,
         description: None,
-        time: None,
-        tip: Tip::default(),
     }
 }
 
@@ -597,21 +597,21 @@ fn is_uncategorised(category: &CategoryId) -> bool {
 #[derive(serde::Deserialize)]
 struct ExpenseRecord {
     id: ExpenseId,
-    amount: Money,
-    date: CalendarDate,
     name: String,
+    amount: Money,
     payers: Split,
     split: ExpenseSplit,
+    date: CalendarDate,
     #[serde(default)]
-    category: Option<CategoryId>,
-    #[serde(default)]
-    description: Option<String>,
+    tip: Tip,
     #[serde(default)]
     exchange_rate: Option<ExchangeRate>,
     #[serde(default)]
     time: Option<TimeOfDay>,
     #[serde(default)]
-    tip: Tip,
+    category: Option<CategoryId>,
+    #[serde(default)]
+    description: Option<String>,
 }
 
 /// Builds the expense `record` describes, through the checks of the builder.
@@ -620,11 +620,11 @@ fn from_record(record: ExpenseRecord) -> Result<Expense, ExpenseError> {
     let cost = Cost::from_parts(record.amount, record.exchange_rate);
     let builder = ExpenseBuilder {
         id: Some(record.id),
-        ..starting(cost, record.date, record.name, record.payers, record.split)
+        ..starting(record.name, cost, record.payers, record.split, record.date)
     }
-    .category(record.category.unwrap_or(CategoryId::UNCATEGORISED))
+    .tip(record.tip)
     .time(record.time)
-    .tip(record.tip);
+    .category(record.category.unwrap_or(CategoryId::UNCATEGORISED));
     match record.description {
         Some(description) => builder.description(description).build(),
         None => builder.build(),

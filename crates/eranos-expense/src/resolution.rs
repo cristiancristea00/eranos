@@ -70,6 +70,7 @@ pub fn resolve_expense_at(
     let total = expense.total().minor_units();
 
     let base = match expense.split() {
+        ExpenseSplit::Whole(split) => split.divide(amount, pass(PASS_SPLIT)),
         ExpenseSplit::Itemised(items) => {
             let mut totals: BTreeMap<MemberId, i64> = BTreeMap::new();
             for (position, item) in (0_u64..).zip(items) {
@@ -84,22 +85,21 @@ pub fn resolve_expense_at(
             totals
                 .into_iter()
                 .map(|(member, summed)| Share {
-                    amount: summed,
                     member,
+                    amount: summed,
                 })
                 .collect()
         }
-        ExpenseSplit::Whole(split) => split.divide(amount, pass(PASS_SPLIT)),
     };
 
     let mut shares = base.clone();
     if 0 < tip {
         let weights: Vec<u64> = match expense.tip().distribution() {
-            TipDistribution::Equal => vec![1; base.len()],
             TipDistribution::Proportional => base
                 .iter()
                 .map(|share| share.amount.unsigned_abs())
                 .collect(),
+            TipDistribution::Equal => vec![1; base.len()],
         };
         let tips = allocate(tip, &weights, pass(PASS_TIP));
         for (share, portion) in shares.iter_mut().zip(tips) {
@@ -121,8 +121,8 @@ pub fn resolve_expense_at(
                     .iter()
                     .zip(allocate(converted, &weights, pass(number)))
                     .map(|(part, reallocated)| Share {
-                        amount: reallocated,
                         member: part.member,
+                        amount: reallocated,
                     })
                     .collect::<Vec<_>>()
             };
@@ -150,7 +150,7 @@ pub fn resolve_expense_at(
     for share in &shares {
         members.entry(share.member).or_default().consumed = share.amount;
     }
-    let money = |minor_units| Money::from_minor_units(currency, minor_units);
+    let money = |minor_units| Money::from_minor_units(minor_units, currency);
     let members = members
         .into_iter()
         .map(|(member, totals)| {
@@ -158,18 +158,18 @@ pub fn resolve_expense_at(
         })
         .collect();
     Ok(ResolvedExpense::new(
-        debts,
         members,
-        money(tip),
         money(total),
+        money(tip),
+        debts,
     ))
 }
 
 /// What one member paid and consumed of an expense, in minor units.
 #[derive(Debug, Clone, Copy, Default)]
 struct PaidAndConsumed {
-    consumed: i64,
     paid: i64,
+    consumed: i64,
 }
 
 /// Converts `amount` at `rate` into `currency`: `None` for an amount without
@@ -203,11 +203,11 @@ fn debts(shares: &[Share], paid: &[Share], rotation: impl Fn(u64) -> u64) -> Vec
             *left -= portion;
             if share.member != payment.member && 0 < portion {
                 debts.push(Debt {
-                    amount: portion,
                     members: MemberPair {
                         from: share.member,
                         to: payment.member,
                     },
+                    amount: portion,
                 });
             }
         }

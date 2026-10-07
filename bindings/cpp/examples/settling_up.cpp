@@ -26,12 +26,12 @@ constexpr std::size_t FRIENDS = 21;
 struct Counts final {
     /// The payments of the adaptive plan.
     std::size_t adaptive;
-    /// The payments of the direct plan.
-    std::size_t direct;
-    /// The payments of the greedy plan.
-    std::size_t greedy;
     /// The payments of the minimum plan.
     std::size_t minimum;
+    /// The payments of the greedy plan.
+    std::size_t greedy;
+    /// The payments of the direct plan.
+    std::size_t direct;
 };
 
 /// A row of the table of expenses: what was bought, who paid it, who shares it, and its amount.
@@ -39,14 +39,14 @@ struct ExpenseRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Expense", "Paid by", "Shared by", "Amount"};
 
-    /// What it cost.
-    std::string amount;
     /// What was bought.
     std::string name;
-    /// Who shares it.
-    std::string participants;
     /// Who paid it.
     std::string payer;
+    /// Who shares it.
+    std::string participants;
+    /// What it cost.
+    std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -59,14 +59,14 @@ struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
 
-    /// What is left: what they paid minus what they consumed.
-    std::string balance;
-    /// What they consumed.
-    std::string consumed;
     /// Their first name.
     std::string name;
     /// What they paid.
     std::string paid;
+    /// What they consumed.
+    std::string consumed;
+    /// What is left: what they paid minus what they consumed.
+    std::string balance;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -79,12 +79,12 @@ struct PaymentRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
-    /// How much is paid.
-    std::string amount;
     /// Who pays.
     std::string from;
     /// Who is paid.
     std::string to;
+    /// How much is paid.
+    std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -97,14 +97,14 @@ struct StrategyRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Strategy", "Guarantee", "Cost", "Payments here"};
 
-    /// How long it takes.
-    std::string_view cost;
-    /// What it promises.
-    std::string_view guarantee;
-    /// How many payments it plans for the group.
-    std::string payments;
     /// Its name.
     std::string_view strategy;
+    /// What it promises.
+    std::string_view guarantee;
+    /// How long it takes.
+    std::string_view cost;
+    /// How many payments it plans for the group.
+    std::string payments;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -117,12 +117,12 @@ struct StrategyRow final {
     switch (strategy) {
     case SettlementStrategy::ADAPTIVE:
         return "Adaptive";
-    case SettlementStrategy::DIRECT:
-        return "Direct";
-    case SettlementStrategy::GREEDY:
-        return "Greedy";
     case SettlementStrategy::MINIMUM_TRANSFERS:
         return "MinimumTransfers";
+    case SettlementStrategy::GREEDY:
+        return "Greedy";
+    case SettlementStrategy::DIRECT:
+        return "Direct";
     }
     std::unreachable();
 }
@@ -130,9 +130,8 @@ struct StrategyRow final {
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the amount, in the order the Rust example gives them.
 void spend(Group &group, std::string const &name, std::string_view const amount, MemberId const &payer, std::vector<MemberId> members) {
-    static_cast<void>(
-        must(group.addExpense(Expense(LocalCost{must(Money::parse(amount, must(Currency::of("EUR"))))}, must(CalendarDate::of(20, 9, 2026)), name,
-                                      EqualSplit{{payer}}, WholeExpenseSplit{EqualSplit{std::move(members)}}))));
+    static_cast<void>(must(group.addExpense(Expense(name, LocalCost{must(Money::parse(amount, must(Currency::of("EUR"))))}, EqualSplit{{payer}},
+                                                    WholeExpenseSplit{EqualSplit{std::move(members)}}, must(CalendarDate::of(2026, 9, 20))))));
 }
 
 /// Prints what each member of @p group paid and consumed, and their balance.
@@ -142,10 +141,10 @@ void printBalances(Group const &group) {
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
         rows.push_back({
-            .balance = toString(found.balance),
-            .consumed = found.share.toString(),
             .name = member.firstName,
             .paid = found.paid.toString(),
+            .consumed = found.share.toString(),
+            .balance = toString(found.balance),
         });
     }
     printTable(rows, 1);
@@ -156,7 +155,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
     std::vector<PaymentRow> rows;
     rows.reserve(settlement.payments.size());
     for (auto const &payment : settlement.payments) {
-        rows.push_back({.amount = payment.amount.toString(), .from = firstName(group, payment.from), .to = firstName(group, payment.to)});
+        rows.push_back({.from = firstName(group, payment.from), .to = firstName(group, payment.to), .amount = payment.amount.toString()});
     }
     printTable(rows, 2);
 }
@@ -199,35 +198,35 @@ void printPayments(Group const &group, Settlement const &settlement) {
     section("7. The strategies side by side");
     Counts const counts{
         .adaptive = adaptive.payments.size(),
-        .direct = direct.payments.size(),
-        .greedy = greedy.payments.size(),
         .minimum = minimum.payments.size(),
+        .greedy = greedy.payments.size(),
+        .direct = direct.payments.size(),
     };
     printTable<StrategyRow>(
         {
             {
-                .cost = "O(2ⁿ·n) for n open balances",
-                .guarantee = "the fewest payments",
-                .payments = std::to_string(counts.minimum),
                 .strategy = "MinimumTransfers",
+                .guarantee = "the fewest payments",
+                .cost = "O(2ⁿ·n) for n open balances",
+                .payments = std::to_string(counts.minimum),
             },
             {
-                .cost = "O(n log n)",
-                .guarantee = "at most n − 1 payments",
-                .payments = std::to_string(counts.greedy),
                 .strategy = "Greedy",
+                .guarantee = "at most n − 1 payments",
+                .cost = "O(n log n)",
+                .payments = std::to_string(counts.greedy),
             },
             {
-                .cost = "O(pairs)",
-                .guarantee = "one payment per pair in debt",
-                .payments = std::to_string(counts.direct),
                 .strategy = "Direct",
+                .guarantee = "one payment per pair in debt",
+                .cost = "O(pairs)",
+                .payments = std::to_string(counts.direct),
             },
             {
-                .cost = "as MinimumTransfers, then Greedy",
-                .guarantee = "the fewest up to 20 balances",
-                .payments = std::to_string(counts.adaptive),
                 .strategy = "Adaptive",
+                .guarantee = "the fewest up to 20 balances",
+                .cost = "as MinimumTransfers, then Greedy",
+                .payments = std::to_string(counts.adaptive),
             },
         },
         3);
@@ -239,7 +238,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
 [[nodiscard]] std::size_t festival() {
     section("8. A larger group");
     auto const euro = must(Currency::of("EUR"));
-    auto group = must(Group::create(euro, "Festival"));
+    auto group = must(Group::create("Festival", euro));
     std::vector<MemberId> friends;
     friends.reserve(FRIENDS);
     for (std::size_t number = 1; FRIENDS >= number; ++number) {
@@ -248,11 +247,11 @@ void printPayments(Group const &group, Settlement const &settlement) {
     }
     // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
     // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
-    auto const date = must(CalendarDate::of(18, 9, 2026));
+    auto const date = must(CalendarDate::of(2026, 9, 18));
     for (std::size_t index = 0; friends.size() > index; ++index) {
         auto const number = static_cast<std::int64_t>(index) + 1;
-        Expense const expense(LocalCost{Money(euro, static_cast<std::int64_t>(FRIENDS) * number * number)}, date, "Round",
-                              EqualSplit{{friends.at(index)}}, WholeExpenseSplit{EqualSplit{friends}});
+        Expense const expense("Round", LocalCost{Money(static_cast<std::int64_t>(FRIENDS) * number * number, euro)}, EqualSplit{{friends.at(index)}},
+                              WholeExpenseSplit{EqualSplit{friends}}, date);
         static_cast<void>(must(group.addExpense(expense)));
     }
     auto const summary = group.summary();
@@ -273,7 +272,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create(must(Currency::of("EUR")), "Ski week"));
+    auto group = must(Group::create("Ski week", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const carol = must(group.addMember(Member("Carol")));
@@ -294,10 +293,10 @@ void run() {
     std::vector<ExpenseRow> expenses;
     for (auto const &expense : group.expenses()) {
         expenses.push_back({
-            .amount = must(total(expense)).toString(),
             .name = expense.name,
-            .participants = names(group, sharedBy(expense.split)),
             .payer = names(group, must(participants(expense.payers))),
+            .participants = names(group, sharedBy(expense.split)),
+            .amount = must(total(expense)).toString(),
         });
     }
     printTable(expenses, 3);
@@ -312,7 +311,7 @@ void run() {
     section("9. Settling up for real");
     for (auto const &payment : must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS)).payments) {
         static_cast<void>(
-            must(group.addTransfer(Transfer(LocalCost{payment.amount}, must(CalendarDate::of(27, 9, 2026)), payment.from, payment.to))));
+            must(group.addTransfer(Transfer(payment.from, payment.to, LocalCost{payment.amount}, must(CalendarDate::of(2026, 9, 27))))));
     }
     printLine("Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n"
               "every balance is zero and a new settlement has nothing left to pay:");
@@ -321,8 +320,8 @@ void run() {
 
     // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that one;
     // greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
-    check(4 == counts.adaptive && 7 == counts.direct && 5 == counts.greedy && 4 == counts.minimum,
-          "the adaptive, direct, greedy, and minimum plans take 4, 7, 5, and 4 payments");
+    check(4 == counts.adaptive && 4 == counts.minimum && 5 == counts.greedy && 7 == counts.direct,
+          "the adaptive, minimum, greedy, and direct plans take 4, 4, 5, and 7 payments");
     // Greedy settles the festival's 21 balances in 19 payments.
     check(19 == festivalPayments, "the festival's plan takes 19 payments");
     auto const summary = group.summary();

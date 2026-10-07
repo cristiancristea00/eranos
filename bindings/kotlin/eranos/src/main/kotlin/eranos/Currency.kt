@@ -13,23 +13,23 @@ import eranos.internal.currencyDetails
 public class Currency internal constructor(
     /** The three-letter code: "EUR". */
     public val code: String,
-    /** How many decimal places its minor unit has: 2 for the euro, 0 for the yen. */
-    public val decimalPlaces: Int,
     /** The English name: "Euro". */
     public val name: String,
     /** The three-digit numeric code: 978 for the euro. */
     public val numericCode: Int,
+    /** How many decimal places its minor unit has: 2 for the euro, 0 for the yen. */
+    public val decimalPlaces: Int,
 ) {
-    /** Whether [other] is of the same class, with the same [code], [decimalPlaces], [name], and [numericCode]. */
+    /** Whether [other] is of the same class, with the same [code], [name], [numericCode], and [decimalPlaces]. */
     override fun equals(other: Any?): Boolean =
         other is Currency &&
             code == other.code &&
-            decimalPlaces == other.decimalPlaces &&
             name == other.name &&
-            numericCode == other.numericCode
+            numericCode == other.numericCode &&
+            decimalPlaces == other.decimalPlaces
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(code, decimalPlaces, name, numericCode)
+    override fun hashCode(): Int = hashOf(code, name, numericCode, decimalPlaces)
 
     /** The code: "EUR". */
     override fun toString(): String = code
@@ -55,9 +55,9 @@ public class Currency internal constructor(
          * The currency of [code], a code the library gave, so always one of [all]; any other code stands for itself, so
          * that an amount in it keeps the code it came with.
          */
-        internal fun known(code: String): Currency = byCode[code] ?: Currency(code, 0, code, 0)
+        internal fun known(code: String): Currency = byCode[code] ?: Currency(code, code, 0, 0)
     }
 }
 
 /** The currency the library describes as [this]. */
-internal fun CurrencyDetails.converted(): Currency = Currency(code, decimalPlaces, name, numericCode)
+internal fun CurrencyDetails.converted(): Currency = Currency(code, name, numericCode, decimalPlaces)

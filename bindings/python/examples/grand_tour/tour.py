@@ -79,20 +79,20 @@ class EntryRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency')
 
-    converted: Money
-    """The entry's amount in the group currency."""
-
     name: str
     """What the entry was."""
-
-    original: Money
-    """The entry's amount as entered."""
 
     payer: str
     """Who paid it."""
 
+    original: Money
+    """The entry's amount as entered."""
+
     rate: ExchangeRate
     """The rate the entry was entered at."""
+
+    converted: Money
+    """The entry's amount in the group currency."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -106,23 +106,23 @@ class BalanceRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance')
 
-    balance: Balance
-    """Where the member stands."""
-
-    consumed: Money
-    """What the member consumed."""
-
     name: str
     """The member's first name."""
 
     paid: Money
     """What the member paid."""
 
-    received: Money
-    """What the member received in transfers."""
+    consumed: Money
+    """What the member consumed."""
 
     sent: Money
     """What the member sent in transfers."""
+
+    received: Money
+    """What the member received in transfers."""
+
+    balance: Balance
+    """Where the member stands."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -136,11 +136,11 @@ class CategoryRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Category', 'Expenses', 'Total')
 
-    expenses: int
-    """The number of expenses in the category."""
-
     name: str
     """The category's name."""
+
+    expenses: int
+    """The number of expenses in the category."""
 
     total: Money
     """What the group spent in the category."""
@@ -157,14 +157,14 @@ class PaymentRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('From', 'To', 'Amount')
 
-    amount: Money
-    """What is paid."""
-
     from_: str
     """Who pays."""
 
     to: str
     """Who is paid."""
+
+    amount: Money
+    """What is paid."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -210,7 +210,7 @@ def october(day: int) -> CalendarDate:
         The date.
 
     """
-    return CalendarDate(day, 10, 2026)
+    return CalendarDate(2026, 10, day)
 
 
 def name(group: Group, member: MemberId) -> str:
@@ -274,8 +274,8 @@ def _balance_row(member: Member, summary: Summary, zero: Money) -> BalanceRow:
     found = None if member.id is None else totals(member.id, summary)
     if found is None:
         # The summary lists the members with a total; every total of the others is zero.
-        return BalanceRow(balance=SettledBalance(), consumed=zero, name=member.first_name, paid=zero, received=zero, sent=zero)
-    return BalanceRow(balance=found.balance, consumed=found.share, name=member.first_name, paid=found.paid, received=found.received, sent=found.sent)
+        return BalanceRow(name=member.first_name, paid=zero, consumed=zero, sent=zero, received=zero, balance=SettledBalance())
+    return BalanceRow(name=member.first_name, paid=found.paid, consumed=found.share, sent=found.sent, received=found.received, balance=found.balance)
 
 
 def print_balances(group: Group) -> None:
@@ -287,7 +287,7 @@ def print_balances(group: Group) -> None:
 
     """
     summary = group.summary()
-    zero = Money(group.currency(), 0)
+    zero = Money(0, group.currency())
     print_table(BalanceRow, [_balance_row(member, summary, zero) for member in group.members()], 1)
 
 
@@ -305,9 +305,9 @@ def print_categories(group: Group) -> None:
         CategoryRow,
         [
             CategoryRow(
+                name='?' if (category := group.category(total.category)) is None else category.name,
                 # An expense in the built-in category names none.
                 expenses=sum(1 for expense in expenses if (expense.category or built_in) == total.category),
-                name='?' if (category := group.category(total.category)) is None else category.name,
                 total=total.total,
             )
             for total in group.summary().category_totals
@@ -328,10 +328,10 @@ def _rate(cost: Cost) -> ExchangeRate:
 
     """
     match cost:
-        case ConvertedCost(rate=rate):
-            return rate
         case LocalCost():
             return ExchangeRate('1')
+        case ConvertedCost(rate=rate):
+            return rate
         case _:
             assert_never(cost)
 
@@ -350,11 +350,11 @@ def _expense_row(group: Group, expense: Expense) -> EntryRow:
     """
     shares = None if expense.id is None else group.expense_shares(expense.id)
     return EntryRow(
-        converted=Money(group.currency(), 0) if shares is None else shares.total,
         name=expense.name,
-        original=expense.total(),
         payer=names(group, expense.payers.members),
+        original=expense.total(),
         rate=_rate(expense.cost),
+        converted=Money(0, group.currency()) if shares is None else shares.total,
     )
 
 
@@ -373,11 +373,11 @@ def _transfer_row(group: Group, transfer: Transfer) -> EntryRow:
     """
     amount = None if transfer.id is None else group.transfer_amount(transfer.id)
     return EntryRow(
-        converted=Money(group.currency(), 0) if amount is None else amount,
         name=f'Transfer to {name(group, transfer.receiver)}',
-        original=transfer.cost.amount,
         payer=name(group, transfer.sender),
+        original=transfer.cost.amount,
         rate=_rate(transfer.cost),
+        converted=Money(0, group.currency()) if amount is None else amount,
     )
 
 

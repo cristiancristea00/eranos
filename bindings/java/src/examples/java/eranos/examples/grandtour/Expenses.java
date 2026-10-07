@@ -47,14 +47,14 @@ final class Expenses {
     static String how(Expense expense) throws EranosException {
         String split =
                 switch (expense.split()) {
-                    case ExpenseSplit.Itemised itemised -> itemised.items().size() + " items";
                     case ExpenseSplit.Whole whole ->
                             switch (whole.split()) {
-                                case Split.Amounts _ -> "by amounts";
                                 case Split.Equal _ -> "equally";
                                 case Split.Parts _ -> "by parts";
                                 case Split.Percentages _ -> "by percentage";
+                                case Split.Amounts _ -> "by amounts";
                             };
+                    case ExpenseSplit.Itemised itemised -> itemised.items().size() + " items";
                 };
         int count = expense.payers().members().size();
         String payers = 1 == count ? "" : ", " + count + " payers";
@@ -62,9 +62,9 @@ final class Expenses {
         if (0 != expense.tipAmount().minorUnits() && expense.tip().isPresent()) {
             tip =
                     switch (expense.tip().orElseThrow().value()) {
-                        case TipValue.Fixed fixed -> ", " + fixed.amount() + " tip";
                         case TipValue.Percentage percentage ->
                                 ", " + percentage.percentage() + " tip";
+                        case TipValue.Fixed fixed -> ", " + fixed.amount() + " tip";
                     };
         }
         return split + payers + tip;
@@ -87,11 +87,11 @@ final class Expenses {
                 }
                 rows.add(
                         new ShareRow(
-                                cell(consumed),
                                 expense.orElseThrow().name(),
                                 how(expense.orElseThrow()),
                                 cell(members),
-                                cell(paid)));
+                                cell(paid),
+                                cell(consumed)));
             }
         }
         printTable(ShareRow.HEADERS, rows, 3);
@@ -104,15 +104,15 @@ final class Expenses {
             for (Item item : itemised.items()) {
                 Money total =
                         new Money(
-                                item.unitPrice().currency(),
-                                item.unitPrice().minorUnits() * item.quantity());
+                                item.unitPrice().minorUnits() * item.quantity(),
+                                item.unitPrice().currency());
                 rows.add(
                         new ItemRow(
-                                total,
                                 item.name(),
-                                item.quantity(),
                                 names(group, item.split().members()),
-                                item.unitPrice()));
+                                item.quantity(),
+                                item.unitPrice(),
+                                total));
             }
             printTable(ItemRow.HEADERS, rows, 2);
         }
@@ -123,12 +123,13 @@ final class Expenses {
         return List.of(
                 new Item(
                         "Vinho verde",
-                        new Split.Equal(List.of(people.ana(), people.bob(), people.dan())),
                         eur("12.00"),
+                        new Split.Equal(List.of(people.ana(), people.bob(), people.dan())),
                         2),
-                new Item("Bacalhau", new Split.Equal(List.of(people.carol())), eur("18.00")),
+                new Item("Bacalhau", eur("18.00"), new Split.Equal(List.of(people.carol()))),
                 new Item(
                         "Custard tarts",
+                        eur("1.50"),
                         new Split.Parts(
                                 List.of(
                                         new MemberParts(people.ana(), Parts.parse("1")),
@@ -136,26 +137,25 @@ final class Expenses {
                                         new MemberParts(people.carol(), Parts.parse("1")),
                                         new MemberParts(people.dan(), Parts.parse("1")),
                                         new MemberParts(people.eva(), Parts.parse("2")))),
-                        eur("1.50"),
                         6),
-                new Item("Juice", new Split.Equal(List.of(people.eva())), eur("3.00")));
+                new Item("Juice", eur("3.00"), new Split.Equal(List.of(people.eva()))));
     }
 
     /** The fado night, item by item, paid by Carol and Dan, with a 10 % tip. */
     static Expense fadoNight(People people, Categories categories) throws EranosException {
         return Expense.builder(
-                        new Cost.Local(eur("54.00")),
-                        october(4),
                         "Fado night",
+                        new Cost.Local(eur("54.00")),
                         new Split.Amounts(
                                 List.of(
-                                        new MemberAmount(eur("39.40"), people.carol()),
-                                        new MemberAmount(eur("20.00"), people.dan()))),
-                        new ExpenseSplit.Itemised(fadoItems(people)))
+                                        new MemberAmount(people.carol(), eur("39.40")),
+                                        new MemberAmount(people.dan(), eur("20.00")))),
+                        new ExpenseSplit.Itemised(fadoItems(people)),
+                        october(4))
+                .tip(new Tip(new TipValue.Percentage(Percentage.parse("10"))))
+                .time(TimeOfDay.of(22, 15))
                 .category(categories.food())
                 .description("Tasca do Chico")
-                .time(TimeOfDay.of(22, 15))
-                .tip(new Tip(new TipValue.Percentage(Percentage.parse("10"))))
                 .build();
     }
 
@@ -165,24 +165,23 @@ final class Expenses {
         ExpenseId groceries =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("10.00")),
-                                        october(1),
                                         "Groceries",
+                                        new Cost.Local(eur("10.00")),
                                         new Split.Equal(List.of(people.ana())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Equal(
                                                         List.of(
                                                                 people.ana(),
                                                                 people.bob(),
-                                                                people.carol()))))
+                                                                people.carol()))),
+                                        october(1))
                                 .category(categories.food())
                                 .build());
         ExpenseId apartment =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("800.00")),
-                                        october(1),
                                         "Apartment",
+                                        new Cost.Local(eur("800.00")),
                                         new Split.Equal(List.of(people.ana())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Percentages(
@@ -198,15 +197,15 @@ final class Expenses {
                                                                         Percentage.parse("35")),
                                                                 new MemberPercentage(
                                                                         people.dan(),
-                                                                        Percentage.parse("15"))))))
+                                                                        Percentage.parse("15"))))),
+                                        october(1))
                                 .category(categories.lodging())
                                 .build());
         ExpenseId seafood =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("90.00")),
-                                        october(2),
                                         "Seafood dinner",
+                                        new Cost.Local(eur("90.00")),
                                         new Split.Equal(List.of(people.carol())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Parts(
@@ -225,37 +224,37 @@ final class Expenses {
                                                                         Parts.parse("1")),
                                                                 new MemberParts(
                                                                         people.eva(),
-                                                                        Parts.parse("0.5"))))))
+                                                                        Parts.parse("0.5"))))),
+                                        october(2))
                                 .category(categories.food())
                                 .build());
         ExpenseId train =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("88.50")),
-                                        october(3),
                                         "Train to Porto",
+                                        new Cost.Local(eur("88.50")),
                                         new Split.Equal(List.of(people.bob())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Amounts(
                                                         List.of(
                                                                 new MemberAmount(
-                                                                        eur("24.50"), people.ana()),
+                                                                        people.ana(), eur("24.50")),
                                                                 new MemberAmount(
-                                                                        eur("24.50"), people.bob()),
+                                                                        people.bob(), eur("24.50")),
                                                                 new MemberAmount(
-                                                                        eur("24.50"),
-                                                                        people.carol()),
+                                                                        people.carol(),
+                                                                        eur("24.50")),
                                                                 new MemberAmount(
-                                                                        eur("15.00"),
-                                                                        people.eva())))))
+                                                                        people.eva(),
+                                                                        eur("15.00"))))),
+                                        october(3))
                                 .category(categories.transport())
                                 .build());
         ExpenseId museum =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("60.00")),
-                                        october(3),
                                         "Museum",
+                                        new Cost.Local(eur("60.00")),
                                         new Split.Equal(List.of(people.ana(), people.bob())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Equal(
@@ -263,15 +262,15 @@ final class Expenses {
                                                                 people.ana(),
                                                                 people.bob(),
                                                                 people.carol(),
-                                                                people.dan()))))
+                                                                people.dan()))),
+                                        october(3))
                                 .build());
         ExpenseId fado = group.addExpense(fadoNight(people, categories));
         ExpenseId tour =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("45.00")),
-                                        october(5),
                                         "Tuk-tuk tour",
+                                        new Cost.Local(eur("45.00")),
                                         new Split.Equal(List.of(people.dan())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Equal(
@@ -280,12 +279,13 @@ final class Expenses {
                                                                 people.bob(),
                                                                 people.carol(),
                                                                 people.dan(),
-                                                                people.eva()))))
-                                .category(categories.transport())
+                                                                people.eva()))),
+                                        october(5))
                                 .tip(
                                         new Tip(
                                                 new TipValue.Fixed(eur("5.00")),
                                                 TipDistribution.EQUAL))
+                                .category(categories.transport())
                                 .build());
         return new Tour.Expenses(apartment, fado, groceries, museum, seafood, tour, train);
     }
@@ -309,9 +309,9 @@ final class Expenses {
                         .map(
                                 tip ->
                                         switch (tip.value()) {
-                                            case TipValue.Fixed fixed -> fixed.amount().toString();
                                             case TipValue.Percentage percentage ->
                                                     percentage.percentage().toString();
+                                            case TipValue.Fixed fixed -> fixed.amount().toString();
                                         })
                         .orElse("a tip");
         String shared =
@@ -319,9 +319,9 @@ final class Expenses {
                         .map(
                                 tip ->
                                         switch (tip.distribution()) {
-                                            case EQUAL -> "equally";
                                             case PROPORTIONAL ->
                                                     "in proportion to what each member ordered";
+                                            case EQUAL -> "equally";
                                         })
                         .orElse("another way");
         System.out.print(

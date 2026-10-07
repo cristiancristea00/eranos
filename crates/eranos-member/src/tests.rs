@@ -18,11 +18,11 @@ fn phone() -> PhoneNumber {
 }
 
 fn bank_account() -> Account {
-    Account::new(Iban::parse("RO49AAAA1B31007593840000").unwrap(), "ING").unwrap()
+    Account::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap()).unwrap()
 }
 
 fn app_account() -> Account {
-    Account::new(Username::new("@ana").unwrap(), "Revolut").unwrap()
+    Account::new("Revolut", Username::new("@ana").unwrap()).unwrap()
 }
 
 /// A member with every optional detail set.

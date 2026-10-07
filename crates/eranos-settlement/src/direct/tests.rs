@@ -29,12 +29,12 @@ fn the_sign_of_a_pair_decides_who_pays() {
         settle(&pairs),
         vec![
             Flow {
-                amount: 700,
-                members: pair(ana, bob)
+                members: pair(ana, bob),
+                amount: 700
             },
             Flow {
-                amount: 300,
-                members: pair(carol, ana)
+                members: pair(carol, ana),
+                amount: 300
             }
         ]
     );

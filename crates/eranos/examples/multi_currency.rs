@@ -17,32 +17,32 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct EntryRow {
-    #[tabled(rename = "In the group currency", order = 4)]
-    converted: Money,
-    #[tabled(rename = "Entry", order = 0)]
+    #[tabled(rename = "Entry")]
     name: String,
-    #[tabled(rename = "Entered as", order = 2)]
-    original: Money,
-    #[tabled(rename = "Paid by", order = 1)]
+    #[tabled(rename = "Paid by")]
     payer: String,
-    #[tabled(rename = "Rate", order = 3)]
+    #[tabled(rename = "Entered as")]
+    original: Money,
+    #[tabled(rename = "Rate")]
     rate: ExchangeRate,
+    #[tabled(rename = "In the group currency")]
+    converted: Money,
 }
 
 #[derive(Tabled)]
 struct BalanceRow {
-    #[tabled(rename = "Balance", order = 5)]
-    balance: Balance,
-    #[tabled(rename = "Consumed", order = 2)]
-    consumed: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Paid", order = 1)]
+    #[tabled(rename = "Paid")]
     paid: Money,
-    #[tabled(rename = "Received", order = 4)]
-    received: Money,
-    #[tabled(rename = "Sent", order = 3)]
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Sent")]
     sent: Money,
+    #[tabled(rename = "Received")]
+    received: Money,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
 }
 
 /// Prints a section heading with a line under it.
@@ -70,27 +70,27 @@ fn name(group: &Group, member: MemberId) -> String {
 /// Every expense and transfer, as entered and in the group currency.
 fn print_entries(group: &Group) {
     let expenses = group.expenses().map(|expense| EntryRow {
-        converted: group
-            .expense_shares(expense.id())
-            .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
         name: expense.name().to_owned(),
-        original: expense.total(),
         payer: expense
             .payers()
             .members()
             .map(|member| name(group, member))
             .collect::<Vec<_>>()
             .join(", "),
+        original: expense.total(),
         rate: expense.exchange_rate(),
+        converted: group
+            .expense_shares(expense.id())
+            .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
     });
     let transfers = group.transfers().map(|transfer| EntryRow {
+        name: format!("Transfer to {}", name(group, transfer.to())),
+        payer: name(group, transfer.from()),
+        original: transfer.amount(),
+        rate: transfer.exchange_rate(),
         converted: group
             .transfer_amount(transfer.id())
             .unwrap_or_else(|| Money::zero(group.currency())),
-        name: format!("Transfer to {}", name(group, transfer.to())),
-        original: transfer.amount(),
-        payer: name(group, transfer.from()),
-        rate: transfer.exchange_rate(),
     });
     print_table(expenses.chain(transfers), 2);
 }
@@ -101,12 +101,12 @@ fn print_balances(group: &Group) {
         group.members().map(|member| {
             let totals = summary.member(member.id());
             BalanceRow {
-                balance: totals.balance(),
-                consumed: totals.share(),
                 name: member.first_name().to_owned(),
                 paid: totals.paid(),
-                received: totals.received(),
+                consumed: totals.share(),
                 sent: totals.sent(),
+                received: totals.received(),
+                balance: totals.balance(),
             }
         }),
         1,
@@ -118,31 +118,31 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     let both = Split::equal([ana, bob]);
     group.add_expense(
         Expense::builder(
-            Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
-            CalendarDate::new(1, 8, 2026)?,
             "Fuel",
+            Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
             ana,
             both.clone(),
+            CalendarDate::new(2026, 8, 1)?,
         )
         .build()?,
     )?;
     group.add_expense(
         Expense::builder(
-            Money::parse("24000.00", Currency::HUF)?.at(ExchangeRate::parse("0.0025")?),
-            CalendarDate::new(2, 8, 2026)?,
             "Dinner",
+            Money::parse("24000.00", Currency::HUF)?.at(ExchangeRate::parse("0.0025")?),
             bob,
             both.clone(),
+            CalendarDate::new(2026, 8, 2)?,
         )
         .build()?,
     )?;
     group.add_expense(
         Expense::builder(
-            Money::parse("60.00", Currency::EUR)?,
-            CalendarDate::new(3, 8, 2026)?,
             "Ferry",
+            Money::parse("60.00", Currency::EUR)?,
             bob,
             both,
+            CalendarDate::new(2026, 8, 3)?,
         )
         .build()?,
     )?;
@@ -158,10 +158,10 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
 fn repayment(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
     section("3. A repayment in cash, in another currency");
     let cash = Transfer::builder(
-        Money::parse("100.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
-        CalendarDate::new(4, 8, 2026)?,
         ana,
         bob,
+        Money::parse("100.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
+        CalendarDate::new(2026, 8, 4)?,
     )
     .note("Cash at the border")
     .build()?;
@@ -200,7 +200,7 @@ fn new_currency(group: &mut Group) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder(Currency::EUR, "Danube road trip").build()?;
+    let mut group = Group::builder("Danube road trip", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
 

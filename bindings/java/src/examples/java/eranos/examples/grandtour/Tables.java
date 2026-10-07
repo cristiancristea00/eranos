@@ -46,7 +46,7 @@ final class Tables {
     }
 
     /** A member with their contact details and accounts, a row of the members' table. */
-    record MemberRow(String accounts, String email, String name, String phone) implements Row {
+    record MemberRow(String name, String email, String phone, String accounts) implements Row {
         static final List<String> HEADERS = List.of("Member", "Email", "Phone", "Accounts");
 
         @Override
@@ -79,7 +79,7 @@ final class Tables {
      * An expense with every involved member's payment and consumption, one per line, a row of the
      * shares' table.
      */
-    record ShareRow(String consumed, String expense, String how, String members, String paid)
+    record ShareRow(String expense, String how, String members, String paid, String consumed)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Expense", "Split", "Member", "Paid", "Consumed");
@@ -91,7 +91,7 @@ final class Tables {
     }
 
     /** A line of a receipt, a row of the items' table. */
-    record ItemRow(Money lineTotal, String name, int quantity, String sharedBy, Money unitPrice)
+    record ItemRow(String name, String sharedBy, int quantity, Money unitPrice, Money lineTotal)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Item", "Shared by", "Quantity", "Unit price", "Line total");
@@ -108,7 +108,7 @@ final class Tables {
     }
 
     /** An expense or a transfer as entered and in the group currency, a row of the entries. */
-    record EntryRow(Money converted, String name, Money original, String payer, ExchangeRate rate)
+    record EntryRow(String name, String payer, Money original, ExchangeRate rate, Money converted)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Entry", "Paid by", "Entered as", "Rate", "In the group currency");
@@ -120,7 +120,7 @@ final class Tables {
     }
 
     /** An entry and the edit made to it, a row of the edits' table. */
-    record EditRow(String edit, String entry) implements Row {
+    record EditRow(String entry, String edit) implements Row {
         static final List<String> HEADERS = List.of("Entry", "Edit");
 
         @Override
@@ -131,7 +131,7 @@ final class Tables {
 
     /** A member's totals, a row of the balances' table. */
     record BalanceRow(
-            Balance balance, Money consumed, String name, Money paid, Money received, Money sent)
+            String name, Money paid, Money consumed, Money sent, Money received, Balance balance)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Member", "Paid", "Consumed", "Sent", "Received", "Balance");
@@ -149,7 +149,7 @@ final class Tables {
     }
 
     /** A member's status and balance, a row of the statuses' table. */
-    record StatusRow(Balance balance, String name, String status) implements Row {
+    record StatusRow(String name, String status, Balance balance) implements Row {
         static final List<String> HEADERS = List.of("Member", "Status", "Balance");
 
         @Override
@@ -159,7 +159,7 @@ final class Tables {
     }
 
     /** A category with its expenses and their total, a row of the categories' table. */
-    record CategoryRow(long expenses, String name, Money total) implements Row {
+    record CategoryRow(String name, long expenses, Money total) implements Row {
         static final List<String> HEADERS = List.of("Category", "Expenses", "Total");
 
         @Override
@@ -170,7 +170,7 @@ final class Tables {
 
     /** A member's consumption in each category, a row of the members' categories. */
     record MemberCategoryRow(
-            Money food, Money lodging, String name, Money transport, Money uncategorised)
+            String name, Money food, Money lodging, Money transport, Money uncategorised)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Member", "Food", "Lodging", "Getting around", "Uncategorised");
@@ -190,7 +190,7 @@ final class Tables {
      * A strategy asked for, the strategy whose plan it chose, and the plan's payments, a row of the
      * strategies' table.
      */
-    record StrategyRow(String computedBy, int payments, String strategy) implements Row {
+    record StrategyRow(String strategy, String computedBy, int payments) implements Row {
         static final List<String> HEADERS = List.of("Strategy", "Computed by", "Payments");
 
         @Override
@@ -200,7 +200,7 @@ final class Tables {
     }
 
     /** A payment of a plan, a row of the payments' table. */
-    record PaymentRow(Money amount, String from, String to) implements Row {
+    record PaymentRow(String from, String to, Money amount) implements Row {
         static final List<String> HEADERS = List.of("From", "To", "Amount");
 
         @Override
@@ -220,7 +220,7 @@ final class Tables {
     }
 
     /** A currency with its details, a row of the currencies' table. */
-    record CurrencyRow(String code, int decimalPlaces, String name, int numericCode)
+    record CurrencyRow(String code, String name, int numericCode, int decimalPlaces)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Code", "Name", "Numeric code", "Decimal places");
@@ -248,7 +248,7 @@ final class Tables {
 
     static void printBalances(Group group) {
         Summary summary = group.summary();
-        Money zero = new Money(group.currency(), 0);
+        Money zero = new Money(0, group.currency());
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             // The summary lists the members with a total; every total of the others is zero.
@@ -257,20 +257,20 @@ final class Tables {
                     totals.map(
                                     found ->
                                             new BalanceRow(
-                                                    found.balance(),
-                                                    found.share(),
                                                     member.firstName(),
                                                     found.paid(),
+                                                    found.share(),
+                                                    found.sent(),
                                                     found.received(),
-                                                    found.sent()))
+                                                    found.balance()))
                             .orElse(
                                     new BalanceRow(
-                                            new Balance.Settled(),
-                                            zero,
                                             member.firstName(),
                                             zero,
                                             zero,
-                                            zero)));
+                                            zero,
+                                            zero,
+                                            new Balance.Settled())));
         }
         printTable(BalanceRow.HEADERS, rows, 1);
     }
@@ -290,8 +290,8 @@ final class Tables {
                             .count();
             rows.add(
                     new CategoryRow(
-                            count,
                             group.category(total.category()).map(Category::name).orElse("?"),
+                            count,
                             total.total()));
         }
         printTable(CategoryRow.HEADERS, rows, 1);
@@ -302,7 +302,7 @@ final class Tables {
      * currency.
      */
     static void printEntries(Group group, Predicate<Currency> shown) throws EranosException {
-        Money zero = new Money(group.currency(), 0);
+        Money zero = new Money(0, group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
             if (shown.test(expense.cost().amount().currency())) {
@@ -312,11 +312,11 @@ final class Tables {
                                 : Optional.empty();
                 rows.add(
                         new EntryRow(
-                                shares.map(ExpenseShares::total).orElse(zero),
                                 expense.name(),
-                                expense.total(),
                                 names(group, expense.payers().members()),
-                                rate(expense.cost())));
+                                expense.total(),
+                                rate(expense.cost()),
+                                shares.map(ExpenseShares::total).orElse(zero)));
             }
         }
         for (Transfer transfer : group.transfers()) {
@@ -327,11 +327,11 @@ final class Tables {
                                 : Optional.empty();
                 rows.add(
                         new EntryRow(
-                                amount.orElse(zero),
                                 "Transfer to " + name(group, transfer.to()),
-                                transfer.cost().amount(),
                                 name(group, transfer.from()),
-                                rate(transfer.cost())));
+                                transfer.cost().amount(),
+                                rate(transfer.cost()),
+                                amount.orElse(zero)));
             }
         }
         printTable(EntryRow.HEADERS, rows, 2);

@@ -11,7 +11,7 @@
 
 /// A time of day, to the minute. A plain struct of its hour and minute.
 typedef struct EranosTimeOfDay EranosTimeOfDay;
-/// A day of the calendar. A plain struct of its day, month, and year.
+/// A day of the calendar. A plain struct of its year, month, and day.
 typedef struct EranosCalendarDate EranosCalendarDate;
 
 /// The date written `text`: "2026-09-23".

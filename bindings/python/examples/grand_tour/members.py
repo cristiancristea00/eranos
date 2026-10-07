@@ -50,17 +50,17 @@ class MemberRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Email', 'Phone', 'Accounts')
 
-    accounts: str
-    """The member's accounts, a line each."""
+    name: str
+    """The member's full name."""
 
     email: str
     """The member's email, or nothing."""
 
-    name: str
-    """The member's full name."""
-
     phone: str
     """The member's phone number, grouped for reading, or nothing."""
+
+    accounts: str
+    """The member's accounts, a line each."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -97,7 +97,7 @@ def the_group() -> Group:
 
     """
     section('1. The group')
-    group = Group.create(Currency('EUR'), 'Lisbon', description='A week by the Atlantic', language=Language('pt-pt'))
+    group = Group.create('Lisbon', Currency('EUR'), description='A week by the Atlantic', language=Language('pt-pt'))
     blank = refusal(lambda: group.set_name('   '))
     group.set_name('Lisbon and Porto')
     group.set_description('A week by the Atlantic, with a day in Porto')
@@ -161,10 +161,10 @@ def _print_members(group: Group) -> None:
         MemberRow,
         [
             MemberRow(
-                accounts=cell(_describe(account) for account in member.accounts),
-                email='' if member.email is None else str(member.email),
                 name=' '.join(part for part in (member.first_name, member.last_name) if part is not None),
+                email='' if member.email is None else str(member.email),
                 phone='' if member.phone is None else member.phone.international(),
+                accounts=cell(_describe(account) for account in member.accounts),
             )
             for member in group.members()
         ],
@@ -264,13 +264,13 @@ def members(group: Group) -> People:
     ana = group.add_member(
         Member(
             first_name='Ana',
-            accounts=(
-                Account(IbanAccountDetails(Iban('RO49 AAAA 1B31 0075 9384 0000')), 'ING'),
-                Account(UsernameAccountDetails(Username('@ana')), 'Revolut'),
-            ),
-            email=Email('ana@example.com'),
             last_name='Popescu',
+            email=Email('ana@example.com'),
             phone=PhoneNumber('+40 712 345 678'),
+            accounts=(
+                Account('ING', IbanAccountDetails(Iban('RO49 AAAA 1B31 0075 9384 0000'))),
+                Account('Revolut', UsernameAccountDetails(Username('@ana'))),
+            ),
         )
     )
     bob = group.add_member(Member(first_name='Bob'))
@@ -281,7 +281,7 @@ def members(group: Group) -> People:
     # An edit starts from a copy of the member, which keeps its identifier.
     stored = group.member(bob)
     assert stored is not None, 'Bob is a member'
-    edited = copy.replace(stored, email=Email('bob@example.com'), last_name='Ionescu')
+    edited = copy.replace(stored, last_name='Ionescu', email=Email('bob@example.com'))
     before = group.replace_member(edited)
     _print_members(group)
     print_lines(

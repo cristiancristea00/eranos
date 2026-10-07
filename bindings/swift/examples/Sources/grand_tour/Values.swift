@@ -8,7 +8,7 @@ func currencies() throws(EranosError) {
     var rows: [CurrencyRow] = []
     for code in ["EUR", "RON", "JPY", "BHD"] {
         let currency = try Currency(code: code)
-        rows.append(CurrencyRow(code: currency.code, decimalPlaces: currency.decimalPlaces, name: currency.name, numericCode: currency.numericCode))
+        rows.append(CurrencyRow(code: currency.code, name: currency.name, numericCode: currency.numericCode, decimalPlaces: currency.decimalPlaces))
     }
     let unknown = Result { () throws(EranosError) in try Currency(code: "XYZ") }
     print("""
@@ -24,8 +24,8 @@ func amounts() throws(EranosError) {
     let change = try eur("5.00").subtracting(eur("7.50"))
     let mixed = Result { () throws(EranosError) in try eur("1.00").adding(ron("1.00")) }
     let yen = try Money(parsing: "1500", in: Currency(code: "JPY"))
-    let dinars = Money(currency: try Currency(code: "BHD"), minorUnits: 1_234)
-    let nothing = Money(currency: try Currency(code: "RON"), minorUnits: 0)
+    let dinars = Money(minorUnits: 1_234, currency: try Currency(code: "BHD"))
+    let nothing = Money(minorUnits: 0, currency: try Currency(code: "RON"))
     let cost = Cost.converted(try eur("10.00"), rate: try ExchangeRate(parsing: "4.9765"))
     let doubled = Cost.converted(try eur("20.00"), rate: try rate(of: cost))
     print("Amounts are exact minor units in their currency:")
@@ -83,7 +83,7 @@ func datesAndIdentifiers(_ group: Group, _ people: People) throws(EranosError) {
     printTable(
         [
             ValueRow(input: "2026-10-01", result: "\(date): day \(date.day), month \(date.month), year \(date.year)"),
-            ValueRow(input: "29 February 2027", result: message(Result { () throws(EranosError) in try CalendarDate(day: 29, month: 2, year: 2027) })),
+            ValueRow(input: "29 February 2027", result: message(Result { () throws(EranosError) in try CalendarDate(year: 2027, month: 2, day: 29) })),
             ValueRow(input: "22:15", result: "\(time): hour \(time.hour), minute \(time.minute)"),
             ValueRow(input: "24:00", result: message(Result { () throws(EranosError) in try TimeOfDay(hour: 24, minute: 0) })),
             ValueRow(input: "Ana's identifier", result: "\(parsed), the same after a round trip: \(people.ana == found)"),

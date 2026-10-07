@@ -21,12 +21,12 @@ export class Currency {
     private constructor(
         /** The three-letter code: "EUR". */
         readonly code: string,
-        /** How many decimal places its minor unit has: 2 for the euro, 0 for the yen. */
-        readonly decimalPlaces: number,
         /** The English name: "Euro". */
         readonly name: string,
         /** The three-digit numeric code: 978 for the euro. */
         readonly numericCode: number,
+        /** How many decimal places its minor unit has: 2 for the euro, 0 for the yen. */
+        readonly decimalPlaces: number,
     ) {}
 
     /**
@@ -57,7 +57,7 @@ export class Currency {
      * @internal
      */
     static known(code: string): Currency {
-        return Currency.byCode().get(code) ?? new Currency(code, 0, code, 0);
+        return Currency.byCode().get(code) ?? new Currency(code, code, 0, 0);
     }
 
     /** The currencies of the library's list by their codes. */
@@ -65,7 +65,7 @@ export class Currency {
         Currency.listed ??= new Map(
             internal
                 .currencies()
-                .map((details) => [details.code, new Currency(details.code, details.decimalPlaces, details.name, details.numericCode)]),
+                .map((details) => [details.code, new Currency(details.code, details.name, details.numericCode, details.decimalPlaces)]),
         );
         return Currency.listed;
     }

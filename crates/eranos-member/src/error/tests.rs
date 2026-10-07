@@ -5,30 +5,30 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case {
     error: MemberError,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// A [`MemberError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedMemberError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromMemberError for ConvertedMemberError {
     fn empty_first_name(message: String) -> Self {
         Self {
+            method: "empty_first_name",
             held: String::new(),
             message,
-            method: "empty_first_name",
         }
     }
 }
@@ -40,16 +40,16 @@ impl FromMemberError for ConvertedMemberError {
 fn every_failure_of_member_error_converts_through_the_method_of_its_variant() {
     let cases = [Case {
         error: MemberError::EmptyFirstName,
-        held: String::new(),
         method: "empty_first_name",
+        held: String::new(),
     }];
     for case in cases {
         assert_eq!(
             ConvertedMemberError::from_member_error(case.error),
             ConvertedMemberError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }

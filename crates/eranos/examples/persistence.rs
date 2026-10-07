@@ -17,12 +17,12 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ComparisonRow {
-    #[tabled(rename = "Balance after loading", order = 2)]
-    after: Balance,
-    #[tabled(rename = "Balance before saving", order = 1)]
-    before: Balance,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
+    #[tabled(rename = "Balance before saving")]
+    before: Balance,
+    #[tabled(rename = "Balance after loading")]
+    after: Balance,
 }
 
 /// Prints a section heading with a line under it.
@@ -41,26 +41,26 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder(Currency::EUR, "Road trip").build()?;
+    let mut group = Group::builder("Road trip", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     group.add_expense(
         Expense::builder(
-            Money::parse("70.00", Currency::EUR)?,
-            CalendarDate::new(23, 9, 2026)?,
             "Fuel",
+            Money::parse("70.00", Currency::EUR)?,
             ana,
             Split::equal([ana, bob]),
+            CalendarDate::new(2026, 9, 23)?,
         )
         .build()?,
     )?;
     group.add_expense(
         Expense::builder(
-            Money::parse("30.00", Currency::EUR)?,
-            CalendarDate::new(23, 9, 2026)?,
             "Lunch",
+            Money::parse("30.00", Currency::EUR)?,
             bob,
             Split::equal([ana, bob]),
+            CalendarDate::new(2026, 9, 23)?,
         )
         .tip(Tip::percentage(Percentage::parse("10")?))
         .build()?,
@@ -93,12 +93,12 @@ fn main() -> Result<(), Box<dyn Error>> {
          the totals. The loaded group equals the saved one, and so do its balances:"
     );
     let rows = [ana, bob].map(|member| ComparisonRow {
-        after: loaded.summary().member(member).balance(),
-        before: group.summary().member(member).balance(),
         name: group
             .member(member)
             .map_or("?", Member::first_name)
             .to_owned(),
+        before: group.summary().member(member).balance(),
+        after: loaded.summary().member(member).balance(),
     });
     print_table(rows, 1);
     let plan = loaded.settlement(SettlementStrategy::Greedy)?;
@@ -109,13 +109,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     section("3. A corrupted file is refused");
     println!(
-        "Here the fuel's payer was edited to an identifier no member has. Reading the file\n\
-         as a SavedGroup and loading it with into_group replays every entry through the\n\
-         same checks as adding it, and refuses the file instead of producing balances that\n\
-         do not add up:"
+        "Here Ana's identifier was edited in her member entry, so the fuel's payer is an\n\
+         identifier no member has. Reading the file as a SavedGroup and loading it with\n\
+         into_group replays every entry through the same checks as adding it, and refuses\n\
+         the file instead of producing balances that do not add up:"
     );
-    // The fuel is the first entry that names Ana: the expenses come before
-    // the members in the saved form.
+    // Ana's own entry is the first to name her: the members come before the
+    // expenses in the saved form, so the fuel she paid is left naming an
+    // identifier no member has.
     let corrupted = saved.replacen(&ana.to_string(), "0199a000-0000-7000-8000-00000000ffff", 1);
     let refused = serde_json::from_str::<SavedGroup>(&corrupted)?.into_group();
     println!(

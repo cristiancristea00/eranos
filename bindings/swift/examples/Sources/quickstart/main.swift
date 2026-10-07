@@ -7,10 +7,10 @@ import Report
 struct ExpenseRow: TableRow {
     static let headers = ["Expense", "Paid by", "Shared by", "Amount"]
 
-    let amount: Money
     let name: String
-    let participants: String
     let payers: String
+    let participants: String
+    let amount: Money
 
     var cells: [String] {
         [name, payers, participants, "\(amount)"]
@@ -20,10 +20,10 @@ struct ExpenseRow: TableRow {
 struct MemberRow: TableRow {
     static let headers = ["Member", "Paid", "Consumed", "Balance"]
 
-    let balance: Balance
-    let consumed: Money
     let name: String
     let paid: Money
+    let consumed: Money
+    let balance: Balance
 
     var cells: [String] {
         [name, "\(paid)", "\(consumed)", "\(balance)"]
@@ -33,9 +33,9 @@ struct MemberRow: TableRow {
 struct PaymentRow: TableRow {
     static let headers = ["From", "To", "Amount"]
 
-    let amount: Money
     let from: String
     let to: String
+    let amount: Money
 
     var cells: [String] {
         [from, to, "\(amount)"]
@@ -44,7 +44,7 @@ struct PaymentRow: TableRow {
 
 func main() throws(EranosError) {
     let euro = try Currency(code: "EUR")
-    let group = try Group(currency: euro, name: "Weekend in Sinaia")
+    let group = try Group(name: "Weekend in Sinaia", currency: euro)
     title(try group.name())
     print("""
         Three friends rent a cabin and buy groceries. The group keeps its books in \(try group.currency()), so
@@ -62,17 +62,17 @@ func main() throws(EranosError) {
         Each expense records who paid and who shares it. Here everyone shares everything
         equally.
         """)
-    let friday = try CalendarDate(day: 25, month: 9, year: 2026)
+    let friday = try CalendarDate(year: 2026, month: 9, day: 25)
     let everyone = Split.equal([ana, bob, carol])
-    _ = try group.add(Expense(cost: .local(Money(parsing: "240.00", in: euro)), date: friday, name: "Cabin", payers: .equal([ana]), split: .whole(everyone)))
-    _ = try group.add(Expense(cost: .local(Money(parsing: "60.00", in: euro)), date: friday, name: "Groceries", payers: .equal([bob]), split: .whole(everyone)))
+    _ = try group.add(Expense(name: "Cabin", cost: .local(Money(parsing: "240.00", in: euro)), payers: .equal([ana]), split: .whole(everyone), date: friday))
+    _ = try group.add(Expense(name: "Groceries", cost: .local(Money(parsing: "60.00", in: euro)), payers: .equal([bob]), split: .whole(everyone), date: friday))
     printTable(
         try group.expenses().map { expense throws(EranosError) in
             ExpenseRow(
-                amount: try expense.total(),
                 name: expense.name,
+                payers: try names(group, expense.payers.members),
                 participants: try names(group, participants(expense.split)),
-                payers: try names(group, expense.payers.members)
+                amount: try expense.total()
             )
         },
         numbersFrom: 3
@@ -87,7 +87,7 @@ func main() throws(EranosError) {
     printTable(
         try group.members().compactMap { member in
             member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
-                MemberRow(balance: totals.balance, consumed: totals.share, name: member.firstName, paid: totals.paid)
+                MemberRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
             }
         },
         numbersFrom: 1
@@ -100,7 +100,7 @@ func main() throws(EranosError) {
     print("The fewest payments that bring every balance to zero (\(settlement.payments.count) in total):")
     printTable(
         try settlement.payments.map { payment throws(EranosError) in
-            PaymentRow(amount: payment.amount, from: try names(group, [payment.from]), to: try names(group, [payment.to]))
+            PaymentRow(from: try names(group, [payment.from]), to: try names(group, [payment.to]), amount: payment.amount)
         },
         numbersFrom: 2
     )

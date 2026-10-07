@@ -13,7 +13,6 @@
 #![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
-use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 use std::fmt;
@@ -31,11 +30,11 @@ use eranos_money::{Currency, Money, MoneyError};
 /// ```
 /// use eranos::{Balance, Currency, CalendarDate, Expense, Group, Member, Money, Split};
 ///
-/// let mut group = Group::builder(Currency::EUR, "Weekend").build()?;
+/// let mut group = Group::builder("Weekend", Currency::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
-/// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
-/// group.add_expense(Expense::builder(amount, day, "Groceries", ana, Split::equal([ana, bob])).build()?)?;
+/// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+/// group.add_expense(Expense::builder("Groceries", amount, ana, Split::equal([ana, bob]), day).build()?)?;
 ///
 /// let summary = group.summary();
 /// assert_eq!(summary.total_spent(), Money::parse("30.00", Currency::EUR)?);
@@ -46,34 +45,53 @@ use eranos_money::{Currency, Money, MoneyError};
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Summary {
+    currency: Currency,
+    total_spent: i64,
     // In the three maps, rows whose values are all zero are removed, so two
     // summaries with the same totals compare equal however they were
     // reached.
-    categories: BTreeMap<CategoryId, i64>,
-    currency: Currency,
-    member_categories: BTreeMap<MemberCategory, i64>,
     members: BTreeMap<MemberId, Totals>,
-    total_spent: i64,
+    categories: BTreeMap<CategoryId, i64>,
+    member_categories: BTreeMap<MemberCategory, i64>,
 }
 
 impl Summary {
     const fn new(currency: Currency) -> Self {
         Self {
-            categories: BTreeMap::new(),
             currency,
-            member_categories: BTreeMap::new(),
-            members: BTreeMap::new(),
             total_spent: 0,
+            members: BTreeMap::new(),
+            categories: BTreeMap::new(),
+            member_categories: BTreeMap::new(),
         }
     }
 
-    /// The spending in one category.
+    /// The sum of every expense's total (amount plus tip); transfers are not
+    /// spending and do not count.
     #[must_use]
-    pub fn category_total(&self, category: CategoryId) -> Money {
-        Money::from_minor_units(
-            self.currency,
-            self.categories.get(&category).copied().unwrap_or(0),
-        )
+    pub const fn total_spent(&self) -> Money {
+        Money::from_minor_units(self.total_spent, self.currency)
+    }
+
+    /// The totals of every member with a non-zero total, ordered by member;
+    /// each names its member.
+    pub fn members(&self) -> impl ExactSizeIterator<Item = MemberSummary> + '_ {
+        self.members.iter().map(|(&member, &totals)| MemberSummary {
+            member,
+            totals,
+            currency: self.currency,
+        })
+    }
+
+    /// The totals of one member; all zero for a member without entries.
+    #[must_use]
+    pub fn member(&self, member: MemberId) -> MemberSummary {
+        let totals = self.members.get(&member).copied().unwrap_or_default();
+        MemberSummary {
+            member,
+            totals,
+            currency: self.currency,
+        }
     }
 
     /// The spending of every category with expenses, ordered by category,
@@ -83,19 +101,17 @@ impl Summary {
             .iter()
             .map(|(&category, &total)| CategoryTotal {
                 category,
-                total: Money::from_minor_units(self.currency, total),
+                total: Money::from_minor_units(total, self.currency),
             })
     }
 
-    /// One member's share of the spending in one category.
+    /// The spending in one category.
     #[must_use]
-    pub fn member_category_total(&self, member: MemberId, category: CategoryId) -> Money {
-        let total = self
-            .member_categories
-            .get(&MemberCategory { category, member })
-            .copied()
-            .unwrap_or(0);
-        Money::from_minor_units(self.currency, total)
+    pub fn category_total(&self, category: CategoryId) -> Money {
+        Money::from_minor_units(
+            self.categories.get(&category).copied().unwrap_or(0),
+            self.currency,
+        )
     }
 
     /// One member's share of the spending in every category they have
@@ -107,53 +123,36 @@ impl Summary {
         // The nil UUID of Uncategorised is the smallest identifier, so the
         // member's rows start here.
         let first = MemberCategory {
-            category: CategoryId::UNCATEGORISED,
             member,
+            category: CategoryId::UNCATEGORISED,
         };
         self.member_categories
             .range(first..)
             .take_while(move |&(key, _)| key.member == member)
             .map(|(key, &total)| CategoryTotal {
                 category: key.category,
-                total: Money::from_minor_units(self.currency, total),
+                total: Money::from_minor_units(total, self.currency),
             })
     }
 
-    /// The totals of every member with a non-zero total, ordered by member;
-    /// each names its member.
-    pub fn members(&self) -> impl ExactSizeIterator<Item = MemberSummary> + '_ {
-        self.members.iter().map(|(&member, &totals)| MemberSummary {
-            currency: self.currency,
-            member,
-            totals,
-        })
-    }
-
-    /// The totals of one member; all zero for a member without entries.
+    /// One member's share of the spending in one category.
     #[must_use]
-    pub fn member(&self, member: MemberId) -> MemberSummary {
-        let totals = self.members.get(&member).copied().unwrap_or_default();
-        MemberSummary {
-            currency: self.currency,
-            member,
-            totals,
-        }
-    }
-
-    /// The sum of every expense's total (amount plus tip); transfers are not
-    /// spending and do not count.
-    #[must_use]
-    pub const fn total_spent(&self) -> Money {
-        Money::from_minor_units(self.currency, self.total_spent)
+    pub fn member_category_total(&self, member: MemberId, category: CategoryId) -> Money {
+        let total = self
+            .member_categories
+            .get(&MemberCategory { member, category })
+            .copied()
+            .unwrap_or(0);
+        Money::from_minor_units(total, self.currency)
     }
 }
 
 /// One member's totals in the group currency.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemberSummary {
-    currency: Currency,
     member: MemberId,
     totals: Totals,
+    currency: Currency,
 }
 
 impl MemberSummary {
@@ -166,32 +165,32 @@ impl MemberSummary {
     /// What the member paid towards expenses.
     #[must_use]
     pub const fn paid(&self) -> Money {
-        Money::from_minor_units(self.currency, self.totals.paid)
+        Money::from_minor_units(self.totals.paid, self.currency)
     }
 
     /// The member's share of the expenses: what they consumed.
     #[must_use]
     pub const fn share(&self) -> Money {
-        Money::from_minor_units(self.currency, self.totals.share)
+        Money::from_minor_units(self.totals.share, self.currency)
     }
 
     /// What the member transferred to others.
     #[must_use]
     pub const fn sent(&self) -> Money {
-        Money::from_minor_units(self.currency, self.totals.sent)
+        Money::from_minor_units(self.totals.sent, self.currency)
     }
 
     /// What others transferred to the member.
     #[must_use]
     pub const fn received(&self) -> Money {
-        Money::from_minor_units(self.currency, self.totals.received)
+        Money::from_minor_units(self.totals.received, self.currency)
     }
 
     /// `paid − share + sent − received`: positive when the group owes the
     /// member, negative when the member owes the group.
     #[must_use]
     pub const fn net(&self) -> Money {
-        Money::from_minor_units(self.currency, self.totals.net)
+        Money::from_minor_units(self.totals.net, self.currency)
     }
 
     /// The net amount as a [`Balance`].
@@ -199,9 +198,9 @@ impl MemberSummary {
     pub const fn balance(&self) -> Balance {
         let net = self.totals.net;
         match net.signum() {
-            1 => Balance::GetsBack(Money::from_minor_units(self.currency, net)),
             // The ledger keeps every value above i64::MIN, so negating fits.
-            -1 => Balance::Owes(Money::from_minor_units(self.currency, -net)),
+            -1 => Balance::Owes(Money::from_minor_units(-net, self.currency)),
+            1 => Balance::GetsBack(Money::from_minor_units(net, self.currency)),
             _ => Balance::Settled,
         }
     }
@@ -231,46 +230,46 @@ impl CategoryTotal {
 
 /// Where a member stands with the group.
 ///
-/// The text form is `owes 12.00 EUR`, `gets back 12.00 EUR`, or `settled`.
+/// The text form is `owes 12.00 EUR`, `settled`, or `gets back 12.00 EUR`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Balance {
-    /// The others owe this much to the member.
-    GetsBack(Money),
     /// The member owes this much to the others.
     Owes(Money),
     /// The member owes nothing and is owed nothing.
     Settled,
+    /// The others owe this much to the member.
+    GetsBack(Money),
 }
 
 impl fmt::Display for Balance {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::GetsBack(amount) => write!(formatter, "gets back {amount}"),
             Self::Owes(amount) => write!(formatter, "owes {amount}"),
             Self::Settled => formatter.write_str("settled"),
+            Self::GetsBack(amount) => write!(formatter, "gets back {amount}"),
         }
     }
 }
 
 /// Builds a value from a [`Balance`], one method per standing.
 pub trait FromBalance: Sized {
-    /// The value for a member the others owe `amount`.
-    fn gets_back(amount: Money) -> Self;
-
     /// The value for a member who owes the others `amount`.
     fn owes(amount: Money) -> Self;
 
     /// The value for a member who owes nothing and is owed nothing.
     fn settled() -> Self;
 
+    /// The value for a member the others owe `amount`.
+    fn gets_back(amount: Money) -> Self;
+
     /// The value for `balance`, from the method of its variant.
     #[must_use]
     fn from_balance(balance: Balance) -> Self {
         match balance {
-            Balance::GetsBack(amount) => Self::gets_back(amount),
             Balance::Owes(amount) => Self::owes(amount),
             Balance::Settled => Self::settled(),
+            Balance::GetsBack(amount) => Self::gets_back(amount),
         }
     }
 }
@@ -282,13 +281,13 @@ pub trait FromBalance: Sized {
 /// ```
 /// use eranos::{Currency, CalendarDate, Expense, Group, Member, Money, Split};
 ///
-/// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
+/// let mut group = Group::builder("Trip", Currency::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let carol = group.add_member(Member::builder("Carol").build()?)?;
-/// let (amount, day) = (Money::parse("10.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
+/// let (amount, day) = (Money::parse("10.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
 /// let everyone = Split::equal([ana, bob, carol]);
-/// let taxi = group.add_expense(Expense::builder(amount, day, "Taxi", ana, everyone).build()?)?;
+/// let taxi = group.add_expense(Expense::builder("Taxi", amount, ana, everyone, day).build()?)?;
 ///
 /// let shares = group.expense_shares(taxi).expect("the expense was just added");
 /// let cents: Vec<i64> = shares.members().iter().map(|share| share.share().minor_units()).collect();
@@ -299,8 +298,8 @@ pub trait FromBalance: Sized {
 pub struct ExpenseShares {
     /// Sorted by member.
     pub(crate) members: Vec<MemberShare>,
-    pub(crate) tip: Money,
     pub(crate) total: Money,
+    pub(crate) tip: Money,
 }
 
 impl ExpenseShares {
@@ -319,16 +318,16 @@ impl ExpenseShares {
             .and_then(|index| self.members.get(index))
     }
 
-    /// The part of the total that is tip.
-    #[must_use]
-    pub const fn tip(&self) -> Money {
-        self.tip
-    }
-
     /// The expense's total (amount plus tip).
     #[must_use]
     pub const fn total(&self) -> Money {
         self.total
+    }
+
+    /// The part of the total that is tip.
+    #[must_use]
+    pub const fn tip(&self) -> Money {
+        self.tip
     }
 }
 
@@ -371,7 +370,10 @@ impl MemberShare {
 }
 
 /// Two members in a direction: `from` owes or pays `to`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// Derived: by `from`, then `to`. The derived comparisons are `#[inline]`,
+// which the crates above need: they sort and search by pair, and without the
+// attribute each comparison is a call into this crate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MemberPair {
     /// The member who owes or pays.
     pub from: MemberId,
@@ -390,35 +392,14 @@ impl MemberPair {
     }
 }
 
-// Written out, so that it does not depend on the order of the fields: by
-// `from`, then `to`. Both comparisons are `#[inline]`: the crates above sort
-// and search by them, and without the attribute each comparison is a call
-// into this crate, which slows the direct settlement of 100 members by about
-// half.
-impl Ord for MemberPair {
-    #[inline]
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.from
-            .cmp(&other.from)
-            .then_with(|| self.to.cmp(&other.to))
-    }
-}
-
-impl PartialOrd for MemberPair {
-    #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
 /// An amount one member owes another because of one entry: `members.from`
 /// owes `members.to`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Debt {
-    /// The amount, in minor units of the group currency.
-    pub amount: i64,
     /// Who owes whom.
     pub members: MemberPair,
+    /// The amount, in minor units of the group currency.
+    pub amount: i64,
 }
 
 /// An expense divided in the group currency: the shares callers read, and
@@ -426,10 +407,10 @@ pub struct Debt {
 /// reads.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedExpense {
-    /// What each participant owes each payer, for the direct settlement.
-    pub debts: Vec<Debt>,
     /// What every involved member paid and consumed.
     pub shares: ExpenseShares,
+    /// What each participant owes each payer, for the direct settlement.
+    pub debts: Vec<Debt>,
 }
 
 impl ResolvedExpense {
@@ -437,18 +418,18 @@ impl ResolvedExpense {
     /// member, what each involved member paid and consumed.
     #[must_use]
     pub const fn new(
-        debts: Vec<Debt>,
         members: Vec<MemberShare>,
-        tip: Money,
         total: Money,
+        tip: Money,
+        debts: Vec<Debt>,
     ) -> Self {
         Self {
-            debts,
             shares: ExpenseShares {
                 members,
-                tip,
                 total,
+                tip,
             },
+            debts,
         }
     }
 }
@@ -456,13 +437,13 @@ impl ResolvedExpense {
 /// The totals of one member, in minor units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 struct Totals {
+    paid: i64,
+    share: i64,
+    sent: i64,
+    received: i64,
     // Kept as its own accumulator: computing it from the other four could
     // overflow even when every total fits.
     net: i64,
-    paid: i64,
-    received: i64,
-    sent: i64,
-    share: i64,
 }
 
 impl Totals {
@@ -474,35 +455,20 @@ impl Totals {
 /// The changes to one member's totals, in minor units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 struct TotalsChange {
-    net: i128,
     paid: i128,
-    received: i128,
-    sent: i128,
     share: i128,
+    sent: i128,
+    received: i128,
+    net: i128,
 }
 
 /// The key of one member's spending in one category.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// Derived: by `member`, then `category`, which keeps each member's rows
+// together for `Summary::member_category_totals`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct MemberCategory {
-    category: CategoryId,
     member: MemberId,
-}
-
-// Written out, so that it does not depend on the order of the fields: by
-// `member`, then `category`, which keeps each member's rows together for
-// `Summary::member_category_totals`.
-impl Ord for MemberCategory {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.member
-            .cmp(&other.member)
-            .then_with(|| self.category.cmp(&other.category))
-    }
-}
-
-impl PartialOrd for MemberCategory {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    category: CategoryId,
 }
 
 /// A row of one of the ledger's maps: its key and its value.
@@ -515,11 +481,11 @@ struct Row<K, V> {
 /// Changes to apply to a [`Ledger`] at once, in exact 128-bit arithmetic.
 #[derive(Debug, Default)]
 pub struct Delta {
+    total_spent: i128,
+    members: BTreeMap<MemberId, TotalsChange>,
     categories: BTreeMap<CategoryId, i128>,
     member_categories: BTreeMap<MemberCategory, i128>,
-    members: BTreeMap<MemberId, TotalsChange>,
     pairs: BTreeMap<MemberPair, i128>,
-    total_spent: i128,
 }
 
 impl Delta {
@@ -536,8 +502,8 @@ impl Delta {
             change.paid += paid;
             change.share += consumed;
             let key = MemberCategory {
-                category,
                 member: share.member,
+                category,
             };
             *self.member_categories.entry(key).or_default() += consumed;
         }
@@ -576,10 +542,10 @@ impl Delta {
 /// netted debt between every pair of members.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ledger {
+    summary: Summary,
     /// Keyed with the lower member as `from`: what `from` owes `to`,
     /// negative when `to` owes `from`.
     pairs: BTreeMap<MemberPair, i64>,
-    summary: Summary,
 }
 
 impl Ledger {
@@ -587,16 +553,9 @@ impl Ledger {
     #[must_use]
     pub const fn new(currency: Currency) -> Self {
         Self {
-            pairs: BTreeMap::new(),
             summary: Summary::new(currency),
+            pairs: BTreeMap::new(),
         }
-    }
-
-    /// The netted debt of every pair of members, keyed with the lower member
-    /// as `from`: what `from` owes `to`, negative when `to` owes `from`.
-    #[must_use]
-    pub const fn pairs(&self) -> &BTreeMap<MemberPair, i64> {
-        &self.pairs
     }
 
     /// The group's totals.
@@ -631,11 +590,18 @@ impl Ledger {
         for row in moved {
             summary.member_categories.remove(&row.key);
             let key = MemberCategory {
-                category: to,
                 member: row.key.member,
+                category: to,
             };
             *summary.member_categories.entry(key).or_default() += row.value;
         }
+    }
+
+    /// The netted debt of every pair of members, keyed with the lower member
+    /// as `from`: what `from` owes `to`, negative when `to` owes `from`.
+    #[must_use]
+    pub const fn pairs(&self) -> &BTreeMap<MemberPair, i64> {
+        &self.pairs
     }
 
     /// Applies `delta` if every resulting value stays in range; otherwise
@@ -654,11 +620,11 @@ impl Ledger {
             .map(|(&member, change)| {
                 let old = summary.members.get(&member).copied().unwrap_or_default();
                 let value = Totals {
-                    net: fit(i128::from(old.net) + change.net)?,
                     paid: fit(i128::from(old.paid) + change.paid)?,
-                    received: fit(i128::from(old.received) + change.received)?,
-                    sent: fit(i128::from(old.sent) + change.sent)?,
                     share: fit(i128::from(old.share) + change.share)?,
+                    sent: fit(i128::from(old.sent) + change.sent)?,
+                    received: fit(i128::from(old.received) + change.received)?,
+                    net: fit(i128::from(old.net) + change.net)?,
                 };
                 Ok(Row { key: member, value })
             })

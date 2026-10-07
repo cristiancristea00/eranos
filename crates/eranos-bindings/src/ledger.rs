@@ -9,11 +9,6 @@ use crate::money::Money;
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Balance {
-    /// The others owe the member `amount`.
-    GetsBack {
-        /// What the member gets back.
-        amount: Money,
-    },
     /// The member owes the others `amount`.
     Owes {
         /// What the member owes.
@@ -21,15 +16,14 @@ pub enum Balance {
     },
     /// The member owes nothing and is owed nothing.
     Settled,
+    /// The others owe the member `amount`.
+    GetsBack {
+        /// What the member gets back.
+        amount: Money,
+    },
 }
 
 impl FromBalance for Balance {
-    fn gets_back(amount: eranos::Money) -> Self {
-        Self::GetsBack {
-            amount: Money::from_library(amount),
-        }
-    }
-
     fn owes(amount: eranos::Money) -> Self {
         Self::Owes {
             amount: Money::from_library(amount),
@@ -39,40 +33,46 @@ impl FromBalance for Balance {
     fn settled() -> Self {
         Self::Settled
     }
+
+    fn gets_back(amount: eranos::Money) -> Self {
+        Self::GetsBack {
+            amount: Money::from_library(amount),
+        }
+    }
 }
 
 /// A member's totals, in the group currency.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberSummary {
-    /// Where the member stands.
-    pub balance: Balance,
     /// The member, as their identifier.
     pub member: String,
+    /// What the member paid for expenses.
+    pub paid: Money,
+    /// The member's share of the expenses: what they consumed.
+    pub share: Money,
+    /// What the member sent in transfers.
+    pub sent: Money,
+    /// What the member received in transfers.
+    pub received: Money,
     /// What the member is owed, less what they owe: positive when they get
     /// money back.
     pub net: Money,
-    /// What the member paid for expenses.
-    pub paid: Money,
-    /// What the member received in transfers.
-    pub received: Money,
-    /// What the member sent in transfers.
-    pub sent: Money,
-    /// The member's share of the expenses: what they consumed.
-    pub share: Money,
+    /// Where the member stands.
+    pub balance: Balance,
 }
 
 impl MemberSummary {
     /// The record of `summary`.
     fn from_library(summary: library::MemberSummary) -> Self {
         Self {
-            balance: Balance::from_balance(summary.balance()),
             member: summary.member().to_string(),
-            net: Money::from_library(summary.net()),
             paid: Money::from_library(summary.paid()),
-            received: Money::from_library(summary.received()),
-            sent: Money::from_library(summary.sent()),
             share: Money::from_library(summary.share()),
+            sent: Money::from_library(summary.sent()),
+            received: Money::from_library(summary.received()),
+            net: Money::from_library(summary.net()),
+            balance: Balance::from_balance(summary.balance()),
         }
     }
 }
@@ -112,20 +112,22 @@ pub struct MemberCategoryTotals {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Summary {
+    /// What the group spent.
+    pub total_spent: Money,
+    /// The totals of every member.
+    pub members: Vec<MemberSummary>,
     /// The total of every category.
     pub category_totals: Vec<CategoryTotal>,
     /// The totals per category of every member.
     pub member_category_totals: Vec<MemberCategoryTotals>,
-    /// The totals of every member.
-    pub members: Vec<MemberSummary>,
-    /// What the group spent.
-    pub total_spent: Money,
 }
 
 impl Summary {
     /// The record of `summary`.
     pub(crate) fn from_library(summary: &library::Summary) -> Self {
         Self {
+            total_spent: Money::from_library(summary.total_spent()),
+            members: summary.members().map(MemberSummary::from_library).collect(),
             category_totals: summary
                 .category_totals()
                 .map(CategoryTotal::from_library)
@@ -140,8 +142,6 @@ impl Summary {
                         .collect(),
                 })
                 .collect(),
-            members: summary.members().map(MemberSummary::from_library).collect(),
-            total_spent: Money::from_library(summary.total_spent()),
         }
     }
 }
@@ -164,10 +164,10 @@ pub struct MemberShare {
 pub struct ExpenseShares {
     /// What every member paid and consumed.
     pub members: Vec<MemberShare>,
-    /// The tip.
-    pub tip: Money,
     /// The total: the amount and the tip.
     pub total: Money,
+    /// The tip.
+    pub tip: Money,
 }
 
 impl ExpenseShares {
@@ -183,8 +183,8 @@ impl ExpenseShares {
                     share: Money::from_library(share.share()),
                 })
                 .collect(),
-            tip: Money::from_library(shares.tip()),
             total: Money::from_library(shares.total()),
+            tip: Money::from_library(shares.tip()),
         }
     }
 }

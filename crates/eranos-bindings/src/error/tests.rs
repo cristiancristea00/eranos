@@ -31,8 +31,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Id {
-                    detail: message,
                     failure: IdFailure::InvalidId,
+                    detail: message,
                 },
             }
         },
@@ -42,8 +42,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Calendar {
-                    detail: message,
                     failure: CalendarFailure::InvalidDate,
+                    detail: message,
                 },
             }
         },
@@ -53,8 +53,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Calendar {
-                    detail: message,
                     failure: CalendarFailure::InvalidTime,
+                    detail: message,
                 },
             }
         },
@@ -67,11 +67,11 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::CurrencyMismatch {
                         left: "USD".to_owned(),
                         right: "GBP".to_owned(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -81,8 +81,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::InvalidAmount,
+                    detail: message,
                 },
             }
         },
@@ -92,8 +92,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::InvalidExchangeRate,
+                    detail: message,
                 },
             }
         },
@@ -103,8 +103,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::InvalidParts,
+                    detail: message,
                 },
             }
         },
@@ -114,8 +114,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::InvalidPercentage,
+                    detail: message,
                 },
             }
         },
@@ -125,25 +125,25 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::Overflow,
+                    detail: message,
                 },
             }
         },
         {
             let error = MoneyError::TooManyDecimals {
-                allowed: 3,
                 currency: Currency::USD,
+                allowed: 3,
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::TooManyDecimals {
-                        allowed: 3,
                         currency: "USD".to_owned(),
+                        allowed: 3,
                     },
+                    detail: message,
                 },
             }
         },
@@ -153,8 +153,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
-                    detail: message,
                     failure: MoneyFailure::UnknownCurrency,
+                    detail: message,
                 },
             }
         },
@@ -164,8 +164,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Account {
-                    detail: message,
                     failure: AccountFailure::EmptyName,
+                    detail: message,
                 },
             }
         },
@@ -175,8 +175,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Account {
-                    detail: message,
                     failure: AccountFailure::EmptyUsername,
+                    detail: message,
                 },
             }
         },
@@ -186,10 +186,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Account {
-                    detail: message,
                     failure: AccountFailure::InvalidIban {
                         reason: IbanReason::InvalidChecksum,
                     },
+                    detail: message,
                 },
             }
         },
@@ -199,8 +199,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Contact {
-                    detail: message,
                     failure: ContactFailure::InvalidEmail,
+                    detail: message,
                 },
             }
         },
@@ -210,8 +210,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Contact {
-                    detail: message,
                     failure: ContactFailure::InvalidPhoneNumber,
+                    detail: message,
                 },
             }
         },
@@ -221,8 +221,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Member {
-                    detail: message,
                     failure: MemberFailure::EmptyFirstName,
+                    detail: message,
                 },
             }
         },
@@ -232,31 +232,31 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Category {
-                    detail: message,
                     failure: CategoryFailure::EmptyName,
+                    detail: message,
                 },
             }
         },
         {
             let error = ExpenseError::AmountsDoNotAddUp {
-                actual: eranos::Money::from_minor_units(Currency::EUR, 6),
-                expected: eranos::Money::from_minor_units(Currency::EUR, 7),
+                expected: eranos::Money::from_minor_units(7, Currency::EUR),
+                actual: eranos::Money::from_minor_units(6, Currency::EUR),
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::AmountsDoNotAddUp {
-                        actual: Money {
-                            currency: "EUR".to_owned(),
-                            minor_units: 6,
-                        },
                         expected: Money {
-                            currency: "EUR".to_owned(),
                             minor_units: 7,
+                            currency: "EUR".to_owned(),
+                        },
+                        actual: Money {
+                            minor_units: 6,
+                            currency: "EUR".to_owned(),
                         },
                     },
+                    detail: message,
                 },
             }
         },
@@ -269,11 +269,11 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::CurrencyMismatch {
                         expected: "GBP".to_owned(),
                         found: "RON".to_owned(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -285,10 +285,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::DuplicateMember {
                         member: MemberId::from_bytes([10; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -298,8 +298,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::EmptyItemName,
+                    detail: message,
                 },
             }
         },
@@ -309,8 +309,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::EmptyName,
+                    detail: message,
                 },
             }
         },
@@ -320,31 +320,31 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::EmptySplit,
+                    detail: message,
                 },
             }
         },
         {
             let error = ExpenseError::ItemsDoNotAddUp {
-                actual: eranos::Money::from_minor_units(Currency::EUR, 11),
-                expected: eranos::Money::from_minor_units(Currency::EUR, 12),
+                expected: eranos::Money::from_minor_units(12, Currency::EUR),
+                actual: eranos::Money::from_minor_units(11, Currency::EUR),
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::ItemsDoNotAddUp {
-                        actual: Money {
-                            currency: "EUR".to_owned(),
-                            minor_units: 11,
-                        },
                         expected: Money {
-                            currency: "EUR".to_owned(),
                             minor_units: 12,
+                            currency: "EUR".to_owned(),
+                        },
+                        actual: Money {
+                            minor_units: 11,
+                            currency: "EUR".to_owned(),
                         },
                     },
+                    detail: message,
                 },
             }
         },
@@ -354,8 +354,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::NegativeTip,
+                    detail: message,
                 },
             }
         },
@@ -365,8 +365,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::NoItems,
+                    detail: message,
                 },
             }
         },
@@ -376,8 +376,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::NonPositiveAmount,
+                    detail: message,
                 },
             }
         },
@@ -389,10 +389,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::NonPositiveShare {
                         member: MemberId::from_bytes([13; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -402,8 +402,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::Overflow,
+                    detail: message,
                 },
             }
         },
@@ -415,10 +415,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::PercentagesDoNotAddUp {
                         total_basis_points: 14,
                     },
+                    detail: message,
                 },
             }
         },
@@ -428,8 +428,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
-                    detail: message,
                     failure: ExpenseFailure::ZeroQuantity,
+                    detail: message,
                 },
             }
         },
@@ -439,8 +439,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Settlement {
-                    detail: message,
                     failure: SettlementFailure::OutOfMemory { balances: 15 },
+                    detail: message,
                 },
             }
         },
@@ -450,8 +450,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Transfer {
-                    detail: message,
                     failure: TransferFailure::NonPositiveAmount,
+                    detail: message,
                 },
             }
         },
@@ -461,8 +461,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Transfer {
-                    detail: message,
                     failure: TransferFailure::SameMember,
+                    detail: message,
                 },
             }
         },
@@ -472,8 +472,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Language {
-                    detail: message,
                     failure: LanguageFailure::InvalidLanguage,
+                    detail: message,
                 },
             }
         },
@@ -483,10 +483,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::ArchivedMember {
                         member: MemberId::from_bytes([16; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -496,8 +496,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::BuiltInCategory,
+                    detail: message,
                 },
             }
         },
@@ -507,8 +507,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::Busy,
+                    detail: message,
                 },
             }
         },
@@ -518,10 +518,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::DuplicateCategory {
                         category: CategoryId::from_bytes([17; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -533,10 +533,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::DuplicateCategoryName {
                         existing: CategoryId::from_bytes([18; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -548,10 +548,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::DuplicateExchangeRate {
                         currency: "USD".to_owned(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -561,10 +561,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::DuplicateExpense {
                         expense: ExpenseId::from_bytes([20; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -574,10 +574,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::DuplicateMember {
                         member: MemberId::from_bytes([21; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -587,10 +587,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::DuplicateTransfer {
                         transfer: TransferId::from_bytes([22; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -600,27 +600,27 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::EmptyName,
+                    detail: message,
                 },
             }
         },
         {
             let error = GroupError::MemberInUse {
-                expenses: vec![ExpenseId::from_bytes([23; 16])],
                 member: MemberId::from_bytes([24; 16]),
+                expenses: vec![ExpenseId::from_bytes([23; 16])],
                 transfers: vec![TransferId::from_bytes([25; 16])],
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::MemberInUse {
-                        expenses: vec![ExpenseId::from_bytes([23; 16]).to_string()],
                         member: MemberId::from_bytes([24; 16]).to_string(),
+                        expenses: vec![ExpenseId::from_bytes([23; 16]).to_string()],
                         transfers: vec![TransferId::from_bytes([25; 16]).to_string()],
                     },
+                    detail: message,
                 },
             }
         },
@@ -632,10 +632,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::MissingExchangeRate {
                         currency: "GBP".to_owned(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -645,8 +645,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::Overflow,
+                    detail: message,
                 },
             }
         },
@@ -656,8 +656,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::UnexpectedExchangeRate,
+                    detail: message,
                 },
             }
         },
@@ -667,10 +667,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::UnknownCategory {
                         category: CategoryId::from_bytes([27; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -680,10 +680,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::UnknownExpense {
                         expense: ExpenseId::from_bytes([28; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -693,10 +693,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::UnknownMember {
                         member: MemberId::from_bytes([29; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -706,10 +706,10 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::UnknownTransfer {
                         transfer: TransferId::from_bytes([30; 16]).to_string(),
                     },
+                    detail: message,
                 },
             }
         },
@@ -719,8 +719,8 @@ fn conversions() -> Vec<Conversion> {
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Group {
-                    detail: message,
                     failure: GroupFailure::UnsupportedFormat { format: 31 },
+                    detail: message,
                 },
             }
         },
@@ -823,17 +823,17 @@ fn a_refused_saved_group_names_the_fault_and_its_place() {
     assert_eq!(
         refusal("{]"),
         EranosError::InvalidJson {
+            line: 1,
             column: 2,
             detail: "the saved group is not valid JSON, at line 1, column 2".to_owned(),
-            line: 1,
         }
     );
     assert_eq!(
         refusal("{\"format\": 2"),
         EranosError::InvalidJson {
+            line: 1,
             column: 12,
             detail: "the saved group ends early, at line 1, column 12".to_owned(),
-            line: 1,
         }
     );
     let secret = refusal("{\"format\": \"RO49AAAA1B31007593840000\"}");

@@ -35,11 +35,11 @@ interface Expenses {
 
 /** An expense with every involved member's payment and consumption, as the table of shares prints it. */
 interface ShareRow {
-    readonly consumed: string;
     readonly expense: string;
     readonly how: string;
     readonly members: string;
     readonly paid: string;
+    readonly consumed: string;
 }
 
 const shareColumns: Columns<ShareRow> = [
@@ -52,11 +52,11 @@ const shareColumns: Columns<ShareRow> = [
 
 /** A line of a receipt, as the table of items prints it. */
 interface ItemRow {
-    readonly lineTotal: Money;
     readonly name: string;
-    readonly quantity: number;
     readonly sharedBy: string;
+    readonly quantity: number;
     readonly unitPrice: Money;
+    readonly lineTotal: Money;
 }
 
 const itemColumns: Columns<ItemRow> = [
@@ -70,26 +70,28 @@ const itemColumns: Columns<ItemRow> = [
 /** How a whole expense's amount divides, in a word or two. */
 function divided(split: Split): string {
     switch (split.kind) {
-        case 'amounts':
-            return 'by amounts';
         case 'equal':
             return 'equally';
         case 'parts':
             return 'by parts';
         case 'percentages':
             return 'by percentage';
+        case 'amounts':
+            return 'by amounts';
     }
 }
 
 /** How an expense divides, in a few words. */
 function how(expense: Expense): string {
-    const split = 'itemised' === expense.split.kind ? `${String(expense.split.items.length)} items` : divided(expense.split.split);
+    const split = 'whole' === expense.split.kind ? divided(expense.split.split) : `${String(expense.split.items.length)} items`;
     const count = splitMembers(expense.payers).length;
     const payers = 1 === count ? '' : `, ${String(count)} payers`;
     let tip = '';
     if (0n !== expenseTipAmount(expense).minorUnits && undefined !== expense.tip) {
         tip =
-            'fixed' === expense.tip.value.kind ? `, ${expense.tip.value.amount.toString()} tip` : `, ${expense.tip.value.percentage.toString()} tip`;
+            'percentage' === expense.tip.value.kind
+                ? `, ${expense.tip.value.percentage.toString()} tip`
+                : `, ${expense.tip.value.amount.toString()} tip`;
     }
     return split + payers + tip;
 }
@@ -105,11 +107,11 @@ function printShares(group: Group, expenses: readonly ExpenseId[]): void {
                 ? []
                 : [
                       {
-                          consumed: cell(shares.members.map((share) => share.share.toString())),
                           expense: expense.name,
                           how: how(expense),
                           members: cell(shares.members.map((share) => name(group, share.member))),
                           paid: cell(shares.members.map((share) => (0n === share.paid.minorUnits ? '' : share.paid.toString()))),
+                          consumed: cell(shares.members.map((share) => share.share.toString())),
                       },
                   ];
         }),
@@ -127,11 +129,11 @@ function printItems(group: Group, id: ExpenseId): void {
         split.items.map((item) => {
             const quantity = item.quantity ?? 1;
             return {
-                lineTotal: new Money(item.unitPrice.currency, item.unitPrice.minorUnits * BigInt(quantity)),
                 name: item.name,
-                quantity,
                 sharedBy: names(group, splitMembers(item.split)),
+                quantity,
                 unitPrice: item.unitPrice,
+                lineTotal: new Money(item.unitPrice.minorUnits * BigInt(quantity), item.unitPrice.currency),
             };
         }),
         2,
@@ -141,10 +143,11 @@ function printItems(group: Group, id: ExpenseId): void {
 /** The receipt of the fado night: every line with its own split. */
 function fadoItems(people: People): Item[] {
     return [
-        { name: 'Vinho verde', split: { kind: 'equal', members: [people.ana, people.bob, people.dan] }, unitPrice: eur('12.00'), quantity: 2 },
-        { name: 'Bacalhau', split: { kind: 'equal', members: [people.carol] }, unitPrice: eur('18.00') },
+        { name: 'Vinho verde', unitPrice: eur('12.00'), split: { kind: 'equal', members: [people.ana, people.bob, people.dan] }, quantity: 2 },
+        { name: 'Bacalhau', unitPrice: eur('18.00'), split: { kind: 'equal', members: [people.carol] } },
         {
             name: 'Custard tarts',
+            unitPrice: eur('1.50'),
             split: {
                 kind: 'parts',
                 shares: [
@@ -155,10 +158,9 @@ function fadoItems(people: People): Item[] {
                     { member: people.eva, parts: Parts.parse('2') },
                 ],
             },
-            unitPrice: eur('1.50'),
             quantity: 6,
         },
-        { name: 'Juice', split: { kind: 'equal', members: [people.eva] }, unitPrice: eur('3.00') },
+        { name: 'Juice', unitPrice: eur('3.00'), split: { kind: 'equal', members: [people.eva] } },
     ];
 }
 
@@ -166,17 +168,16 @@ function fadoItems(people: People): Item[] {
 function addExpenses(group: Group, people: People, categories: Categories): Expenses {
     const { ana, bob, carol, dan, eva } = people;
     const groceries = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('10.00') },
-        date: october(1),
         name: 'Groceries',
+        cost: { kind: 'local', amount: eur('10.00') },
         payers: { kind: 'equal', members: [ana] },
         split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol] } },
+        date: october(1),
         category: categories.food,
     });
     const apartment = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('800.00') },
-        date: october(1),
         name: 'Apartment',
+        cost: { kind: 'local', amount: eur('800.00') },
         payers: { kind: 'equal', members: [ana] },
         split: {
             kind: 'whole',
@@ -190,12 +191,12 @@ function addExpenses(group: Group, people: People, categories: Categories): Expe
                 ],
             },
         },
+        date: october(1),
         category: categories.lodging,
     });
     const seafood = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('90.00') },
-        date: october(2),
         name: 'Seafood dinner',
+        cost: { kind: 'local', amount: eur('90.00') },
         payers: { kind: 'equal', members: [carol] },
         split: {
             kind: 'whole',
@@ -210,59 +211,60 @@ function addExpenses(group: Group, people: People, categories: Categories): Expe
                 ],
             },
         },
+        date: october(2),
         category: categories.food,
     });
     const train = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('88.50') },
-        date: october(3),
         name: 'Train to Porto',
+        cost: { kind: 'local', amount: eur('88.50') },
         payers: { kind: 'equal', members: [bob] },
         split: {
             kind: 'whole',
             split: {
                 kind: 'amounts',
                 shares: [
-                    { amount: eur('24.50'), member: ana },
-                    { amount: eur('24.50'), member: bob },
-                    { amount: eur('24.50'), member: carol },
-                    { amount: eur('15.00'), member: eva },
+                    { member: ana, amount: eur('24.50') },
+                    { member: bob, amount: eur('24.50') },
+                    { member: carol, amount: eur('24.50') },
+                    { member: eva, amount: eur('15.00') },
                 ],
             },
         },
+        date: october(3),
         category: categories.transport,
     });
     const museum = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('60.00') },
-        date: october(3),
         name: 'Museum',
+        cost: { kind: 'local', amount: eur('60.00') },
         payers: { kind: 'equal', members: [ana, bob] },
         split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol, dan] } },
+        date: october(3),
     });
     const fado = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('54.00') },
-        date: october(4),
         name: 'Fado night',
+        cost: { kind: 'local', amount: eur('54.00') },
         payers: {
             kind: 'amounts',
             shares: [
-                { amount: eur('39.40'), member: carol },
-                { amount: eur('20.00'), member: dan },
+                { member: carol, amount: eur('39.40') },
+                { member: dan, amount: eur('20.00') },
             ],
         },
         split: { kind: 'itemised', items: fadoItems(people) },
+        date: october(4),
+        tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
+        time: TimeOfDay.of(22, 15),
         category: categories.food,
         description: 'Tasca do Chico',
-        time: TimeOfDay.of(22, 15),
-        tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
     });
     const tour = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('45.00') },
-        date: october(5),
         name: 'Tuk-tuk tour',
+        cost: { kind: 'local', amount: eur('45.00') },
         payers: { kind: 'equal', members: [dan] },
         split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol, dan, eva] } },
-        category: categories.transport,
+        date: october(5),
         tip: { value: { kind: 'fixed', amount: eur('5.00') }, distribution: TipDistribution.EQUAL },
+        category: categories.transport,
     });
     return { apartment, fado, groceries, museum, seafood, tour, train };
 }
@@ -275,7 +277,7 @@ function consumed(group: Group, id: ExpenseId, member: MemberId): Money | undefi
 /** Prints how the fado night's tip was shared, and its receipt. */
 function printFado(group: Group, fado: Expense): void {
     const tip = fado.tip;
-    const rule = undefined === tip ? 'a tip' : 'fixed' === tip.value.kind ? tip.value.amount.toString() : tip.value.percentage.toString();
+    const rule = undefined === tip ? 'a tip' : 'percentage' === tip.value.kind ? tip.value.percentage.toString() : tip.value.amount.toString();
     const shared =
         undefined === tip ? 'another way' : TipDistribution.EQUAL === tip.distribution ? 'equally' : 'in proportion to what each member ordered';
     printLines(

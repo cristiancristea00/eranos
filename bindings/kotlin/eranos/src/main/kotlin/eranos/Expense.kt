@@ -14,75 +14,66 @@ import eranos.internal.expenseTotal
 public class Expense internal constructor(
     /** The identifier: `null` for an expense to add, set for one the group holds. */
     public val id: ExpenseId?,
-    /** What it cost. */
-    public val cost: Cost,
-    /** The day it was bought. */
-    public val date: CalendarDate,
     /** What was bought. */
     public val name: String,
+    /** What it cost. */
+    public val cost: Cost,
     /** Who paid the total, amount and tip, and how much each. */
     public val payers: Split,
     /** How the amount is shared. */
     public val split: ExpenseSplit,
+    /** The day it was bought. */
+    public val date: CalendarDate,
+    /** The tip on top of the amount. */
+    public val tip: Tip?,
+    /** The time of day it was bought. */
+    public val time: TimeOfDay?,
     /** The category; `null` for the built-in one. */
     public val category: CategoryId?,
     /** A longer description. */
     public val description: String?,
-    /** The time of day it was bought. */
-    public val time: TimeOfDay?,
-    /** The tip on top of the amount. */
-    public val tip: Tip?,
 ) {
     /** An expense to add, of [cost] on [date], that [payers] paid and [split] shares. */
     public constructor(
-        cost: Cost,
-        date: CalendarDate,
         name: String,
+        cost: Cost,
         payers: Split,
         split: ExpenseSplit,
+        date: CalendarDate,
+        tip: Tip? = null,
+        time: TimeOfDay? = null,
         category: CategoryId? = null,
         description: String? = null,
-        time: TimeOfDay? = null,
-        tip: Tip? = null,
-    ) : this(null, cost, date, name, payers, split, category, description, time, tip)
+    ) : this(null, name, cost, payers, split, date, tip, time, category, description)
 
     /** The expense as the generated code holds it. */
     internal val generated: eranos.internal.Expense
         get() =
             eranos.internal.Expense(
                 id?.value,
-                cost.generated,
-                date.generated,
                 name,
+                cost.generated,
                 payers.generated,
                 split.generated,
+                date.generated,
+                tip?.generated,
+                time?.generated,
                 category?.value,
                 description,
-                time?.generated,
-                tip?.generated,
             )
 
     /** This expense with the given fields changed; the identifier stays, so the copy can replace the expense. */
     public fun copy(
-        cost: Cost = this.cost,
-        date: CalendarDate = this.date,
         name: String = this.name,
+        cost: Cost = this.cost,
         payers: Split = this.payers,
         split: ExpenseSplit = this.split,
+        date: CalendarDate = this.date,
+        tip: Tip? = this.tip,
+        time: TimeOfDay? = this.time,
         category: CategoryId? = this.category,
         description: String? = this.description,
-        time: TimeOfDay? = this.time,
-        tip: Tip? = this.tip,
-    ): Expense = Expense(id, cost, date, name, payers, split, category, description, time, tip)
-
-    /**
-     * The tip, in the expense's own currency.
-     *
-     * @throws EranosException.Expense with [ExpenseFailure.CurrencyMismatch] for a fixed tip in another currency, and
-     *   [ExpenseFailure.NegativeTip] for a fixed tip below zero.
-     */
-    @Throws(EranosException::class)
-    public fun tipAmount(): Money = converting { expenseTipAmount(generated).converted() }
+    ): Expense = Expense(id, name, cost, payers, split, date, tip, time, category, description)
 
     /**
      * The total, amount and tip, in the expense's own currency: what its payers paid.
@@ -94,6 +85,15 @@ public class Expense internal constructor(
     public fun total(): Money = converting { expenseTotal(generated).converted() }
 
     /**
+     * The tip, in the expense's own currency.
+     *
+     * @throws EranosException.Expense with [ExpenseFailure.CurrencyMismatch] for a fixed tip in another currency, and
+     *   [ExpenseFailure.NegativeTip] for a fixed tip below zero.
+     */
+    @Throws(EranosException::class)
+    public fun tipAmount(): Money = converting { expenseTipAmount(generated).converted() }
+
+    /**
      * Every member the expense involves, as a payer or a participant, in identifier order.
      *
      * @throws EranosException.Id for a member whose identifier is not one, and the failures of an item that does not build.
@@ -102,44 +102,44 @@ public class Expense internal constructor(
     public fun members(): List<MemberId> = converting { expenseMembers(generated).map(::MemberId) }
 
     /**
-     * Whether [other] is of the same class, with the same [id], [cost], [date], [name], [payers], [split], [category],
-     * [description], [time], and [tip].
+     * Whether [other] is of the same class, with the same [id], [name], [cost], [payers], [split], [date], [tip], [time],
+     * [category], and [description].
      */
     override fun equals(other: Any?): Boolean =
         other is Expense &&
             id == other.id &&
-            cost == other.cost &&
-            date == other.date &&
             name == other.name &&
+            cost == other.cost &&
             payers == other.payers &&
             split == other.split &&
-            category == other.category &&
-            description == other.description &&
+            date == other.date &&
+            tip == other.tip &&
             time == other.time &&
-            tip == other.tip
+            category == other.category &&
+            description == other.description
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(id, cost, date, name, payers, split, category, description, time, tip)
+    override fun hashCode(): Int = hashOf(id, name, cost, payers, split, date, tip, time, category, description)
 
     /** A description of every field, for logs. */
     override fun toString(): String =
-        "Expense(id=$id, cost=$cost, date=$date, name=$name, payers=$payers, split=$split, category=$category, " +
-            "description=$description, time=$time, tip=$tip)"
+        "Expense(id=$id, name=$name, cost=$cost, payers=$payers, split=$split, date=$date, tip=$tip, time=$time, " +
+            "category=$category, description=$description)"
 }
 
 /** The expense the generated code holds as [this]. */
 internal fun eranos.internal.Expense.converted(): Expense =
     Expense(
         id?.let(::ExpenseId),
-        cost.converted(),
-        date.converted(),
         name,
+        cost.converted(),
         payers.converted(),
         split.converted(),
+        date.converted(),
+        tip?.converted(),
+        time?.converted(),
         category?.let(::CategoryId),
         description,
-        time?.converted(),
-        tip?.converted(),
     )
 
 /**
@@ -149,6 +149,20 @@ internal fun eranos.internal.Expense.converted(): Expense =
 public sealed interface Cost {
     /** The amount, in its own currency. */
     public val amount: Money
+
+    /** An amount in the group currency. */
+    public class Local(
+        override val amount: Money,
+    ) : Cost {
+        /** Whether [other] is of the same class, with the same [amount]. */
+        override fun equals(other: Any?): Boolean = other is Local && amount == other.amount
+
+        /** A hash of what [equals] compares. */
+        override fun hashCode(): Int = amount.hashCode()
+
+        /** A description of every field, for logs. */
+        override fun toString(): String = "Local(amount=$amount)"
+    }
 
     /** An amount in another currency than the group's, converted at [rate]. */
     public class Converted(
@@ -165,39 +179,40 @@ public sealed interface Cost {
         /** A description of every field, for logs. */
         override fun toString(): String = "Converted(amount=$amount, rate=$rate)"
     }
-
-    /** An amount in the group currency. */
-    public class Local(
-        override val amount: Money,
-    ) : Cost {
-        /** Whether [other] is of the same class, with the same [amount]. */
-        override fun equals(other: Any?): Boolean = other is Local && amount == other.amount
-
-        /** A hash of what [equals] compares. */
-        override fun hashCode(): Int = amount.hashCode()
-
-        /** A description of every field, for logs. */
-        override fun toString(): String = "Local(amount=$amount)"
-    }
 }
 
 /** The cost as the generated code holds it. */
 internal val Cost.generated: eranos.internal.Cost
     get() =
         when (this) {
-            is Cost.Converted -> eranos.internal.Cost.Converted(amount.generated, rate.toString())
             is Cost.Local -> eranos.internal.Cost.Local(amount.generated)
+            is Cost.Converted -> eranos.internal.Cost.Converted(amount.generated, rate.toString())
         }
 
 /** The cost the generated code holds as [this]. */
 internal fun eranos.internal.Cost.converted(): Cost =
     when (this) {
-        is eranos.internal.Cost.Converted -> Cost.Converted(amount.converted(), ExchangeRate(rate))
         is eranos.internal.Cost.Local -> Cost.Local(amount.converted())
+        is eranos.internal.Cost.Converted -> Cost.Converted(amount.converted(), ExchangeRate(rate))
     }
 
 /** How an expense's cost is shared: as a whole, or line by line of an itemised bill. */
 public sealed interface ExpenseSplit {
+    /** The whole amount is divided by one split. */
+    public class Whole(
+        /** How the amount divides. */
+        public val split: Split,
+    ) : ExpenseSplit {
+        /** Whether [other] is of the same class, with the same [split]. */
+        override fun equals(other: Any?): Boolean = other is Whole && split == other.split
+
+        /** A hash of what [equals] compares. */
+        override fun hashCode(): Int = split.hashCode()
+
+        /** A description of every field, for logs. */
+        override fun toString(): String = "Whole(split=$split)"
+    }
+
     /** Every line is divided by its own split; the lines add up to the amount. */
     public class Itemised(
         items: List<Item>,
@@ -214,66 +229,51 @@ public sealed interface ExpenseSplit {
         /** A description of every field, for logs. */
         override fun toString(): String = "Itemised(items=$items)"
     }
-
-    /** The whole amount is divided by one split. */
-    public class Whole(
-        /** How the amount divides. */
-        public val split: Split,
-    ) : ExpenseSplit {
-        /** Whether [other] is of the same class, with the same [split]. */
-        override fun equals(other: Any?): Boolean = other is Whole && split == other.split
-
-        /** A hash of what [equals] compares. */
-        override fun hashCode(): Int = split.hashCode()
-
-        /** A description of every field, for logs. */
-        override fun toString(): String = "Whole(split=$split)"
-    }
 }
 
 /** The expense split as the generated code holds it. */
 internal val ExpenseSplit.generated: eranos.internal.ExpenseSplit
     get() =
         when (this) {
-            is ExpenseSplit.Itemised -> eranos.internal.ExpenseSplit.Itemised(items.map { it.generated })
             is ExpenseSplit.Whole -> eranos.internal.ExpenseSplit.Whole(split.generated)
+            is ExpenseSplit.Itemised -> eranos.internal.ExpenseSplit.Itemised(items.map { it.generated })
         }
 
 /** The expense split the generated code holds as [this]. */
 internal fun eranos.internal.ExpenseSplit.converted(): ExpenseSplit =
     when (this) {
-        is eranos.internal.ExpenseSplit.Itemised -> ExpenseSplit.Itemised(items.map { it.converted() })
         is eranos.internal.ExpenseSplit.Whole -> ExpenseSplit.Whole(split.converted())
+        is eranos.internal.ExpenseSplit.Itemised -> ExpenseSplit.Itemised(items.map { it.converted() })
     }
 
 /** A line of an itemised bill: [quantity] units of [name] at [unitPrice], which [split] divides. */
 public class Item(
     /** What was bought. */
     public val name: String,
-    /** How the line's total divides. */
-    public val split: Split,
     /** The price of one unit, in the expense's currency. */
     public val unitPrice: Money,
+    /** How the line's total divides. */
+    public val split: Split,
     /** How many units, from 1. */
     public val quantity: Int = 1,
 ) {
     /** The line as the generated code holds it. */
     internal val generated: eranos.internal.Item
-        get() = eranos.internal.Item(name, split.generated, unitPrice.generated, quantity)
+        get() = eranos.internal.Item(name, unitPrice.generated, split.generated, quantity)
 
-    /** Whether [other] is of the same class, with the same [name], [split], [unitPrice], and [quantity]. */
+    /** Whether [other] is of the same class, with the same [name], [unitPrice], [split], and [quantity]. */
     override fun equals(other: Any?): Boolean =
-        other is Item && name == other.name && split == other.split && unitPrice == other.unitPrice && quantity == other.quantity
+        other is Item && name == other.name && unitPrice == other.unitPrice && split == other.split && quantity == other.quantity
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(name, split, unitPrice, quantity)
+    override fun hashCode(): Int = hashOf(name, unitPrice, split, quantity)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "Item(name=$name, split=$split, unitPrice=$unitPrice, quantity=$quantity)"
+    override fun toString(): String = "Item(name=$name, unitPrice=$unitPrice, split=$split, quantity=$quantity)"
 }
 
 /** The line the generated code holds as [this]. */
-internal fun eranos.internal.Item.converted(): Item = Item(name, split.converted(), unitPrice.converted(), quantity)
+internal fun eranos.internal.Item.converted(): Item = Item(name, unitPrice.converted(), split.converted(), quantity)
 
 /** A tip on top of an expense's amount, which its payers cover: [value], shared by [distribution]. */
 public class Tip(
@@ -301,21 +301,6 @@ internal fun eranos.internal.Tip.converted(): Tip = Tip(value.converted(), distr
 
 /** How a tip is expressed. */
 public sealed interface TipValue {
-    /** A fixed amount in the expense's currency. */
-    public class Fixed(
-        /** The amount. */
-        public val amount: Money,
-    ) : TipValue {
-        /** Whether [other] is of the same class, with the same [amount]. */
-        override fun equals(other: Any?): Boolean = other is Fixed && amount == other.amount
-
-        /** A hash of what [equals] compares. */
-        override fun hashCode(): Int = amount.hashCode()
-
-        /** A description of every field, for logs. */
-        override fun toString(): String = "Fixed(amount=$amount)"
-    }
-
     /** A percentage of the expense's amount. */
     public class Percentage(
         /** The percentage. */
@@ -330,43 +315,58 @@ public sealed interface TipValue {
         /** A description of every field, for logs. */
         override fun toString(): String = "Percentage(percentage=$percentage)"
     }
+
+    /** A fixed amount in the expense's currency. */
+    public class Fixed(
+        /** The amount. */
+        public val amount: Money,
+    ) : TipValue {
+        /** Whether [other] is of the same class, with the same [amount]. */
+        override fun equals(other: Any?): Boolean = other is Fixed && amount == other.amount
+
+        /** A hash of what [equals] compares. */
+        override fun hashCode(): Int = amount.hashCode()
+
+        /** A description of every field, for logs. */
+        override fun toString(): String = "Fixed(amount=$amount)"
+    }
 }
 
 /** The tip's value as the generated code holds it. */
 internal val TipValue.generated: eranos.internal.TipValue
     get() =
         when (this) {
-            is TipValue.Fixed -> eranos.internal.TipValue.Fixed(amount.generated)
             is TipValue.Percentage -> eranos.internal.TipValue.Percentage(percentage.basisPoints)
+            is TipValue.Fixed -> eranos.internal.TipValue.Fixed(amount.generated)
         }
 
 /** The tip's value the generated code holds as [this]. */
 internal fun eranos.internal.TipValue.converted(): TipValue =
     when (this) {
-        is eranos.internal.TipValue.Fixed -> TipValue.Fixed(amount.converted())
         is eranos.internal.TipValue.Percentage -> TipValue.Percentage(Percentage(basisPoints))
+        is eranos.internal.TipValue.Fixed -> TipValue.Fixed(amount.converted())
     }
 
 /** How a tip is shared among an expense's participants. */
 public enum class TipDistribution {
-    /** The same for every participant. */
-    EQUAL,
-
     /** In proportion to each participant's share of the amount. */
     PROPORTIONAL,
+
+    /** The same for every participant. */
+    EQUAL,
 }
 
 /** The distribution as the generated code holds it. */
 internal val TipDistribution.generated: eranos.internal.TipDistribution
     get() =
         when (this) {
-            TipDistribution.EQUAL -> eranos.internal.TipDistribution.EQUAL
             TipDistribution.PROPORTIONAL -> eranos.internal.TipDistribution.PROPORTIONAL
+            TipDistribution.EQUAL -> eranos.internal.TipDistribution.EQUAL
         }
 
 /** The distribution the generated code holds as [this]. */
 internal fun eranos.internal.TipDistribution.converted(): TipDistribution =
     when (this) {
-        eranos.internal.TipDistribution.EQUAL -> TipDistribution.EQUAL
         eranos.internal.TipDistribution.PROPORTIONAL -> TipDistribution.PROPORTIONAL
+        eranos.internal.TipDistribution.EQUAL -> TipDistribution.EQUAL
     }

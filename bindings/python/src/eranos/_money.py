@@ -20,11 +20,11 @@ class Money:
     amounts in one currency, and the result within the range of a 64-bit number of minor units.
     """
 
-    currency: Currency
-    """The currency."""
-
     minor_units: int
     """The amount in minor units, cents for the euro and none for the yen."""
+
+    currency: Currency
+    """The currency."""
 
     @classmethod
     def parse(cls, text: str, currency: Currency) -> Money:
@@ -102,7 +102,7 @@ def money_of(value: generated.Money) -> Money:
         The amount.
 
     """
-    return Money(Currency(value.currency), value.minor_units)
+    return Money(value.minor_units, Currency(value.currency))
 
 
 def generated_money(money: Money) -> generated.Money:
@@ -116,4 +116,4 @@ def generated_money(money: Money) -> generated.Money:
         The generated amount.
 
     """
-    return generated.Money(currency=money.currency.code, minor_units=money.minor_units)
+    return generated.Money(minor_units=money.minor_units, currency=money.currency.code)

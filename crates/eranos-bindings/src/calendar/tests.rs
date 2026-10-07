@@ -10,9 +10,9 @@ use crate::CalendarFailure;
 #[test]
 fn dates_and_times_convert_both_ways_and_refuse_what_does_not_exist() {
     let date = CalendarDate {
-        day: 29,
-        month: 2,
         year: 2028,
+        month: 2,
+        day: 29,
     };
     assert_eq!(date.to_library().map(CalendarDate::from_library), Ok(date));
     let time = TimeOfDay {
@@ -25,24 +25,24 @@ fn dates_and_times_convert_both_ways_and_refuse_what_does_not_exist() {
         // No 29 February in 2027, a day too large for any field, a
         // negative month, and a year beyond 9999 that would wrap.
         CalendarDate {
-            day: 29,
-            month: 2,
             year: 2027,
+            month: 2,
+            day: 29,
         },
         CalendarDate {
+            year: 2026,
+            month: 1,
             day: 257,
-            month: 1,
-            year: 2026,
         },
         CalendarDate {
-            day: 1,
+            year: 2026,
             month: -1,
-            year: 2026,
+            day: 1,
         },
         CalendarDate {
-            day: 1,
-            month: 1,
             year: 70_000,
+            month: 1,
+            day: 1,
         },
     ];
     for impossible in refused_dates {

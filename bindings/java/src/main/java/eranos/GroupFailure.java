@@ -6,6 +6,95 @@ import java.util.Objects;
 /** What the library's {@code GroupError} reports: a type per failure, with what it holds. */
 public sealed interface GroupFailure {
     /**
+     * A saved group in a format this version does not read: a newer one, whose fields it would
+     * drop, or an earlier one.
+     *
+     * @param format the format the saved group names
+     */
+    record UnsupportedFormat(long format) implements GroupFailure {
+        /**
+         * The failure of these components.
+         *
+         * @param format the format the saved group names
+         */
+        public UnsupportedFormat {}
+    }
+
+    /** A group name that is blank. */
+    record EmptyName() implements GroupFailure {}
+
+    /**
+     * An entry in another currency than the group's has no exchange rate into the group currency:
+     * its cost is local, or a currency change gave no rate for its currency.
+     *
+     * @param currency the currency without a rate
+     */
+    record MissingExchangeRate(Currency currency) implements GroupFailure {
+        /**
+         * The failure of these components.
+         *
+         * @param currency the currency without a rate
+         */
+        public MissingExchangeRate {
+            Objects.requireNonNull(currency, "currency");
+        }
+    }
+
+    /**
+     * An entry in the group currency has a converted cost; only a local cost is in the group
+     * currency.
+     */
+    record UnexpectedExchangeRate() implements GroupFailure {}
+
+    /**
+     * The same currency appears twice among the rates of a currency change.
+     *
+     * @param currency the currency that appears twice
+     */
+    record DuplicateExchangeRate(Currency currency) implements GroupFailure {
+        /**
+         * The failure of these components.
+         *
+         * @param currency the currency that appears twice
+         */
+        public DuplicateExchangeRate {
+            Objects.requireNonNull(currency, "currency");
+        }
+    }
+
+    /**
+     * A member with this ID already exists.
+     *
+     * @param member the identifier another member has
+     */
+    record DuplicateMember(MemberId member) implements GroupFailure {
+        /**
+         * The failure of these components.
+         *
+         * @param member the identifier another member has
+         */
+        public DuplicateMember {
+            Objects.requireNonNull(member, "member");
+        }
+    }
+
+    /**
+     * No member with this ID.
+     *
+     * @param member the identifier no member has
+     */
+    record UnknownMember(MemberId member) implements GroupFailure {
+        /**
+         * The failure of these components.
+         *
+         * @param member the identifier no member has
+         */
+        public UnknownMember {
+            Objects.requireNonNull(member, "member");
+        }
+    }
+
+    /**
      * An archived member cannot join a new expense.
      *
      * @param member the archived member
@@ -21,11 +110,28 @@ public sealed interface GroupFailure {
         }
     }
 
-    /** The built-in Uncategorised category cannot be renamed or removed. */
-    record BuiltInCategory() implements GroupFailure {}
-
-    /** A shared group's lock was asked for without waiting, while another call held it. */
-    record Busy() implements GroupFailure {}
+    /**
+     * The member is still referenced and cannot be removed; archive it instead.
+     *
+     * @param member the member
+     * @param expenses the expenses that name the member
+     * @param transfers the transfers that name the member
+     */
+    record MemberInUse(MemberId member, List<ExpenseId> expenses, List<TransferId> transfers)
+            implements GroupFailure {
+        /**
+         * The failure of these components; the lists are copied.
+         *
+         * @param member the member
+         * @param expenses the expenses that name the member
+         * @param transfers the transfers that name the member
+         */
+        public MemberInUse {
+            Objects.requireNonNull(member, "member");
+            expenses = List.copyOf(expenses);
+            transfers = List.copyOf(transfers);
+        }
+    }
 
     /**
      * A category with this ID already exists.
@@ -60,20 +166,23 @@ public sealed interface GroupFailure {
     }
 
     /**
-     * The same currency appears twice among the rates of a currency change.
+     * No category with this ID.
      *
-     * @param currency the currency that appears twice
+     * @param category the identifier no category has
      */
-    record DuplicateExchangeRate(Currency currency) implements GroupFailure {
+    record UnknownCategory(CategoryId category) implements GroupFailure {
         /**
          * The failure of these components.
          *
-         * @param currency the currency that appears twice
+         * @param category the identifier no category has
          */
-        public DuplicateExchangeRate {
-            Objects.requireNonNull(currency, "currency");
+        public UnknownCategory {
+            Objects.requireNonNull(category, "category");
         }
     }
+
+    /** The built-in Uncategorised category cannot be renamed or removed. */
+    record BuiltInCategory() implements GroupFailure {}
 
     /**
      * An expense with this ID already exists.
@@ -88,106 +197,6 @@ public sealed interface GroupFailure {
          */
         public DuplicateExpense {
             Objects.requireNonNull(expense, "expense");
-        }
-    }
-
-    /**
-     * A member with this ID already exists.
-     *
-     * @param member the identifier another member has
-     */
-    record DuplicateMember(MemberId member) implements GroupFailure {
-        /**
-         * The failure of these components.
-         *
-         * @param member the identifier another member has
-         */
-        public DuplicateMember {
-            Objects.requireNonNull(member, "member");
-        }
-    }
-
-    /**
-     * A transfer with this ID already exists.
-     *
-     * @param transfer the identifier another transfer has
-     */
-    record DuplicateTransfer(TransferId transfer) implements GroupFailure {
-        /**
-         * The failure of these components.
-         *
-         * @param transfer the identifier another transfer has
-         */
-        public DuplicateTransfer {
-            Objects.requireNonNull(transfer, "transfer");
-        }
-    }
-
-    /** A group name that is blank. */
-    record EmptyName() implements GroupFailure {}
-
-    /**
-     * The member is still referenced and cannot be removed; archive it instead.
-     *
-     * @param expenses the expenses that name the member
-     * @param member the member
-     * @param transfers the transfers that name the member
-     */
-    record MemberInUse(List<ExpenseId> expenses, MemberId member, List<TransferId> transfers)
-            implements GroupFailure {
-        /**
-         * The failure of these components; the lists are copied.
-         *
-         * @param expenses the expenses that name the member
-         * @param member the member
-         * @param transfers the transfers that name the member
-         */
-        public MemberInUse {
-            expenses = List.copyOf(expenses);
-            Objects.requireNonNull(member, "member");
-            transfers = List.copyOf(transfers);
-        }
-    }
-
-    /**
-     * An entry in another currency than the group's has no exchange rate into the group currency:
-     * its cost is local, or a currency change gave no rate for its currency.
-     *
-     * @param currency the currency without a rate
-     */
-    record MissingExchangeRate(Currency currency) implements GroupFailure {
-        /**
-         * The failure of these components.
-         *
-         * @param currency the currency without a rate
-         */
-        public MissingExchangeRate {
-            Objects.requireNonNull(currency, "currency");
-        }
-    }
-
-    /** A total would leave the range of an amount. */
-    record Overflow() implements GroupFailure {}
-
-    /**
-     * An entry in the group currency has a converted cost; only a local cost is in the group
-     * currency.
-     */
-    record UnexpectedExchangeRate() implements GroupFailure {}
-
-    /**
-     * No category with this ID.
-     *
-     * @param category the identifier no category has
-     */
-    record UnknownCategory(CategoryId category) implements GroupFailure {
-        /**
-         * The failure of these components.
-         *
-         * @param category the identifier no category has
-         */
-        public UnknownCategory {
-            Objects.requireNonNull(category, "category");
         }
     }
 
@@ -208,18 +217,18 @@ public sealed interface GroupFailure {
     }
 
     /**
-     * No member with this ID.
+     * A transfer with this ID already exists.
      *
-     * @param member the identifier no member has
+     * @param transfer the identifier another transfer has
      */
-    record UnknownMember(MemberId member) implements GroupFailure {
+    record DuplicateTransfer(TransferId transfer) implements GroupFailure {
         /**
          * The failure of these components.
          *
-         * @param member the identifier no member has
+         * @param transfer the identifier another transfer has
          */
-        public UnknownMember {
-            Objects.requireNonNull(member, "member");
+        public DuplicateTransfer {
+            Objects.requireNonNull(transfer, "transfer");
         }
     }
 
@@ -239,18 +248,9 @@ public sealed interface GroupFailure {
         }
     }
 
-    /**
-     * A saved group in a format this version does not read: a newer one, whose fields it would
-     * drop, or an earlier one.
-     *
-     * @param format the format the saved group names
-     */
-    record UnsupportedFormat(long format) implements GroupFailure {
-        /**
-         * The failure of these components.
-         *
-         * @param format the format the saved group names
-         */
-        public UnsupportedFormat {}
-    }
+    /** A shared group's lock was asked for without waiting, while another call held it. */
+    record Busy() implements GroupFailure {}
+
+    /** A total would leave the range of an amount. */
+    record Overflow() implements GroupFailure {}
 }

@@ -28,30 +28,16 @@ typedef struct EranosAccount EranosAccount;
 
 /// A new account of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param details The IBAN or the username
 /// @param name The label, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param details The IBAN or the username
 /// @param account Receives the account on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosAccountCreate(EranosAccountDetails const *const details, char const *const name,
+[[nodiscard]] static inline EranosError *eranosAccountCreate(char const *const name, EranosAccountDetails const *const details,
                                                              EranosAccount **const account) {
-    EranosAccount_create_result const result = EranosAccount_create(details, eranosDetailView(name));
+    EranosAccount_create_result const result = EranosAccount_create(eranosDetailView(name), details);
     *account = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
-}
-
-/// The IBAN or the username.
-///
-/// @param account The account
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosAccountDetails *eranosAccountDetails(EranosAccount const *const account) { return EranosAccount_details(account); }
-
-/// Sets the IBAN or the username.
-///
-/// @param account The account
-/// @param details The IBAN or the username
-static inline void eranosAccountSetDetails(EranosAccount *const account, EranosAccountDetails const *const details) {
-    EranosAccount_set_details(account, details);
 }
 
 /// The label.
@@ -73,6 +59,20 @@ static inline void eranosAccountName(EranosAccount const *const account, EranosT
 [[nodiscard]] static inline EranosError *eranosAccountSetName(EranosAccount *const account, char const *const name) {
     EranosAccount_set_name_result const result = EranosAccount_set_name(account, eranosDetailView(name));
     return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The IBAN or the username.
+///
+/// @param account The account
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosAccountDetails *eranosAccountDetails(EranosAccount const *const account) { return EranosAccount_details(account); }
+
+/// Sets the IBAN or the username.
+///
+/// @param account The account
+/// @param details The IBAN or the username
+static inline void eranosAccountSetDetails(EranosAccount *const account, EranosAccountDetails const *const details) {
+    EranosAccount_set_details(account, details);
 }
 
 /// Destroys @p account; destroying nullptr does nothing, as free() does.
@@ -260,19 +260,33 @@ static inline void eranosMemberFirstName(EranosMember const *const member, Erano
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Where the member can be paid, in the order they were given.
+/// The last name. Writes it, if present; absent otherwise.
 ///
 /// @param member The member
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosAccountList *eranosMemberAccounts(EranosMember const *const member) { return EranosMember_accounts(member); }
-
-/// Sets where the member can be paid, in the order they were given.
-///
-/// @param member The member
-/// @param accounts Where the member can be paid, in the order they were given
-static inline void eranosMemberSetAccounts(EranosMember *const member, EranosAccountList const *const accounts) {
-    EranosMember_set_accounts(member, accounts);
+/// @param lastName Receives the last name, replacing what it held
+/// @return Whether there is one
+[[nodiscard]] static inline bool eranosMemberLastName(EranosMember const *const member, EranosText *const lastName) {
+    eranosDetailClear(lastName);
+    bool const present = EranosMember_last_name(member, lastName).is_ok;
+    eranosDetailFinish(lastName);
+    return present;
 }
+
+/// Sets the last name.
+///
+/// @param member The member
+/// @param lastName The last name, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosMemberSetLastName(EranosMember *const member, char const *const lastName) {
+    EranosMember_set_last_name_result const result = EranosMember_set_last_name(member, eranosDetailView(lastName));
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// Clears the last name.
+///
+/// @param member The member
+static inline void eranosMemberClearLastName(EranosMember *const member) { EranosMember_clear_last_name(member); }
 
 /// The email address. Writes it, if present; absent otherwise.
 ///
@@ -302,34 +316,6 @@ static inline void eranosMemberSetAccounts(EranosMember *const member, EranosAcc
 /// @param member The member
 static inline void eranosMemberClearEmail(EranosMember *const member) { EranosMember_clear_email(member); }
 
-/// The last name. Writes it, if present; absent otherwise.
-///
-/// @param member The member
-/// @param lastName Receives the last name, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosMemberLastName(EranosMember const *const member, EranosText *const lastName) {
-    eranosDetailClear(lastName);
-    bool const present = EranosMember_last_name(member, lastName).is_ok;
-    eranosDetailFinish(lastName);
-    return present;
-}
-
-/// Sets the last name.
-///
-/// @param member The member
-/// @param lastName The last name, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
-///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosMemberSetLastName(EranosMember *const member, char const *const lastName) {
-    EranosMember_set_last_name_result const result = EranosMember_set_last_name(member, eranosDetailView(lastName));
-    return eranosDetailErrorOf(result.is_ok, &result.err);
-}
-
-/// Clears the last name.
-///
-/// @param member The member
-static inline void eranosMemberClearLastName(EranosMember *const member) { EranosMember_clear_last_name(member); }
-
 /// The phone number. Writes it, if present; absent otherwise.
 ///
 /// @param member The member
@@ -357,6 +343,20 @@ static inline void eranosMemberClearLastName(EranosMember *const member) { Erano
 ///
 /// @param member The member
 static inline void eranosMemberClearPhone(EranosMember *const member) { EranosMember_clear_phone(member); }
+
+/// Where the member can be paid, in the order they were given.
+///
+/// @param member The member
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosAccountList *eranosMemberAccounts(EranosMember const *const member) { return EranosMember_accounts(member); }
+
+/// Sets where the member can be paid, in the order they were given.
+///
+/// @param member The member
+/// @param accounts Where the member can be paid, in the order they were given
+static inline void eranosMemberSetAccounts(EranosMember *const member, EranosAccountList const *const accounts) {
+    EranosMember_set_accounts(member, accounts);
+}
 
 /// Destroys @p member; destroying nullptr does nothing, as free() does.
 ///

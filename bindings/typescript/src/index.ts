@@ -8,7 +8,7 @@
  * import { Currency, Group, init } from 'eranos';
  *
  * await init(new URL('eranos/eranos_web.wasm', import.meta.url));
- * const group = Group.create(Currency.of('EUR'), 'Flat');
+ * const group = Group.create('Flat', Currency.of('EUR'));
  * ```
  *
  * @packageDocumentation

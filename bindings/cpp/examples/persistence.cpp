@@ -18,12 +18,12 @@ struct ComparisonRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<3> HEADERS{"Member", "Balance before saving", "Balance after loading"};
 
-    /// The balance after loading.
-    std::string after;
-    /// The balance before saving.
-    std::string before;
     /// The member's first name.
     std::string name;
+    /// The balance before saving.
+    std::string before;
+    /// The balance after loading.
+    std::string after;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -50,14 +50,14 @@ struct ComparisonRow final {
 
 /// Runs the example.
 void run() {
-    auto const day = must(CalendarDate::of(23, 9, 2026));
-    auto group = must(Group::create(must(Currency::of("EUR")), "Road trip"));
+    auto const day = must(CalendarDate::of(2026, 9, 23));
+    auto group = must(Group::create("Road trip", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
-    static_cast<void>(must(group.addExpense(Expense(LocalCost{euros("70.00")}, day, "Fuel", EqualSplit{{ana}}, both))));
-    Expense lunch(LocalCost{euros("30.00")}, day, "Lunch", EqualSplit{{bob}}, both);
-    lunch.tip = Tip(TipDistribution::PROPORTIONAL, PercentageTipValue{must(Percentage::parse("10"))});
+    static_cast<void>(must(group.addExpense(Expense("Fuel", LocalCost{euros("70.00")}, EqualSplit{{ana}}, both, day))));
+    Expense lunch("Lunch", LocalCost{euros("30.00")}, EqualSplit{{bob}}, both, day);
+    lunch.tip = Tip(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
     static_cast<void>(must(group.addExpense(lunch)));
 
     title("Road trip: saving and loading a group");
@@ -83,18 +83,19 @@ void run() {
     auto const after = loaded.summary();
     std::vector<ComparisonRow> rows;
     for (auto const &member : {ana, bob}) {
-        rows.push_back({.after = balanceOf(after, member), .before = balanceOf(before, member), .name = firstName(group, member)});
+        rows.push_back({.name = firstName(group, member), .before = balanceOf(before, member), .after = balanceOf(after, member)});
     }
     printTable(rows, 1);
     auto const plan = must(loaded.settlement(SettlementStrategy::GREEDY));
     std::println("Payments needed to settle the loaded group: {}.", plan.payments.size());
 
     section("3. A corrupted file is refused");
-    printLine("Here the fuel's payer was edited to an identifier no member has. Reading the file\n"
-              "as a SavedGroup and loading it with into_group replays every entry through the\n"
-              "same checks as adding it, and refuses the file instead of producing balances that\n"
-              "do not add up:");
-    // The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
+    printLine("Here Ana's identifier was edited in her member entry, so the fuel's payer is an\n"
+              "identifier no member has. Reading the file as a SavedGroup and loading it with\n"
+              "into_group replays every entry through the same checks as adding it, and refuses\n"
+              "the file instead of producing balances that do not add up:");
+    // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel she
+    // paid is left naming an identifier no member has.
     auto const corrupted = replaceFirst(saved, ana.value(), "0199a000-0000-7000-8000-00000000ffff");
     auto const refused = refusal(Group::load(corrupted));
     check(refused.has_value(), "the file is refused");

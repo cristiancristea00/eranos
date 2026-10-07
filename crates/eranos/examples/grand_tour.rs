@@ -69,187 +69,187 @@ struct Tampering {
 
 #[derive(Tabled)]
 struct DetailRow {
-    #[tabled(rename = "Detail", order = 0)]
+    #[tabled(rename = "Detail")]
     detail: &'static str,
-    #[tabled(rename = "Value", order = 1)]
+    #[tabled(rename = "Value")]
     value: String,
 }
 
 #[derive(Tabled)]
 struct MemberRow {
-    #[tabled(rename = "Accounts", order = 3)]
-    accounts: String,
-    #[tabled(rename = "Email", order = 1)]
-    email: String,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Phone", order = 2)]
+    #[tabled(rename = "Email")]
+    email: String,
+    #[tabled(rename = "Phone")]
     phone: String,
+    #[tabled(rename = "Accounts")]
+    accounts: String,
 }
 
 #[derive(Tabled)]
 struct CheckRow {
-    #[tabled(rename = "Input", order = 0)]
+    #[tabled(rename = "Input")]
     input: String,
-    #[tabled(rename = "Checked as", order = 1)]
+    #[tabled(rename = "Checked as")]
     kind: &'static str,
-    #[tabled(rename = "Result", order = 2)]
+    #[tabled(rename = "Result")]
     result: String,
 }
 
 #[derive(Tabled)]
 struct RefusalRow {
-    #[tabled(rename = "Change", order = 0)]
+    #[tabled(rename = "Change")]
     change: &'static str,
-    #[tabled(rename = "Refused with", order = 1)]
+    #[tabled(rename = "Refused with")]
     error: String,
 }
 
 #[derive(Tabled)]
 struct ShareRow {
-    #[tabled(rename = "Consumed", order = 4)]
-    consumed: String,
-    #[tabled(rename = "Expense", order = 0)]
+    #[tabled(rename = "Expense")]
     expense: String,
-    #[tabled(rename = "Split", order = 1)]
+    #[tabled(rename = "Split")]
     how: String,
-    #[tabled(rename = "Member", order = 2)]
+    #[tabled(rename = "Member")]
     members: String,
-    #[tabled(rename = "Paid", order = 3)]
+    #[tabled(rename = "Paid")]
     paid: String,
+    #[tabled(rename = "Consumed")]
+    consumed: String,
 }
 
 #[derive(Tabled)]
 struct ItemRow {
-    #[tabled(rename = "Line total", order = 4)]
-    line_total: Money,
-    #[tabled(rename = "Item", order = 0)]
+    #[tabled(rename = "Item")]
     name: String,
-    #[tabled(rename = "Quantity", order = 2)]
-    quantity: u32,
-    #[tabled(rename = "Shared by", order = 1)]
+    #[tabled(rename = "Shared by")]
     shared_by: String,
-    #[tabled(rename = "Unit price", order = 3)]
+    #[tabled(rename = "Quantity")]
+    quantity: u32,
+    #[tabled(rename = "Unit price")]
     unit_price: Money,
+    #[tabled(rename = "Line total")]
+    line_total: Money,
 }
 
 #[derive(Tabled)]
 struct EntryRow {
-    #[tabled(rename = "In the group currency", order = 4)]
-    converted: Money,
-    #[tabled(rename = "Entry", order = 0)]
+    #[tabled(rename = "Entry")]
     name: String,
-    #[tabled(rename = "Entered as", order = 2)]
-    original: Money,
-    #[tabled(rename = "Paid by", order = 1)]
+    #[tabled(rename = "Paid by")]
     payer: String,
-    #[tabled(rename = "Rate", order = 3)]
+    #[tabled(rename = "Entered as")]
+    original: Money,
+    #[tabled(rename = "Rate")]
     rate: ExchangeRate,
+    #[tabled(rename = "In the group currency")]
+    converted: Money,
 }
 
 #[derive(Tabled)]
 struct EditRow {
-    #[tabled(rename = "Edit", order = 1)]
-    edit: String,
-    #[tabled(rename = "Entry", order = 0)]
+    #[tabled(rename = "Entry")]
     entry: String,
+    #[tabled(rename = "Edit")]
+    edit: String,
 }
 
 #[derive(Tabled)]
 struct BalanceRow {
-    #[tabled(rename = "Balance", order = 5)]
-    balance: Balance,
-    #[tabled(rename = "Consumed", order = 2)]
-    consumed: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Paid", order = 1)]
+    #[tabled(rename = "Paid")]
     paid: Money,
-    #[tabled(rename = "Received", order = 4)]
-    received: Money,
-    #[tabled(rename = "Sent", order = 3)]
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Sent")]
     sent: Money,
+    #[tabled(rename = "Received")]
+    received: Money,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
 }
 
 #[derive(Tabled)]
 struct StatusRow {
-    #[tabled(rename = "Balance", order = 2)]
-    balance: Balance,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Status", order = 1)]
+    #[tabled(rename = "Status")]
     status: &'static str,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
 }
 
 #[derive(Tabled)]
 struct CategoryRow {
-    #[tabled(rename = "Expenses", order = 1)]
-    expenses: usize,
-    #[tabled(rename = "Category", order = 0)]
+    #[tabled(rename = "Category")]
     name: String,
-    #[tabled(rename = "Total", order = 2)]
+    #[tabled(rename = "Expenses")]
+    expenses: usize,
+    #[tabled(rename = "Total")]
     total: Money,
 }
 
 #[derive(Tabled)]
 struct MemberCategoryRow {
-    #[tabled(rename = "Food", order = 1)]
-    food: Money,
-    #[tabled(rename = "Lodging", order = 2)]
-    lodging: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Getting around", order = 3)]
+    #[tabled(rename = "Food")]
+    food: Money,
+    #[tabled(rename = "Lodging")]
+    lodging: Money,
+    #[tabled(rename = "Getting around")]
     transport: Money,
-    #[tabled(rename = "Uncategorised", order = 4)]
+    #[tabled(rename = "Uncategorised")]
     uncategorised: Money,
 }
 
 #[derive(Tabled)]
 struct StrategyRow {
-    #[tabled(rename = "Computed by", order = 1)]
-    computed_by: &'static str,
-    #[tabled(rename = "Payments", order = 2)]
-    payments: usize,
-    #[tabled(rename = "Strategy", order = 0)]
+    #[tabled(rename = "Strategy")]
     strategy: &'static str,
+    #[tabled(rename = "Computed by")]
+    computed_by: &'static str,
+    #[tabled(rename = "Payments")]
+    payments: usize,
 }
 
 #[derive(Tabled)]
 struct PaymentRow {
-    #[tabled(rename = "Amount", order = 2)]
-    amount: Money,
-    #[tabled(rename = "From", order = 0)]
+    #[tabled(rename = "From")]
     from: String,
-    #[tabled(rename = "To", order = 1)]
+    #[tabled(rename = "To")]
     to: String,
+    #[tabled(rename = "Amount")]
+    amount: Money,
 }
 
 #[derive(Tabled)]
 struct LoadRow {
-    #[tabled(rename = "Change to the file", order = 0)]
+    #[tabled(rename = "Change to the file")]
     change: &'static str,
-    #[tabled(rename = "Message", order = 1)]
+    #[tabled(rename = "Message")]
     message: GroupError,
 }
 
 #[derive(Tabled)]
 struct CurrencyRow {
-    #[tabled(rename = "Code", order = 0)]
+    #[tabled(rename = "Code")]
     code: &'static str,
-    #[tabled(rename = "Decimal places", order = 3)]
-    decimal_places: u8,
-    #[tabled(rename = "Name", order = 1)]
+    #[tabled(rename = "Name")]
     name: &'static str,
-    #[tabled(rename = "Numeric code", order = 2)]
+    #[tabled(rename = "Numeric code")]
     numeric_code: u16,
+    #[tabled(rename = "Decimal places")]
+    decimal_places: u8,
 }
 
 #[derive(Tabled)]
 struct ValueRow {
-    #[tabled(rename = "Input", order = 0)]
+    #[tabled(rename = "Input")]
     input: &'static str,
-    #[tabled(rename = "Result", order = 1)]
+    #[tabled(rename = "Result")]
     result: String,
 }
 
@@ -279,7 +279,7 @@ fn ron(text: &str) -> Result<Money, Box<dyn Error>> {
 
 /// A date of the trip, in October 2026.
 fn october(date: u8) -> Result<CalendarDate, Box<dyn Error>> {
-    Ok(CalendarDate::new(date, 10, 2026)?)
+    Ok(CalendarDate::new(2026, 10, date)?)
 }
 
 fn name(group: &Group, member: MemberId) -> String {
@@ -339,12 +339,12 @@ fn print_balances(group: &Group) {
         group.members().map(|member| {
             let totals = summary.member(member.id());
             BalanceRow {
-                balance: totals.balance(),
-                consumed: totals.share(),
                 name: member.first_name().to_owned(),
                 paid: totals.paid(),
-                received: totals.received(),
+                consumed: totals.share(),
                 sent: totals.sent(),
+                received: totals.received(),
+                balance: totals.balance(),
             }
         }),
         1,
@@ -355,14 +355,14 @@ fn print_categories(group: &Group) {
     let summary = group.summary();
     print_table(
         summary.category_totals().map(|total| CategoryRow {
-            expenses: group
-                .expenses()
-                .filter(|expense| expense.category() == total.category())
-                .count(),
             name: group
                 .category(total.category())
                 .map_or("?", Category::name)
                 .to_owned(),
+            expenses: group
+                .expenses()
+                .filter(|expense| expense.category() == total.category())
+                .count(),
             total: total.total(),
         }),
         1,
@@ -376,32 +376,32 @@ fn print_entries(group: &Group, shown: impl Fn(Currency) -> bool) {
         .expenses()
         .filter(|expense| shown(expense.amount().currency()))
         .map(|expense| EntryRow {
+            name: expense.name().to_owned(),
+            payer: names(group, expense.payers().members(), ", "),
+            original: expense.total(),
+            rate: expense.exchange_rate(),
             converted: group
                 .expense_shares(expense.id())
                 .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
-            name: expense.name().to_owned(),
-            original: expense.total(),
-            payer: names(group, expense.payers().members(), ", "),
-            rate: expense.exchange_rate(),
         });
     let transfers = group
         .transfers()
         .filter(|transfer| shown(transfer.amount().currency()))
         .map(|transfer| EntryRow {
+            name: format!("Transfer to {}", name(group, transfer.to())),
+            payer: name(group, transfer.from()),
+            original: transfer.amount(),
+            rate: transfer.exchange_rate(),
             converted: group
                 .transfer_amount(transfer.id())
                 .unwrap_or_else(|| Money::zero(group.currency())),
-            name: format!("Transfer to {}", name(group, transfer.to())),
-            original: transfer.amount(),
-            payer: name(group, transfer.from()),
-            rate: transfer.exchange_rate(),
         });
     print_table(expenses.chain(transfers), 2);
 }
 
 fn the_group() -> Result<Group, Box<dyn Error>> {
     section("1. The group");
-    let mut group = Group::builder(Currency::EUR, "Lisbon")
+    let mut group = Group::builder("Lisbon", Currency::EUR)
         .description("A week by the Atlantic")
         .language(Language::parse("pt-pt")?)
         .build()?;
@@ -465,16 +465,16 @@ fn describe(account: &Account) -> String {
 fn print_members(group: &Group) {
     print_table(
         group.members().map(|member| MemberRow {
-            accounts: cell(member.accounts().iter().map(describe)),
-            email: member.email().map_or("", Email::as_str).to_owned(),
             name: [Some(member.first_name()), member.last_name()]
                 .into_iter()
                 .flatten()
                 .collect::<Vec<_>>()
                 .join(" "),
+            email: member.email().map_or("", Email::as_str).to_owned(),
             phone: member
                 .phone()
                 .map_or_else(String::new, PhoneNumber::international),
+            accounts: cell(member.accounts().iter().map(describe)),
         }),
         4,
     );
@@ -539,10 +539,10 @@ fn members(group: &mut Group) -> Result<People, Box<dyn Error>> {
             .email(Email::parse("ana@example.com")?)
             .phone(PhoneNumber::parse("+40 712 345 678")?)
             .account(Account::new(
-                Iban::parse("RO49 AAAA 1B31 0075 9384 0000")?,
                 "ING",
+                Iban::parse("RO49 AAAA 1B31 0075 9384 0000")?,
             )?)
-            .account(Account::new(Username::new("@ana")?, "Revolut")?)
+            .account(Account::new("Revolut", Username::new("@ana")?)?)
             .build()?,
     )?;
     let mut add = |first_name| -> Result<MemberId, Box<dyn Error>> {
@@ -646,15 +646,15 @@ fn categories(group: &mut Group) -> Result<Categories, Box<dyn Error>> {
 /// How an expense divides, in a few words.
 fn how(expense: &Expense) -> String {
     let split = match expense.split() {
-        ExpenseSplit::Itemised(items) => format!("{} items", items.len()),
         ExpenseSplit::Whole(split) => match split {
-            Split::Amounts(_) => "by amounts",
             Split::Equal(_) => "equally",
             Split::Parts(_) => "by parts",
             Split::Percentages(_) => "by percentage",
+            Split::Amounts(_) => "by amounts",
             _ => "another way",
         }
         .to_owned(),
+        ExpenseSplit::Itemised(items) => format!("{} items", items.len()),
         _ => "another way".to_owned(),
     };
     let payers = match expense.payers().len() {
@@ -665,8 +665,8 @@ fn how(expense: &Expense) -> String {
         String::new()
     } else {
         match expense.tip().value() {
-            TipValue::Fixed(amount) => format!(", {amount} tip"),
             TipValue::Percentage(rate) => format!(", {rate} tip"),
+            TipValue::Fixed(amount) => format!(", {amount} tip"),
             _ => ", a tip".to_owned(),
         }
     };
@@ -687,12 +687,6 @@ fn print_shares(group: &Group, expenses: &[ExpenseId]) {
             }
         };
         Some(ShareRow {
-            consumed: cell(
-                shares
-                    .members()
-                    .iter()
-                    .map(|share| share.share().to_string()),
-            ),
             expense: expense.name().to_owned(),
             how: how(expense),
             members: cell(
@@ -702,6 +696,12 @@ fn print_shares(group: &Group, expenses: &[ExpenseId]) {
                     .map(|share| name(group, share.member())),
             ),
             paid: cell(shares.members().iter().map(paid)),
+            consumed: cell(
+                shares
+                    .members()
+                    .iter()
+                    .map(|share| share.share().to_string()),
+            ),
         })
     });
     print_table(rows, 3);
@@ -713,11 +713,11 @@ fn print_items(group: &Group, id: ExpenseId) {
     };
     print_table(
         items.iter().map(|item| ItemRow {
-            line_total: item.line_total(),
             name: item.name().to_owned(),
-            quantity: item.quantity(),
             shared_by: names(group, item.split().members(), ", "),
+            quantity: item.quantity(),
             unit_price: item.unit_price(),
+            line_total: item.line_total(),
         }),
         2,
     );
@@ -734,12 +734,13 @@ fn fado_items(people: People) -> Result<Vec<Item>, Box<dyn Error>> {
         ..
     } = people;
     Ok(vec![
-        Item::builder([ana, bob, dan], "Vinho verde", eur("12.00")?)
+        Item::builder("Vinho verde", eur("12.00")?, [ana, bob, dan])
             .quantity(2)
             .build()?,
-        Item::builder([carol], "Bacalhau", eur("18.00")?).build()?,
+        Item::builder("Bacalhau", eur("18.00")?, [carol]).build()?,
         Item::builder_with_split(
             "Custard tarts",
+            eur("1.50")?,
             Split::parts([
                 MemberParts::new(ana, Parts::ONE),
                 MemberParts::new(bob, Parts::ONE),
@@ -747,11 +748,10 @@ fn fado_items(people: People) -> Result<Vec<Item>, Box<dyn Error>> {
                 MemberParts::new(dan, Parts::ONE),
                 MemberParts::new(eva, Parts::from_whole(2)?),
             ]),
-            eur("1.50")?,
         )
         .quantity(6)
         .build()?,
-        Item::builder([eva], "Juice", eur("3.00")?).build()?,
+        Item::builder("Juice", eur("3.00")?, [eva]).build()?,
     ])
 }
 
@@ -759,14 +759,14 @@ fn fado_items(people: People) -> Result<Vec<Item>, Box<dyn Error>> {
 /// caller builds it, which gives it its identifier.
 fn fado_night(people: People, categories: Categories) -> Result<ExpenseBuilder, Box<dyn Error>> {
     Ok(Expense::itemised_builder_with_payers(
-        eur("54.00")?,
-        october(4)?,
-        fado_items(people)?,
         "Fado night",
+        eur("54.00")?,
         Split::amounts([
-            MemberAmount::new(eur("39.40")?, people.carol),
-            MemberAmount::new(eur("20.00")?, people.dan),
+            MemberAmount::new(people.carol, eur("39.40")?),
+            MemberAmount::new(people.dan, eur("20.00")?),
         ]),
+        fado_items(people)?,
+        october(4)?,
     )
     .category(categories.food)
     .description("Tasca do Chico")
@@ -790,17 +790,16 @@ fn add_expenses(
     } = people;
     let everyone = [ana, bob, carol, dan, eva];
     let groceries = Expense::builder(
-        eur("10.00")?,
-        october(1)?,
         "Groceries",
+        eur("10.00")?,
         ana,
         Split::equal([ana, bob, carol]),
+        october(1)?,
     )
     .category(categories.food);
     let apartment = Expense::builder(
-        eur("800.00")?,
-        october(1)?,
         "Apartment",
+        eur("800.00")?,
         ana,
         Split::percentages([
             MemberPercentage::new(ana, Percentage::parse("25")?),
@@ -808,12 +807,12 @@ fn add_expenses(
             MemberPercentage::new(carol, Percentage::parse("35")?),
             MemberPercentage::new(dan, Percentage::parse("15")?),
         ]),
+        october(1)?,
     )
     .category(categories.lodging);
     let seafood = Expense::builder(
-        eur("90.00")?,
-        october(2)?,
         "Seafood dinner",
+        eur("90.00")?,
         carol,
         Split::parts([
             MemberParts::new(ana, Parts::ONE),
@@ -822,35 +821,36 @@ fn add_expenses(
             MemberParts::new(dan, Parts::ONE),
             MemberParts::new(eva, Parts::parse("0.5")?),
         ]),
+        october(2)?,
     )
     .category(categories.food);
     let train = Expense::builder(
-        eur("88.50")?,
-        october(3)?,
         "Train to Porto",
+        eur("88.50")?,
         bob,
         Split::amounts([
-            MemberAmount::new(eur("24.50")?, ana),
-            MemberAmount::new(eur("24.50")?, bob),
-            MemberAmount::new(eur("24.50")?, carol),
-            MemberAmount::new(eur("15.00")?, eva),
+            MemberAmount::new(ana, eur("24.50")?),
+            MemberAmount::new(bob, eur("24.50")?),
+            MemberAmount::new(carol, eur("24.50")?),
+            MemberAmount::new(eva, eur("15.00")?),
         ]),
+        october(3)?,
     )
     .category(categories.transport);
     let museum = Expense::builder_with_payers(
-        eur("60.00")?,
-        october(3)?,
         "Museum",
+        eur("60.00")?,
         Split::equal([ana, bob]),
         Split::equal([ana, bob, carol, dan]),
+        october(3)?,
     );
     let fado = fado_night(people, categories)?;
     let tour = Expense::builder(
-        eur("45.00")?,
-        october(5)?,
         "Tuk-tuk tour",
+        eur("45.00")?,
         dan,
         Split::equal(everyone),
+        october(5)?,
     )
     .category(categories.transport)
     .tip(Tip::fixed(eur("5.00")?).distributed(TipDistribution::Equal));
@@ -907,13 +907,13 @@ fn expenses(
     let fado_expense = group.expense(fado).ok_or("the fado night was added")?;
     let tip = fado_expense.tip();
     let rule = match tip.value() {
-        TipValue::Fixed(amount) => amount.to_string(),
         TipValue::Percentage(rate) => rate.to_string(),
+        TipValue::Fixed(amount) => amount.to_string(),
         _ => "a tip".to_owned(),
     };
     let shared = match tip.distribution() {
-        TipDistribution::Equal => "equally",
         TipDistribution::Proportional => "in proportion to what each member ordered",
+        TipDistribution::Equal => "equally",
         _ => "another way",
     };
     println!(
@@ -972,17 +972,17 @@ fn another_currency(
     let rate = ExchangeRate::parse("0.2")?;
     let parking = group.add_expense(
         Expense::builder(
-            ron("250.00")?.at(rate),
-            october(6)?,
             "Airport parking",
+            ron("250.00")?.at(rate),
             ana,
             Split::equal([ana, bob]),
+            october(6)?,
         )
         .category(categories.transport)
         .build()?,
     )?;
     let cash = group.add_transfer(
-        Transfer::builder(ron("100.00")?.at(rate), october(6)?, bob, ana)
+        Transfer::builder(bob, ana, ron("100.00")?.at(rate), october(6)?)
             .note("Cash for the parking")
             .time(TimeOfDay::new(7, 40)?)
             .build()?,
@@ -1045,11 +1045,11 @@ fn replace_and_remove(
     // Bob entered the coffee twice.
     let coffee = || -> Result<Expense, Box<dyn Error>> {
         Ok(Expense::builder(
-            eur("6.00")?,
-            october(5)?,
             "Coffee",
+            eur("6.00")?,
             bob,
             Split::equal([ana, bob, carol]),
+            october(5)?,
         )
         .category(categories.food)
         .build()?)
@@ -1059,7 +1059,7 @@ fn replace_and_remove(
     let removed = group.remove_expense(copy)?;
     // Dan's part of the apartment was 120.00, not 100.00.
     let first =
-        group.add_transfer(Transfer::builder(eur("100.00")?, october(5)?, dan, ana).build()?)?;
+        group.add_transfer(Transfer::builder(dan, ana, eur("100.00")?, october(5)?).build()?)?;
     let fixed = group
         .transfer(first)
         .ok_or("the transfer was added")?
@@ -1070,7 +1070,7 @@ fn replace_and_remove(
     let replaced = group.replace_transfer(fixed)?;
     // Carol sent 10.00 to the wrong member.
     let mistake =
-        group.add_transfer(Transfer::builder(eur("10.00")?, october(5)?, carol, bob).build()?)?;
+        group.add_transfer(Transfer::builder(carol, bob, eur("10.00")?, october(5)?).build()?)?;
     let undone = group.remove_transfer(mistake)?;
 
     assert_eq!(previous.amount(), eur("90.00")?);
@@ -1079,6 +1079,7 @@ fn replace_and_remove(
     assert!(group.transfer(mistake).is_none());
     Ok(vec![
         EditRow {
+            entry: previous.name().to_owned(),
             edit: format!(
                 "{} became {}, at {}",
                 previous.amount(),
@@ -1090,16 +1091,16 @@ fn replace_and_remove(
                     .and_then(Expense::description)
                     .unwrap_or_default()
             ),
-            entry: previous.name().to_owned(),
         },
         EditRow {
+            entry: removed.name().to_owned(),
             edit: format!(
                 "entered twice; the copy of {} was removed",
                 removed.amount()
             ),
-            entry: removed.name().to_owned(),
         },
         EditRow {
+            entry: format!("{} to {}", name(group, dan), name(group, ana)),
             edit: format!(
                 "{} became {}, noted {}",
                 replaced.amount(),
@@ -1111,11 +1112,10 @@ fn replace_and_remove(
                     .and_then(Transfer::note)
                     .unwrap_or_default()
             ),
-            entry: format!("{} to {}", name(group, dan), name(group, ana)),
         },
         EditRow {
-            edit: format!("{} sent to the wrong member; removed", undone.amount()),
             entry: format!("{} to {}", name(group, carol), name(group, bob)),
+            edit: format!("{} sent to the wrong member; removed", undone.amount()),
         },
     ])
 }
@@ -1139,24 +1139,24 @@ fn edits(
 
     let before = group.summary().clone();
     let unbalanced = Expense::builder(
-        eur("30.00")?,
-        october(6)?,
         "Taxi",
+        eur("30.00")?,
         ana,
         Split::percentages([
             MemberPercentage::new(ana, Percentage::parse("50")?),
             MemberPercentage::new(bob, Percentage::parse("49.99")?),
         ]),
+        october(6)?,
     )
     .build();
-    let to_herself = Transfer::builder(eur("5.00")?, october(6)?, ana, ana).build();
+    let to_herself = Transfer::builder(ana, ana, eur("5.00")?, october(6)?).build();
     let unrated = group.add_expense(
         Expense::builder(
-            ron("40.00")?,
-            october(6)?,
             "Souvenirs",
+            ron("40.00")?,
             ana,
             Split::equal([ana]),
+            october(6)?,
         )
         .build()?,
     );
@@ -1212,11 +1212,11 @@ fn comings_and_goings(group: &mut Group, people: People) -> Result<(), Box<dyn E
     group.archive_member(dan)?;
     let farewell = group.add_expense(
         Expense::builder(
-            eur("40.00")?,
-            october(6)?,
             "Farewell dinner",
+            eur("40.00")?,
             ana,
             Split::equal([ana, bob, carol, dan]),
+            october(6)?,
         )
         .build()?,
     );
@@ -1230,13 +1230,13 @@ fn comings_and_goings(group: &mut Group, people: People) -> Result<(), Box<dyn E
     let summary = group.summary();
     print_table(
         group.members().map(|member| StatusRow {
-            balance: summary.member(member.id()).balance(),
             name: member.first_name().to_owned(),
             status: if group.is_archived(member.id()) {
                 "archived"
             } else {
                 "active"
             },
+            balance: summary.member(member.id()).balance(),
         }),
         2,
     );
@@ -1280,9 +1280,9 @@ fn summary(group: &Group, people: People, categories: Categories) -> Result<(), 
         group.members().map(|member| {
             let total = |category| summary.member_category_total(member.id(), category);
             MemberCategoryRow {
+                name: member.first_name().to_owned(),
                 food: total(categories.food),
                 lodging: total(categories.lodging),
-                name: member.first_name().to_owned(),
                 transport: total(categories.transport),
                 uncategorised: total(CategoryId::UNCATEGORISED),
             }
@@ -1394,9 +1394,9 @@ fn new_currency(group: &mut Group, people: People) -> Result<(), Box<dyn Error>>
 const fn strategy_name(strategy: SettlementStrategy) -> &'static str {
     match strategy {
         SettlementStrategy::Adaptive => "Adaptive",
-        SettlementStrategy::Direct => "Direct",
-        SettlementStrategy::Greedy => "Greedy",
         SettlementStrategy::MinimumTransfers => "MinimumTransfers",
+        SettlementStrategy::Greedy => "Greedy",
+        SettlementStrategy::Direct => "Direct",
         _ => "another strategy",
     }
 }
@@ -1415,9 +1415,9 @@ fn settling_up(group: &mut Group) -> Result<(), Box<dyn Error>> {
         };
         assert_eq!(settlement.strategy(), computed_by);
         counts.push(StrategyRow {
+            strategy: strategy_name(strategy),
             computed_by: strategy_name(settlement.strategy()),
             payments: settlement.len(),
-            strategy: strategy_name(strategy),
         });
     }
     println!(
@@ -1433,9 +1433,9 @@ fn settling_up(group: &mut Group) -> Result<(), Box<dyn Error>> {
     println!("The group follows the minimum plan:");
     print_table(
         plan.payments().iter().map(|payment| PaymentRow {
-            amount: payment.amount(),
             from: name(group, payment.from()),
             to: name(group, payment.to()),
+            amount: payment.amount(),
         }),
         2,
     );
@@ -1547,9 +1547,9 @@ fn currencies() -> Result<(), Box<dyn Error>> {
         let currency = Currency::from_code(code)?;
         rows.push(CurrencyRow {
             code: currency.code(),
-            decimal_places: currency.decimal_places(),
             name: currency.name(),
             numeric_code: currency.numeric_code(),
+            decimal_places: currency.decimal_places(),
         });
     }
     println!(
@@ -1568,7 +1568,7 @@ fn amounts() -> Result<(), Box<dyn Error>> {
     let change = eur("5.00")?.checked_sub(eur("7.50")?)?;
     let mixed = eur("1.00")?.checked_add(ron("1.00")?);
     let yen = Money::parse("1500", Currency::JPY)?;
-    let dinars = Money::from_minor_units(Currency::BHD, 1_234);
+    let dinars = Money::from_minor_units(1_234, Currency::BHD);
     let nothing = Money::zero(Currency::RON);
     let cost = eur("10.00")?.at(ExchangeRate::parse("4.9765")?);
     println!("Amounts are exact minor units in their currency:");
@@ -1697,7 +1697,7 @@ fn dates_and_identifiers(people: People) -> Result<(), Box<dyn Error>> {
             },
             ValueRow {
                 input: "29 February 2027",
-                result: message(&CalendarDate::new(29, 2, 2027)),
+                result: message(&CalendarDate::new(2027, 2, 29)),
             },
             ValueRow {
                 input: "22:15",
@@ -1753,11 +1753,11 @@ fn sharing(group: Group, people: People) -> Result<(), Box<dyn Error>> {
     let other = shared.clone();
     let everyone = [people.ana, people.bob, people.carol, people.dan, people.eva];
     let coffee = Expense::builder(
-        ron("75.00")?,
-        october(8)?,
         "Airport coffee",
+        ron("75.00")?,
         people.bob,
         Split::equal(everyone),
+        october(8)?,
     )
     .build()?;
     block_on(other.add_expense(coffee))?;
@@ -1772,9 +1772,9 @@ fn sharing(group: Group, people: People) -> Result<(), Box<dyn Error>> {
         let reading = block_on(shared.read());
         print_table(
             plan.payments().iter().map(|payment| PaymentRow {
-                amount: payment.amount(),
                 from: name(&reading, payment.from()),
                 to: name(&reading, payment.to()),
+                amount: payment.amount(),
             }),
             2,
         );

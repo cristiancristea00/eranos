@@ -6,28 +6,28 @@ import java.util.Objects;
 
 /** A day of the calendar, without a time zone: the day an entry happened wherever it happened. */
 public final class CalendarDate {
-    private final int day;
-    private final int month;
     private final int year;
+    private final int month;
+    private final int day;
 
-    private CalendarDate(int day, int month, int year) {
-        this.day = day;
-        this.month = month;
+    private CalendarDate(int year, int month, int day) {
         this.year = year;
+        this.month = month;
+        this.day = day;
     }
 
     /**
-     * The date of {@code day}, {@code month}, and {@code year}.
+     * The date of {@code year}, {@code month}, and {@code day}.
      *
-     * @param day the day of the month, from 1
-     * @param month the month, from 1 for January
      * @param year the year, from 1 to 9999
+     * @param month the month, from 1 for January
+     * @param day the day of the month, from 1
      * @return the date
      * @throws EranosException.Calendar with {@link CalendarFailure.InvalidDate} for a day that does
      *     not exist, such as 30 February
      */
-    public static CalendarDate of(int day, int month, int year) throws EranosException {
-        CalendarDate date = new CalendarDate(day, month, year);
+    public static CalendarDate of(int year, int month, int day) throws EranosException {
+        CalendarDate date = new CalendarDate(year, month, day);
         return Converting.call(
                 () -> {
                     Eranos.calendarDateFormat(date.generated());
@@ -53,7 +53,7 @@ public final class CalendarDate {
      * @return the date
      */
     static CalendarDate converted(eranos.internal.CalendarDate date) {
-        return new CalendarDate(date.day(), date.month(), date.year());
+        return new CalendarDate(date.year(), date.month(), date.day());
     }
 
     /**
@@ -62,16 +62,16 @@ public final class CalendarDate {
      * @return the generated date
      */
     eranos.internal.CalendarDate generated() {
-        return new eranos.internal.CalendarDate(day, month, year);
+        return new eranos.internal.CalendarDate(year, month, day);
     }
 
     /**
-     * The day of the month.
+     * The year.
      *
-     * @return the day, from 1
+     * @return the year, from 1 to 9999
      */
-    public int day() {
-        return day;
+    public int year() {
+        return year;
     }
 
     /**
@@ -84,25 +84,25 @@ public final class CalendarDate {
     }
 
     /**
-     * The year.
+     * The day of the month.
      *
-     * @return the year, from 1 to 9999
+     * @return the day, from 1
      */
-    public int year() {
-        return year;
+    public int day() {
+        return day;
     }
 
     @Override
     public boolean equals(Object other) {
         return other instanceof CalendarDate date
-                && day == date.day
+                && year == date.year
                 && month == date.month
-                && year == date.year;
+                && day == date.day;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(day, month, year);
+        return Objects.hash(year, month, day);
     }
 
     /**

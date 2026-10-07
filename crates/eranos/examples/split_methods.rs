@@ -17,26 +17,26 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ShareRow {
-    #[tabled(rename = "Consumed", order = 3)]
-    consumed: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Paid", order = 2)]
-    paid: Money,
-    #[tabled(rename = "Rule", order = 1)]
+    #[tabled(rename = "Rule")]
     rule: String,
+    #[tabled(rename = "Paid")]
+    paid: Money,
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
 }
 
 #[derive(Tabled)]
 struct TotalRow {
-    #[tabled(rename = "Balance", order = 3)]
-    balance: String,
-    #[tabled(rename = "Consumed", order = 2)]
-    consumed: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Paid", order = 1)]
+    #[tabled(rename = "Paid")]
     paid: Money,
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Balance")]
+    balance: String,
 }
 
 fn eur(text: &str) -> Result<Money, Box<dyn Error>> {
@@ -80,14 +80,14 @@ fn report(group: &Group, id: ExpenseId, rules: &[Rule]) {
     println!("{}, {}:", expense.name(), shares.total());
     print_table(
         shares.members().iter().map(|share: &MemberShare| ShareRow {
-            consumed: share.share(),
             name: name(group, share.member()),
-            paid: share.paid(),
             rule: rules
                 .iter()
                 .find(|rule| rule.member == share.member())
                 .map_or("(payer only)", |rule| rule.text)
                 .to_owned(),
+            paid: share.paid(),
+            consumed: share.share(),
         }),
         2,
     );
@@ -97,12 +97,12 @@ fn report(group: &Group, id: ExpenseId, rules: &[Rule]) {
 struct Family {
     ana: MemberId,
     bob: MemberId,
-    day: CalendarDate,
     mia: MemberId,
+    day: CalendarDate,
 }
 
 fn equally(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, day, mia } = *family;
+    let Family { ana, bob, mia, day } = *family;
     section("1. Equally");
     println!(
         "Everyone pays the same. 10.00 does not divide by three, so one member pays the\n\
@@ -111,11 +111,11 @@ fn equally(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Erro
     );
     let taxi = group.add_expense(
         Expense::builder(
-            eur("10.00")?,
-            day,
             "Taxi",
+            eur("10.00")?,
             ana,
             Split::equal([ana, bob, mia]),
+            day,
         )
         .build()?,
     )?;
@@ -141,7 +141,7 @@ const fn thirds(family: &Family) -> [Rule; 3] {
 }
 
 fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, day, mia } = *family;
+    let Family { ana, bob, mia, day } = *family;
     section("2. By percentage");
     println!(
         "Everyone pays a percentage of the amount; the percentages must add up to exactly\n\
@@ -149,15 +149,15 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
     );
     let rent = group.add_expense(
         Expense::builder(
-            eur("500.00")?,
-            day,
             "Flat",
+            eur("500.00")?,
             bob,
             Split::percentages([
                 MemberPercentage::new(ana, Percentage::parse("40")?),
                 MemberPercentage::new(bob, Percentage::parse("40")?),
                 MemberPercentage::new(mia, Percentage::parse("20")?),
             ]),
+            day,
         )
         .build()?,
     )?;
@@ -183,7 +183,7 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
 }
 
 fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, day, mia } = *family;
+    let Family { ana, bob, mia, day } = *family;
     section("3. By parts");
     println!(
         "Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n\
@@ -191,15 +191,15 @@ fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Err
     );
     let food = group.add_expense(
         Expense::builder(
-            eur("125.00")?,
-            day,
             "Food",
+            eur("125.00")?,
             ana,
             Split::parts([
                 MemberParts::new(ana, Parts::ONE),
                 MemberParts::new(bob, Parts::ONE),
                 MemberParts::new(mia, Parts::parse("0.5")?),
             ]),
+            day,
         )
         .build()?,
     )?;
@@ -225,7 +225,7 @@ fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Err
 }
 
 fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, day, mia } = *family;
+    let Family { ana, bob, mia, day } = *family;
     section("4. By exact amounts");
     println!(
         "Everyone pays a fixed amount, such as a ticket price; the amounts must add up to\n\
@@ -233,15 +233,15 @@ fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn E
     );
     let tickets = group.add_expense(
         Expense::builder(
-            eur("35.00")?,
-            day,
             "Museum",
+            eur("35.00")?,
             bob,
             Split::amounts([
-                MemberAmount::new(eur("15.00")?, ana),
-                MemberAmount::new(eur("15.00")?, bob),
-                MemberAmount::new(eur("5.00")?, mia),
+                MemberAmount::new(ana, eur("15.00")?),
+                MemberAmount::new(bob, eur("15.00")?),
+                MemberAmount::new(mia, eur("5.00")?),
             ]),
+            day,
         )
         .build()?,
     )?;
@@ -267,7 +267,7 @@ fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn E
 }
 
 fn several_payers(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, day, mia } = *family;
+    let Family { ana, bob, mia, day } = *family;
     section("5. Several payers");
     println!(
         "The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n\
@@ -275,14 +275,14 @@ fn several_payers(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<d
     );
     let dinner = group.add_expense(
         Expense::builder_with_payers(
-            eur("90.00")?,
-            day,
             "Dinner",
+            eur("90.00")?,
             Split::amounts([
-                MemberAmount::new(eur("50.00")?, ana),
-                MemberAmount::new(eur("40.00")?, bob),
+                MemberAmount::new(ana, eur("50.00")?),
+                MemberAmount::new(bob, eur("40.00")?),
             ]),
             Split::equal([ana, bob, mia]),
+            day,
         )
         .build()?,
     )?;
@@ -294,14 +294,14 @@ fn mistakes(family: &Family) -> Result<(), Box<dyn Error>> {
     section("6. Mistakes are refused");
     println!("A percentage split that adds up to 90 % is refused when the expense is built:");
     let invalid = Expense::builder(
-        eur("10.00")?,
-        family.day,
         "Invalid",
+        eur("10.00")?,
         family.ana,
         Split::percentages([
             MemberPercentage::new(family.ana, Percentage::parse("60")?),
             MemberPercentage::new(family.bob, Percentage::parse("30")?),
         ]),
+        family.day,
     )
     .build();
     println!(
@@ -319,10 +319,10 @@ fn totals(group: &Group) {
         group.members().map(|member| {
             let member_totals = summary.member(member.id());
             TotalRow {
-                balance: member_totals.balance().to_string(),
-                consumed: member_totals.share(),
                 name: member.first_name().to_owned(),
                 paid: member_totals.paid(),
+                consumed: member_totals.share(),
+                balance: member_totals.balance().to_string(),
             }
         }),
         1,
@@ -330,12 +330,12 @@ fn totals(group: &Group) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder(Currency::EUR, "Family holiday").build()?;
+    let mut group = Group::builder("Family holiday", Currency::EUR).build()?;
     let family = Family {
         ana: group.add_member(Member::builder("Ana").build()?)?,
         bob: group.add_member(Member::builder("Bob").build()?)?,
-        day: CalendarDate::new(14, 7, 2026)?,
         mia: group.add_member(Member::builder("Mia").build()?)?,
+        day: CalendarDate::new(2026, 7, 14)?,
     };
 
     println!("Family holiday: every way to split an expense");

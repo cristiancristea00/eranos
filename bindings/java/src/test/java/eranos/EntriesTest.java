@@ -25,9 +25,8 @@ class EntriesTest {
     private static Expense taxi(Flat flat) throws EranosException {
         Currency lei = Currency.of("RON");
         return Expense.builder(
-                        new Cost.Converted(new Money(lei, 5_000), ExchangeRate.parse("0.2")),
-                        flat.day,
                         "Taxi",
+                        new Cost.Converted(new Money(5_000, lei), ExchangeRate.parse("0.2")),
                         new Split.Percentages(
                                 List.of(
                                         new MemberPercentage(
@@ -36,6 +35,7 @@ class EntriesTest {
                                 List.of(
                                         new Item(
                                                 "Fare",
+                                                new Money(2_500, lei),
                                                 new Split.Parts(
                                                         List.of(
                                                                 new MemberParts(
@@ -44,12 +44,12 @@ class EntriesTest {
                                                                 new MemberParts(
                                                                         flat.bob,
                                                                         Parts.ofHundredths(50)))),
-                                                new Money(lei, 2_500),
-                                                2))))
+                                                2))),
+                        flat.day)
+                .tip(new Tip(new TipValue.Fixed(new Money(500, lei)), TipDistribution.EQUAL))
+                .time(TimeOfDay.of(9, 5))
                 .category(flat.food)
                 .description("To the airport")
-                .time(TimeOfDay.of(9, 5))
-                .tip(new Tip(new TipValue.Fixed(new Money(lei, 500)), TipDistribution.EQUAL))
                 .build();
     }
 
@@ -59,11 +59,11 @@ class EntriesTest {
      */
     private static Expense dinner(Flat flat) throws EranosException {
         return Expense.builder(
-                        new Cost.Local(flat.euros(3_000)),
-                        flat.day,
                         "Dinner",
-                        new Split.Amounts(List.of(new MemberAmount(flat.euros(3_300), flat.ana))),
-                        new ExpenseSplit.Whole(new Split.Equal(List.of(flat.ana, flat.bob))))
+                        new Cost.Local(flat.euros(3_000)),
+                        new Split.Amounts(List.of(new MemberAmount(flat.ana, flat.euros(3_300)))),
+                        new ExpenseSplit.Whole(new Split.Equal(List.of(flat.ana, flat.bob))),
+                        flat.day)
                 .tip(new Tip(new TipValue.Percentage(Percentage.ofBasisPoints(1_000))))
                 .build();
     }
@@ -80,15 +80,15 @@ class EntriesTest {
             ExpenseId id = flat.group.addExpense(expense);
             Expense stored = flat.group.expense(id).orElseThrow();
             assertEquals(Optional.of(id), stored.id());
-            assertEquals(expense.cost(), stored.cost());
-            assertEquals(expense.date(), stored.date());
             assertEquals(expense.name(), stored.name());
+            assertEquals(expense.cost(), stored.cost());
             assertEquals(expense.payers(), stored.payers());
             assertEquals(expense.split(), stored.split());
+            assertEquals(expense.date(), stored.date());
+            assertEquals(expense.tip(), stored.tip());
+            assertEquals(expense.time(), stored.time());
             assertEquals(expense.category(), stored.category());
             assertEquals(expense.description(), stored.description());
-            assertEquals(expense.time(), stored.time());
-            assertEquals(expense.tip(), stored.tip());
             assertValue(
                     stored, stored.toBuilder().build(), stored.toBuilder().name("Lunch").build());
         }
@@ -96,12 +96,12 @@ class EntriesTest {
         Expense edited =
                 plain.toBuilder()
                         .cost(new Cost.Local(flat.euros(1)))
-                        .date(CalendarDate.of(24, 9, 2026))
                         .payers(new Split.Equal(List.of(flat.bob)))
                         .split(new ExpenseSplit.Whole(new Split.Equal(List.of(flat.ana))))
+                        .date(CalendarDate.of(2026, 9, 24))
                         .build();
         assertEquals(new Cost.Local(flat.euros(1)), edited.cost());
-        assertEquals(CalendarDate.of(24, 9, 2026), edited.date());
+        assertEquals(CalendarDate.of(2026, 9, 24), edited.date());
         assertEquals(Optional.empty(), plain.toBuilder().category(null).build().category());
     }
 
@@ -114,8 +114,8 @@ class EntriesTest {
         Flat flat = new Flat();
         Currency lei = Currency.of("RON");
         Expense taxi = taxi(flat);
-        assertEquals(new Money(lei, 500), taxi.tipAmount());
-        assertEquals(new Money(lei, 5_500), taxi.total());
+        assertEquals(new Money(500, lei), taxi.tipAmount());
+        assertEquals(new Money(5_500, lei), taxi.total());
         assertEquals(List.of(flat.ana, flat.bob), taxi.members());
         assertEquals(flat.euros(300), dinner(flat).tipAmount());
         Expense unreadable =
@@ -132,11 +132,11 @@ class EntriesTest {
                 EranosException.Expense.class,
                 () ->
                         taxi.toBuilder()
-                                .tip(new Tip(new TipValue.Fixed(new Money(lei, -1))))
+                                .tip(new Tip(new TipValue.Fixed(new Money(-1, lei))))
                                 .build()
                                 .total());
         assertEquals(
-                List.of(TipDistribution.EQUAL, TipDistribution.PROPORTIONAL),
+                List.of(TipDistribution.PROPORTIONAL, TipDistribution.EQUAL),
                 List.of(TipDistribution.values()));
         for (TipDistribution distribution : TipDistribution.values()) {
             assertEquals(distribution, TipDistribution.converted(distribution.generated()));
@@ -151,40 +151,40 @@ class EntriesTest {
         Flat flat = new Flat();
         List<Split> splits =
                 List.of(
-                        new Split.Amounts(List.of(new MemberAmount(flat.euros(1), flat.bob))),
                         new Split.Equal(List.of(flat.bob, flat.ana)),
                         new Split.Parts(List.of(new MemberParts(flat.bob, Parts.ofHundredths(1)))),
                         new Split.Percentages(
                                 List.of(
                                         new MemberPercentage(
-                                                flat.ana, Percentage.ofBasisPoints(1)))));
+                                                flat.ana, Percentage.ofBasisPoints(1)))),
+                        new Split.Amounts(List.of(new MemberAmount(flat.bob, flat.euros(1)))));
         assertEquals(
                 List.of(
-                        List.of(flat.bob),
                         List.of(flat.bob, flat.ana),
                         List.of(flat.bob),
-                        List.of(flat.ana)),
+                        List.of(flat.ana),
+                        List.of(flat.bob)),
                 splits.stream().map(Split::members).toList());
         for (Split split : splits) {
             assertEquals(split, Conversions.converted(Conversions.generated(split)));
         }
         List<Cost> costs =
                 List.of(
-                        new Cost.Converted(flat.euros(1), ExchangeRate.parse("0.2")),
-                        new Cost.Local(flat.euros(2)));
+                        new Cost.Local(flat.euros(2)),
+                        new Cost.Converted(flat.euros(1), ExchangeRate.parse("0.2")));
         for (Cost cost : costs) {
             assertEquals(cost, Conversions.converted(Conversions.generated(cost)));
         }
         assertEquals(
-                List.of(flat.euros(1), flat.euros(2)), costs.stream().map(Cost::amount).toList());
+                List.of(flat.euros(2), flat.euros(1)), costs.stream().map(Cost::amount).toList());
         for (TipValue value :
                 List.<TipValue>of(
-                        new TipValue.Fixed(flat.euros(1)),
-                        new TipValue.Percentage(Percentage.ofBasisPoints(1)))) {
+                        new TipValue.Percentage(Percentage.ofBasisPoints(1)),
+                        new TipValue.Fixed(flat.euros(1)))) {
             assertEquals(value, Conversions.converted(Conversions.generated(value)));
         }
         assertEquals(
-                1, new Item("Bread", new Split.Equal(List.of(flat.bob)), flat.euros(1)).quantity());
+                1, new Item("Bread", flat.euros(1), new Split.Equal(List.of(flat.bob))).quantity());
         assertEquals(
                 TipDistribution.PROPORTIONAL,
                 new Tip(new TipValue.Fixed(flat.euros(1))).distribution());
@@ -200,57 +200,57 @@ class EntriesTest {
         List<Account> accounts =
                 List.of(
                         new Account(
-                                new AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")),
-                                "Main account"),
+                                "Main account",
+                                new AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000"))),
                         new Account(
-                                new AccountDetails.Username(Username.parse("carol.pays")),
-                                "Payment app"));
+                                "Payment app",
+                                new AccountDetails.Username(Username.parse("carol.pays"))));
         Member carol =
                 Member.builder("Carol")
-                        .accounts(accounts)
-                        .email(Email.parse("carol@example.com"))
                         .lastName("Popa")
+                        .email(Email.parse("carol@example.com"))
                         .phone(PhoneNumber.parse("+40712345678"))
+                        .accounts(accounts)
                         .build();
         assertEquals(carol, Member.converted(carol.generated()));
         MemberId id = flat.group.addMember(carol);
         Member stored = flat.group.member(id).orElseThrow();
         assertEquals(Optional.of(id), stored.id());
-        assertEquals(carol.accounts(), stored.accounts());
-        assertEquals(carol.email(), stored.email());
         assertEquals(carol.lastName(), stored.lastName());
+        assertEquals(carol.email(), stored.email());
         assertEquals(carol.phone(), stored.phone());
+        assertEquals(carol.accounts(), stored.accounts());
         assertValue(
                 stored,
                 stored.toBuilder().build(),
                 stored.toBuilder().firstName("Caroline").build());
-        Member plain = stored.toBuilder().email(null).lastName(null).phone(null).build();
-        assertEquals(Optional.empty(), plain.email());
+        Member plain = stored.toBuilder().lastName(null).email(null).phone(null).build();
         assertEquals(Optional.empty(), plain.lastName());
+        assertEquals(Optional.empty(), plain.email());
         assertEquals(Optional.empty(), plain.phone());
         assertEquals(List.of(), Member.builder("Dan").build().accounts());
 
         Currency lei = Currency.of("RON");
         Transfer cash =
                 Transfer.builder(
-                                new Cost.Converted(
-                                        new Money(lei, 1_000), ExchangeRate.parse("0.2")),
-                                flat.day,
                                 flat.bob,
-                                flat.ana)
-                        .note("Cash")
+                                flat.ana,
+                                new Cost.Converted(
+                                        new Money(1_000, lei), ExchangeRate.parse("0.2")),
+                                flat.day)
                         .time(TimeOfDay.of(10, 0))
+                        .note("Cash")
                         .build();
         assertEquals(cash, Transfer.converted(cash.generated()));
         TransferId payment = flat.group.addTransfer(cash);
         Transfer storedCash = flat.group.transfer(payment).orElseThrow();
         assertEquals(Optional.of(payment), storedCash.id());
-        assertEquals(cash.cost(), storedCash.cost());
-        assertEquals(cash.date(), storedCash.date());
         assertEquals(cash.from(), storedCash.from());
         assertEquals(cash.to(), storedCash.to());
-        assertEquals(Optional.of("Cash"), storedCash.note());
+        assertEquals(cash.cost(), storedCash.cost());
+        assertEquals(cash.date(), storedCash.date());
         assertEquals(Optional.of(TimeOfDay.of(10, 0)), storedCash.time());
+        assertEquals(Optional.of("Cash"), storedCash.note());
         assertEquals(Optional.of(flat.euros(200)), flat.group.transferAmount(payment));
         assertValue(
                 storedCash,
@@ -258,10 +258,10 @@ class EntriesTest {
                 storedCash.toBuilder().note(null).build());
         Transfer back =
                 storedCash.toBuilder()
-                        .cost(new Cost.Local(flat.euros(5)))
-                        .date(CalendarDate.of(24, 9, 2026))
                         .from(flat.ana)
                         .to(flat.bob)
+                        .cost(new Cost.Local(flat.euros(5)))
+                        .date(CalendarDate.of(2026, 9, 24))
                         .time(null)
                         .build();
         assertEquals(flat.ana, back.from());
@@ -299,8 +299,8 @@ class EntriesTest {
                 new ArrayList<>(
                         List.of(
                                 new Account(
-                                        new AccountDetails.Username(Username.parse("ana.pays")),
-                                        "Payment app")));
+                                        "Payment app",
+                                        new AccountDetails.Username(Username.parse("ana.pays")))));
         Member member = Member.builder("Ana").accounts(accounts).build();
         members.add(flat.bob);
         accounts.clear();

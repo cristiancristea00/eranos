@@ -40,7 +40,7 @@ public final class Main {
 
     /** An expense or a transfer as entered and in the group currency, a row of the entries. */
     private record EntryRow(
-            Money converted, String name, Money original, String payer, ExchangeRate rate)
+            String name, String payer, Money original, ExchangeRate rate, Money converted)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Entry", "Paid by", "Entered as", "Rate", "In the group currency");
@@ -53,7 +53,7 @@ public final class Main {
 
     /** A member's totals, a row of the balances' table. */
     private record BalanceRow(
-            Balance balance, Money consumed, String name, Money paid, Money received, Money sent)
+            String name, Money paid, Money consumed, Money sent, Money received, Balance balance)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Member", "Paid", "Consumed", "Sent", "Received", "Balance");
@@ -72,7 +72,7 @@ public final class Main {
 
     /** Every expense and transfer, as entered and in the group currency. */
     private static void printEntries(Group group) throws EranosException {
-        Money zero = new Money(group.currency(), 0);
+        Money zero = new Money(0, group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
             Optional<ExpenseShares> shares =
@@ -81,11 +81,11 @@ public final class Main {
                             : Optional.empty();
             rows.add(
                     new EntryRow(
-                            shares.map(ExpenseShares::total).orElse(zero),
                             expense.name(),
-                            expense.total(),
                             names(group, expense.payers().members()),
-                            rate(expense.cost())));
+                            expense.total(),
+                            rate(expense.cost()),
+                            shares.map(ExpenseShares::total).orElse(zero)));
         }
         for (Transfer transfer : group.transfers()) {
             Optional<Money> amount =
@@ -94,11 +94,11 @@ public final class Main {
                             : Optional.empty();
             rows.add(
                     new EntryRow(
-                            amount.orElse(zero),
                             "Transfer to " + names(group, List.of(transfer.to())),
-                            transfer.cost().amount(),
                             names(group, List.of(transfer.from())),
-                            rate(transfer.cost())));
+                            transfer.cost().amount(),
+                            rate(transfer.cost()),
+                            amount.orElse(zero)));
         }
         printTable(EntryRow.HEADERS, rows, 2);
     }
@@ -106,8 +106,8 @@ public final class Main {
     /** The rate {@code cost} was entered at: 1 for a cost in the group currency. */
     private static ExchangeRate rate(Cost cost) throws EranosException {
         return switch (cost) {
-            case Cost.Converted converted -> converted.rate();
             case Cost.Local _ -> ExchangeRate.parse("1");
+            case Cost.Converted converted -> converted.rate();
         };
     }
 
@@ -120,12 +120,12 @@ public final class Main {
                     totals ->
                             rows.add(
                                     new BalanceRow(
-                                            totals.balance(),
-                                            totals.share(),
                                             member.firstName(),
                                             totals.paid(),
+                                            totals.share(),
+                                            totals.sent(),
                                             totals.received(),
-                                            totals.sent())));
+                                            totals.balance())));
         }
         printTable(BalanceRow.HEADERS, rows, 1);
     }
@@ -135,31 +135,31 @@ public final class Main {
         ExpenseSplit both = new ExpenseSplit.Whole(new Split.Equal(List.of(ana, bob)));
         group.addExpense(
                 Expense.builder(
+                                "Fuel",
                                 new Cost.Converted(
                                         Money.parse("400.00", Currency.of("RON")),
                                         ExchangeRate.parse("0.2")),
-                                CalendarDate.of(1, 8, 2026),
-                                "Fuel",
                                 new Split.Equal(List.of(ana)),
-                                both)
+                                both,
+                                CalendarDate.of(2026, 8, 1))
                         .build());
         group.addExpense(
                 Expense.builder(
+                                "Dinner",
                                 new Cost.Converted(
                                         Money.parse("24000.00", Currency.of("HUF")),
                                         ExchangeRate.parse("0.0025")),
-                                CalendarDate.of(2, 8, 2026),
-                                "Dinner",
                                 new Split.Equal(List.of(bob)),
-                                both)
+                                both,
+                                CalendarDate.of(2026, 8, 2))
                         .build());
         group.addExpense(
                 Expense.builder(
-                                new Cost.Local(Money.parse("60.00", Currency.of("EUR"))),
-                                CalendarDate.of(3, 8, 2026),
                                 "Ferry",
+                                new Cost.Local(Money.parse("60.00", Currency.of("EUR"))),
                                 new Split.Equal(List.of(bob)),
-                                both)
+                                both,
+                                CalendarDate.of(2026, 8, 3))
                         .build());
         printEntries(group);
         System.out.print(
@@ -174,12 +174,12 @@ public final class Main {
         section("3. A repayment in cash, in another currency");
         group.addTransfer(
                 Transfer.builder(
+                                ana,
+                                bob,
                                 new Cost.Converted(
                                         Money.parse("100.00", Currency.of("RON")),
                                         ExchangeRate.parse("0.2")),
-                                CalendarDate.of(4, 8, 2026),
-                                ana,
-                                bob)
+                                CalendarDate.of(2026, 8, 4))
                         .note("Cash at the border")
                         .build());
         System.out.print(
@@ -220,7 +220,7 @@ public final class Main {
     public static void main(String[] arguments) throws EranosException {
         Currency euro = Currency.of("EUR");
         Currency leu = Currency.of("RON");
-        try (Group group = Group.builder(euro, "Danube road trip").build()) {
+        try (Group group = Group.builder("Danube road trip", euro).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
 

@@ -7,9 +7,6 @@ public sealed interface AccountFailure {
     /** An account whose name is blank. */
     record EmptyName() implements AccountFailure {}
 
-    /** A username that is blank. */
-    record EmptyUsername() implements AccountFailure {}
-
     /**
      * An IBAN that failed validation, and why.
      *
@@ -25,4 +22,7 @@ public sealed interface AccountFailure {
             Objects.requireNonNull(reason, "reason");
         }
     }
+
+    /** A username that is blank. */
+    record EmptyUsername() implements AccountFailure {}
 }

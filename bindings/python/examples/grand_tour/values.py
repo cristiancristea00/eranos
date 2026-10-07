@@ -31,14 +31,14 @@ class CurrencyRow(Row):
     code: str
     """The ISO 4217 code."""
 
-    decimal_places: int
-    """The digits of the minor unit."""
-
     name: str
     """The currency's English name."""
 
     numeric_code: int
     """The ISO 4217 number."""
+
+    decimal_places: int
+    """The digits of the minor unit."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -88,7 +88,7 @@ def _currencies() -> None:
     print_table(
         CurrencyRow,
         [
-            CurrencyRow(code=currency.code, decimal_places=currency.decimal_places, name=currency.name, numeric_code=currency.numeric_code)
+            CurrencyRow(code=currency.code, name=currency.name, numeric_code=currency.numeric_code, decimal_places=currency.decimal_places)
             for currency in listed
         ],
         2,
@@ -102,8 +102,8 @@ def _amounts() -> None:
     change = eur('5.00').minus(eur('7.50'))
     mixed = refusal(lambda: eur('1.00').plus(ron('1.00')))
     yen = Money.parse('1500', Currency('JPY'))
-    dinars = Money(Currency('BHD'), 1_234)
-    nothing = Money(Currency('RON'), 0)
+    dinars = Money(1_234, Currency('BHD'))
+    nothing = Money(0, Currency('RON'))
     cost = ConvertedCost(eur('10.00'), ExchangeRate('4.9765'))
     doubled = copy.replace(cost, amount=eur('20.00'))
     print_lines('Amounts are exact minor units in their currency:')
@@ -174,7 +174,7 @@ def _dates_and_identifiers(group: Group, people: People) -> None:
         ValueRow,
         [
             ValueRow(input='2026-10-01', result=f'{date}: day {date.day}, month {date.month}, year {date.year}'),
-            ValueRow(input='29 February 2027', result=message(refusal(lambda: CalendarDate(29, 2, 2027)))),
+            ValueRow(input='29 February 2027', result=message(refusal(lambda: CalendarDate(2027, 2, 29)))),
             ValueRow(input='22:15', result=f'{time}: hour {time.hour}, minute {time.minute}'),
             ValueRow(input='24:00', result=message(refusal(lambda: TimeOfDay(24, 0)))),
             ValueRow(

@@ -171,7 +171,7 @@ public extension Group {
     /// Removes the member with the identifier `id`, who appears in no entry, and returns them.
     ///
     /// - Throws: ``EranosError/group(_:detail:)`` with ``GroupFailure/unknownMember(_:)``, and
-    ///   ``GroupFailure/memberInUse(expenses:member:transfers:)`` with the entries that still name
+    ///   ``GroupFailure/memberInUse(member:expenses:transfers:)`` with the entries that still name
     ///   them; archive such a member instead; on wasm, ``EranosError/group(_:detail:)`` with
     ///   ``GroupFailure/busy`` while another call holds the lock.
     @discardableResult
@@ -185,7 +185,7 @@ public extension Group {
     /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/group(_:detail:)`` with ``GroupFailure/unknownMember(_:)``, and
-    ///   ``GroupFailure/memberInUse(expenses:member:transfers:)`` with the entries that still name
+    ///   ``GroupFailure/memberInUse(member:expenses:transfers:)`` with the entries that still name
     ///   them; archive such a member instead; ``EranosError/cancelled(detail:)`` when the task is
     ///   cancelled first.
     @discardableResult

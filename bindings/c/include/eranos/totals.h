@@ -32,33 +32,25 @@ typedef enum EranosSettlementStrategy EranosSettlementStrategy;
 /// The fewest payments while at most 20 balances are left after exact opposites pay each other, the greedy plan beyond; the settlement names the
 /// strategy whose plan it is.
 static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE = EranosSettlementStrategy_Adaptive;
-/// Every debt between two members, unsimplified.
-static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_DIRECT = EranosSettlementStrategy_Direct;
-/// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
-static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_GREEDY = EranosSettlementStrategy_Greedy;
 /// The fewest payments possible.
 static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS = EranosSettlementStrategy_MinimumTransfers;
+/// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
+static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_GREEDY = EranosSettlementStrategy_Greedy;
+/// Every debt between two members, unsimplified.
+static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_DIRECT = EranosSettlementStrategy_Direct;
 
 /// The kind of a balance. The values of EranosBalanceKind, by the names of the C layer.
 typedef enum EranosBalanceKind EranosBalanceKind;
 
-/// The others owe the member `amount`.
-static constexpr EranosBalanceKind ERANOS_BALANCE_KIND_GETS_BACK = EranosBalanceKind_GetsBack;
 /// The member owes the others `amount`.
 static constexpr EranosBalanceKind ERANOS_BALANCE_KIND_OWES = EranosBalanceKind_Owes;
 /// The member owes nothing and is owed nothing.
 static constexpr EranosBalanceKind ERANOS_BALANCE_KIND_SETTLED = EranosBalanceKind_Settled;
+/// The others owe the member `amount`.
+static constexpr EranosBalanceKind ERANOS_BALANCE_KIND_GETS_BACK = EranosBalanceKind_GetsBack;
 
 /// Where a member stands.
 typedef struct EranosBalance EranosBalance;
-
-/// The others owe the member `amount`.
-///
-/// @param amount What the others owe the member
-/// @return The balance, which the caller destroys
-[[nodiscard]] static inline EranosBalance *eranosBalanceCreateGetsBack(EranosMoney const *const amount) {
-    return EranosBalance_create_gets_back(amount);
-}
 
 /// The member owes the others `amount`.
 ///
@@ -70,6 +62,14 @@ typedef struct EranosBalance EranosBalance;
 ///
 /// @return The balance, which the caller destroys
 [[nodiscard]] static inline EranosBalance *eranosBalanceCreateSettled(void) { return EranosBalance_create_settled(); }
+
+/// The others owe the member `amount`.
+///
+/// @param amount What the others owe the member
+/// @return The balance, which the caller destroys
+[[nodiscard]] static inline EranosBalance *eranosBalanceCreateGetsBack(EranosMoney const *const amount) {
+    return EranosBalance_create_gets_back(amount);
+}
 
 /// Which kind of balance it is.
 ///
@@ -83,7 +83,7 @@ typedef struct EranosBalance EranosBalance;
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
 [[nodiscard]] static inline EranosMoney *eranosBalanceAmount(EranosBalance const *const balance) { return EranosBalance_amount(balance); }
 
-/// Writes the balance as the library does: "gets back 12.00 EUR", "owes 12.00 EUR", or "settled".
+/// Writes the balance as the library does: "owes 12.00 EUR", "settled", or "gets back 12.00 EUR".
 ///
 /// @param balance The balance
 /// @param text Receives the text, replacing what it held
@@ -184,20 +184,20 @@ typedef struct EranosExpenseShares EranosExpenseShares;
     return EranosExpenseShares_members(expenseShares);
 }
 
-/// The tip.
-///
-/// @param expenseShares The expense shares
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosExpenseSharesTip(EranosExpenseShares const *const expenseShares) {
-    return EranosExpenseShares_tip(expenseShares);
-}
-
 /// The amount with the tip.
 ///
 /// @param expenseShares The expense shares
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
 [[nodiscard]] static inline EranosMoney *eranosExpenseSharesTotal(EranosExpenseShares const *const expenseShares) {
     return EranosExpenseShares_total(expenseShares);
+}
+
+/// The tip.
+///
+/// @param expenseShares The expense shares
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosMoney *eranosExpenseSharesTip(EranosExpenseShares const *const expenseShares) {
+    return EranosExpenseShares_tip(expenseShares);
 }
 
 /// Destroys @p expenseShares; destroying nullptr does nothing, as free() does.
@@ -353,14 +353,6 @@ static inline void eranosMemberShareListDestroy(EranosMemberShareList *const lis
 /// Where a member stands: what they paid, consumed, sent, and received.
 typedef struct EranosMemberSummary EranosMemberSummary;
 
-/// Where the member stands.
-///
-/// @param memberSummary The member summary
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosBalance *eranosMemberSummaryBalance(EranosMemberSummary const *const memberSummary) {
-    return EranosMemberSummary_balance(memberSummary);
-}
-
 /// The member's identifier.
 ///
 /// @param memberSummary The member summary
@@ -371,14 +363,6 @@ static inline void eranosMemberSummaryMember(EranosMemberSummary const *const me
     eranosDetailFinish(member);
 }
 
-/// What the member is owed, less what they owe: positive when they get money back.
-///
-/// @param memberSummary The member summary
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosMemberSummaryNet(EranosMemberSummary const *const memberSummary) {
-    return EranosMemberSummary_net(memberSummary);
-}
-
 /// What the member paid for expenses.
 ///
 /// @param memberSummary The member summary
@@ -387,12 +371,12 @@ static inline void eranosMemberSummaryMember(EranosMemberSummary const *const me
     return EranosMemberSummary_paid(memberSummary);
 }
 
-/// What the member received in transfers.
+/// The member's share of the expenses: what they consumed.
 ///
 /// @param memberSummary The member summary
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosMemberSummaryReceived(EranosMemberSummary const *const memberSummary) {
-    return EranosMemberSummary_received(memberSummary);
+[[nodiscard]] static inline EranosMoney *eranosMemberSummaryShare(EranosMemberSummary const *const memberSummary) {
+    return EranosMemberSummary_share(memberSummary);
 }
 
 /// What the member sent in transfers.
@@ -403,12 +387,28 @@ static inline void eranosMemberSummaryMember(EranosMemberSummary const *const me
     return EranosMemberSummary_sent(memberSummary);
 }
 
-/// The member's share of the expenses: what they consumed.
+/// What the member received in transfers.
 ///
 /// @param memberSummary The member summary
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosMemberSummaryShare(EranosMemberSummary const *const memberSummary) {
-    return EranosMemberSummary_share(memberSummary);
+[[nodiscard]] static inline EranosMoney *eranosMemberSummaryReceived(EranosMemberSummary const *const memberSummary) {
+    return EranosMemberSummary_received(memberSummary);
+}
+
+/// What the member is owed, less what they owe: positive when they get money back.
+///
+/// @param memberSummary The member summary
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosMoney *eranosMemberSummaryNet(EranosMemberSummary const *const memberSummary) {
+    return EranosMemberSummary_net(memberSummary);
+}
+
+/// Where the member stands.
+///
+/// @param memberSummary The member summary
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosBalance *eranosMemberSummaryBalance(EranosMemberSummary const *const memberSummary) {
+    return EranosMemberSummary_balance(memberSummary);
 }
 
 /// Destroys @p memberSummary; destroying nullptr does nothing, as free() does.
@@ -460,12 +460,6 @@ static inline void eranosMemberSummaryListDestroy(EranosMemberSummaryList *const
 /// A payment of a settlement.
 typedef struct EranosPayment EranosPayment;
 
-/// What is paid.
-///
-/// @param payment The payment
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosPaymentAmount(EranosPayment const *const payment) { return EranosPayment_amount(payment); }
-
 /// The identifier of the member who pays.
 ///
 /// @param payment The payment
@@ -485,6 +479,12 @@ static inline void eranosPaymentTo(EranosPayment const *const payment, EranosTex
     EranosPayment_to(payment, to);
     eranosDetailFinish(to);
 }
+
+/// What is paid.
+///
+/// @param payment The payment
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosMoney *eranosPaymentAmount(EranosPayment const *const payment) { return EranosPayment_amount(payment); }
 
 /// Destroys @p payment; destroying nullptr does nothing, as free() does.
 ///
@@ -559,6 +559,20 @@ static inline void eranosSettlementDestroy(EranosSettlement *const settlement) {
 /// The group's totals.
 typedef struct EranosSummary EranosSummary;
 
+/// What the expenses add up to.
+///
+/// @param summary The summary
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosMoney *eranosSummaryTotalSpent(EranosSummary const *const summary) { return EranosSummary_total_spent(summary); }
+
+/// Where every member stands.
+///
+/// @param summary The summary
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosMemberSummaryList *eranosSummaryMembers(EranosSummary const *const summary) {
+    return EranosSummary_members(summary);
+}
+
 /// The total of every category.
 ///
 /// @param summary The summary
@@ -574,20 +588,6 @@ typedef struct EranosSummary EranosSummary;
 [[nodiscard]] static inline EranosMemberCategoryTotalsList *eranosSummaryMemberCategoryTotals(EranosSummary const *const summary) {
     return EranosSummary_member_category_totals(summary);
 }
-
-/// Where every member stands.
-///
-/// @param summary The summary
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMemberSummaryList *eranosSummaryMembers(EranosSummary const *const summary) {
-    return EranosSummary_members(summary);
-}
-
-/// What the expenses add up to.
-///
-/// @param summary The summary
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosSummaryTotalSpent(EranosSummary const *const summary) { return EranosSummary_total_spent(summary); }
 
 /// Destroys @p summary; destroying nullptr does nothing, as free() does.
 ///

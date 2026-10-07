@@ -54,15 +54,15 @@ using AccountDetails = std::variant<IbanAccountDetails, UsernameAccountDetails>;
 struct Account final {
     /// The record of its fields.
     ///
-    /// @param details The IBAN or the username.
     /// @param name The label.
-    Account(AccountDetails details, std::string name) noexcept : details(std::move(details)), name(std::move(name)) {}
-
-    /// The IBAN or the username.
-    AccountDetails details;
+    /// @param details The IBAN or the username.
+    Account(std::string name, AccountDetails details) noexcept : name(std::move(name)), details(std::move(details)) {}
 
     /// The label.
     std::string name;
+
+    /// The IBAN or the username.
+    AccountDetails details;
 
     /// Whether every field of two records is equal.
     ///
@@ -85,17 +85,17 @@ struct Member final {
     /// The first name.
     std::string firstName;
 
-    /// Where the member can be paid, in the order they were given.
-    std::vector<Account> accounts;
+    /// The last name.
+    std::optional<std::string> lastName;
 
     /// The email address.
     std::optional<Email> email;
 
-    /// The last name.
-    std::optional<std::string> lastName;
-
     /// The phone number.
     std::optional<PhoneNumber> phone;
+
+    /// Where the member can be paid, in the order they were given.
+    std::vector<Account> accounts;
 
     /// Whether every field of two records is equal.
     ///

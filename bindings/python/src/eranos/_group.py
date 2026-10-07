@@ -54,7 +54,7 @@ class Group:
     group's lock; its twin, whose name ends in ``_async``, is a coroutine that waits for the lock without blocking the
     event loop, and cancelling its task cancels the call, which leaves the group as it was::
 
-        group = Group.create(Currency('EUR'), 'Flat')
+        group = Group.create('Flat', Currency('EUR'))
         ana = group.add_member(Member(first_name='Ana'))
         bob = await group.add_member_async(Member(first_name='Bob'))
 
@@ -75,15 +75,15 @@ class Group:
         self._handle: generated.Group | None = handle
 
     @classmethod
-    def create(cls, currency: Currency, name: str, *, description: str | None = None, language: Language | None = None) -> Self:
+    def create(cls, name: str, currency: Currency, *, description: str | None = None, language: Language | None = None) -> Self:
         """
         Make a group with no members and no entries, called name, whose totals are in currency.
 
         The library refuses a blank name with ``GroupError.EmptyName``, in a ``GroupError``.
 
         Args:
-            currency: The group currency.
             name: The name.
+            currency: The group currency.
             description: A longer description, or none.
             language: The language the apps show the group in, or none.
 
@@ -91,7 +91,7 @@ class Group:
             The group.
 
         """
-        details = generated.NewGroup(currency=currency.code, name=name, description=description, language=None if language is None else str(language))
+        details = generated.NewGroup(name=name, currency=currency.code, description=description, language=None if language is None else str(language))
         with library_errors():
             return cls(generated.Group(details))
 

@@ -8,11 +8,11 @@ public enum AccountFailure: Sendable, Hashable {
     /// An account whose name is blank.
     case emptyName
 
-    /// A username that is blank.
-    case emptyUsername
-
     /// An IBAN that failed validation, and why.
     case invalidIBAN(IBANReason)
+
+    /// A username that is blank.
+    case emptyUsername
 }
 
 extension AccountFailure {
@@ -20,10 +20,10 @@ extension AccountFailure {
         switch failure {
         case .emptyName:
             self = .emptyName
-        case .emptyUsername:
-            self = .emptyUsername
         case let .invalidIban(reason):
             self = .invalidIBAN(IBANReason(reason))
+        case .emptyUsername:
+            self = .emptyUsername
         }
     }
 }
@@ -87,94 +87,115 @@ extension ContactFailure {
 
 /// What the library's `ExpenseError` reports: a case per failure, with what it holds.
 public enum ExpenseFailure: Sendable, Hashable {
-    /// The amounts of a split do not add up to the amount being split.
-    case amountsDoNotAddUp(actual: Money, expected: Money)
-
-    /// An amount inside the expense is in a different currency.
-    case currencyMismatch(expected: Currency, found: Currency)
-
-    /// A member appears more than once in one split.
-    case duplicateMember(Member.ID)
-
-    /// An item whose name is blank.
-    case emptyItemName
-
     /// An expense whose name is blank.
     case emptyName
-
-    /// A split lists no member.
-    case emptySplit
-
-    /// The item line totals do not add up to the expense amount.
-    case itemsDoNotAddUp(actual: Money, expected: Money)
-
-    /// A fixed tip below zero.
-    case negativeTip
-
-    /// An itemised expense without items.
-    case noItems
 
     /// The amount or unit price is zero or negative.
     case nonPositiveAmount
 
+    /// An amount inside the expense is in a different currency.
+    case currencyMismatch(expected: Currency, found: Currency)
+
+    /// A split lists no member.
+    case emptySplit
+
+    /// A member appears more than once in one split.
+    case duplicateMember(Member.ID)
+
     /// A member's percentage or amount is zero or negative.
     case nonPositiveShare(Member.ID)
 
-    /// A total that does not fit the range of an amount.
-    case overflow
+    /// The amounts of a split do not add up to the amount being split.
+    case amountsDoNotAddUp(expected: Money, actual: Money)
 
     /// The percentages of a split do not add up to exactly 100 %.
     case percentagesDoNotAddUp(totalBasisPoints: Int)
 
+    /// An itemised expense without items.
+    case noItems
+
+    /// An item whose name is blank.
+    case emptyItemName
+
     /// An item quantity of zero.
     case zeroQuantity
+
+    /// The item line totals do not add up to the expense amount.
+    case itemsDoNotAddUp(expected: Money, actual: Money)
+
+    /// A fixed tip below zero.
+    case negativeTip
+
+    /// A total that does not fit the range of an amount.
+    case overflow
 }
 
 extension ExpenseFailure {
     init(_ failure: EranosGenerated.ExpenseFailure) {
         switch failure {
-        case let .amountsDoNotAddUp(actual, expected):
-            self = .amountsDoNotAddUp(actual: Money(actual), expected: Money(expected))
-        case let .currencyMismatch(expected, found):
-            self = .currencyMismatch(expected: Currency(known: expected), found: Currency(known: found))
-        case let .duplicateMember(member):
-            self = .duplicateMember(Member.ID(rawValue: member))
-        case .emptyItemName:
-            self = .emptyItemName
         case .emptyName:
             self = .emptyName
-        case .emptySplit:
-            self = .emptySplit
-        case let .itemsDoNotAddUp(actual, expected):
-            self = .itemsDoNotAddUp(actual: Money(actual), expected: Money(expected))
-        case .negativeTip:
-            self = .negativeTip
-        case .noItems:
-            self = .noItems
         case .nonPositiveAmount:
             self = .nonPositiveAmount
+        case let .currencyMismatch(expected, found):
+            self = .currencyMismatch(expected: Currency(known: expected), found: Currency(known: found))
+        case .emptySplit:
+            self = .emptySplit
+        case let .duplicateMember(member):
+            self = .duplicateMember(Member.ID(rawValue: member))
         case let .nonPositiveShare(member):
             self = .nonPositiveShare(Member.ID(rawValue: member))
-        case .overflow:
-            self = .overflow
+        case let .amountsDoNotAddUp(expected, actual):
+            self = .amountsDoNotAddUp(expected: Money(expected), actual: Money(actual))
         case let .percentagesDoNotAddUp(totalBasisPoints):
             self = .percentagesDoNotAddUp(totalBasisPoints: Int(totalBasisPoints))
+        case .noItems:
+            self = .noItems
+        case .emptyItemName:
+            self = .emptyItemName
         case .zeroQuantity:
             self = .zeroQuantity
+        case let .itemsDoNotAddUp(expected, actual):
+            self = .itemsDoNotAddUp(expected: Money(expected), actual: Money(actual))
+        case .negativeTip:
+            self = .negativeTip
+        case .overflow:
+            self = .overflow
         }
     }
 }
 
 /// What the library's `GroupError` reports: a case per failure, with what it holds.
 public enum GroupFailure: Sendable, Hashable {
+    /// A saved group in a format this version does not read: a newer one, whose fields it would
+    /// drop, or an earlier one.
+    case unsupportedFormat(format: Int)
+
+    /// A group name that is blank.
+    case emptyName
+
+    /// An entry in another currency than the group's has no exchange rate into the group currency:
+    /// its cost is local, or a currency change gave no rate for its currency.
+    case missingExchangeRate(Currency)
+
+    /// An entry in the group currency has a converted cost; only a local cost is in the group
+    /// currency.
+    case unexpectedExchangeRate
+
+    /// The same currency appears twice among the rates of a currency change.
+    case duplicateExchangeRate(Currency)
+
+    /// A member with this ID already exists.
+    case duplicateMember(Member.ID)
+
+    /// No member with this ID.
+    case unknownMember(Member.ID)
+
     /// An archived member cannot join a new expense.
     case archivedMember(Member.ID)
 
-    /// The built-in Uncategorised category cannot be renamed or removed.
-    case builtInCategory
-
-    /// A shared group's lock was asked for without waiting, while another call held it.
-    case busy
+    /// The member is still referenced and cannot be removed; archive it instead.
+    case memberInUse(member: Member.ID, expenses: [Expense.ID], transfers: [Transfer.ID])
 
     /// A category with this ID already exists.
     case duplicateCategory(Category.ID)
@@ -182,93 +203,72 @@ public enum GroupFailure: Sendable, Hashable {
     /// Another category already has this name, compared by Unicode canonical caseless matching.
     case duplicateCategoryName(Category.ID)
 
-    /// The same currency appears twice among the rates of a currency change.
-    case duplicateExchangeRate(Currency)
+    /// No category with this ID.
+    case unknownCategory(Category.ID)
+
+    /// The built-in Uncategorised category cannot be renamed or removed.
+    case builtInCategory
 
     /// An expense with this ID already exists.
     case duplicateExpense(Expense.ID)
 
-    /// A member with this ID already exists.
-    case duplicateMember(Member.ID)
+    /// No expense with this ID.
+    case unknownExpense(Expense.ID)
 
     /// A transfer with this ID already exists.
     case duplicateTransfer(Transfer.ID)
 
-    /// A group name that is blank.
-    case emptyName
-
-    /// The member is still referenced and cannot be removed; archive it instead.
-    case memberInUse(expenses: [Expense.ID], member: Member.ID, transfers: [Transfer.ID])
-
-    /// An entry in another currency than the group's has no exchange rate into the group currency:
-    /// its cost is local, or a currency change gave no rate for its currency.
-    case missingExchangeRate(Currency)
-
-    /// A total would leave the range of an amount.
-    case overflow
-
-    /// An entry in the group currency has a converted cost; only a local cost is in the group
-    /// currency.
-    case unexpectedExchangeRate
-
-    /// No category with this ID.
-    case unknownCategory(Category.ID)
-
-    /// No expense with this ID.
-    case unknownExpense(Expense.ID)
-
-    /// No member with this ID.
-    case unknownMember(Member.ID)
-
     /// No transfer with this ID.
     case unknownTransfer(Transfer.ID)
 
-    /// A saved group in a format this version does not read: a newer one, whose fields it would
-    /// drop, or an earlier one.
-    case unsupportedFormat(format: Int)
+    /// A shared group's lock was asked for without waiting, while another call held it.
+    case busy
+
+    /// A total would leave the range of an amount.
+    case overflow
 }
 
 extension GroupFailure {
     init(_ failure: EranosGenerated.GroupFailure) {
         switch failure {
+        case let .unsupportedFormat(format):
+            self = .unsupportedFormat(format: Int(format))
+        case .emptyName:
+            self = .emptyName
+        case let .missingExchangeRate(currency):
+            self = .missingExchangeRate(Currency(known: currency))
+        case .unexpectedExchangeRate:
+            self = .unexpectedExchangeRate
+        case let .duplicateExchangeRate(currency):
+            self = .duplicateExchangeRate(Currency(known: currency))
+        case let .duplicateMember(member):
+            self = .duplicateMember(Member.ID(rawValue: member))
+        case let .unknownMember(member):
+            self = .unknownMember(Member.ID(rawValue: member))
         case let .archivedMember(member):
             self = .archivedMember(Member.ID(rawValue: member))
-        case .builtInCategory:
-            self = .builtInCategory
-        case .busy:
-            self = .busy
+        case let .memberInUse(member, expenses, transfers):
+            self = .memberInUse(member: Member.ID(rawValue: member), expenses: expenses.map { Expense.ID(rawValue: $0) }, transfers: transfers.map { Transfer.ID(rawValue: $0) })
         case let .duplicateCategory(category):
             self = .duplicateCategory(Category.ID(rawValue: category))
         case let .duplicateCategoryName(existing):
             self = .duplicateCategoryName(Category.ID(rawValue: existing))
-        case let .duplicateExchangeRate(currency):
-            self = .duplicateExchangeRate(Currency(known: currency))
-        case let .duplicateExpense(expense):
-            self = .duplicateExpense(Expense.ID(rawValue: expense))
-        case let .duplicateMember(member):
-            self = .duplicateMember(Member.ID(rawValue: member))
-        case let .duplicateTransfer(transfer):
-            self = .duplicateTransfer(Transfer.ID(rawValue: transfer))
-        case .emptyName:
-            self = .emptyName
-        case let .memberInUse(expenses, member, transfers):
-            self = .memberInUse(expenses: expenses.map { Expense.ID(rawValue: $0) }, member: Member.ID(rawValue: member), transfers: transfers.map { Transfer.ID(rawValue: $0) })
-        case let .missingExchangeRate(currency):
-            self = .missingExchangeRate(Currency(known: currency))
-        case .overflow:
-            self = .overflow
-        case .unexpectedExchangeRate:
-            self = .unexpectedExchangeRate
         case let .unknownCategory(category):
             self = .unknownCategory(Category.ID(rawValue: category))
+        case .builtInCategory:
+            self = .builtInCategory
+        case let .duplicateExpense(expense):
+            self = .duplicateExpense(Expense.ID(rawValue: expense))
         case let .unknownExpense(expense):
             self = .unknownExpense(Expense.ID(rawValue: expense))
-        case let .unknownMember(member):
-            self = .unknownMember(Member.ID(rawValue: member))
+        case let .duplicateTransfer(transfer):
+            self = .duplicateTransfer(Transfer.ID(rawValue: transfer))
         case let .unknownTransfer(transfer):
             self = .unknownTransfer(Transfer.ID(rawValue: transfer))
-        case let .unsupportedFormat(format):
-            self = .unsupportedFormat(format: Int(format))
+        case .busy:
+            self = .busy
+        case .overflow:
+            self = .overflow
         }
     }
 }
@@ -320,11 +320,17 @@ extension MemberFailure {
 
 /// What the library's `MoneyError` reports: a case per failure, with what it holds.
 public enum MoneyFailure: Sendable, Hashable {
+    /// An amount that is not a decimal number.
+    case invalidAmount
+
+    /// An amount with more decimal places than its currency has.
+    case tooManyDecimals(currency: Currency, allowed: Int)
+
     /// Arithmetic between amounts of two different currencies.
     case currencyMismatch(left: Currency, right: Currency)
 
-    /// An amount that is not a decimal number.
-    case invalidAmount
+    /// A currency code that is not an active ISO 4217 code.
+    case unknownCurrency
 
     /// An exchange rate that is not a positive decimal number with at most 18 decimal places.
     case invalidExchangeRate
@@ -337,21 +343,19 @@ public enum MoneyFailure: Sendable, Hashable {
 
     /// A number or a result that does not fit its range.
     case overflow
-
-    /// An amount with more decimal places than its currency has.
-    case tooManyDecimals(allowed: Int, currency: Currency)
-
-    /// A currency code that is not an active ISO 4217 code.
-    case unknownCurrency
 }
 
 extension MoneyFailure {
     init(_ failure: EranosGenerated.MoneyFailure) {
         switch failure {
-        case let .currencyMismatch(left, right):
-            self = .currencyMismatch(left: Currency(known: left), right: Currency(known: right))
         case .invalidAmount:
             self = .invalidAmount
+        case let .tooManyDecimals(currency, allowed):
+            self = .tooManyDecimals(currency: Currency(known: currency), allowed: Int(allowed))
+        case let .currencyMismatch(left, right):
+            self = .currencyMismatch(left: Currency(known: left), right: Currency(known: right))
+        case .unknownCurrency:
+            self = .unknownCurrency
         case .invalidExchangeRate:
             self = .invalidExchangeRate
         case .invalidParts:
@@ -360,10 +364,6 @@ extension MoneyFailure {
             self = .invalidPercentage
         case .overflow:
             self = .overflow
-        case let .tooManyDecimals(allowed, currency):
-            self = .tooManyDecimals(allowed: Int(allowed), currency: Currency(known: currency))
-        case .unknownCurrency:
-            self = .unknownCurrency
         }
     }
 }
@@ -386,20 +386,20 @@ extension SettlementFailure {
 
 /// What the library's `TransferError` reports: a case per failure, with what it holds.
 public enum TransferFailure: Sendable, Hashable {
-    /// The amount is zero or negative.
-    case nonPositiveAmount
-
     /// The sender and the recipient are the same member.
     case sameMember
+
+    /// The amount is zero or negative.
+    case nonPositiveAmount
 }
 
 extension TransferFailure {
     init(_ failure: EranosGenerated.TransferFailure) {
         switch failure {
-        case .nonPositiveAmount:
-            self = .nonPositiveAmount
         case .sameMember:
             self = .sameMember
+        case .nonPositiveAmount:
+            self = .nonPositiveAmount
         }
     }
 }
@@ -409,22 +409,22 @@ public enum IBANReason: Sendable, Hashable {
     /// A character other than an ASCII letter, a digit, or whitespace (which is dropped).
     case invalidCharacter
 
-    /// The check digits are 00, 01, or 99, which ISO 13616 never issues, or the ISO 7064 mod-97
-    /// check failed: the number contains a typo.
-    case invalidChecksum
-
     /// Not two letters followed by two check digits.
     case invalidFormat
-
-    /// A letter where the country's account number has a digit, or a digit where it has a letter,
-    /// by the BBAN structure of the SWIFT IBAN registry.
-    case invalidStructure
 
     /// A country code without an entry in the SWIFT IBAN registry.
     case unknownCountry
 
     /// The wrong number of characters for the country.
     case wrongLength(expected: Int, found: Int)
+
+    /// A letter where the country's account number has a digit, or a digit where it has a letter,
+    /// by the BBAN structure of the SWIFT IBAN registry.
+    case invalidStructure
+
+    /// The check digits are 00, 01, or 99, which ISO 13616 never issues, or the ISO 7064 mod-97
+    /// check failed: the number contains a typo.
+    case invalidChecksum
 }
 
 extension IBANReason {
@@ -432,16 +432,16 @@ extension IBANReason {
         switch reason {
         case .invalidCharacter:
             self = .invalidCharacter
-        case .invalidChecksum:
-            self = .invalidChecksum
         case .invalidFormat:
             self = .invalidFormat
-        case .invalidStructure:
-            self = .invalidStructure
         case .unknownCountry:
             self = .unknownCountry
         case let .wrongLength(expected, found):
             self = .wrongLength(expected: Int(expected), found: Int(found))
+        case .invalidStructure:
+            self = .invalidStructure
+        case .invalidChecksum:
+            self = .invalidChecksum
         }
     }
 }

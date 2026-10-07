@@ -12,34 +12,34 @@ import java.util.Optional;
  */
 public final class Transfer {
     private final TransferId id;
-    private final Cost cost;
-    private final CalendarDate date;
     private final MemberId from;
     private final MemberId to;
-    private final String note;
+    private final Cost cost;
+    private final CalendarDate date;
     private final TimeOfDay time;
+    private final String note;
 
     private Transfer(Builder builder) {
         id = builder.id;
-        cost = builder.cost;
-        date = builder.date;
         from = builder.from;
         to = builder.to;
-        note = builder.note;
+        cost = builder.cost;
+        date = builder.date;
         time = builder.time;
+        note = builder.note;
     }
 
     /**
      * A builder of a transfer to add, of {@code cost} on {@code date}, from one member to another.
      *
-     * @param cost what was paid
-     * @param date the day it was paid
      * @param from the member who paid
      * @param to the member who was paid
+     * @param cost what was paid
+     * @param date the day it was paid
      * @return the builder
      */
-    public static Builder builder(Cost cost, CalendarDate date, MemberId from, MemberId to) {
-        return new Builder(null, cost, date, from, to);
+    public static Builder builder(MemberId from, MemberId to, Cost cost, CalendarDate date) {
+        return new Builder(null, from, to, cost, date);
     }
 
     /**
@@ -49,7 +49,7 @@ public final class Transfer {
      * @return the builder
      */
     public Builder toBuilder() {
-        return new Builder(id, cost, date, from, to).note(note).time(time);
+        return new Builder(id, from, to, cost, date).time(time).note(note);
     }
 
     /**
@@ -61,12 +61,12 @@ public final class Transfer {
     static Transfer converted(eranos.internal.Transfer transfer) {
         return new Builder(
                         null == transfer.id() ? null : new TransferId(transfer.id()),
-                        Conversions.converted(transfer.cost()),
-                        CalendarDate.converted(transfer.date()),
                         new MemberId(transfer.from()),
-                        new MemberId(transfer.to()))
-                .note(transfer.note())
+                        new MemberId(transfer.to()),
+                        Conversions.converted(transfer.cost()),
+                        CalendarDate.converted(transfer.date()))
                 .time(null == transfer.time() ? null : TimeOfDay.converted(transfer.time()))
+                .note(transfer.note())
                 .build();
     }
 
@@ -78,12 +78,12 @@ public final class Transfer {
     eranos.internal.Transfer generated() {
         return new eranos.internal.Transfer(
                 null == id ? null : id.value(),
-                Conversions.generated(cost),
-                date.generated(),
                 from.value(),
                 to.value(),
-                note,
-                null == time ? null : time.generated());
+                Conversions.generated(cost),
+                date.generated(),
+                null == time ? null : time.generated(),
+                note);
     }
 
     /**
@@ -93,24 +93,6 @@ public final class Transfer {
      */
     public Optional<TransferId> id() {
         return Optional.ofNullable(id);
-    }
-
-    /**
-     * What was paid.
-     *
-     * @return the cost
-     */
-    public Cost cost() {
-        return cost;
-    }
-
-    /**
-     * The day it was paid.
-     *
-     * @return the date
-     */
-    public CalendarDate date() {
-        return date;
     }
 
     /**
@@ -132,12 +114,21 @@ public final class Transfer {
     }
 
     /**
-     * A note on the transfer.
+     * What was paid.
      *
-     * @return the note, if the transfer has one
+     * @return the cost
      */
-    public Optional<String> note() {
-        return Optional.ofNullable(note);
+    public Cost cost() {
+        return cost;
+    }
+
+    /**
+     * The day it was paid.
+     *
+     * @return the date
+     */
+    public CalendarDate date() {
+        return date;
     }
 
     /**
@@ -149,77 +140,64 @@ public final class Transfer {
         return Optional.ofNullable(time);
     }
 
+    /**
+     * A note on the transfer.
+     *
+     * @return the note, if the transfer has one
+     */
+    public Optional<String> note() {
+        return Optional.ofNullable(note);
+    }
+
     @Override
     public boolean equals(Object other) {
         return other instanceof Transfer transfer
                 && Objects.equals(id, transfer.id)
-                && cost.equals(transfer.cost)
-                && date.equals(transfer.date)
                 && from.equals(transfer.from)
                 && to.equals(transfer.to)
-                && Objects.equals(note, transfer.note)
-                && Objects.equals(time, transfer.time);
+                && cost.equals(transfer.cost)
+                && date.equals(transfer.date)
+                && Objects.equals(time, transfer.time)
+                && Objects.equals(note, transfer.note);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, cost, date, from, to, note, time);
+        return Objects.hash(id, from, to, cost, date, time, note);
     }
 
     @Override
     public String toString() {
         return "Transfer[id="
                 + id
-                + ", cost="
-                + cost
-                + ", date="
-                + date
                 + ", from="
                 + from
                 + ", to="
                 + to
-                + ", note="
-                + note
+                + ", cost="
+                + cost
+                + ", date="
+                + date
                 + ", time="
                 + time
+                + ", note="
+                + note
                 + "]";
     }
 
     /** A builder of a transfer, whose every setter replaces what was set before. */
     public static final class Builder {
         private final TransferId id;
-        private Cost cost;
-        private CalendarDate date;
         private MemberId from;
         private MemberId to;
-        private String note;
+        private Cost cost;
+        private CalendarDate date;
         private TimeOfDay time;
+        private String note;
 
-        private Builder(TransferId id, Cost cost, CalendarDate date, MemberId from, MemberId to) {
+        private Builder(TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate date) {
             this.id = id;
-            cost(cost).date(date).from(from).to(to);
-        }
-
-        /**
-         * Sets what was paid.
-         *
-         * @param cost the cost
-         * @return this builder
-         */
-        public Builder cost(Cost cost) {
-            this.cost = Objects.requireNonNull(cost, "cost");
-            return this;
-        }
-
-        /**
-         * Sets the day it was paid.
-         *
-         * @param date the date
-         * @return this builder
-         */
-        public Builder date(CalendarDate date) {
-            this.date = Objects.requireNonNull(date, "date");
-            return this;
+            from(from).to(to).cost(cost).date(date);
         }
 
         /**
@@ -245,13 +223,24 @@ public final class Transfer {
         }
 
         /**
-         * Sets the note; {@code null} leaves the transfer without one.
+         * Sets what was paid.
          *
-         * @param note the note, or {@code null}
+         * @param cost the cost
          * @return this builder
          */
-        public Builder note(String note) {
-            this.note = note;
+        public Builder cost(Cost cost) {
+            this.cost = Objects.requireNonNull(cost, "cost");
+            return this;
+        }
+
+        /**
+         * Sets the day it was paid.
+         *
+         * @param date the date
+         * @return this builder
+         */
+        public Builder date(CalendarDate date) {
+            this.date = Objects.requireNonNull(date, "date");
             return this;
         }
 
@@ -263,6 +252,17 @@ public final class Transfer {
          */
         public Builder time(TimeOfDay time) {
             this.time = time;
+            return this;
+        }
+
+        /**
+         * Sets the note; {@code null} leaves the transfer without one.
+         *
+         * @param note the note, or {@code null}
+         * @return this builder
+         */
+        public Builder note(String note) {
+            this.note = note;
             return this;
         }
 

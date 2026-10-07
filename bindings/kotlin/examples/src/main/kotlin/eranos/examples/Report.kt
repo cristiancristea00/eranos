@@ -19,8 +19,8 @@ fun section(title: String) {
 }
 
 /**
- * A row of a report's table. Its type declares the fields alphabetically, as the Rust example's row does, and names the
- * columns once, in a `HEADERS` constant of its companion object, in the order [cells] lists them.
+ * A row of a report's table. Its type declares the fields in the order of its columns, as the Rust example's row does, and
+ * names the columns once, in a `HEADERS` constant of its companion object, in the order [cells] lists them.
  */
 interface Row {
     /** The text of each cell, from the first column to the last. */
@@ -69,8 +69,8 @@ fun names(
 fun participants(split: ExpenseSplit): List<MemberId> {
     val members =
         when (split) {
-            is ExpenseSplit.Itemised -> split.items.flatMap { item -> item.split.members }
             is ExpenseSplit.Whole -> split.split.members
+            is ExpenseSplit.Itemised -> split.items.flatMap { item -> item.split.members }
         }
     return members.distinct().sortedBy { member -> member.value }
 }

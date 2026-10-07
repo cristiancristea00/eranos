@@ -22,11 +22,11 @@ import { type Columns, load, names, printLines, printTable, refusal, section, ti
 
 /** A line of the receipt, as the table of the receipt prints it. */
 interface LineRow {
-    readonly lineTotal: Money;
     readonly name: string;
     readonly participants: string;
     readonly quantity: number;
     readonly unitPrice: Money;
+    readonly lineTotal: Money;
 }
 
 const lineColumns: Columns<LineRow> = [
@@ -39,12 +39,12 @@ const lineColumns: Columns<LineRow> = [
 
 /** What a member ordered and pays with each way of sharing the tip, as the table of tips prints it. */
 interface TipRow {
-    readonly equalTip: Money;
-    readonly equalTotal: Money;
     readonly name: string;
+    readonly subtotal: Money;
     readonly proportionalTip: Money;
     readonly proportionalTotal: Money;
-    readonly subtotal: Money;
+    readonly equalTip: Money;
+    readonly equalTotal: Money;
 }
 
 const tipColumns: Columns<TipRow> = [
@@ -64,10 +64,11 @@ function eur(text: string): Money {
 /** The receipt: every line with the members who had it. */
 function receipt(ana: MemberId, bob: MemberId, carol: MemberId): Item[] {
     return [
-        { name: 'Ciorbă', split: { kind: 'equal', members: [ana] }, unitPrice: eur('8.00') },
-        { name: 'Sarmale', split: { kind: 'equal', members: [bob, carol] }, unitPrice: eur('14.00'), quantity: 2 },
+        { name: 'Ciorbă', unitPrice: eur('8.00'), split: { kind: 'equal', members: [ana] } },
+        { name: 'Sarmale', unitPrice: eur('14.00'), split: { kind: 'equal', members: [bob, carol] }, quantity: 2 },
         {
             name: 'Papanași',
+            unitPrice: eur('9.00'),
             split: {
                 kind: 'parts',
                 shares: [
@@ -75,9 +76,8 @@ function receipt(ana: MemberId, bob: MemberId, carol: MemberId): Item[] {
                     { member: carol, parts: Parts.ofHundredths(200) },
                 ],
             },
-            unitPrice: eur('9.00'),
         },
-        { name: 'Lemonade', split: { kind: 'equal', members: [ana, bob, carol] }, unitPrice: eur('3.00'), quantity: 3 },
+        { name: 'Lemonade', unitPrice: eur('3.00'), split: { kind: 'equal', members: [ana, bob, carol] }, quantity: 3 },
     ];
 }
 
@@ -96,11 +96,11 @@ function consumed(shares: ExpenseShares | undefined, member: MemberId): Money | 
 }
 
 await load();
-using group = Group.create(Currency.of('EUR'), "Dinner at Caru' cu Bere");
+using group = Group.create("Dinner at Caru' cu Bere", Currency.of('EUR'));
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 const carol = group.addMemberSync({ firstName: 'Carol' });
-const day = CalendarDate.of(23, 9, 2026);
+const day = CalendarDate.of(2026, 9, 23);
 
 title(`${group.nameSync()}: an itemised bill`);
 printLines(
@@ -114,11 +114,11 @@ printTable(
     receipt(ana, bob, carol).map((item) => {
         const quantity = item.quantity ?? 1;
         return {
-            lineTotal: new Money(item.unitPrice.currency, item.unitPrice.minorUnits * BigInt(quantity)),
             name: item.name,
             participants: names(group, splitMembers(item.split)),
             quantity,
             unitPrice: item.unitPrice,
+            lineTotal: new Money(item.unitPrice.minorUnits * BigInt(quantity), item.unitPrice.currency),
         };
     }),
     2,
@@ -131,19 +131,19 @@ printLines(
 section('2. Who ordered what, and the tip');
 // The dinner, its tip of 10 % shared by `distribution`.
 const bill = (distribution: TipDistribution): Expense => ({
-    cost: { kind: 'local', amount: eur('54.00') },
-    date: day,
     name: 'Dinner',
+    cost: { kind: 'local', amount: eur('54.00') },
     payers: { kind: 'equal', members: [ana] },
     split: { kind: 'itemised', items: receipt(ana, bob, carol) },
+    date: day,
     tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') }, distribution },
 });
 const untipped: Expense = {
-    cost: { kind: 'local', amount: eur('54.00') },
-    date: day,
     name: 'Dinner',
+    cost: { kind: 'local', amount: eur('54.00') },
     payers: { kind: 'equal', members: [ana] },
     split: { kind: 'itemised', items: receipt(ana, bob, carol) },
+    date: day,
 };
 const ordered = preview(group, untipped);
 const proportional = group.addExpenseSync(bill(TipDistribution.PROPORTIONAL));
@@ -161,12 +161,12 @@ printTable(
         const equalTotal = consumed(even, member);
         assert.ok(undefined !== subtotal && undefined !== proportionalTotal && undefined !== equalTotal, 'every member ordered');
         return {
-            equalTip: equalTotal.minus(subtotal),
-            equalTotal,
             name: names(group, [member]),
+            subtotal,
             proportionalTip: proportionalTotal.minus(subtotal),
             proportionalTotal,
-            subtotal,
+            equalTip: equalTotal.minus(subtotal),
+            equalTotal,
         };
     }),
     1,
@@ -176,11 +176,11 @@ printLines('By consumption, Carol, who ordered the most, adds the largest part o
 section('3. A total that does not match is refused');
 const mismatch = refusal(() =>
     group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('55.00') },
-        date: day,
         name: 'Dinner',
+        cost: { kind: 'local', amount: eur('55.00') },
         payers: { kind: 'equal', members: [ana] },
         split: { kind: 'itemised', items: receipt(ana, bob, carol) },
+        date: day,
     }),
 );
 assert.ok(undefined !== mismatch, 'the mismatch must be refused');

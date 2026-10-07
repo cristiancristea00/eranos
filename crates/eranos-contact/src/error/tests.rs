@@ -5,38 +5,38 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case {
     error: ContactError,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// A [`ContactError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedContactError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromContactError for ConvertedContactError {
     fn invalid_email(message: String) -> Self {
         Self {
+            method: "invalid_email",
             held: String::new(),
             message,
-            method: "invalid_email",
         }
     }
 
     fn invalid_phone_number(message: String) -> Self {
         Self {
+            method: "invalid_phone_number",
             held: String::new(),
             message,
-            method: "invalid_phone_number",
         }
     }
 }
@@ -49,22 +49,22 @@ fn every_failure_of_contact_error_converts_through_the_method_of_its_variant() {
     let cases = [
         Case {
             error: ContactError::InvalidEmail,
-            held: String::new(),
             method: "invalid_email",
+            held: String::new(),
         },
         Case {
             error: ContactError::InvalidPhoneNumber,
-            held: String::new(),
             method: "invalid_phone_number",
+            held: String::new(),
         },
     ];
     for case in cases {
         assert_eq!(
             ConvertedContactError::from_contact_error(case.error),
             ConvertedContactError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }

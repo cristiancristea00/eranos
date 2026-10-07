@@ -29,37 +29,43 @@
 /// The kind of a tip value. The values of EranosTipValueKind, by the names of the C layer.
 typedef enum EranosTipValueKind EranosTipValueKind;
 
-/// A fixed amount in the expense's currency.
-static constexpr EranosTipValueKind ERANOS_TIP_VALUE_KIND_FIXED = EranosTipValueKind_Fixed;
 /// A percentage of the expense's amount.
 static constexpr EranosTipValueKind ERANOS_TIP_VALUE_KIND_PERCENTAGE = EranosTipValueKind_Percentage;
+/// A fixed amount in the expense's currency.
+static constexpr EranosTipValueKind ERANOS_TIP_VALUE_KIND_FIXED = EranosTipValueKind_Fixed;
 
 /// How a tip is shared among the participants. The values of EranosTipDistribution, by the names of the C layer.
 typedef enum EranosTipDistribution EranosTipDistribution;
 
-/// The same for every participant.
-static constexpr EranosTipDistribution ERANOS_TIP_DISTRIBUTION_EQUAL = EranosTipDistribution_Equal;
 /// In proportion to each participant's share of the amount.
 static constexpr EranosTipDistribution ERANOS_TIP_DISTRIBUTION_PROPORTIONAL = EranosTipDistribution_Proportional;
+/// The same for every participant.
+static constexpr EranosTipDistribution ERANOS_TIP_DISTRIBUTION_EQUAL = EranosTipDistribution_Equal;
 
 /// The kind of a expense split. The values of EranosExpenseSplitKind, by the names of the C layer.
 typedef enum EranosExpenseSplitKind EranosExpenseSplitKind;
 
-/// Every line is divided by its own split; the lines add up to the amount.
-static constexpr EranosExpenseSplitKind ERANOS_EXPENSE_SPLIT_KIND_ITEMISED = EranosExpenseSplitKind_Itemised;
 /// The whole amount is divided by one split.
 static constexpr EranosExpenseSplitKind ERANOS_EXPENSE_SPLIT_KIND_WHOLE = EranosExpenseSplitKind_Whole;
+/// Every line is divided by its own split; the lines add up to the amount.
+static constexpr EranosExpenseSplitKind ERANOS_EXPENSE_SPLIT_KIND_ITEMISED = EranosExpenseSplitKind_Itemised;
 
 /// The kind of a cost. The values of EranosCostKind, by the names of the C layer.
 typedef enum EranosCostKind EranosCostKind;
 
-/// An amount in another currency than the group's, converted at `rate`.
-static constexpr EranosCostKind ERANOS_COST_KIND_CONVERTED = EranosCostKind_Converted;
 /// An amount in the group currency.
 static constexpr EranosCostKind ERANOS_COST_KIND_LOCAL = EranosCostKind_Local;
+/// An amount in another currency than the group's, converted at `rate`.
+static constexpr EranosCostKind ERANOS_COST_KIND_CONVERTED = EranosCostKind_Converted;
 
 /// What an entry cost: an amount in the group currency, or one in another, converted at a rate.
 typedef struct EranosCost EranosCost;
+
+/// An amount in the group currency.
+///
+/// @param amount The amount, in its own currency
+/// @return The cost, which the caller destroys
+[[nodiscard]] static inline EranosCost *eranosCostCreateLocal(EranosMoney const *const amount) { return EranosCost_create_local(amount); }
 
 /// An amount in another currency than the group's, converted at `rate`.
 ///
@@ -73,12 +79,6 @@ typedef struct EranosCost EranosCost;
     *cost = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
-
-/// An amount in the group currency.
-///
-/// @param amount The amount, in its own currency
-/// @return The cost, which the caller destroys
-[[nodiscard]] static inline EranosCost *eranosCostCreateLocal(EranosMoney const *const amount) { return EranosCost_create_local(amount); }
 
 /// Which kind of cost it is.
 ///
@@ -118,18 +118,18 @@ typedef struct EranosExpense EranosExpense;
 
 /// A new expense of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param cost What it cost
-/// @param date The day it was bought
 /// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param cost What it cost
 /// @param payers Who paid the total, amount and tip, and how much each
 /// @param split How the amount is shared
+/// @param date The day it was bought
 /// @param expense Receives the expense on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosExpenseCreate(EranosCost const *const cost, EranosCalendarDate const date, char const *const name,
-                                                             EranosSplit const *const payers, EranosExpenseSplit const *const split,
+[[nodiscard]] static inline EranosError *eranosExpenseCreate(char const *const name, EranosCost const *const cost, EranosSplit const *const payers,
+                                                             EranosExpenseSplit const *const split, EranosCalendarDate const date,
                                                              EranosExpense **const expense) {
-    EranosExpense_create_result const result = EranosExpense_create(cost, date, eranosDetailView(name), payers, split);
+    EranosExpense_create_result const result = EranosExpense_create(eranosDetailView(name), cost, payers, split, date);
     *expense = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -162,30 +162,6 @@ typedef struct EranosExpense EranosExpense;
 /// @param expense The expense
 static inline void eranosExpenseClearId(EranosExpense *const expense) { EranosExpense_clear_id(expense); }
 
-/// What it cost.
-///
-/// @param expense The expense
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosCost *eranosExpenseCost(EranosExpense const *const expense) { return EranosExpense_cost(expense); }
-
-/// Sets what it cost.
-///
-/// @param expense The expense
-/// @param cost What it cost
-static inline void eranosExpenseSetCost(EranosExpense *const expense, EranosCost const *const cost) { EranosExpense_set_cost(expense, cost); }
-
-/// The day it was bought.
-///
-/// @param expense The expense
-/// @return The day it was bought
-[[nodiscard]] static inline EranosCalendarDate eranosExpenseDate(EranosExpense const *const expense) { return EranosExpense_date(expense); }
-
-/// Sets the day it was bought.
-///
-/// @param expense The expense
-/// @param date The day it was bought
-static inline void eranosExpenseSetDate(EranosExpense *const expense, EranosCalendarDate const date) { EranosExpense_set_date(expense, date); }
-
 /// What was bought.
 ///
 /// @param expense The expense
@@ -206,6 +182,18 @@ static inline void eranosExpenseName(EranosExpense const *const expense, EranosT
     EranosExpense_set_name_result const result = EranosExpense_set_name(expense, eranosDetailView(name));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
+
+/// What it cost.
+///
+/// @param expense The expense
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosCost *eranosExpenseCost(EranosExpense const *const expense) { return EranosExpense_cost(expense); }
+
+/// Sets what it cost.
+///
+/// @param expense The expense
+/// @param cost What it cost
+static inline void eranosExpenseSetCost(EranosExpense *const expense, EranosCost const *const cost) { EranosExpense_set_cost(expense, cost); }
 
 /// Who paid the total, amount and tip, and how much each.
 ///
@@ -234,6 +222,56 @@ static inline void eranosExpenseSetPayers(EranosExpense *const expense, EranosSp
 static inline void eranosExpenseSetSplit(EranosExpense *const expense, EranosExpenseSplit const *const split) {
     EranosExpense_set_split(expense, split);
 }
+
+/// The day it was bought.
+///
+/// @param expense The expense
+/// @return The day it was bought
+[[nodiscard]] static inline EranosCalendarDate eranosExpenseDate(EranosExpense const *const expense) { return EranosExpense_date(expense); }
+
+/// Sets the day it was bought.
+///
+/// @param expense The expense
+/// @param date The day it was bought
+static inline void eranosExpenseSetDate(EranosExpense *const expense, EranosCalendarDate const date) { EranosExpense_set_date(expense, date); }
+
+/// The tip on top of the amount.
+///
+/// @param expense The expense
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosTip *eranosExpenseTip(EranosExpense const *const expense) { return EranosExpense_tip(expense); }
+
+/// Sets the tip on top of the amount.
+///
+/// @param expense The expense
+/// @param tip The tip on top of the amount
+static inline void eranosExpenseSetTip(EranosExpense *const expense, EranosTip const *const tip) { EranosExpense_set_tip(expense, tip); }
+
+/// Clears the tip on top of the amount.
+///
+/// @param expense The expense
+static inline void eranosExpenseClearTip(EranosExpense *const expense) { EranosExpense_clear_tip(expense); }
+
+/// The time of day it was bought.
+///
+/// @param expense The expense
+/// @param time Receives the time, when there is one
+/// @return Whether there is one
+[[nodiscard]] static inline bool eranosExpenseTime(EranosExpense const *const expense, EranosTimeOfDay *const time) {
+    EranosExpense_time_result const result = EranosExpense_time(expense);
+    return eranosDetailPresentTimeOfDay(result.is_ok, &result.ok, time);
+}
+
+/// Sets the time of day it was bought.
+///
+/// @param expense The expense
+/// @param time The time of day it was bought
+static inline void eranosExpenseSetTime(EranosExpense *const expense, EranosTimeOfDay const time) { EranosExpense_set_time(expense, time); }
+
+/// Clears the time of day it was bought.
+///
+/// @param expense The expense
+static inline void eranosExpenseClearTime(EranosExpense *const expense) { EranosExpense_clear_time(expense); }
 
 /// The category's identifier; absent for the built-in one. Writes it, if present; absent otherwise.
 ///
@@ -290,44 +328,6 @@ static inline void eranosExpenseClearCategory(EranosExpense *const expense) { Er
 ///
 /// @param expense The expense
 static inline void eranosExpenseClearDescription(EranosExpense *const expense) { EranosExpense_clear_description(expense); }
-
-/// The time of day it was bought.
-///
-/// @param expense The expense
-/// @param time Receives the time, when there is one
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosExpenseTime(EranosExpense const *const expense, EranosTimeOfDay *const time) {
-    EranosExpense_time_result const result = EranosExpense_time(expense);
-    return eranosDetailPresentTimeOfDay(result.is_ok, &result.ok, time);
-}
-
-/// Sets the time of day it was bought.
-///
-/// @param expense The expense
-/// @param time The time of day it was bought
-static inline void eranosExpenseSetTime(EranosExpense *const expense, EranosTimeOfDay const time) { EranosExpense_set_time(expense, time); }
-
-/// Clears the time of day it was bought.
-///
-/// @param expense The expense
-static inline void eranosExpenseClearTime(EranosExpense *const expense) { EranosExpense_clear_time(expense); }
-
-/// The tip on top of the amount.
-///
-/// @param expense The expense
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosTip *eranosExpenseTip(EranosExpense const *const expense) { return EranosExpense_tip(expense); }
-
-/// Sets the tip on top of the amount.
-///
-/// @param expense The expense
-/// @param tip The tip on top of the amount
-static inline void eranosExpenseSetTip(EranosExpense *const expense, EranosTip const *const tip) { EranosExpense_set_tip(expense, tip); }
-
-/// Clears the tip on top of the amount.
-///
-/// @param expense The expense
-static inline void eranosExpenseClearTip(EranosExpense *const expense) { EranosExpense_clear_tip(expense); }
 
 /// The tip in the expense's currency, zero without one.
 ///
@@ -411,20 +411,20 @@ static inline void eranosExpenseListDestroy(EranosExpenseList *const list) {
 /// How an expense's amount is shared.
 typedef struct EranosExpenseSplit EranosExpenseSplit;
 
-/// Every line is divided by its own split; the lines add up to the amount.
-///
-/// @param items The lines of the bill
-/// @return The expense split, which the caller destroys
-[[nodiscard]] static inline EranosExpenseSplit *eranosExpenseSplitCreateItemised(EranosItemList const *const items) {
-    return EranosExpenseSplit_create_itemised(items);
-}
-
 /// The whole amount is divided by one split.
 ///
 /// @param split How the amount divides
 /// @return The expense split, which the caller destroys
 [[nodiscard]] static inline EranosExpenseSplit *eranosExpenseSplitCreateWhole(EranosSplit const *const split) {
     return EranosExpenseSplit_create_whole(split);
+}
+
+/// Every line is divided by its own split; the lines add up to the amount.
+///
+/// @param items The lines of the bill
+/// @return The expense split, which the caller destroys
+[[nodiscard]] static inline EranosExpenseSplit *eranosExpenseSplitCreateItemised(EranosItemList const *const items) {
+    return EranosExpenseSplit_create_itemised(items);
 }
 
 /// Which kind of expense split it is.
@@ -466,14 +466,14 @@ typedef struct EranosItem EranosItem;
 /// A new item of its required fields; every other field starts absent, empty, or at its default.
 ///
 /// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param split How the line's total divides
 /// @param unitPrice The price of one unit, in the expense's currency
+/// @param split How the line's total divides
 /// @param item Receives the item on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosItemCreate(char const *const name, EranosSplit const *const split, EranosMoney const *const unitPrice,
+[[nodiscard]] static inline EranosError *eranosItemCreate(char const *const name, EranosMoney const *const unitPrice, EranosSplit const *const split,
                                                           EranosItem **const item) {
-    EranosItem_create_result const result = EranosItem_create(eranosDetailView(name), split, unitPrice);
+    EranosItem_create_result const result = EranosItem_create(eranosDetailView(name), unitPrice, split);
     *item = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -499,18 +499,6 @@ static inline void eranosItemName(EranosItem const *const item, EranosText *cons
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// How the line's total divides.
-///
-/// @param item The item
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosSplit *eranosItemSplit(EranosItem const *const item) { return EranosItem_split(item); }
-
-/// Sets how the line's total divides.
-///
-/// @param item The item
-/// @param split How the line's total divides
-static inline void eranosItemSetSplit(EranosItem *const item, EranosSplit const *const split) { EranosItem_set_split(item, split); }
-
 /// The price of one unit, in the expense's currency.
 ///
 /// @param item The item
@@ -522,6 +510,18 @@ static inline void eranosItemSetSplit(EranosItem *const item, EranosSplit const 
 /// @param item The item
 /// @param unitPrice The price of one unit, in the expense's currency
 static inline void eranosItemSetUnitPrice(EranosItem *const item, EranosMoney const *const unitPrice) { EranosItem_set_unit_price(item, unitPrice); }
+
+/// How the line's total divides.
+///
+/// @param item The item
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosSplit *eranosItemSplit(EranosItem const *const item) { return EranosItem_split(item); }
+
+/// Sets how the line's total divides.
+///
+/// @param item The item
+/// @param split How the line's total divides
+static inline void eranosItemSetSplit(EranosItem *const item, EranosSplit const *const split) { EranosItem_set_split(item, split); }
 
 /// How many units, from 1.
 ///
@@ -638,12 +638,6 @@ static inline void eranosTipDestroy(EranosTip *const tip) {
 /// How a tip is expressed.
 typedef struct EranosTipValue EranosTipValue;
 
-/// A fixed amount in the expense's currency.
-///
-/// @param amount The tip
-/// @return The tip value, which the caller destroys
-[[nodiscard]] static inline EranosTipValue *eranosTipValueCreateFixed(EranosMoney const *const amount) { return EranosTipValue_create_fixed(amount); }
-
 /// A percentage of the expense's amount.
 ///
 /// @param basisPoints The tip's share of the amount, in basis points
@@ -651,6 +645,12 @@ typedef struct EranosTipValue EranosTipValue;
 [[nodiscard]] static inline EranosTipValue *eranosTipValueCreatePercentage(int32_t const basisPoints) {
     return EranosTipValue_create_percentage(basisPoints);
 }
+
+/// A fixed amount in the expense's currency.
+///
+/// @param amount The tip
+/// @return The tip value, which the caller destroys
+[[nodiscard]] static inline EranosTipValue *eranosTipValueCreateFixed(EranosMoney const *const amount) { return EranosTipValue_create_fixed(amount); }
 
 /// Which kind of tip value it is.
 ///

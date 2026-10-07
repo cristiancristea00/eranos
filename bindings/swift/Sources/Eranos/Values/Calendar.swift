@@ -2,14 +2,14 @@ internal import EranosGenerated
 
 /// A day of the calendar, without a time zone: the day an entry happened wherever it happened.
 public struct CalendarDate: Hashable, Sendable, CustomStringConvertible {
-    /// The day of the month, from 1.
-    public let day: Int32
+    /// The year, from 1 to 9999.
+    public let year: Int32
 
     /// The month, from 1 for January.
     public let month: Int32
 
-    /// The year, from 1 to 9999.
-    public let year: Int32
+    /// The day of the month, from 1.
+    public let day: Int32
 
     /// The date as the library writes it, in ISO 8601: "2026-09-23".
     public var description: String {
@@ -17,15 +17,15 @@ public struct CalendarDate: Hashable, Sendable, CustomStringConvertible {
     }
 
     var generated: EranosGenerated.CalendarDate {
-        .init(day: day, month: month, year: year)
+        .init(year: year, month: month, day: day)
     }
 
-    /// The date of `day`, `month`, and `year`.
+    /// The date of `year`, `month`, and `day`.
     ///
     /// - Throws: ``EranosError/calendar(_:detail:)`` with ``CalendarFailure/invalidDate`` for a
     ///   day that does not exist, such as 30 February.
-    public init(day: Int32, month: Int32, year: Int32) throws(EranosError) {
-        let date = EranosGenerated.CalendarDate(day: day, month: month, year: year)
+    public init(year: Int32, month: Int32, day: Int32) throws(EranosError) {
+        let date = EranosGenerated.CalendarDate(year: year, month: month, day: day)
         _ = try converting { try EranosGenerated.calendarDateFormat(date: date) }
         self.init(date)
     }
@@ -39,9 +39,9 @@ public struct CalendarDate: Hashable, Sendable, CustomStringConvertible {
     }
 
     init(_ date: EranosGenerated.CalendarDate) {
-        day = date.day
-        month = date.month
         year = date.year
+        month = date.month
+        day = date.day
     }
 }
 

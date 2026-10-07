@@ -16,11 +16,11 @@ import eranos.examples.printTable
 import eranos.examples.section
 
 private data class ShareRow(
-    val consumed: String,
     val expense: String,
     val how: String,
     val members: String,
     val paid: String,
+    val consumed: String,
 ) : Row {
     override val cells: List<String>
         get() = listOf(expense, how, members, paid, consumed)
@@ -31,11 +31,11 @@ private data class ShareRow(
 }
 
 private data class ItemRow(
-    val lineTotal: Money,
     val name: String,
-    val quantity: Int,
     val sharedBy: String,
+    val quantity: Int,
     val unitPrice: Money,
+    val lineTotal: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, sharedBy, "$quantity", "$unitPrice", "$lineTotal")
@@ -60,17 +60,17 @@ private data class Expenses(
 internal fun how(expense: Expense): String {
     val split =
         when (val divided = expense.split) {
-            is ExpenseSplit.Itemised -> {
-                "${divided.items.size} items"
-            }
-
             is ExpenseSplit.Whole -> {
                 when (divided.split) {
-                    is Split.Amounts -> "by amounts"
                     is Split.Equal -> "equally"
                     is Split.Parts -> "by parts"
                     is Split.Percentages -> "by percentage"
+                    is Split.Amounts -> "by amounts"
                 }
+            }
+
+            is ExpenseSplit.Itemised -> {
+                "${divided.items.size} items"
             }
         }
     val count = expense.payers.members.size
@@ -80,8 +80,8 @@ internal fun how(expense: Expense): String {
             ""
         } else {
             when (val value = expense.tip?.value) {
-                is TipValue.Fixed -> ", ${value.amount} tip"
                 is TipValue.Percentage -> ", ${value.percentage} tip"
+                is TipValue.Fixed -> ", ${value.amount} tip"
                 null -> ""
             }
         }
@@ -101,11 +101,11 @@ internal fun printShares(
                 null
             } else {
                 ShareRow(
-                    consumed = cell(shares.members.map { share -> "${share.share}" }),
                     expense = expense.name,
                     how = how(expense),
                     members = cell(shares.members.map { share -> name(group, share.member) }),
                     paid = cell(shares.members.map { share -> if (0L == share.paid.minorUnits) "" else "${share.paid}" }),
+                    consumed = cell(shares.members.map { share -> "${share.share}" }),
                 )
             }
         }
@@ -122,11 +122,11 @@ internal fun printItems(
             ItemRow.HEADERS,
             split.items.map { item ->
                 ItemRow(
-                    lineTotal = Money(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity),
                     name = item.name,
-                    quantity = item.quantity,
                     sharedBy = names(group, item.split.members),
+                    quantity = item.quantity,
                     unitPrice = item.unitPrice,
+                    lineTotal = Money(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency),
                 )
             },
             numbersFrom = 2,
@@ -153,14 +153,14 @@ internal fun printFado(
 ) {
     val rule =
         when (val value = fado.tip?.value) {
-            is TipValue.Fixed -> "${value.amount}"
             is TipValue.Percentage -> "${value.percentage}"
+            is TipValue.Fixed -> "${value.amount}"
             null -> "a tip"
         }
     val shared =
         when (fado.tip?.distribution) {
-            TipDistribution.EQUAL -> "equally"
             TipDistribution.PROPORTIONAL -> "in proportion to what each member ordered"
+            TipDistribution.EQUAL -> "equally"
             null -> "another way"
         }
     println(

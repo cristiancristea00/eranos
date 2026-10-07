@@ -16,66 +16,66 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ExpenseRow {
-    #[tabled(rename = "Amount", order = 3)]
-    amount: Money,
-    #[tabled(rename = "Expense", order = 0)]
+    #[tabled(rename = "Expense")]
     name: String,
-    #[tabled(rename = "Shared by", order = 2)]
-    participants: String,
-    #[tabled(rename = "Paid by", order = 1)]
+    #[tabled(rename = "Paid by")]
     payer: String,
+    #[tabled(rename = "Shared by")]
+    participants: String,
+    #[tabled(rename = "Amount")]
+    amount: Money,
 }
 
 #[derive(Tabled)]
 struct BalanceRow {
-    #[tabled(rename = "Balance", order = 3)]
-    balance: Balance,
-    #[tabled(rename = "Consumed", order = 2)]
-    consumed: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Paid", order = 1)]
+    #[tabled(rename = "Paid")]
     paid: Money,
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
 }
 
 #[derive(Tabled)]
 struct PaymentRow {
-    #[tabled(rename = "Amount", order = 2)]
-    amount: Money,
-    #[tabled(rename = "From", order = 0)]
+    #[tabled(rename = "From")]
     from: String,
-    #[tabled(rename = "To", order = 1)]
+    #[tabled(rename = "To")]
     to: String,
+    #[tabled(rename = "Amount")]
+    amount: Money,
 }
 
 #[derive(Tabled)]
 struct StrategyRow {
-    #[tabled(rename = "Cost", order = 2)]
-    cost: &'static str,
-    #[tabled(rename = "Guarantee", order = 1)]
-    guarantee: &'static str,
-    #[tabled(rename = "Payments here", order = 3)]
-    payments: usize,
-    #[tabled(rename = "Strategy", order = 0)]
+    #[tabled(rename = "Strategy")]
     strategy: &'static str,
+    #[tabled(rename = "Guarantee")]
+    guarantee: &'static str,
+    #[tabled(rename = "Cost")]
+    cost: &'static str,
+    #[tabled(rename = "Payments here")]
+    payments: usize,
 }
 
 /// The number of payments of each strategy's plan.
 #[derive(Debug, PartialEq, Eq)]
 struct Counts {
     adaptive: usize,
-    direct: usize,
-    greedy: usize,
     minimum: usize,
+    greedy: usize,
+    direct: usize,
 }
 
 /// The name of `strategy` as the apps show it.
 const fn strategy_name(strategy: SettlementStrategy) -> &'static str {
     match strategy {
         SettlementStrategy::Adaptive => "Adaptive",
-        SettlementStrategy::Direct => "Direct",
-        SettlementStrategy::Greedy => "Greedy",
         SettlementStrategy::MinimumTransfers => "MinimumTransfers",
+        SettlementStrategy::Greedy => "Greedy",
+        SettlementStrategy::Direct => "Direct",
         _ => "another strategy",
     }
 }
@@ -113,11 +113,11 @@ fn spend(
     participants: &[MemberId],
 ) -> Result<(), Box<dyn Error>> {
     let expense = Expense::builder(
-        Money::parse(amount, Currency::EUR)?,
-        CalendarDate::new(20, 9, 2026)?,
         name,
+        Money::parse(amount, Currency::EUR)?,
         payer,
         Split::equal(participants.iter().copied()),
+        CalendarDate::new(2026, 9, 20)?,
     )
     .build()?;
     group.add_expense(expense)?;
@@ -130,10 +130,10 @@ fn print_balances(group: &Group) {
         group.members().map(|member| {
             let totals = summary.member(member.id());
             BalanceRow {
-                balance: totals.balance(),
-                consumed: totals.share(),
                 name: member.first_name().to_owned(),
                 paid: totals.paid(),
+                consumed: totals.share(),
+                balance: totals.balance(),
             }
         }),
         1,
@@ -143,9 +143,9 @@ fn print_balances(group: &Group) {
 fn print_payments(group: &Group, settlement: &Settlement) {
     print_table(
         settlement.payments().iter().map(|payment| PaymentRow {
-            amount: payment.amount(),
             from: names(group, [payment.from()]),
             to: names(group, [payment.to()]),
+            amount: payment.amount(),
         }),
         2,
     );
@@ -200,37 +200,37 @@ fn strategies(group: &Group) -> Result<Counts, Box<dyn Error>> {
     print_table(
         [
             StrategyRow {
-                cost: "O(2ⁿ·n) for n open balances",
-                guarantee: "the fewest payments",
-                payments: minimum.len(),
                 strategy: "MinimumTransfers",
+                guarantee: "the fewest payments",
+                cost: "O(2ⁿ·n) for n open balances",
+                payments: minimum.len(),
             },
             StrategyRow {
-                cost: "O(n log n)",
-                guarantee: "at most n − 1 payments",
-                payments: greedy.len(),
                 strategy: "Greedy",
+                guarantee: "at most n − 1 payments",
+                cost: "O(n log n)",
+                payments: greedy.len(),
             },
             StrategyRow {
-                cost: "O(pairs)",
-                guarantee: "one payment per pair in debt",
-                payments: direct.len(),
                 strategy: "Direct",
+                guarantee: "one payment per pair in debt",
+                cost: "O(pairs)",
+                payments: direct.len(),
             },
             StrategyRow {
-                cost: "as MinimumTransfers, then Greedy",
-                guarantee: "the fewest up to 20 balances",
-                payments: adaptive.len(),
                 strategy: "Adaptive",
+                guarantee: "the fewest up to 20 balances",
+                cost: "as MinimumTransfers, then Greedy",
+                payments: adaptive.len(),
             },
         ],
         3,
     );
     Ok(Counts {
         adaptive: adaptive.len(),
-        direct: direct.len(),
-        greedy: greedy.len(),
         minimum: minimum.len(),
+        greedy: greedy.len(),
+        direct: direct.len(),
     })
 }
 
@@ -239,7 +239,7 @@ fn strategies(group: &Group) -> Result<Counts, Box<dyn Error>> {
 /// returns the number of payments.
 fn festival() -> Result<usize, Box<dyn Error>> {
     section("8. A larger group");
-    let mut group = Group::builder(Currency::EUR, "Festival").build()?;
+    let mut group = Group::builder("Festival", Currency::EUR).build()?;
     let mut friends = Vec::new();
     for number in 1..=21 {
         friends.push(group.add_member(Member::builder(format!("Friend {number}")).build()?)?);
@@ -249,11 +249,11 @@ fn festival() -> Result<usize, Box<dyn Error>> {
     // cents: never zero, and never the opposite of another's.
     for (number, &payer) in (1_i64..).zip(&friends) {
         let expense = Expense::builder(
-            Money::from_minor_units(Currency::EUR, 21 * number * number),
-            CalendarDate::new(18, 9, 2026)?,
             "Round",
+            Money::from_minor_units(21 * number * number, Currency::EUR),
             payer,
             Split::equal(friends.iter().copied()),
+            CalendarDate::new(2026, 9, 18)?,
         )
         .build()?;
         group.add_expense(expense)?;
@@ -280,7 +280,7 @@ fn festival() -> Result<usize, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder(Currency::EUR, "Ski week").build()?;
+    let mut group = Group::builder("Ski week", Currency::EUR).build()?;
     let mut add = |name| -> Result<MemberId, Box<dyn Error>> {
         Ok(group.add_member(Member::builder(name).build()?)?)
     };
@@ -302,10 +302,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     spend(&mut group, "Snacks", "1.00", filip, &[ana])?;
     print_table(
         group.expenses().map(|expense| ExpenseRow {
-            amount: expense.total(),
             name: expense.name().to_owned(),
-            participants: names(&group, expense.split().participants()),
             payer: names(&group, expense.payers().members()),
+            participants: names(&group, expense.split().participants()),
+            amount: expense.total(),
         }),
         3,
     );
@@ -324,7 +324,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for payment in plan.payments() {
         group.add_transfer(Transfer::from_payment(
             payment,
-            CalendarDate::new(27, 9, 2026)?,
+            CalendarDate::new(2026, 9, 27)?,
         ))?;
     }
     println!(
@@ -347,9 +347,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         counts,
         Counts {
             adaptive: 4,
-            direct: 7,
-            greedy: 5,
             minimum: 4,
+            greedy: 5,
+            direct: 7,
         }
     );
     // Greedy settles the festival's 21 balances in 19 payments.

@@ -29,14 +29,14 @@ namespace detail {
 /// A day of the calendar, which the library checks when it is made.
 class CalendarDate final {
   public:
-    /// The date of @p day @p month @p year, in the library's order of the three.
+    /// The date of @p year @p month @p day, in the library's order of the three.
     ///
-    /// @param day The day of the month, from 1
-    /// @param month The month, from 1 for January
     /// @param year The year
+    /// @param month The month, from 1 for January
+    /// @param day The day of the month, from 1
     /// @return The date, or an error of the kind ErrorKind::CALENDAR for a day the calendar does not have
-    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the order is the library's, day, month, and year.
-    [[nodiscard]] static std::expected<CalendarDate, Error> of(std::int32_t const day, std::int32_t const month, std::int32_t const year);
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the order is the library's, year, month, and day.
+    [[nodiscard]] static std::expected<CalendarDate, Error> of(std::int32_t const year, std::int32_t const month, std::int32_t const day);
 
     /// The date written @p text: "2026-09-23".
     ///
@@ -45,20 +45,20 @@ class CalendarDate final {
     ///   UTF-8
     [[nodiscard]] static std::expected<CalendarDate, Error> parse(std::string_view const text);
 
-    /// The day of the month, from 1.
+    /// The year.
     ///
-    /// @return The day
-    [[nodiscard]] constexpr std::int32_t day() const noexcept { return fields.day; }
+    /// @return The year
+    [[nodiscard]] constexpr std::int32_t year() const noexcept { return fields.year; }
 
     /// The month, from 1 for January.
     ///
     /// @return The month
     [[nodiscard]] constexpr std::int32_t month() const noexcept { return fields.month; }
 
-    /// The year.
+    /// The day of the month, from 1.
     ///
-    /// @return The year
-    [[nodiscard]] constexpr std::int32_t year() const noexcept { return fields.year; }
+    /// @return The day
+    [[nodiscard]] constexpr std::int32_t day() const noexcept { return fields.day; }
 
     /// The date as the library writes it: "2026-09-23".
     ///
@@ -75,11 +75,11 @@ class CalendarDate final {
   private:
     friend constexpr CalendarDate detail::calendarDateOf(detail::EranosCalendarDate const date) noexcept;
 
-    /// The day, the month, and the year.
+    /// The year, the month, and the day.
     struct Fields final {
-        std::int32_t day;
-        std::int32_t month;
         std::int32_t year;
+        std::int32_t month;
+        std::int32_t day;
 
         [[nodiscard]] friend constexpr bool operator==(Fields const &left, Fields const &right) noexcept = default;
     };
@@ -153,8 +153,8 @@ namespace detail {
 
 } // namespace detail
 
-inline std::expected<CalendarDate, Error> CalendarDate::of(std::int32_t const day, std::int32_t const month, std::int32_t const year) {
-    detail::EranosCalendarDate const date{.day = day, .month = month, .year = year};
+inline std::expected<CalendarDate, Error> CalendarDate::of(std::int32_t const year, std::int32_t const month, std::int32_t const day) {
+    detail::EranosCalendarDate const date{.year = year, .month = month, .day = day};
     return detail::expectedOf(date.format()).transform([date](std::string const & /* text */) noexcept { return detail::calendarDateOf(date); });
 }
 

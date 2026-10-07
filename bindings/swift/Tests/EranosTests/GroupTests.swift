@@ -20,9 +20,9 @@ func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     #expect(expenses.map(\.name) == ["Dinner"])
     #expect(try group.expense(withID: flat.dinner) == expenses.first)
     let shares = try #require(try group.shares(of: flat.dinner))
+    #expect(shares.members.map(\.share) == [flat.euros(1_500), flat.euros(1_500)])
     #expect(shares.total == flat.euros(3_000))
     #expect(shares.tip == flat.euros(0))
-    #expect(shares.members.map(\.share) == [flat.euros(1_500), flat.euros(1_500)])
     #expect(try group.summary().totalSpent == flat.euros(3_000))
     let members = try group.members()
     #expect(members.map(\.firstName) == ["Ana", "Bob"])
@@ -142,7 +142,7 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     #expect(try "Lunch" == group.replace(lateLunch).name)
     #expect(try "Late lunch" == group.remove(lunch).name)
 
-    let payment = try group.add(Transfer(cost: .local(flat.euros(500)), date: flat.day, from: flat.ana, to: flat.bob))
+    let payment = try group.add(Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(500)), date: flat.day))
     var larger = try #require(try group.transfer(withID: payment))
     larger.cost = .local(flat.euros(700))
     #expect(try group.replace(larger).cost == .local(flat.euros(500)))
@@ -158,7 +158,7 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     #expect(try nil == group.language())
     let lei = try Currency(code: "RON")
     try group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
-    #expect(try group.summary().totalSpent == Money(currency: lei, minorUnits: 15_000))
+    #expect(try group.summary().totalSpent == Money(minorUnits: 15_000, currency: lei))
 }
 
 /// An asynchronous change that did not take effect, or took another effect than its synchronous
@@ -188,7 +188,7 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     #expect(try await "Lunch" == group.replace(lateLunch).name)
     #expect(try await "Late lunch" == group.remove(lunch).name)
 
-    let payment = try await group.add(Transfer(cost: .local(flat.euros(500)), date: flat.day, from: flat.ana, to: flat.bob))
+    let payment = try await group.add(Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(500)), date: flat.day))
     var larger = try #require(try await group.transfer(withID: payment))
     larger.cost = .local(flat.euros(700))
     #expect(try await group.replace(larger).cost == .local(flat.euros(500)))
@@ -212,11 +212,11 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
 @Test
 func aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() async throws {
     let euro = try Currency(code: "EUR")
-    let plain = try Group(currency: euro, name: "Trip")
+    let plain = try Group(name: "Trip", currency: euro)
     #expect(try await nil == plain.description())
     #expect(try await nil == plain.language())
     #expect(throws: EranosError.group(.emptyName, detail: "the group name must not be empty")) {
-        try Group(currency: euro, name: " ")
+        try Group(name: " ", currency: euro)
     }
     #expect(throws: EranosError.invalidJSON(line: 1, column: 1, detail: "the saved group ends early, at line 1, column 1")) {
         try Group.load("{")

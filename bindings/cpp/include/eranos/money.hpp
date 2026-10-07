@@ -25,9 +25,9 @@ namespace eranos {
 struct Money final {
     /// The amount of @p minorUnits minor units of @p currency.
     ///
-    /// @param currency The currency
     /// @param minorUnits The amount in minor units: cents for the euro, none for the yen
-    Money(Currency currency, std::int64_t const minorUnits) noexcept : currency(std::move(currency)), minorUnits(minorUnits) {}
+    /// @param currency The currency
+    Money(std::int64_t const minorUnits, Currency currency) noexcept : minorUnits(minorUnits), currency(std::move(currency)) {}
 
     /// The amount written @p text in @p currency: "12.50", "12.5", or "-3".
     ///
@@ -37,11 +37,11 @@ struct Money final {
     ///   text that is not UTF-8
     [[nodiscard]] static std::expected<Money, Error> parse(std::string_view const text, Currency const &currency);
 
-    /// The currency.
-    Currency currency;
-
     /// The amount in minor units: cents for the euro, none for the yen.
     std::int64_t minorUnits;
+
+    /// The currency.
+    Currency currency;
 
     /// This amount plus @p other.
     ///
@@ -60,7 +60,7 @@ struct Money final {
     /// @return The text
     [[nodiscard]] std::string toString() const;
 
-    /// Whether two amounts have one currency and one number of minor units.
+    /// Whether two amounts have one number of minor units and one currency.
     ///
     /// @param left An amount
     /// @param right Another amount

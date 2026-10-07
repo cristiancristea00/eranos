@@ -15,10 +15,10 @@ import { ExchangeRate, Parts, Percentage } from './ratios.js';
 
 /** The exact amount one member pays of a split. */
 export interface MemberAmount {
-    /** The amount. */
-    readonly amount: Money;
     /** The member. */
     readonly member: MemberId;
+    /** The amount. */
+    readonly amount: Money;
 }
 
 /** The parts one member pays in proportion to. */
@@ -38,18 +38,12 @@ export interface MemberPercentage {
 }
 
 /**
- * How an amount divides among members: equally, by exact amounts, by parts, or by percentages.
+ * How an amount divides among members: equally, by parts, by percentages, or by exact amounts.
  *
  * The library divides every amount so that the shares add up to it exactly, and gives any minor unit left over by the
  * rounding to a member it picks from the expense's identifier.
  */
 export type Split =
-    | {
-          /** Every member pays an exact amount; the amounts add up to what they divide. */
-          readonly kind: 'amounts';
-          /** Each member's amount. */
-          readonly shares: readonly MemberAmount[];
-      }
     | {
           /** Every member pays the same. */
           readonly kind: 'equal';
@@ -67,6 +61,12 @@ export type Split =
           readonly kind: 'percentages';
           /** Each member's percentage. */
           readonly shares: readonly MemberPercentage[];
+      }
+    | {
+          /** Every member pays an exact amount; the amounts add up to what they divide. */
+          readonly kind: 'amounts';
+          /** Each member's amount. */
+          readonly shares: readonly MemberAmount[];
       };
 
 /**
@@ -77,13 +77,13 @@ export type Split =
  */
 export function splitMembers(split: Split): readonly MemberId[] {
     switch (split.kind) {
-        case 'amounts':
-            return split.shares.map((share) => share.member);
         case 'equal':
             return split.members;
         case 'parts':
             return split.shares.map((share) => share.member);
         case 'percentages':
+            return split.shares.map((share) => share.member);
+        case 'amounts':
             return split.shares.map((share) => share.member);
     }
 }
@@ -95,11 +95,6 @@ export function splitMembers(split: Split): readonly MemberId[] {
  */
 export function convertedSplit(split: internal.Split): Split {
     switch (split.tag) {
-        case internal.Split_Tags.Amounts:
-            return {
-                kind: 'amounts',
-                shares: split.inner.shares.map((share) => ({ amount: Money.converted(share.amount), member: memberId(share.member) })),
-            };
         case internal.Split_Tags.Equal:
             return { kind: 'equal', members: split.inner.members.map(memberId) };
         case internal.Split_Tags.Parts:
@@ -112,6 +107,11 @@ export function convertedSplit(split: internal.Split): Split {
                 kind: 'percentages',
                 shares: split.inner.shares.map((share) => ({ member: memberId(share.member), percentage: Percentage.known(share.basisPoints) })),
             };
+        case internal.Split_Tags.Amounts:
+            return {
+                kind: 'amounts',
+                shares: split.inner.shares.map((share) => ({ member: memberId(share.member), amount: Money.converted(share.amount) })),
+            };
     }
 }
 
@@ -122,21 +122,21 @@ export function convertedSplit(split: internal.Split): Split {
  */
 export function generatedSplit(split: Split): internal.Split {
     switch (split.kind) {
-        case 'amounts':
-            return new internal.Split.Amounts({
-                shares: split.shares.map((share) => internal.MemberAmount.create({ amount: share.amount.generated(), member: share.member })),
-            });
         case 'equal':
             return new internal.Split.Equal({ members: [...split.members] });
         case 'parts':
             return new internal.Split.Parts({
-                shares: split.shares.map((share) => internal.MemberParts.create({ hundredths: share.parts.hundredths, member: share.member })),
+                shares: split.shares.map((share) => internal.MemberParts.create({ member: share.member, hundredths: share.parts.hundredths })),
             });
         case 'percentages':
             return new internal.Split.Percentages({
                 shares: split.shares.map((share) =>
-                    internal.MemberPercentage.create({ basisPoints: share.percentage.basisPoints, member: share.member }),
+                    internal.MemberPercentage.create({ member: share.member, basisPoints: share.percentage.basisPoints }),
                 ),
+            });
+        case 'amounts':
+            return new internal.Split.Amounts({
+                shares: split.shares.map((share) => internal.MemberAmount.create({ member: share.member, amount: share.amount.generated() })),
             });
     }
 }
@@ -147,18 +147,18 @@ export function generatedSplit(split: Split): internal.Split {
  */
 export type Cost =
     | {
+          /** An amount in the group currency. */
+          readonly kind: 'local';
+          /** The amount. */
+          readonly amount: Money;
+      }
+    | {
           /** An amount in another currency than the group's, converted at `rate`. */
           readonly kind: 'converted';
           /** The amount, in its own currency. */
           readonly amount: Money;
           /** The rate into the group currency. */
           readonly rate: ExchangeRate;
-      }
-    | {
-          /** An amount in the group currency. */
-          readonly kind: 'local';
-          /** The amount. */
-          readonly amount: Money;
       };
 
 /**
@@ -168,10 +168,10 @@ export type Cost =
  */
 export function convertedCost(cost: internal.Cost): Cost {
     switch (cost.tag) {
-        case internal.Cost_Tags.Converted:
-            return { kind: 'converted', amount: Money.converted(cost.inner.amount), rate: ExchangeRate.known(cost.inner.rate) };
         case internal.Cost_Tags.Local:
             return { kind: 'local', amount: Money.converted(cost.inner.amount) };
+        case internal.Cost_Tags.Converted:
+            return { kind: 'converted', amount: Money.converted(cost.inner.amount), rate: ExchangeRate.known(cost.inner.rate) };
     }
 }
 
@@ -182,10 +182,10 @@ export function convertedCost(cost: internal.Cost): Cost {
  */
 export function generatedCost(cost: Cost): internal.Cost {
     switch (cost.kind) {
-        case 'converted':
-            return new internal.Cost.Converted({ amount: cost.amount.generated(), rate: cost.rate.toString() });
         case 'local':
             return new internal.Cost.Local({ amount: cost.amount.generated() });
+        case 'converted':
+            return new internal.Cost.Converted({ amount: cost.amount.generated(), rate: cost.rate.toString() });
     }
 }
 
@@ -193,10 +193,10 @@ export function generatedCost(cost: Cost): internal.Cost {
 export interface Item {
     /** What was bought. */
     readonly name: string;
-    /** How the line's total divides. */
-    readonly split: Split;
     /** The price of one unit, in the expense's currency. */
     readonly unitPrice: Money;
+    /** How the line's total divides. */
+    readonly split: Split;
     /** How many units, from 1; one unless given. */
     readonly quantity?: number;
 }
@@ -204,16 +204,16 @@ export interface Item {
 /** How an expense's cost is shared: as a whole, or line by line of an itemised bill. */
 export type ExpenseSplit =
     | {
-          /** Every line is divided by its own split; the lines add up to the amount. */
-          readonly kind: 'itemised';
-          /** The lines of the bill. */
-          readonly items: readonly Item[];
-      }
-    | {
           /** The whole amount is divided by one split. */
           readonly kind: 'whole';
           /** How the amount divides. */
           readonly split: Split;
+      }
+    | {
+          /** Every line is divided by its own split; the lines add up to the amount. */
+          readonly kind: 'itemised';
+          /** The lines of the bill. */
+          readonly items: readonly Item[];
       };
 
 /**
@@ -223,18 +223,18 @@ export type ExpenseSplit =
  */
 export function convertedExpenseSplit(split: internal.ExpenseSplit): ExpenseSplit {
     switch (split.tag) {
+        case internal.ExpenseSplit_Tags.Whole:
+            return { kind: 'whole', split: convertedSplit(split.inner.split) };
         case internal.ExpenseSplit_Tags.Itemised:
             return {
                 kind: 'itemised',
                 items: split.inner.items.map((item) => ({
                     name: item.name,
-                    split: convertedSplit(item.split),
                     unitPrice: Money.converted(item.unitPrice),
+                    split: convertedSplit(item.split),
                     quantity: item.quantity,
                 })),
             };
-        case internal.ExpenseSplit_Tags.Whole:
-            return { kind: 'whole', split: convertedSplit(split.inner.split) };
     }
 }
 
@@ -245,43 +245,43 @@ export function convertedExpenseSplit(split: internal.ExpenseSplit): ExpenseSpli
  */
 export function generatedExpenseSplit(split: ExpenseSplit): internal.ExpenseSplit {
     switch (split.kind) {
+        case 'whole':
+            return new internal.ExpenseSplit.Whole({ split: generatedSplit(split.split) });
         case 'itemised':
             return new internal.ExpenseSplit.Itemised({
                 items: split.items.map((item) =>
                     internal.Item.create({
                         name: item.name,
-                        split: generatedSplit(item.split),
                         unitPrice: item.unitPrice.generated(),
+                        split: generatedSplit(item.split),
                         quantity: item.quantity ?? 1,
                     }),
                 ),
             });
-        case 'whole':
-            return new internal.ExpenseSplit.Whole({ split: generatedSplit(split.split) });
     }
 }
 
 /** How a tip is shared among an expense's participants. */
 export enum TipDistribution {
-    /** The same for every participant. */
-    EQUAL = 'EQUAL',
     /** In proportion to each participant's share of the amount. */
     PROPORTIONAL = 'PROPORTIONAL',
+    /** The same for every participant. */
+    EQUAL = 'EQUAL',
 }
 
 /** How a tip is expressed. */
 export type TipValue =
     | {
-          /** A fixed amount in the expense's currency. */
-          readonly kind: 'fixed';
-          /** The tip. */
-          readonly amount: Money;
-      }
-    | {
           /** A percentage of the expense's amount. */
           readonly kind: 'percentage';
           /** The tip's share of the amount. */
           readonly percentage: Percentage;
+      }
+    | {
+          /** A fixed amount in the expense's currency. */
+          readonly kind: 'fixed';
+          /** The tip. */
+          readonly amount: Money;
       };
 
 /** A tip on top of an expense's amount, which its payers cover. */
@@ -304,20 +304,20 @@ export function convertedTip(tip: internal.Tip): Tip {
 /** The tip's value the generated code holds as `value`. */
 function convertedTipValue(value: internal.TipValue): TipValue {
     switch (value.tag) {
-        case internal.TipValue_Tags.Fixed:
-            return { kind: 'fixed', amount: Money.converted(value.inner.amount) };
         case internal.TipValue_Tags.Percentage:
             return { kind: 'percentage', percentage: Percentage.known(value.inner.basisPoints) };
+        case internal.TipValue_Tags.Fixed:
+            return { kind: 'fixed', amount: Money.converted(value.inner.amount) };
     }
 }
 
 /** The distribution the generated code holds as `distribution`. */
 function convertedTipDistribution(distribution: internal.TipDistribution): TipDistribution {
     switch (distribution) {
-        case internal.TipDistribution.Equal:
-            return TipDistribution.EQUAL;
         case internal.TipDistribution.Proportional:
             return TipDistribution.PROPORTIONAL;
+        case internal.TipDistribution.Equal:
+            return TipDistribution.EQUAL;
     }
 }
 
@@ -336,20 +336,20 @@ export function generatedTip(tip: Tip): internal.Tip {
 /** The tip's value as the generated code holds it. */
 function generatedTipValue(value: TipValue): internal.TipValue {
     switch (value.kind) {
-        case 'fixed':
-            return new internal.TipValue.Fixed({ amount: value.amount.generated() });
         case 'percentage':
             return new internal.TipValue.Percentage({ basisPoints: value.percentage.basisPoints });
+        case 'fixed':
+            return new internal.TipValue.Fixed({ amount: value.amount.generated() });
     }
 }
 
 /** The distribution as the generated code holds it. */
 function generatedTipDistribution(distribution: TipDistribution): internal.TipDistribution {
     switch (distribution) {
-        case TipDistribution.EQUAL:
-            return internal.TipDistribution.Equal;
         case TipDistribution.PROPORTIONAL:
             return internal.TipDistribution.Proportional;
+        case TipDistribution.EQUAL:
+            return internal.TipDistribution.Equal;
     }
 }
 
@@ -362,24 +362,24 @@ function generatedTipDistribution(distribution: TipDistribution): internal.TipDi
 export interface Expense {
     /** The identifier: absent for an expense to add, present for one the group holds. */
     readonly id?: ExpenseId;
-    /** What it cost. */
-    readonly cost: Cost;
-    /** The day it was bought. */
-    readonly date: CalendarDate;
     /** What was bought. */
     readonly name: string;
+    /** What it cost. */
+    readonly cost: Cost;
     /** Who paid the total, amount and tip, and how much each. */
     readonly payers: Split;
     /** How the amount is shared. */
     readonly split: ExpenseSplit;
+    /** The day it was bought. */
+    readonly date: CalendarDate;
+    /** The tip on top of the amount. */
+    readonly tip?: Tip;
+    /** The time of day it was bought. */
+    readonly time?: TimeOfDay;
     /** The category; absent for the built-in one. */
     readonly category?: CategoryId;
     /** A longer description. */
     readonly description?: string;
-    /** The time of day it was bought. */
-    readonly time?: TimeOfDay;
-    /** The tip on top of the amount. */
-    readonly tip?: Tip;
 }
 
 /**
@@ -390,15 +390,15 @@ export interface Expense {
 export function convertedExpense(expense: internal.Expense): Expense {
     return {
         ...(undefined === expense.id ? {} : { id: expenseId(expense.id) }),
-        cost: convertedCost(expense.cost),
-        date: CalendarDate.converted(expense.date),
         name: expense.name,
+        cost: convertedCost(expense.cost),
         payers: convertedSplit(expense.payers),
         split: convertedExpenseSplit(expense.split),
+        date: CalendarDate.converted(expense.date),
+        ...(undefined === expense.tip ? {} : { tip: convertedTip(expense.tip) }),
+        ...(undefined === expense.time ? {} : { time: TimeOfDay.converted(expense.time) }),
         ...(undefined === expense.category ? {} : { category: categoryId(expense.category) }),
         ...(undefined === expense.description ? {} : { description: expense.description }),
-        ...(undefined === expense.time ? {} : { time: TimeOfDay.converted(expense.time) }),
-        ...(undefined === expense.tip ? {} : { tip: convertedTip(expense.tip) }),
     };
 }
 
@@ -410,15 +410,15 @@ export function convertedExpense(expense: internal.Expense): Expense {
 export function generatedExpense(expense: Expense): internal.Expense {
     return internal.Expense.create({
         ...(undefined === expense.id ? {} : { id: expense.id }),
-        cost: generatedCost(expense.cost),
-        date: expense.date.generated(),
         name: expense.name,
+        cost: generatedCost(expense.cost),
         payers: generatedSplit(expense.payers),
         split: generatedExpenseSplit(expense.split),
+        date: expense.date.generated(),
+        ...(undefined === expense.tip ? {} : { tip: generatedTip(expense.tip) }),
+        ...(undefined === expense.time ? {} : { time: expense.time.generated() }),
         ...(undefined === expense.category ? {} : { category: expense.category }),
         ...(undefined === expense.description ? {} : { description: expense.description }),
-        ...(undefined === expense.time ? {} : { time: expense.time.generated() }),
-        ...(undefined === expense.tip ? {} : { tip: generatedTip(expense.tip) }),
     });
 }
 
@@ -474,10 +474,10 @@ export type AccountDetails =
 
 /** A place to send a member money, with a label: "Main account". */
 export interface Account {
-    /** The IBAN or the username. */
-    readonly details: AccountDetails;
     /** The label. */
     readonly name: string;
+    /** The IBAN or the username. */
+    readonly details: AccountDetails;
 }
 
 /** The account details the generated code holds as `details`. */
@@ -510,14 +510,14 @@ export interface Member {
     readonly id?: MemberId;
     /** The first name. */
     readonly firstName: string;
-    /** Where the member can be paid, in the order they were given; none unless given. */
-    readonly accounts?: readonly Account[];
-    /** The email address. */
-    readonly email?: Email;
     /** The last name. */
     readonly lastName?: string;
+    /** The email address. */
+    readonly email?: Email;
     /** The phone number. */
     readonly phone?: PhoneNumber;
+    /** Where the member can be paid, in the order they were given; none unless given. */
+    readonly accounts?: readonly Account[];
 }
 
 /**
@@ -529,10 +529,10 @@ export function convertedMember(member: internal.Member): Member {
     return {
         ...(undefined === member.id ? {} : { id: memberId(member.id) }),
         firstName: member.firstName,
-        accounts: member.accounts.map((account) => ({ details: convertedAccountDetails(account.details), name: account.name })),
-        ...(undefined === member.email ? {} : { email: Email.known(member.email) }),
         ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
+        ...(undefined === member.email ? {} : { email: Email.known(member.email) }),
         ...(undefined === member.phone ? {} : { phone: PhoneNumber.known(member.phone) }),
+        accounts: member.accounts.map((account) => ({ name: account.name, details: convertedAccountDetails(account.details) })),
     };
 }
 
@@ -545,12 +545,12 @@ export function generatedMember(member: Member): internal.Member {
     return internal.Member.create({
         ...(undefined === member.id ? {} : { id: member.id }),
         firstName: member.firstName,
-        accounts: (member.accounts ?? []).map((account) =>
-            internal.Account.create({ details: generatedAccountDetails(account.details), name: account.name }),
-        ),
-        ...(undefined === member.email ? {} : { email: member.email.toString() }),
         ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
+        ...(undefined === member.email ? {} : { email: member.email.toString() }),
         ...(undefined === member.phone ? {} : { phone: member.phone.e164 }),
+        accounts: (member.accounts ?? []).map((account) =>
+            internal.Account.create({ name: account.name, details: generatedAccountDetails(account.details) }),
+        ),
     });
 }
 
@@ -593,18 +593,18 @@ export function generatedCategory(category: Category): internal.Category {
 export interface Transfer {
     /** The identifier: absent for a transfer to add, present for one the group holds. */
     readonly id?: TransferId;
-    /** What was paid. */
-    readonly cost: Cost;
-    /** The day it was paid. */
-    readonly date: CalendarDate;
     /** The member who paid. */
     readonly from: MemberId;
     /** The member who was paid. */
     readonly to: MemberId;
-    /** A note on the transfer. */
-    readonly note?: string;
+    /** What was paid. */
+    readonly cost: Cost;
+    /** The day it was paid. */
+    readonly date: CalendarDate;
     /** The time of day it was paid. */
     readonly time?: TimeOfDay;
+    /** A note on the transfer. */
+    readonly note?: string;
 }
 
 /**
@@ -615,12 +615,12 @@ export interface Transfer {
 export function convertedTransfer(transfer: internal.Transfer): Transfer {
     return {
         ...(undefined === transfer.id ? {} : { id: transferId(transfer.id) }),
-        cost: convertedCost(transfer.cost),
-        date: CalendarDate.converted(transfer.date),
         from: memberId(transfer.from),
         to: memberId(transfer.to),
-        ...(undefined === transfer.note ? {} : { note: transfer.note }),
+        cost: convertedCost(transfer.cost),
+        date: CalendarDate.converted(transfer.date),
         ...(undefined === transfer.time ? {} : { time: TimeOfDay.converted(transfer.time) }),
+        ...(undefined === transfer.note ? {} : { note: transfer.note }),
     };
 }
 
@@ -632,11 +632,11 @@ export function convertedTransfer(transfer: internal.Transfer): Transfer {
 export function generatedTransfer(transfer: Transfer): internal.Transfer {
     return internal.Transfer.create({
         ...(undefined === transfer.id ? {} : { id: transfer.id }),
-        cost: generatedCost(transfer.cost),
-        date: transfer.date.generated(),
         from: transfer.from,
         to: transfer.to,
-        ...(undefined === transfer.note ? {} : { note: transfer.note }),
+        cost: generatedCost(transfer.cost),
+        date: transfer.date.generated(),
         ...(undefined === transfer.time ? {} : { time: transfer.time.generated() }),
+        ...(undefined === transfer.note ? {} : { note: transfer.note }),
     });
 }

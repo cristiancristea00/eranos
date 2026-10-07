@@ -27,13 +27,13 @@ fn parts(members: &[MemberId]) -> Split {
 }
 
 fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {
-    let day = CalendarDate::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
+    let day = CalendarDate::new(2026, 9, 23).unwrap_or_else(|error| panic!("{error}"));
     Expense::builder(
-        Money::from_minor_units(Currency::EUR, minor_units),
-        day,
         "Expense",
+        Money::from_minor_units(minor_units, Currency::EUR),
         payer,
         parts(members),
+        day,
     )
     .build()
     .unwrap_or_else(|error| panic!("{error}"))
@@ -55,7 +55,7 @@ struct Household {
 /// A household of six with `EXISTING` expenses, each paid by the next member
 /// in turn.
 fn household() -> Household {
-    let mut group = Group::builder(Currency::EUR, "Benchmark")
+    let mut group = Group::builder("Benchmark", Currency::EUR)
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     let members: Vec<MemberId> = iter::repeat_with(|| {
@@ -85,7 +85,7 @@ fn mutations(criterion: &mut Criterion) {
     // A new version of `added`, so it replaces `added` under its identifier.
     let replacement = added
         .to_builder()
-        .cost(Money::from_minor_units(Currency::EUR, 54_321))
+        .cost(Money::from_minor_units(54_321, Currency::EUR))
         .paid_by(second)
         .split(parts(&[first, second, reader]))
         .build()

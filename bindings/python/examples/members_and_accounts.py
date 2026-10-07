@@ -42,17 +42,17 @@ class MemberRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Email', 'Phone', 'Accounts')
 
-    accounts: str
-    """The member's accounts, a line each."""
+    name: str
+    """The member's full name."""
 
     email: str
     """The member's email, or nothing."""
 
-    name: str
-    """The member's full name."""
-
     phone: str
     """The member's phone number, grouped for reading, or nothing."""
+
+    accounts: str
+    """The member's accounts, a line each."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -87,17 +87,17 @@ class BalanceRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Status', 'Consumed', 'Balance')
 
-    balance: Balance
-    """Where the member stands."""
-
-    consumed: Money
-    """What the member consumed."""
-
     name: str
     """The member's first name."""
 
     status: str
     """Whether the member is active or archived."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    balance: Balance
+    """Where the member stands."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -170,10 +170,10 @@ def print_members(group: Group) -> None:
         MemberRow,
         [
             MemberRow(
-                accounts='\n'.join(describe(account) for account in member.accounts),
-                email='' if member.email is None else str(member.email),
                 name=' '.join(name for name in (member.first_name, member.last_name) if name is not None),
+                email='' if member.email is None else str(member.email),
                 phone='' if member.phone is None else member.phone.international(),
+                accounts='\n'.join(describe(account) for account in member.accounts),
             )
             for member in group.members()
         ],
@@ -194,10 +194,10 @@ def print_balances(group: Group) -> None:
         BalanceRow,
         [
             BalanceRow(
-                balance=found.balance,
-                consumed=found.share,
                 name=member.first_name,
                 status='archived' if group.is_archived(member.id) else 'active',
+                consumed=found.share,
+                balance=found.balance,
             )
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
@@ -221,13 +221,13 @@ def members(group: Group) -> Flatmates:
     ana = group.add_member(
         Member(
             first_name='Ana',
-            accounts=(
-                Account(IbanAccountDetails(Iban('ro49 aaaa 1b31 0075 9384 0000')), 'ING'),
-                Account(UsernameAccountDetails(Username('@ana')), 'Revolut'),
-            ),
-            email=Email('ana@example.com'),
             last_name='Popescu',
+            email=Email('ana@example.com'),
             phone=PhoneNumber('+40 712 345 678'),
+            accounts=(
+                Account('ING', IbanAccountDetails(Iban('ro49 aaaa 1b31 0075 9384 0000'))),
+                Account('Revolut', UsernameAccountDetails(Username('@ana'))),
+            ),
         )
     )
     bob = group.add_member(Member(first_name='Bob'))
@@ -283,7 +283,7 @@ def moving_out(group: Group, flatmates: Flatmates) -> None:
     euro = Currency('EUR')
     both = WholeExpenseSplit(EqualSplit((ana, bob)))
     rent = group.add_expense(
-        Expense(cost=LocalCost(Money.parse('900.00', euro)), date=CalendarDate(1, 9, 2026), name='Rent', payers=EqualSplit((ana,)), split=both)
+        Expense(name='Rent', cost=LocalCost(Money.parse('900.00', euro)), payers=EqualSplit((ana,)), split=both, date=CalendarDate(2026, 9, 1))
     )
     group.archive_member(bob)
     print_lines(
@@ -293,7 +293,7 @@ def moving_out(group: Group, flatmates: Flatmates) -> None:
     print_balances(group)
 
     utilities = Expense(
-        cost=LocalCost(Money.parse('60.00', euro)), date=CalendarDate(1, 10, 2026), name='Utilities', payers=EqualSplit((ana,)), split=both
+        name='Utilities', cost=LocalCost(Money.parse('60.00', euro)), payers=EqualSplit((ana,)), split=both, date=CalendarDate(2026, 10, 1)
     )
     refused = refusal(lambda: group.add_expense(utilities))
     assert isinstance(refused, GroupError), 'the archived member must be refused'
@@ -312,7 +312,7 @@ def moving_out(group: Group, flatmates: Flatmates) -> None:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create(Currency('EUR'), 'Flat 4B')
+    group = Group.create('Flat 4B', Currency('EUR'))
     title('Flat 4B: members and their accounts')
     print_lines(
         'Ana and Bob share a flat. A member needs only a first name; the last name,',

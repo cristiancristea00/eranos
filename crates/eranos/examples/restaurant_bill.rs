@@ -17,32 +17,32 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct LineRow {
-    #[tabled(rename = "Line total", order = 4)]
-    line_total: Money,
-    #[tabled(rename = "Item", order = 0)]
+    #[tabled(rename = "Item")]
     name: String,
-    #[tabled(rename = "Shared by", order = 1)]
+    #[tabled(rename = "Shared by")]
     participants: String,
-    #[tabled(rename = "Quantity", order = 2)]
+    #[tabled(rename = "Quantity")]
     quantity: u32,
-    #[tabled(rename = "Unit price", order = 3)]
+    #[tabled(rename = "Unit price")]
     unit_price: Money,
+    #[tabled(rename = "Line total")]
+    line_total: Money,
 }
 
 #[derive(Tabled)]
 struct TipRow {
-    #[tabled(rename = "Tip shared equally", order = 4)]
-    equal_tip: Money,
-    #[tabled(rename = "Pays", order = 5)]
-    equal_total: Money,
-    #[tabled(rename = "Member", order = 0)]
+    #[tabled(rename = "Member")]
     name: String,
-    #[tabled(rename = "Tip by consumption", order = 2)]
-    proportional_tip: Money,
-    #[tabled(rename = "Pays", order = 3)]
-    proportional_total: Money,
-    #[tabled(rename = "Ordered", order = 1)]
+    #[tabled(rename = "Ordered")]
     subtotal: Money,
+    #[tabled(rename = "Tip by consumption")]
+    proportional_tip: Money,
+    #[tabled(rename = "Pays")]
+    proportional_total: Money,
+    #[tabled(rename = "Tip shared equally")]
+    equal_tip: Money,
+    #[tabled(rename = "Pays")]
+    equal_total: Money,
 }
 
 fn eur(text: &str) -> Result<Money, Box<dyn Error>> {
@@ -75,20 +75,20 @@ fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
 
 fn receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> Result<Vec<Item>, Box<dyn Error>> {
     Ok(vec![
-        Item::builder([ana], "Ciorbă", eur("8.00")?).build()?,
-        Item::builder([bob, carol], "Sarmale", eur("14.00")?)
+        Item::builder("Ciorbă", eur("8.00")?, [ana]).build()?,
+        Item::builder("Sarmale", eur("14.00")?, [bob, carol])
             .quantity(2)
             .build()?,
         Item::builder_with_split(
             "Papanași",
+            eur("9.00")?,
             Split::parts([
                 MemberParts::new(ana, Parts::ONE),
                 MemberParts::new(carol, Parts::from_whole(2)?),
             ]),
-            eur("9.00")?,
         )
         .build()?,
-        Item::builder([ana, bob, carol], "Lemonade", eur("3.00")?)
+        Item::builder("Lemonade", eur("3.00")?, [ana, bob, carol])
             .quantity(3)
             .build()?,
     ])
@@ -113,11 +113,11 @@ fn consumed(shares: &ExpenseShares, member: MemberId) -> Result<Money, Box<dyn E
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder(Currency::EUR, "Dinner at Caru' cu Bere").build()?;
+    let mut group = Group::builder("Dinner at Caru' cu Bere", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     let carol = group.add_member(Member::builder("Carol").build()?)?;
-    let day = CalendarDate::new(23, 9, 2026)?;
+    let day = CalendarDate::new(2026, 9, 23)?;
 
     let title = format!("{}: an itemised bill", group.name());
     println!("{title}\n{}", "═".repeat(title.chars().count()));
@@ -130,11 +130,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let lines = receipt(ana, bob, carol)?;
     print_table(
         lines.iter().map(|item| LineRow {
-            line_total: item.line_total(),
             name: item.name().to_owned(),
             participants: names(&group, item.split().members()),
             quantity: item.quantity(),
             unit_price: item.unit_price(),
+            line_total: item.line_total(),
         }),
         2,
     );
@@ -146,13 +146,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     section("2. Who ordered what, and the tip");
     let bill = |distribution| -> Result<Expense, Box<dyn Error>> {
         Ok(
-            Expense::itemised_builder(eur("54.00")?, day, receipt(ana, bob, carol)?, "Dinner", ana)
+            Expense::itemised_builder("Dinner", eur("54.00")?, ana, receipt(ana, bob, carol)?, day)
                 .tip(Tip::percentage(Percentage::parse("10")?).distributed(distribution))
                 .build()?,
         )
     };
     let untipped =
-        Expense::itemised_builder(eur("54.00")?, day, receipt(ana, bob, carol)?, "Dinner", ana)
+        Expense::itemised_builder("Dinner", eur("54.00")?, ana, receipt(ana, bob, carol)?, day)
             .build()?;
     let ordered = preview(&group, untipped)?;
     let proportional = group.add_expense(bill(TipDistribution::Proportional)?)?;
@@ -171,12 +171,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         let proportional_total = consumed(by_consumption, member)?;
         let equal_total = consumed(&even, member)?;
         rows.push(TipRow {
-            equal_tip: equal_total.checked_sub(subtotal)?,
-            equal_total,
             name: names(&group, [member]),
+            subtotal,
             proportional_tip: proportional_total.checked_sub(subtotal)?,
             proportional_total,
-            subtotal,
+            equal_tip: equal_total.checked_sub(subtotal)?,
+            equal_total,
         });
     }
     print_table(rows, 1);
@@ -187,7 +187,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     section("3. A total that does not match is refused");
     let mismatched =
-        Expense::itemised_builder(eur("55.00")?, day, receipt(ana, bob, carol)?, "Dinner", ana)
+        Expense::itemised_builder("Dinner", eur("55.00")?, ana, receipt(ana, bob, carol)?, day)
             .build();
     println!(
         "An amount of 55.00 EUR with these lines is refused when the expense is built:\n  \

@@ -24,8 +24,6 @@ struct LineRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<5> HEADERS{"Item", "Shared by", "Quantity", "Unit price", "Line total"};
 
-    /// The quantity times the unit price.
-    std::string lineTotal;
     /// What was ordered.
     std::string name;
     /// Who shared it.
@@ -34,6 +32,8 @@ struct LineRow final {
     std::string quantity;
     /// The price of one.
     std::string unitPrice;
+    /// The quantity times the unit price.
+    std::string lineTotal;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -46,18 +46,18 @@ struct TipRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<6> HEADERS{"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"};
 
-    /// Their part of the tip shared equally.
-    std::string equalTip;
-    /// What they pay with the tip shared equally.
-    std::string equalTotal;
     /// Their first name.
     std::string name;
+    /// What they ordered.
+    std::string subtotal;
     /// Their part of the tip shared by consumption.
     std::string proportionalTip;
     /// What they pay with the tip shared by consumption.
     std::string proportionalTotal;
-    /// What they ordered.
-    std::string subtotal;
+    /// Their part of the tip shared equally.
+    std::string equalTip;
+    /// What they pay with the tip shared equally.
+    std::string equalTotal;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -69,8 +69,8 @@ struct TipRow final {
 [[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
 /// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] Item line(std::string name, Split split, std::string_view const unitPrice, std::int32_t const quantity) {
-    Item item(std::move(name), std::move(split), euros(unitPrice));
+[[nodiscard]] Item line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
+    Item item(std::move(name), euros(unitPrice), std::move(split));
     item.quantity = quantity;
     return item;
 }
@@ -78,10 +78,10 @@ struct TipRow final {
 /// The receipt: every line with the members who had it.
 [[nodiscard]] std::vector<Item> receipt(MemberId const &ana, MemberId const &bob, MemberId const &carol) {
     return {
-        line("Ciorbă", EqualSplit{{ana}}, "8.00", 1),
-        line("Sarmale", EqualSplit{{bob, carol}}, "14.00", 2),
-        line("Papanași", PartsSplit{{MemberParts(ana, Parts{100}), MemberParts(carol, Parts{200})}}, "9.00", 1),
-        line("Lemonade", EqualSplit{{ana, bob, carol}}, "3.00", 3),
+        line("Ciorbă", "8.00", EqualSplit{{ana}}, 1),
+        line("Sarmale", "14.00", EqualSplit{{bob, carol}}, 2),
+        line("Papanași", "9.00", PartsSplit{{MemberParts(ana, Parts{100}), MemberParts(carol, Parts{200})}}, 1),
+        line("Lemonade", "3.00", EqualSplit{{ana, bob, carol}}, 3),
     };
 }
 
@@ -102,11 +102,11 @@ struct TipRow final {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create(must(Currency::of("EUR")), "Dinner at Caru' cu Bere"));
+    auto group = must(Group::create("Dinner at Caru' cu Bere", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const carol = must(group.addMember(Member("Carol")));
-    auto const day = must(CalendarDate::of(23, 9, 2026));
+    auto const day = must(CalendarDate::of(2026, 9, 23));
 
     title(std::format("{}: an itemised bill", group.name()));
     printLine("Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,\n"
@@ -115,13 +115,13 @@ void run() {
     section("1. The receipt");
     std::vector<LineRow> lines;
     for (auto const &item : receipt(ana, bob, carol)) {
-        Money const total(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity);
+        Money const total(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency);
         lines.push_back({
-            .lineTotal = total.toString(),
             .name = item.name,
             .participants = names(group, must(participants(item.split))),
             .quantity = std::to_string(item.quantity),
             .unitPrice = item.unitPrice.toString(),
+            .lineTotal = total.toString(),
         });
     }
     printTable(lines, 2);
@@ -131,9 +131,9 @@ void run() {
     section("2. Who ordered what, and the tip");
     // The dinner, with its tip of 10 % shared by `distribution` when there is one.
     auto const bill = [&](std::optional<TipDistribution> const distribution) {
-        Expense expense(LocalCost{euros("54.00")}, day, "Dinner", EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)});
+        Expense expense("Dinner", LocalCost{euros("54.00")}, EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)}, day);
         if (distribution.has_value()) {
-            expense.tip = Tip(*distribution, PercentageTipValue{must(Percentage::parse("10"))});
+            expense.tip = Tip(PercentageTipValue{must(Percentage::parse("10"))}, *distribution);
         }
         return expense;
     };
@@ -150,12 +150,12 @@ void run() {
         auto const proportionalTotal = consumed(byConsumption, member);
         auto const equalTotal = consumed(even, member);
         tips.push_back({
-            .equalTip = must(equalTotal.minus(subtotal)).toString(),
-            .equalTotal = equalTotal.toString(),
             .name = firstName(group, member),
+            .subtotal = subtotal.toString(),
             .proportionalTip = must(proportionalTotal.minus(subtotal)).toString(),
             .proportionalTotal = proportionalTotal.toString(),
-            .subtotal = subtotal.toString(),
+            .equalTip = must(equalTotal.minus(subtotal)).toString(),
+            .equalTotal = equalTotal.toString(),
         });
     }
     printTable(tips, 1);
@@ -164,7 +164,7 @@ void run() {
 
     section("3. A total that does not match is refused");
     auto const mismatch = refusal(
-        group.addExpense(Expense(LocalCost{euros("55.00")}, day, "Dinner", EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)})));
+        group.addExpense(Expense("Dinner", LocalCost{euros("55.00")}, EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)}, day)));
     check(mismatch.has_value(), "the mismatch is refused");
     std::println("An amount of 55.00 EUR with these lines is refused when the expense is built:\n"
                  "  error: {}",

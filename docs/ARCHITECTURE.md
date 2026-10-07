@@ -523,18 +523,19 @@ serialise. A group serialises only its inputs, never the derived totals:
 {
   "format": 2,
   "id": "…",
-  "categories": [{"id": "…", "name": "Food"}],
-  "currency": "EUR",
-  "expenses":   [{"id": "…",
-                  "amount": {"currency": "EUR", "minor_units": 9000},
-                  "date": "2026-09-23", "name": "Dinner", "payers": {"equal": ["…"]},
-                  "split": {"whole": {"percentages": [["…", 5000], …]}},
-                  "tip": {"value": {"percentage": 1000}, "distribution": "proportional"}}],
-  "members":    [{"id": "…", "first_name": "Ana", …}],
   "name": "Lisbon",
-  "transfers":  [{"id": "…", "amount": …, "date": "…", "from": "…", "to": "…"}],
+  "currency": "EUR",
+  "language": "pt-PT",
+  "members":    [{"id": "…", "first_name": "Ana", …}],
   "archived":   ["…"],
-  "language": "pt-PT"
+  "categories": [{"id": "…", "name": "Food"}],
+  "expenses":   [{"id": "…", "name": "Dinner",
+                  "amount": {"minor_units": 9000, "currency": "EUR"},
+                  "payers": {"equal": ["…"]},
+                  "split": {"whole": {"percentages": [["…", 5000], …]}},
+                  "date": "2026-09-23",
+                  "tip": {"value": {"percentage": 1000}, "distribution": "proportional"}}],
+  "transfers":  [{"id": "…", "from": "…", "to": "…", "amount": …, "date": "…"}]
 }
 ```
 
@@ -546,8 +547,9 @@ serialise. A group serialises only its inputs, never the derived totals:
   built-in category, an expense's category when it is the built-in one
   (every group has it again when it loads), and a tip equal to
   `Tip::default()`, no tip at all. Keys follow the field order of
-  [AGENTS.md](../AGENTS.md): `format` and `id` first, then the required
-  fields, then the optional ones, each alphabetically.
+  [AGENTS.md](../AGENTS.md): `format` and `id` first, then the fields that
+  describe the value in their natural order, the optional ones after the
+  required, and a group's collections last.
 - Loading replays the entries through the `add_*` methods: members (all
   unarchived first), categories, expenses, transfers, then the `archived`
   list, because an expense may reference a member archived after it was

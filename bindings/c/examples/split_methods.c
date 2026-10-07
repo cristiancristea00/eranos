@@ -14,10 +14,10 @@ typedef struct Family {
     Id ana;
     /// The second parent.
     Id bob;
-    /// The day of every expense.
-    EranosCalendarDate day;
     /// Their daughter.
     Id mia;
+    /// The day of every expense.
+    EranosCalendarDate day;
 } Family;
 
 /// The rule by which a member shares an expense, as the report names it.
@@ -30,14 +30,14 @@ typedef struct Rule {
 
 /// A row of the table of an expense's shares: a member's rule, what they paid, and what they consumed.
 typedef struct ShareRow {
-    /// What they consumed.
-    Line consumed;
     /// Their first name.
     Line name;
-    /// What they paid.
-    Line paid;
     /// The rule by which they share the expense.
     Line rule;
+    /// What they paid.
+    Line paid;
+    /// What they consumed.
+    Line consumed;
 } ShareRow;
 
 /// A table of an expense's shares, its columns from @p numbersFrom on aligned to the right.
@@ -52,14 +52,14 @@ static void addShareRow(Table *const table, ShareRow const *const row) {
 
 /// A row of the table of totals: what a member paid and consumed over the holiday, and their balance.
 typedef struct TotalRow {
-    /// What is left: what they paid minus what they consumed.
-    Line balance;
-    /// What they consumed.
-    Line consumed;
     /// Their first name.
     Line name;
     /// What they paid.
     Line paid;
+    /// What they consumed.
+    Line consumed;
+    /// What is left: what they paid minus what they consumed.
+    Line balance;
 } TotalRow;
 
 /// A table of totals, its columns from @p numbersFrom on aligned to the right.
@@ -110,10 +110,10 @@ static void report(EranosGroup const *const group, Id const id, Rule const *cons
         EranosMemberShare *const share = eranosMemberShareListGet(members, index);
         eranosMemberShareMember(share, text);
         addShareRow(table, &(ShareRow){
-                               .consumed = moneyLine(eranosMemberShareShare(share)),
                                .name = firstName(group, eranosTextData(text)),
-                               .paid = moneyLine(eranosMemberSharePaid(share)),
                                .rule = lineOf("%s", ruleOf(rules, count, eranosTextData(text))),
+                               .paid = moneyLine(eranosMemberSharePaid(share)),
+                               .consumed = moneyLine(eranosMemberShareShare(share)),
                            });
         eranosMemberShareDestroy(share);
     }
@@ -131,7 +131,7 @@ static void equally(EranosGroup *const group, Family const *const family) {
               "leftover cent; which member it is rotates from expense to expense, so over a trip\n"
               "nobody always pays it.");
     Members const members = everyone(family);
-    Id const taxi = addExpense(group, expenseOf(localCost(euros("10.00")), family->day, "Taxi", soleSplit(family->ana), equalSplit(&members)));
+    Id const taxi = addExpense(group, expenseOf("Taxi", localCost(euros("10.00")), soleSplit(family->ana), equalSplit(&members), family->day));
     Rule const thirds[] = {
         {.member = family->ana, .text = "an equal third"},
         {.member = family->bob, .text = "an equal third"},
@@ -151,7 +151,7 @@ static void byPercentage(EranosGroup *const group, Family const *const family) {
         {.member = family->mia, .value = "20"},
     };
     Id const rent =
-        addExpense(group, expenseOf(localCost(euros("500.00")), family->day, "Flat", soleSplit(family->bob), percentagesSplit(shares, 3)));
+        addExpense(group, expenseOf("Flat", localCost(euros("500.00")), soleSplit(family->bob), percentagesSplit(shares, 3), family->day));
     Rule const rules[] = {
         {.member = family->ana, .text = "40%"},
         {.member = family->bob, .text = "40%"},
@@ -170,7 +170,7 @@ static Id byParts(EranosGroup *const group, Family const *const family) {
         {.member = family->bob, .value = "1"},
         {.member = family->mia, .value = "0.5"},
     };
-    Id const food = addExpense(group, expenseOf(localCost(euros("125.00")), family->day, "Food", soleSplit(family->ana), partsSplit(shares, 3)));
+    Id const food = addExpense(group, expenseOf("Food", localCost(euros("125.00")), soleSplit(family->ana), partsSplit(shares, 3), family->day));
     Rule const rules[] = {
         {.member = family->ana, .text = "1 part"},
         {.member = family->bob, .text = "1 part"},
@@ -191,7 +191,7 @@ static void byAmounts(EranosGroup *const group, Family const *const family) {
         {.member = family->mia, .value = "5.00"},
     };
     Id const tickets =
-        addExpense(group, expenseOf(localCost(euros("35.00")), family->day, "Museum", soleSplit(family->bob), amountsSplit("EUR", shares, 3)));
+        addExpense(group, expenseOf("Museum", localCost(euros("35.00")), soleSplit(family->bob), amountsSplit("EUR", shares, 3), family->day));
     Rule const rules[] = {
         {.member = family->ana, .text = "15.00 EUR"},
         {.member = family->bob, .text = "15.00 EUR"},
@@ -211,7 +211,7 @@ static void severalPayers(EranosGroup *const group, Family const *const family) 
     };
     Members const members = everyone(family);
     Id const dinner =
-        addExpense(group, expenseOf(localCost(euros("90.00")), family->day, "Dinner", amountsSplit("EUR", cards, 2), equalSplit(&members)));
+        addExpense(group, expenseOf("Dinner", localCost(euros("90.00")), amountsSplit("EUR", cards, 2), equalSplit(&members), family->day));
     Rule const thirds[] = {
         {.member = family->ana, .text = "an equal third"},
         {.member = family->bob, .text = "an equal third"},
@@ -229,7 +229,7 @@ static void mistakes(EranosGroup *const group, Family const *const family) {
         {.member = family->bob, .value = "30"},
     };
     EranosError *const refused =
-        expenseRefusal(group, expenseOf(localCost(euros("10.00")), family->day, "Invalid", soleSplit(family->ana), percentagesSplit(shares, 2)));
+        expenseRefusal(group, expenseOf("Invalid", localCost(euros("10.00")), soleSplit(family->ana), percentagesSplit(shares, 2), family->day));
     check(nullptr != refused, "the split is refused");
     Line const message = messageLine(refused);
     printFormatted("  error: %s", message.text);
@@ -253,10 +253,10 @@ static void totals(EranosGroup const *const group) {
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         addTotalRow(table, &(TotalRow){
-                               .balance = balanceLine(eranosMemberSummaryBalance(found)),
-                               .consumed = moneyLine(eranosMemberSummaryShare(found)),
                                .name = textLine(text),
                                .paid = moneyLine(eranosMemberSummaryPaid(found)),
+                               .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                               .balance = balanceLine(eranosMemberSummaryBalance(found)),
                            });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
@@ -293,7 +293,7 @@ static bool miaConsumedHalfAPart(EranosGroup const *const group, Family const *c
 
 int main(void) {
     EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("EUR", "Family holiday", &details));
+    must(eranosNewGroupCreate("Family holiday", "EUR", &details));
     EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
@@ -302,7 +302,7 @@ int main(void) {
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
     Id const mia = addMember(group, "Mia");
-    Family const family = {.ana = ana, .bob = bob, .day = {.day = 14, .month = 7, .year = 2026}, .mia = mia};
+    Family const family = {.ana = ana, .bob = bob, .mia = mia, .day = {.year = 2026, .month = 7, .day = 14}};
 
     printLine("Family holiday: every way to split an expense\n"
               "═════════════════════════════════════════════");

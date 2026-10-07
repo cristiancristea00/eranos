@@ -16,12 +16,12 @@ pub mod ffi {
     /// A day of the calendar.
     #[derive(Debug, Clone, Copy)]
     pub struct EranosCalendarDate {
-        /// The day of the month, from 1.
-        pub day: i32,
-        /// The month, from 1 for January.
-        pub month: i32,
         /// The year.
         pub year: i32,
+        /// The month, from 1 for January.
+        pub month: i32,
+        /// The day of the month, from 1.
+        pub day: i32,
     }
 
     impl EranosCalendarDate {
@@ -136,24 +136,24 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            currency: &DiplomatStr,
             minor_units: i64,
+            currency: &DiplomatStr,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Money {
-                currency: crate::text(currency)?,
                 minor_units,
+                currency: crate::text(currency)?,
             })))
-        }
-
-        /// The currency, as an ISO 4217 code.
-        pub fn currency(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.currency);
         }
 
         /// The amount in minor units: cents for the euro, none for the yen.
         #[must_use]
         pub const fn minor_units(&self) -> i64 {
             self.0.minor_units
+        }
+
+        /// The currency, as an ISO 4217 code.
+        pub fn currency(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.currency);
         }
 
         /// The amount written `text` in the currency `currency`: "12.50", "12.5", or "-3".
@@ -460,9 +460,9 @@ pub mod ffi {
 impl From<ffi::EranosCalendarDate> for eranos_bindings::CalendarDate {
     fn from(date: ffi::EranosCalendarDate) -> Self {
         Self {
-            day: date.day,
-            month: date.month,
             year: date.year,
+            month: date.month,
+            day: date.day,
         }
     }
 }
@@ -470,9 +470,9 @@ impl From<ffi::EranosCalendarDate> for eranos_bindings::CalendarDate {
 impl From<eranos_bindings::CalendarDate> for ffi::EranosCalendarDate {
     fn from(date: eranos_bindings::CalendarDate) -> Self {
         Self {
-            day: date.day,
-            month: date.month,
             year: date.year,
+            month: date.month,
+            day: date.day,
         }
     }
 }

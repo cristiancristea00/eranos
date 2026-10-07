@@ -23,16 +23,16 @@ struct EntryRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<5> HEADERS{"Entry", "Paid by", "Entered as", "Rate", "In the group currency"};
 
-    /// Its amount in the group currency.
-    std::string converted;
     /// What it was.
     std::string name;
-    /// Its amount as entered.
-    std::string original;
     /// Who paid it.
     std::string payer;
+    /// Its amount as entered.
+    std::string original;
     /// The rate it was entered at.
     std::string rate;
+    /// Its amount in the group currency.
+    std::string converted;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -45,18 +45,18 @@ struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<6> HEADERS{"Member", "Paid", "Consumed", "Sent", "Received", "Balance"};
 
-    /// What is left.
-    std::string balance;
-    /// What they consumed.
-    std::string consumed;
     /// Their first name.
     std::string name;
     /// What they paid.
     std::string paid;
-    /// What they received.
-    std::string received;
+    /// What they consumed.
+    std::string consumed;
     /// What they sent.
     std::string sent;
+    /// What they received.
+    std::string received;
+    /// What is left.
+    std::string balance;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -80,26 +80,26 @@ struct BalanceRow final {
 
 /// Prints every expense and transfer, as entered and in the group currency.
 void printEntries(Group const &group) {
-    Money const zero(group.currency(), 0);
+    Money const zero(0, group.currency());
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
         auto const shares = must(group.expenseShares(expense.id.value()));
         rows.push_back({
-            .converted = shares.has_value() ? shares->total.toString() : zero.toString(),
             .name = expense.name,
-            .original = must(total(expense)).toString(),
             .payer = names(group, must(participants(expense.payers))),
+            .original = must(total(expense)).toString(),
             .rate = rateOf(expense.cost).toString(),
+            .converted = shares.has_value() ? shares->total.toString() : zero.toString(),
         });
     }
     for (auto const &transfer : group.transfers()) {
         auto const converted = must(group.transferAmount(transfer.id.value()));
         rows.push_back({
-            .converted = converted.has_value() ? converted->toString() : zero.toString(),
             .name = std::format("Transfer to {}", firstName(group, transfer.to)),
-            .original = amountOf(transfer.cost).toString(),
             .payer = firstName(group, transfer.from),
+            .original = amountOf(transfer.cost).toString(),
             .rate = rateOf(transfer.cost).toString(),
+            .converted = converted.has_value() ? converted->toString() : zero.toString(),
         });
     }
     printTable(rows, 2);
@@ -112,12 +112,12 @@ void printBalances(Group const &group) {
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
         rows.push_back({
-            .balance = toString(found.balance),
-            .consumed = found.share.toString(),
             .name = member.firstName,
             .paid = found.paid.toString(),
-            .received = found.received.toString(),
+            .consumed = found.share.toString(),
             .sent = found.sent.toString(),
+            .received = found.received.toString(),
+            .balance = toString(found.balance),
         });
     }
     printTable(rows, 1);
@@ -127,12 +127,14 @@ void printBalances(Group const &group) {
 void expenses(Group &group, MemberId const &ana, MemberId const &bob) {
     section("1. Expenses in three currencies");
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
-    static_cast<void>(must(group.addExpense(Expense(ConvertedCost{.amount = amountOf("400.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
-                                                    must(CalendarDate::of(1, 8, 2026)), "Fuel", EqualSplit{{ana}}, both))));
-    static_cast<void>(must(group.addExpense(Expense(ConvertedCost{.amount = amountOf("24000.00", "HUF"), .rate = must(ExchangeRate::parse("0.0025"))},
-                                                    must(CalendarDate::of(2, 8, 2026)), "Dinner", EqualSplit{{bob}}, both))));
     static_cast<void>(
-        must(group.addExpense(Expense(LocalCost{amountOf("60.00", "EUR")}, must(CalendarDate::of(3, 8, 2026)), "Ferry", EqualSplit{{bob}}, both))));
+        must(group.addExpense(Expense("Fuel", ConvertedCost{.amount = amountOf("400.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
+                                      EqualSplit{{ana}}, both, must(CalendarDate::of(2026, 8, 1))))));
+    static_cast<void>(
+        must(group.addExpense(Expense("Dinner", ConvertedCost{.amount = amountOf("24000.00", "HUF"), .rate = must(ExchangeRate::parse("0.0025"))},
+                                      EqualSplit{{bob}}, both, must(CalendarDate::of(2026, 8, 2))))));
+    static_cast<void>(
+        must(group.addExpense(Expense("Ferry", LocalCost{amountOf("60.00", "EUR")}, EqualSplit{{bob}}, both, must(CalendarDate::of(2026, 8, 3))))));
     printEntries(group);
     std::println("The rate says how many {} one unit of the entry's currency is worth: 400.00 RON at\n"
                  "0.2 is 80.00 EUR. The ferry was paid in the group currency, a local cost at 1.",
@@ -142,8 +144,8 @@ void expenses(Group &group, MemberId const &ana, MemberId const &bob) {
 /// Adds Ana's repayment to Bob, in cash and in RON.
 void repayment(Group &group, MemberId const &ana, MemberId const &bob) {
     section("3. A repayment in cash, in another currency");
-    Transfer transfer(ConvertedCost{.amount = amountOf("100.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
-                      must(CalendarDate::of(4, 8, 2026)), ana, bob);
+    Transfer transfer(ana, bob, ConvertedCost{.amount = amountOf("100.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
+                      must(CalendarDate::of(2026, 8, 4)));
     transfer.note = "Cash at the border";
     static_cast<void>(must(group.addTransfer(transfer)));
     std::println("Ana pays Bob 100.00 RON in cash, which at 0.2 is exactly the 20.00 EUR she owed.\n"
@@ -169,7 +171,7 @@ void newCurrency(Group &group) {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create(must(Currency::of("EUR")), "Danube road trip"));
+    auto group = must(Group::create("Danube road trip", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
 

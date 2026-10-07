@@ -23,9 +23,9 @@ final class Flat {
 
     Flat() throws EranosException {
         euro = Currency.of("EUR");
-        day = CalendarDate.of(23, 9, 2026);
+        day = CalendarDate.of(2026, 9, 23);
         group =
-                Group.builder(euro, "Flat")
+                Group.builder("Flat", euro)
                         .description("Rent")
                         .language(Language.parse("pt-pt"))
                         .build();
@@ -35,21 +35,21 @@ final class Flat {
         dinner =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(euros(3_000)),
-                                        day,
                                         "Dinner",
+                                        new Cost.Local(euros(3_000)),
                                         new Split.Equal(List.of(ana)),
-                                        new ExpenseSplit.Whole(new Split.Equal(List.of(ana, bob))))
+                                        new ExpenseSplit.Whole(new Split.Equal(List.of(ana, bob))),
+                                        day)
                                 .category(food)
                                 .build());
         repayment =
                 group.addTransfer(
-                        Transfer.builder(new Cost.Local(euros(1_000)), day, bob, ana).build());
+                        Transfer.builder(bob, ana, new Cost.Local(euros(1_000)), day).build());
     }
 
     /** {@code minorUnits} cents. */
     Money euros(long minorUnits) {
-        return new Money(euro, minorUnits);
+        return new Money(minorUnits, euro);
     }
 
     /**
@@ -58,11 +58,11 @@ final class Flat {
      */
     Expense expense(String name, MemberId payer, List<MemberId> members) {
         return Expense.builder(
-                        new Cost.Local(euros(3_000)),
-                        day,
                         name,
+                        new Cost.Local(euros(3_000)),
                         new Split.Equal(List.of(payer)),
-                        new ExpenseSplit.Whole(new Split.Equal(members)))
+                        new ExpenseSplit.Whole(new Split.Equal(members)),
+                        day)
                 .build();
     }
 

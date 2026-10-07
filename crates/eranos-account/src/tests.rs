@@ -22,7 +22,7 @@ fn username() -> Username {
 #[test]
 fn the_account_name_is_trimmed() {
     // Surrounding whitespace.
-    let account = Account::new(iban(), "  ING \n").unwrap();
+    let account = Account::new("  ING \n", iban()).unwrap();
     assert_eq!(account.name(), "ING");
     // The details are kept as given.
     assert_eq!(account.details(), &AccountDetails::Iban(iban()));
@@ -35,7 +35,7 @@ fn a_blank_account_name_is_rejected() {
     // Empty and whitespace-only labels.
     for name in ["", "   ", "\t"] {
         assert_eq!(
-            Account::new(username(), name),
+            Account::new(name, username()),
             Err(AccountError::EmptyName),
             "{name:?}"
         );
@@ -59,11 +59,11 @@ fn ibans_and_usernames_convert_into_account_details() {
 #[test]
 fn kind_reports_the_kind_of_details() {
     // IBAN accounts.
-    let bank = Account::new(iban(), "ING").unwrap();
+    let bank = Account::new("ING", iban()).unwrap();
     assert_eq!(bank.kind(), AccountKind::Iban);
     assert_eq!(bank.details().kind(), AccountKind::Iban);
     // Username accounts.
-    let app = Account::new(username(), "Revolut").unwrap();
+    let app = Account::new("Revolut", username()).unwrap();
     assert_eq!(app.kind(), AccountKind::Username);
     assert_eq!(app.details().kind(), AccountKind::Username);
 }
@@ -122,15 +122,15 @@ fn as_str_returns_the_username() {
 #[test]
 fn accounts_round_trip_through_serde() {
     // IBAN accounts.
-    let bank = Account::new(iban(), "ING").unwrap();
+    let bank = Account::new("ING", iban()).unwrap();
     let json = serde_json::to_string(&bank).unwrap();
     assert_eq!(
         json,
-        r#"{"details":{"iban":"RO49AAAA1B31007593840000"},"name":"ING"}"#
+        r#"{"name":"ING","details":{"iban":"RO49AAAA1B31007593840000"}}"#
     );
     assert_eq!(serde_json::from_str::<Account>(&json).unwrap(), bank);
     // Username accounts, trimmed on the way in.
-    let app = Account::new(Username::new("@ana").unwrap(), "Revolut").unwrap();
+    let app = Account::new("Revolut", Username::new("@ana").unwrap()).unwrap();
     let loaded: Account =
         serde_json::from_str(r#"{"name":" Revolut ","details":{"username":" @ana "}}"#).unwrap();
     assert_eq!(loaded, app);

@@ -16,31 +16,31 @@ struct Flat {
 
     init() throws {
         euro = try Currency(code: "EUR")
-        day = try CalendarDate(day: 23, month: 9, year: 2026)
-        group = try Group(currency: euro, name: "Flat", description: "Rent", language: Language("pt-pt"))
+        day = try CalendarDate(year: 2026, month: 9, day: 23)
+        group = try Group(name: "Flat", currency: euro, description: "Rent", language: Language("pt-pt"))
         ana = try group.add(Member(firstName: "Ana"))
         bob = try group.add(Member(firstName: "Bob"))
         food = try group.add(Category(name: "Food"))
         dinner = try group.add(
             Expense(
-                cost: .local(Money(currency: euro, minorUnits: 3_000)),
-                date: day,
                 name: "Dinner",
+                cost: .local(Money(minorUnits: 3_000, currency: euro)),
                 payers: .equal([ana]),
                 split: .whole(.equal([ana, bob])),
+                date: day,
                 category: food
             )
         )
-        repayment = try group.add(Transfer(cost: .local(Money(currency: euro, minorUnits: 1_000)), date: day, from: bob, to: ana))
+        repayment = try group.add(Transfer(from: bob, to: ana, cost: .local(Money(minorUnits: 1_000, currency: euro)), date: day))
     }
 
     /// `minorUnits` cents.
     func euros(_ minorUnits: Int64) -> Money {
-        Money(currency: euro, minorUnits: minorUnits)
+        Money(minorUnits: minorUnits, currency: euro)
     }
 
     /// An expense of 30.00 EUR that `payer` paid and `members` share equally.
     func expense(_ name: String, paidBy payer: Member.ID, sharedBy members: [Member.ID]) -> Expense {
-        Expense(cost: .local(euros(3_000)), date: day, name: name, payers: .equal([payer]), split: .whole(.equal(members)))
+        Expense(name: name, cost: .local(euros(3_000)), payers: .equal([payer]), split: .whole(.equal(members)), date: day)
     }
 }

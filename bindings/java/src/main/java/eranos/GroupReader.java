@@ -39,16 +39,6 @@ public final class GroupReader implements AutoCloseable {
     }
 
     /**
-     * The group currency, which every total is in.
-     *
-     * @return the currency
-     * @throws IllegalStateException after {@link #close}
-     */
-    public Currency currency() {
-        return Converting.callUnfailing(() -> Currency.known(handle.currency()));
-    }
-
-    /**
      * The group's name.
      *
      * @return the text
@@ -56,6 +46,16 @@ public final class GroupReader implements AutoCloseable {
      */
     public String name() {
         return Converting.callUnfailing(() -> handle.name());
+    }
+
+    /**
+     * The group currency, which every total is in.
+     *
+     * @return the currency
+     * @throws IllegalStateException after {@link #close}
+     */
+    public Currency currency() {
+        return Converting.callUnfailing(() -> Currency.known(handle.currency()));
     }
 
     /**

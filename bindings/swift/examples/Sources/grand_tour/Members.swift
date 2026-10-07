@@ -6,7 +6,7 @@ import Report
 
 func theGroup() throws(EranosError) -> Group {
     section("1. The group")
-    let group = try Group(currency: Currency(code: "EUR"), name: "Lisbon", description: "A week by the Atlantic", language: Language("pt-pt"))
+    let group = try Group(name: "Lisbon", currency: Currency(code: "EUR"), description: "A week by the Atlantic", language: Language("pt-pt"))
     let blank = Result { () throws(EranosError) in try group.rename(to: "   ") }
     try group.rename(to: "Lisbon and Porto")
     try group.changeDescription(to: "A week by the Atlantic, with a day in Porto")
@@ -49,10 +49,10 @@ func printMembers(_ group: Group) throws(EranosError) {
     printTable(
         try group.members().map { member in
             MemberRow(
-                accounts: cell(member.accounts.map(describe)),
-                email: member.email?.description ?? "",
                 name: [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
-                phone: member.phone?.description ?? ""
+                email: member.email?.description ?? "",
+                phone: member.phone?.description ?? "",
+                accounts: cell(member.accounts.map(describe))
             )
         },
         numbersFrom: 4
@@ -93,13 +93,13 @@ func members(_ group: Group) throws(EranosError) -> People {
     let ana = try group.add(
         Member(
             firstName: "Ana",
-            accounts: [
-                Account(details: .iban(try IBAN("RO49 AAAA 1B31 0075 9384 0000")), name: "ING"),
-                Account(details: .username(try Username("@ana")), name: "Revolut")
-            ],
-            email: try Email("ana@example.com"),
             lastName: "Popescu",
-            phone: try PhoneNumber("+40 712 345 678")
+            email: try Email("ana@example.com"),
+            phone: try PhoneNumber("+40 712 345 678"),
+            accounts: [
+                Account(name: "ING", details: .iban(try IBAN("RO49 AAAA 1B31 0075 9384 0000"))),
+                Account(name: "Revolut", details: .username(try Username("@ana")))
+            ]
         )
     )
     let bob = try group.add(Member(firstName: "Bob"))

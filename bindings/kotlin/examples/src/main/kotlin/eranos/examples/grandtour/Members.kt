@@ -32,10 +32,10 @@ private data class DetailRow(
 }
 
 private data class MemberRow(
-    val accounts: String,
-    val email: String,
     val name: String,
+    val email: String,
     val phone: String,
+    val accounts: String,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, email, phone, accounts)
@@ -60,7 +60,7 @@ private data class CheckRow(
 
 internal fun theGroup(): Group {
     section("1. The group")
-    val group = Group(Currency.of("EUR"), "Lisbon", "A week by the Atlantic", Language.parse("pt-pt"))
+    val group = Group("Lisbon", Currency.of("EUR"), "A week by the Atlantic", Language.parse("pt-pt"))
     val blank = refusal { group.renameBlocking("   ") }
     group.renameBlocking("Lisbon and Porto")
     group.setDescriptionBlocking("A week by the Atlantic, with a day in Porto")
@@ -102,10 +102,10 @@ internal fun printMembers(group: Group) {
         MemberRow.HEADERS,
         group.membersBlocking().map { member ->
             MemberRow(
-                accounts = cell(member.accounts.map(::describe)),
-                email = member.email?.toString().orEmpty(),
                 name = listOfNotNull(member.firstName, member.lastName).joinToString(" "),
+                email = member.email?.toString().orEmpty(),
                 phone = member.phone?.toString().orEmpty(),
+                accounts = cell(member.accounts.map(::describe)),
             )
         },
         numbersFrom = 4,
@@ -148,14 +148,14 @@ internal fun members(group: Group): People {
         group.addBlocking(
             Member(
                 "Ana",
+                lastName = "Popescu",
+                email = Email.parse("ana@example.com"),
+                phone = PhoneNumber.parse("+40 712 345 678"),
                 accounts =
                     listOf(
-                        Account(AccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000")), "ING"),
-                        Account(AccountDetails.Username(Username.parse("@ana")), "Revolut"),
+                        Account("ING", AccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000"))),
+                        Account("Revolut", AccountDetails.Username(Username.parse("@ana"))),
                     ),
-                email = Email.parse("ana@example.com"),
-                lastName = "Popescu",
-                phone = PhoneNumber.parse("+40 712 345 678"),
             ),
         )
     val bob = group.addBlocking(Member("Bob"))
@@ -164,7 +164,7 @@ internal fun members(group: Group): People {
     val eva = group.addBlocking(Member("Eva"))
     val filip = group.addBlocking(Member("Filip"))
     // An edit starts from a copy of the member, which keeps its identifier.
-    val edited = checkNotNull(group.memberBlocking(bob)) { "Bob is a member" }.copy(email = Email.parse("bob@example.com"), lastName = "Ionescu")
+    val edited = checkNotNull(group.memberBlocking(bob)) { "Bob is a member" }.copy(lastName = "Ionescu", email = Email.parse("bob@example.com"))
     val before = group.replaceBlocking(edited)
     printMembers(group)
     println(

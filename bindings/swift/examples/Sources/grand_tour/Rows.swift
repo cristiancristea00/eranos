@@ -17,10 +17,10 @@ struct DetailRow: TableRow {
 struct MemberRow: TableRow {
     static let headers = ["Member", "Email", "Phone", "Accounts"]
 
-    let accounts: String
-    let email: String
     let name: String
+    let email: String
     let phone: String
+    let accounts: String
 
     var cells: [String] {
         [name, email, phone, accounts]
@@ -53,11 +53,11 @@ struct RefusalRow: TableRow {
 struct ShareRow: TableRow {
     static let headers = ["Expense", "Split", "Member", "Paid", "Consumed"]
 
-    let consumed: String
     let expense: String
     let how: String
     let members: String
     let paid: String
+    let consumed: String
 
     var cells: [String] {
         [expense, how, members, paid, consumed]
@@ -67,11 +67,11 @@ struct ShareRow: TableRow {
 struct ItemRow: TableRow {
     static let headers = ["Item", "Shared by", "Quantity", "Unit price", "Line total"]
 
-    let lineTotal: Money
     let name: String
-    let quantity: Int32
     let sharedBy: String
+    let quantity: Int32
     let unitPrice: Money
+    let lineTotal: Money
 
     var cells: [String] {
         [name, sharedBy, "\(quantity)", "\(unitPrice)", "\(lineTotal)"]
@@ -81,11 +81,11 @@ struct ItemRow: TableRow {
 struct EntryRow: TableRow {
     static let headers = ["Entry", "Paid by", "Entered as", "Rate", "In the group currency"]
 
-    let converted: Money
     let name: String
-    let original: Money
     let payer: String
+    let original: Money
     let rate: ExchangeRate
+    let converted: Money
 
     var cells: [String] {
         [name, payer, "\(original)", "\(rate)", "\(converted)"]
@@ -95,8 +95,8 @@ struct EntryRow: TableRow {
 struct EditRow: TableRow {
     static let headers = ["Entry", "Edit"]
 
-    let edit: String
     let entry: String
+    let edit: String
 
     var cells: [String] {
         [entry, edit]
@@ -106,12 +106,12 @@ struct EditRow: TableRow {
 struct BalanceRow: TableRow {
     static let headers = ["Member", "Paid", "Consumed", "Sent", "Received", "Balance"]
 
-    let balance: Balance
-    let consumed: Money
     let name: String
     let paid: Money
-    let received: Money
+    let consumed: Money
     let sent: Money
+    let received: Money
+    let balance: Balance
 
     var cells: [String] {
         [name, "\(paid)", "\(consumed)", "\(sent)", "\(received)", "\(balance)"]
@@ -121,9 +121,9 @@ struct BalanceRow: TableRow {
 struct StatusRow: TableRow {
     static let headers = ["Member", "Status", "Balance"]
 
-    let balance: Balance
     let name: String
     let status: String
+    let balance: Balance
 
     var cells: [String] {
         [name, status, "\(balance)"]
@@ -133,8 +133,8 @@ struct StatusRow: TableRow {
 struct CategoryRow: TableRow {
     static let headers = ["Category", "Expenses", "Total"]
 
-    let expenses: Int
     let name: String
+    let expenses: Int
     let total: Money
 
     var cells: [String] {
@@ -145,9 +145,9 @@ struct CategoryRow: TableRow {
 struct MemberCategoryRow: TableRow {
     static let headers = ["Member", "Food", "Lodging", "Getting around", "Uncategorised"]
 
+    let name: String
     let food: Money
     let lodging: Money
-    let name: String
     let transport: Money
     let uncategorised: Money
 
@@ -159,9 +159,9 @@ struct MemberCategoryRow: TableRow {
 struct StrategyRow: TableRow {
     static let headers = ["Strategy", "Computed by", "Payments"]
 
+    let strategy: String
     let computedBy: String
     let payments: Int
-    let strategy: String
 
     var cells: [String] {
         [strategy, computedBy, "\(payments)"]
@@ -171,9 +171,9 @@ struct StrategyRow: TableRow {
 struct PaymentRow: TableRow {
     static let headers = ["From", "To", "Amount"]
 
-    let amount: Money
     let from: String
     let to: String
+    let amount: Money
 
     var cells: [String] {
         [from, to, "\(amount)"]
@@ -195,9 +195,9 @@ struct CurrencyRow: TableRow {
     static let headers = ["Code", "Name", "Numeric code", "Decimal places"]
 
     let code: String
-    let decimalPlaces: Int
     let name: String
     let numericCode: Int
+    let decimalPlaces: Int
 
     var cells: [String] {
         [code, name, "\(numericCode)", "\(decimalPlaces)"]

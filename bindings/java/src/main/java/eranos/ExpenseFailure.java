@@ -4,24 +4,11 @@ import java.util.Objects;
 
 /** What the library's {@code ExpenseError} reports: a type per failure, with what it holds. */
 public sealed interface ExpenseFailure {
-    /**
-     * The amounts of a split do not add up to the amount being split.
-     *
-     * @param actual what the amounts add up to
-     * @param expected the amount being split
-     */
-    record AmountsDoNotAddUp(Money actual, Money expected) implements ExpenseFailure {
-        /**
-         * The failure of these components.
-         *
-         * @param actual what the amounts add up to
-         * @param expected the amount being split
-         */
-        public AmountsDoNotAddUp {
-            Objects.requireNonNull(actual, "actual");
-            Objects.requireNonNull(expected, "expected");
-        }
-    }
+    /** An expense whose name is blank. */
+    record EmptyName() implements ExpenseFailure {}
+
+    /** The amount or unit price is zero or negative. */
+    record NonPositiveAmount() implements ExpenseFailure {}
 
     /**
      * An amount inside the expense is in a different currency.
@@ -42,6 +29,9 @@ public sealed interface ExpenseFailure {
         }
     }
 
+    /** A split lists no member. */
+    record EmptySplit() implements ExpenseFailure {}
+
     /**
      * A member appears more than once in one split.
      *
@@ -57,43 +47,6 @@ public sealed interface ExpenseFailure {
             Objects.requireNonNull(member, "member");
         }
     }
-
-    /** An item whose name is blank. */
-    record EmptyItemName() implements ExpenseFailure {}
-
-    /** An expense whose name is blank. */
-    record EmptyName() implements ExpenseFailure {}
-
-    /** A split lists no member. */
-    record EmptySplit() implements ExpenseFailure {}
-
-    /**
-     * The item line totals do not add up to the expense amount.
-     *
-     * @param actual what the line totals add up to
-     * @param expected the expense amount
-     */
-    record ItemsDoNotAddUp(Money actual, Money expected) implements ExpenseFailure {
-        /**
-         * The failure of these components.
-         *
-         * @param actual what the line totals add up to
-         * @param expected the expense amount
-         */
-        public ItemsDoNotAddUp {
-            Objects.requireNonNull(actual, "actual");
-            Objects.requireNonNull(expected, "expected");
-        }
-    }
-
-    /** A fixed tip below zero. */
-    record NegativeTip() implements ExpenseFailure {}
-
-    /** An itemised expense without items. */
-    record NoItems() implements ExpenseFailure {}
-
-    /** The amount or unit price is zero or negative. */
-    record NonPositiveAmount() implements ExpenseFailure {}
 
     /**
      * A member's percentage or amount is zero or negative.
@@ -111,8 +64,24 @@ public sealed interface ExpenseFailure {
         }
     }
 
-    /** A total that does not fit the range of an amount. */
-    record Overflow() implements ExpenseFailure {}
+    /**
+     * The amounts of a split do not add up to the amount being split.
+     *
+     * @param expected the amount being split
+     * @param actual what the amounts add up to
+     */
+    record AmountsDoNotAddUp(Money expected, Money actual) implements ExpenseFailure {
+        /**
+         * The failure of these components.
+         *
+         * @param expected the amount being split
+         * @param actual what the amounts add up to
+         */
+        public AmountsDoNotAddUp {
+            Objects.requireNonNull(expected, "expected");
+            Objects.requireNonNull(actual, "actual");
+        }
+    }
 
     /**
      * The percentages of a split do not add up to exactly 100 %.
@@ -128,6 +97,37 @@ public sealed interface ExpenseFailure {
         public PercentagesDoNotAddUp {}
     }
 
+    /** An itemised expense without items. */
+    record NoItems() implements ExpenseFailure {}
+
+    /** An item whose name is blank. */
+    record EmptyItemName() implements ExpenseFailure {}
+
     /** An item quantity of zero. */
     record ZeroQuantity() implements ExpenseFailure {}
+
+    /**
+     * The item line totals do not add up to the expense amount.
+     *
+     * @param expected the expense amount
+     * @param actual what the line totals add up to
+     */
+    record ItemsDoNotAddUp(Money expected, Money actual) implements ExpenseFailure {
+        /**
+         * The failure of these components.
+         *
+         * @param expected the expense amount
+         * @param actual what the line totals add up to
+         */
+        public ItemsDoNotAddUp {
+            Objects.requireNonNull(expected, "expected");
+            Objects.requireNonNull(actual, "actual");
+        }
+    }
+
+    /** A fixed tip below zero. */
+    record NegativeTip() implements ExpenseFailure {}
+
+    /** A total that does not fit the range of an amount. */
+    record Overflow() implements ExpenseFailure {}
 }

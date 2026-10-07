@@ -22,11 +22,11 @@ import { type Columns, load, names, printLines, printTable, section, totals } fr
 
 /** An expense or a transfer, as entered and in the group currency, as the table of entries prints it. */
 interface EntryRow {
-    readonly converted: Money;
     readonly name: string;
-    readonly original: Money;
     readonly payer: string;
+    readonly original: Money;
     readonly rate: ExchangeRate;
+    readonly converted: Money;
 }
 
 const entryColumns: Columns<EntryRow> = [
@@ -39,12 +39,12 @@ const entryColumns: Columns<EntryRow> = [
 
 /** A member's totals, as the table of balances prints them. */
 interface BalanceRow {
-    readonly balance: Balance;
-    readonly consumed: Money;
     readonly name: string;
     readonly paid: Money;
-    readonly received: Money;
+    readonly consumed: Money;
     readonly sent: Money;
+    readonly received: Money;
+    readonly balance: Balance;
 }
 
 const balanceColumns: Columns<BalanceRow> = [
@@ -63,20 +63,20 @@ function rate(cost: Cost): ExchangeRate {
 
 /** Every expense and transfer, as entered and in the group currency. */
 function printEntries(group: Group): void {
-    const zero = new Money(group.currencySync(), 0n);
+    const zero = new Money(0n, group.currencySync());
     const expenses = group.expensesSync().map((expense): EntryRow => ({
-        converted: (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total ?? zero,
         name: expense.name,
-        original: expenseTotal(expense),
         payer: names(group, splitMembers(expense.payers)),
+        original: expenseTotal(expense),
         rate: rate(expense.cost),
+        converted: (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total ?? zero,
     }));
     const transfers = group.transfersSync().map((transfer): EntryRow => ({
-        converted: (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id)) ?? zero,
         name: `Transfer to ${names(group, [transfer.to])}`,
-        original: transfer.cost.amount,
         payer: names(group, [transfer.from]),
+        original: transfer.cost.amount,
         rate: rate(transfer.cost),
+        converted: (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id)) ?? zero,
     }));
     printTable(entryColumns, [...expenses, ...transfers], 2);
 }
@@ -91,12 +91,12 @@ function printBalances(group: Group): void {
                 ? []
                 : [
                       {
-                          balance: found.balance,
-                          consumed: found.share,
                           name: member.firstName,
                           paid: found.paid,
-                          received: found.received,
+                          consumed: found.share,
                           sent: found.sent,
+                          received: found.received,
+                          balance: found.balance,
                       },
                   ];
         }),
@@ -108,25 +108,25 @@ function expenses(group: Group, ana: MemberId, bob: MemberId): void {
     section('1. Expenses in three currencies');
     const both: Split = { kind: 'equal', members: [ana, bob] };
     group.addExpenseSync({
-        cost: { kind: 'converted', amount: Money.parse('400.00', Currency.of('RON')), rate: ExchangeRate.parse('0.2') },
-        date: CalendarDate.of(1, 8, 2026),
         name: 'Fuel',
+        cost: { kind: 'converted', amount: Money.parse('400.00', Currency.of('RON')), rate: ExchangeRate.parse('0.2') },
         payers: { kind: 'equal', members: [ana] },
         split: { kind: 'whole', split: both },
+        date: CalendarDate.of(2026, 8, 1),
     });
     group.addExpenseSync({
-        cost: { kind: 'converted', amount: Money.parse('24000.00', Currency.of('HUF')), rate: ExchangeRate.parse('0.0025') },
-        date: CalendarDate.of(2, 8, 2026),
         name: 'Dinner',
+        cost: { kind: 'converted', amount: Money.parse('24000.00', Currency.of('HUF')), rate: ExchangeRate.parse('0.0025') },
         payers: { kind: 'equal', members: [bob] },
         split: { kind: 'whole', split: both },
+        date: CalendarDate.of(2026, 8, 2),
     });
     group.addExpenseSync({
-        cost: { kind: 'local', amount: Money.parse('60.00', Currency.of('EUR')) },
-        date: CalendarDate.of(3, 8, 2026),
         name: 'Ferry',
+        cost: { kind: 'local', amount: Money.parse('60.00', Currency.of('EUR')) },
         payers: { kind: 'equal', members: [bob] },
         split: { kind: 'whole', split: both },
+        date: CalendarDate.of(2026, 8, 3),
     });
     printEntries(group);
     printLines(
@@ -138,10 +138,10 @@ function expenses(group: Group, ana: MemberId, bob: MemberId): void {
 function repayment(group: Group, ana: MemberId, bob: MemberId): void {
     section('3. A repayment in cash, in another currency');
     group.addTransferSync({
-        cost: { kind: 'converted', amount: Money.parse('100.00', Currency.of('RON')), rate: ExchangeRate.parse('0.2') },
-        date: CalendarDate.of(4, 8, 2026),
         from: ana,
         to: bob,
+        cost: { kind: 'converted', amount: Money.parse('100.00', Currency.of('RON')), rate: ExchangeRate.parse('0.2') },
+        date: CalendarDate.of(2026, 8, 4),
         note: 'Cash at the border',
     });
     printLines(
@@ -170,7 +170,7 @@ function newCurrency(group: Group): void {
 await load();
 const euro = Currency.of('EUR');
 const leu = Currency.of('RON');
-using group = Group.create(euro, 'Danube road trip');
+using group = Group.create('Danube road trip', euro);
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 

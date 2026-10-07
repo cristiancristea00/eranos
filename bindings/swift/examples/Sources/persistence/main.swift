@@ -7,9 +7,9 @@ import Report
 struct ComparisonRow: TableRow {
     static let headers = ["Member", "Balance before saving", "Balance after loading"]
 
-    let after: String
-    let before: String
     let name: String
+    let before: String
+    let after: String
 
     var cells: [String] {
         [name, before, after]
@@ -18,18 +18,18 @@ struct ComparisonRow: TableRow {
 
 func main() throws(EranosError) {
     let euro = try Currency(code: "EUR")
-    let day = try CalendarDate(day: 23, month: 9, year: 2026)
-    let group = try Group(currency: euro, name: "Road trip")
+    let day = try CalendarDate(year: 2026, month: 9, day: 23)
+    let group = try Group(name: "Road trip", currency: euro)
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
-    _ = try group.add(Expense(cost: .local(Money(parsing: "70.00", in: euro)), date: day, name: "Fuel", payers: .equal([ana]), split: .whole(.equal([ana, bob]))))
+    _ = try group.add(Expense(name: "Fuel", cost: .local(Money(parsing: "70.00", in: euro)), payers: .equal([ana]), split: .whole(.equal([ana, bob])), date: day))
     _ = try group.add(
         Expense(
-            cost: .local(Money(parsing: "30.00", in: euro)),
-            date: day,
             name: "Lunch",
+            cost: .local(Money(parsing: "30.00", in: euro)),
             payers: .equal([bob]),
             split: .whole(.equal([ana, bob])),
+            date: day,
             tip: Tip(value: .percentage(try Percentage(parsing: "10")))
         )
     )
@@ -64,9 +64,9 @@ func main() throws(EranosError) {
     printTable(
         try [ana, bob].map { member throws(EranosError) in
             ComparisonRow(
-                after: totals(of: member, in: after)?.balance.description ?? "?",
+                name: try names(group, [member]),
                 before: totals(of: member, in: before)?.balance.description ?? "?",
-                name: try names(group, [member])
+                after: totals(of: member, in: after)?.balance.description ?? "?"
             )
         },
         numbersFrom: 1
@@ -76,12 +76,13 @@ func main() throws(EranosError) {
 
     section("3. A corrupted file is refused")
     print("""
-        Here the fuel's payer was edited to an identifier no member has. Reading the file
-        as a SavedGroup and loading it with into_group replays every entry through the
-        same checks as adding it, and refuses the file instead of producing balances that
-        do not add up:
+        Here Ana's identifier was edited in her member entry, so the fuel's payer is an
+        identifier no member has. Reading the file as a SavedGroup and loading it with
+        into_group replays every entry through the same checks as adding it, and refuses
+        the file instead of producing balances that do not add up:
         """)
-    // The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
+    // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel she
+    // paid is left naming an identifier no member has.
     let corrupted = saved.replacing(ana.rawValue, with: "0199a000-0000-7000-8000-00000000ffff", maxReplacements: 1)
     do {
         _ = try Group.load(corrupted)

@@ -14,7 +14,6 @@
 
 mod error;
 
-use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
 
@@ -32,46 +31,33 @@ pub use error::{CalendarError, FromCalendarError};
 /// ```
 /// use eranos::CalendarDate;
 ///
-/// let date = CalendarDate::new(23, 9, 2026)?;
+/// let date = CalendarDate::new(2026, 9, 23)?;
 /// assert_eq!(date.to_string(), "2026-09-23");
 /// assert_eq!("2026-09-23".parse::<CalendarDate>()?, date);
-/// assert!(CalendarDate::new(29, 2, 2026).is_err()); // 2026 is not a leap year
+/// assert!(CalendarDate::new(2026, 2, 29).is_err()); // 2026 is not a leap year
 /// # Ok::<(), eranos::error::CalendarError>(())
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+// Derived: jiff orders dates chronologically.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CalendarDate {
     /// Always in years 1..=9999: jiff's dates start at year -9999, and
     /// `from_civil` refuses the years before 1.
     inner: civil::Date,
 }
 
-// Written out, like every ordering here, so that it never depends on the
-// order of the fields; jiff orders dates chronologically.
-impl Ord for CalendarDate {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.inner.cmp(&other.inner)
-    }
-}
-
-impl PartialOrd for CalendarDate {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
 impl CalendarDate {
-    /// Returns the date `day` `month` `year`: `new(24, 9, 2026)` is 24
-    /// September 2026.
+    /// Returns the date `year`-`month`-`day`, in the order ISO 8601 writes
+    /// it: `new(2026, 9, 24)` is 24 September 2026.
     ///
     /// # Errors
     ///
     /// [`CalendarError::InvalidDate`] when the year is outside 1..=9999 or the
     /// day does not exist in that month.
-    pub fn new(day: u8, month: u8, year: u16) -> Result<Self, CalendarError> {
-        // A day or a month above `i8::MAX`, or a year above `i16::MAX`, is in
+    pub fn new(year: u16, month: u8, day: u8) -> Result<Self, CalendarError> {
+        // A year above `i16::MAX`, or a month or a day above `i8::MAX`, is in
         // no calendar jiff represents.
-        let (Ok(day), Ok(month), Ok(year)) =
-            (i8::try_from(day), i8::try_from(month), i16::try_from(year))
+        let (Ok(year), Ok(month), Ok(day)) =
+            (i16::try_from(year), i8::try_from(month), i8::try_from(day))
         else {
             return Err(CalendarError::InvalidDate);
         };
@@ -102,7 +88,7 @@ impl CalendarDate {
     /// use eranos::CalendarDate;
     ///
     /// assert_eq!(CalendarDate::parse("2028-02-29")?.day(), 29);
-    /// assert_eq!(CalendarDate::parse("2026-09-24T18:30+02:00")?, CalendarDate::new(24, 9, 2026)?);
+    /// assert_eq!(CalendarDate::parse("2026-09-24T18:30+02:00")?, CalendarDate::new(2026, 9, 24)?);
     /// assert!(CalendarDate::parse("2026-9-23").is_err());
     /// assert!(CalendarDate::parse("0000-01-01").is_err());
     /// # Ok::<(), eranos::error::CalendarError>(())
@@ -120,11 +106,12 @@ impl CalendarDate {
         (1 <= inner.year()).then_some(Self { inner })
     }
 
-    /// The day of the month, starting at 1.
+    /// The year, 1 to 9999.
     #[must_use]
-    pub fn day(self) -> u8 {
-        // jiff's days run from 1 to 31, so the cast keeps the value.
-        self.inner.day().cast_unsigned()
+    pub fn year(self) -> u16 {
+        // `from_civil` refuses the years before 1 and jiff's end at 9999, so
+        // the cast keeps the value.
+        self.inner.year().cast_unsigned()
     }
 
     /// The month, 1 (January) to 12 (December).
@@ -134,12 +121,11 @@ impl CalendarDate {
         self.inner.month().cast_unsigned()
     }
 
-    /// The year, 1 to 9999.
+    /// The day of the month, starting at 1.
     #[must_use]
-    pub fn year(self) -> u16 {
-        // `from_civil` refuses the years before 1 and jiff's end at 9999, so
-        // the cast keeps the value.
-        self.inner.year().cast_unsigned()
+    pub fn day(self) -> u8 {
+        // jiff's days run from 1 to 31, so the cast keeps the value.
+        self.inner.day().cast_unsigned()
     }
 }
 
@@ -187,25 +173,12 @@ impl FromStr for CalendarDate {
 /// assert!(TimeOfDay::new(24, 0).is_err());
 /// # Ok::<(), eranos::error::CalendarError>(())
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+// Derived: jiff orders times chronologically.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TimeOfDay {
     /// Always on a whole minute: `new` sets no seconds, and `parse` refuses a
     /// time with seconds or a fraction of one.
     inner: civil::Time,
-}
-
-// Written out, like the ordering of `CalendarDate`; jiff orders times
-// chronologically.
-impl Ord for TimeOfDay {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.inner.cmp(&other.inner)
-    }
-}
-
-impl PartialOrd for TimeOfDay {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 impl TimeOfDay {

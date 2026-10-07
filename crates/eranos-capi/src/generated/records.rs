@@ -27,24 +27,13 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            details: &EranosAccountDetails,
             name: &DiplomatStr,
+            details: &EranosAccountDetails,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Account {
-                details: details.0.clone(),
                 name: crate::text(name)?,
+                details: details.0.clone(),
             })))
-        }
-
-        /// The IBAN or the username.
-        #[must_use]
-        pub fn details(&self) -> Box<EranosAccountDetails> {
-            Box::new(EranosAccountDetails(self.0.details.clone()))
-        }
-
-        /// Sets the IBAN or the username.
-        pub fn set_details(&mut self, details: &EranosAccountDetails) {
-            self.0.details.clone_from(&details.0);
         }
 
         /// The label: "Main account".
@@ -60,6 +49,17 @@ pub mod ffi {
         pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
             self.0.name = crate::text(name)?;
             Ok(())
+        }
+
+        /// The IBAN or the username.
+        #[must_use]
+        pub fn details(&self) -> Box<EranosAccountDetails> {
+            Box::new(EranosAccountDetails(self.0.details.clone()))
+        }
+
+        /// Sets the IBAN or the username.
+        pub fn set_details(&mut self, details: &EranosAccountDetails) {
+            self.0.details.clone_from(&details.0);
         }
     }
 
@@ -178,14 +178,6 @@ pub mod ffi {
     pub struct EranosBalance(pub(crate) eranos_bindings::Balance);
 
     impl EranosBalance {
-        /// The others owe the member `amount`.
-        #[must_use]
-        pub fn create_gets_back(amount: &EranosMoney) -> Box<Self> {
-            Box::new(Self(eranos_bindings::Balance::GetsBack {
-                amount: amount.0.clone(),
-            }))
-        }
-
         /// The member owes the others `amount`.
         #[must_use]
         pub fn create_owes(amount: &EranosMoney) -> Box<Self> {
@@ -200,23 +192,31 @@ pub mod ffi {
             Box::new(Self(eranos_bindings::Balance::Settled))
         }
 
+        /// The others owe the member `amount`.
+        #[must_use]
+        pub fn create_gets_back(amount: &EranosMoney) -> Box<Self> {
+            Box::new(Self(eranos_bindings::Balance::GetsBack {
+                amount: amount.0.clone(),
+            }))
+        }
+
         /// Which kind of balance it is.
         #[must_use]
         pub const fn kind(&self) -> EranosBalanceKind {
             match &self.0 {
-                eranos_bindings::Balance::GetsBack { .. } => EranosBalanceKind::GetsBack,
                 eranos_bindings::Balance::Owes { .. } => EranosBalanceKind::Owes,
                 eranos_bindings::Balance::Settled => EranosBalanceKind::Settled,
+                eranos_bindings::Balance::GetsBack { .. } => EranosBalanceKind::GetsBack,
             }
         }
 
-        /// In `GetsBack`, what the member gets back; in `Owes`, what the member owes. Present in
-        /// the kinds `GetsBack` and `Owes` alone.
+        /// In `Owes`, what the member owes; in `GetsBack`, what the member gets back. Present in
+        /// the kinds `Owes` and `GetsBack` alone.
         #[must_use]
         pub fn amount(&self) -> Option<Box<EranosMoney>> {
             match &self.0 {
-                eranos_bindings::Balance::GetsBack { amount, .. }
-                | eranos_bindings::Balance::Owes { amount, .. } => {
+                eranos_bindings::Balance::Owes { amount, .. }
+                | eranos_bindings::Balance::GetsBack { amount, .. } => {
                     Some(Box::new(EranosMoney(amount.clone())))
                 }
                 eranos_bindings::Balance::Settled => None,
@@ -239,12 +239,12 @@ pub mod ffi {
     /// The kinds of balance.
     #[derive(Debug)]
     pub enum EranosBalanceKind {
-        /// The others owe the member `amount`.
-        GetsBack,
         /// The member owes the others `amount`.
         Owes,
         /// The member owes nothing and is owed nothing.
         Settled,
+        /// The others owe the member `amount`.
+        GetsBack,
     }
 
     /// A label the group gives expenses.
@@ -384,6 +384,14 @@ pub mod ffi {
     pub struct EranosCost(pub(crate) eranos_bindings::Cost);
 
     impl EranosCost {
+        /// An amount in the group currency.
+        #[must_use]
+        pub fn create_local(amount: &EranosMoney) -> Box<Self> {
+            Box::new(Self(eranos_bindings::Cost::Local {
+                amount: amount.0.clone(),
+            }))
+        }
+
         /// An amount in another currency than the group's, converted at `rate`.
         ///
         /// # Errors
@@ -399,29 +407,21 @@ pub mod ffi {
             })))
         }
 
-        /// An amount in the group currency.
-        #[must_use]
-        pub fn create_local(amount: &EranosMoney) -> Box<Self> {
-            Box::new(Self(eranos_bindings::Cost::Local {
-                amount: amount.0.clone(),
-            }))
-        }
-
         /// Which kind of cost it is.
         #[must_use]
         pub const fn kind(&self) -> EranosCostKind {
             match &self.0 {
-                eranos_bindings::Cost::Converted { .. } => EranosCostKind::Converted,
                 eranos_bindings::Cost::Local { .. } => EranosCostKind::Local,
+                eranos_bindings::Cost::Converted { .. } => EranosCostKind::Converted,
             }
         }
 
-        /// In `Converted`, the amount, in its own currency; in `Local`, the amount.
+        /// In `Local`, the amount; in `Converted`, the amount, in its own currency.
         #[must_use]
         pub fn amount(&self) -> Box<EranosMoney> {
             match &self.0 {
-                eranos_bindings::Cost::Converted { amount, .. }
-                | eranos_bindings::Cost::Local { amount, .. } => {
+                eranos_bindings::Cost::Local { amount, .. }
+                | eranos_bindings::Cost::Converted { amount, .. } => {
                     Box::new(EranosMoney(amount.clone()))
                 }
             }
@@ -442,10 +442,10 @@ pub mod ffi {
     /// The kinds of cost.
     #[derive(Debug)]
     pub enum EranosCostKind {
-        /// An amount in another currency than the group's, converted at `rate`.
-        Converted,
         /// An amount in the group currency.
         Local,
+        /// An amount in another currency than the group's, converted at `rate`.
+        Converted,
     }
 
     /// What ISO 4217 says of a currency.
@@ -459,12 +459,6 @@ pub mod ffi {
             crate::write_text(write, &self.0.code);
         }
 
-        /// How many decimal places its minor unit has: 2 for the euro.
-        #[must_use]
-        pub const fn decimal_places(&self) -> i32 {
-            self.0.decimal_places
-        }
-
         /// The English name: "Euro".
         pub fn name(&self, write: &mut DiplomatWrite) {
             crate::write_text(write, &self.0.name);
@@ -474,6 +468,12 @@ pub mod ffi {
         #[must_use]
         pub const fn numeric_code(&self) -> i32 {
             self.0.numeric_code
+        }
+
+        /// How many decimal places its minor unit has: 2 for the euro.
+        #[must_use]
+        pub const fn decimal_places(&self) -> i32 {
+            self.0.decimal_places
         }
 
         /// The currency of the ISO 4217 code `code`.
@@ -626,23 +626,23 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            cost: &EranosCost,
-            date: EranosCalendarDate,
             name: &DiplomatStr,
+            cost: &EranosCost,
             payers: &EranosSplit,
             split: &EranosExpenseSplit,
+            date: EranosCalendarDate,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Expense {
                 id: None,
-                cost: cost.0.clone(),
-                date: date.into(),
                 name: crate::text(name)?,
+                cost: cost.0.clone(),
                 payers: payers.0.clone(),
                 split: split.0.clone(),
+                date: date.into(),
+                tip: None,
+                time: None,
                 category: None,
                 description: None,
-                time: None,
-                tip: None,
             })))
         }
 
@@ -669,28 +669,6 @@ pub mod ffi {
             self.0.id = None;
         }
 
-        /// What it cost.
-        #[must_use]
-        pub fn cost(&self) -> Box<EranosCost> {
-            Box::new(EranosCost(self.0.cost.clone()))
-        }
-
-        /// Sets what it cost.
-        pub fn set_cost(&mut self, cost: &EranosCost) {
-            self.0.cost.clone_from(&cost.0);
-        }
-
-        /// The day it was bought.
-        #[must_use]
-        pub fn date(&self) -> EranosCalendarDate {
-            self.0.date.into()
-        }
-
-        /// Sets the day it was bought.
-        pub fn set_date(&mut self, date: EranosCalendarDate) {
-            self.0.date = date.into();
-        }
-
         /// What was bought.
         pub fn name(&self, write: &mut DiplomatWrite) {
             crate::write_text(write, &self.0.name);
@@ -704,6 +682,17 @@ pub mod ffi {
         pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
             self.0.name = crate::text(name)?;
             Ok(())
+        }
+
+        /// What it cost.
+        #[must_use]
+        pub fn cost(&self) -> Box<EranosCost> {
+            Box::new(EranosCost(self.0.cost.clone()))
+        }
+
+        /// Sets what it cost.
+        pub fn set_cost(&mut self, cost: &EranosCost) {
+            self.0.cost.clone_from(&cost.0);
         }
 
         /// Who paid the total, amount plus tip, and how much each.
@@ -726,6 +715,49 @@ pub mod ffi {
         /// Sets how the amount is shared.
         pub fn set_split(&mut self, split: &EranosExpenseSplit) {
             self.0.split.clone_from(&split.0);
+        }
+
+        /// The day it was bought.
+        #[must_use]
+        pub fn date(&self) -> EranosCalendarDate {
+            self.0.date.into()
+        }
+
+        /// Sets the day it was bought.
+        pub fn set_date(&mut self, date: EranosCalendarDate) {
+            self.0.date = date.into();
+        }
+
+        /// The tip on top of the amount.
+        #[must_use]
+        pub fn tip(&self) -> Option<Box<EranosTip>> {
+            self.0.tip.clone().map(|value| Box::new(EranosTip(value)))
+        }
+
+        /// Sets the tip on top of the amount.
+        pub fn set_tip(&mut self, tip: &EranosTip) {
+            self.0.tip = Some(tip.0.clone());
+        }
+
+        /// Clears the tip on top of the amount.
+        pub fn clear_tip(&mut self) {
+            self.0.tip = None;
+        }
+
+        /// The time of day it was bought.
+        #[must_use]
+        pub fn time(&self) -> Option<EranosTimeOfDay> {
+            self.0.time.map(Into::into)
+        }
+
+        /// Sets the time of day it was bought.
+        pub fn set_time(&mut self, time: EranosTimeOfDay) {
+            self.0.time = Some(time.into());
+        }
+
+        /// Clears the time of day it was bought.
+        pub const fn clear_time(&mut self) {
+            self.0.time = None;
         }
 
         /// The category, as its identifier; absent for the built-in one. Writes it, if present;
@@ -770,38 +802,6 @@ pub mod ffi {
         /// Clears a longer description.
         pub fn clear_description(&mut self) {
             self.0.description = None;
-        }
-
-        /// The time of day it was bought.
-        #[must_use]
-        pub fn time(&self) -> Option<EranosTimeOfDay> {
-            self.0.time.map(Into::into)
-        }
-
-        /// Sets the time of day it was bought.
-        pub fn set_time(&mut self, time: EranosTimeOfDay) {
-            self.0.time = Some(time.into());
-        }
-
-        /// Clears the time of day it was bought.
-        pub const fn clear_time(&mut self) {
-            self.0.time = None;
-        }
-
-        /// The tip on top of the amount.
-        #[must_use]
-        pub fn tip(&self) -> Option<Box<EranosTip>> {
-            self.0.tip.clone().map(|value| Box::new(EranosTip(value)))
-        }
-
-        /// Sets the tip on top of the amount.
-        pub fn set_tip(&mut self, tip: &EranosTip) {
-            self.0.tip = Some(tip.0.clone());
-        }
-
-        /// Clears the tip on top of the amount.
-        pub fn clear_tip(&mut self) {
-            self.0.tip = None;
         }
 
         /// The tip in the expense's currency, zero without one.
@@ -880,16 +880,16 @@ pub mod ffi {
             Box::new(EranosMemberShareList(self.0.members.clone()))
         }
 
-        /// The tip.
-        #[must_use]
-        pub fn tip(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.tip.clone()))
-        }
-
         /// The total: the amount and the tip.
         #[must_use]
         pub fn total(&self) -> Box<EranosMoney> {
             Box::new(EranosMoney(self.0.total.clone()))
+        }
+
+        /// The tip.
+        #[must_use]
+        pub fn tip(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.tip.clone()))
         }
     }
 
@@ -899,14 +899,6 @@ pub mod ffi {
     pub struct EranosExpenseSplit(pub(crate) eranos_bindings::ExpenseSplit);
 
     impl EranosExpenseSplit {
-        /// Every item is divided by its own split.
-        #[must_use]
-        pub fn create_itemised(items: &EranosItemList) -> Box<Self> {
-            Box::new(Self(eranos_bindings::ExpenseSplit::Itemised {
-                items: items.0.clone(),
-            }))
-        }
-
         /// The whole amount is divided by one split.
         #[must_use]
         pub fn create_whole(split: &EranosSplit) -> Box<Self> {
@@ -915,12 +907,20 @@ pub mod ffi {
             }))
         }
 
+        /// Every item is divided by its own split.
+        #[must_use]
+        pub fn create_itemised(items: &EranosItemList) -> Box<Self> {
+            Box::new(Self(eranos_bindings::ExpenseSplit::Itemised {
+                items: items.0.clone(),
+            }))
+        }
+
         /// Which kind of expense split it is.
         #[must_use]
         pub const fn kind(&self) -> EranosExpenseSplitKind {
             match &self.0 {
-                eranos_bindings::ExpenseSplit::Itemised { .. } => EranosExpenseSplitKind::Itemised,
                 eranos_bindings::ExpenseSplit::Whole { .. } => EranosExpenseSplitKind::Whole,
+                eranos_bindings::ExpenseSplit::Itemised { .. } => EranosExpenseSplitKind::Itemised,
             }
         }
 
@@ -950,10 +950,10 @@ pub mod ffi {
     /// The kinds of expense split.
     #[derive(Debug)]
     pub enum EranosExpenseSplitKind {
-        /// Every item is divided by its own split.
-        Itemised,
         /// The whole amount is divided by one split.
         Whole,
+        /// Every item is divided by its own split.
+        Itemised,
     }
 
     /// A line of an itemised bill.
@@ -970,13 +970,13 @@ pub mod ffi {
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
             name: &DiplomatStr,
-            split: &EranosSplit,
             unit_price: &EranosMoney,
+            split: &EranosSplit,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Item {
                 name: crate::text(name)?,
-                split: split.0.clone(),
                 unit_price: unit_price.0.clone(),
+                split: split.0.clone(),
                 quantity: 1,
             })))
         }
@@ -996,17 +996,6 @@ pub mod ffi {
             Ok(())
         }
 
-        /// How the line total divides.
-        #[must_use]
-        pub fn split(&self) -> Box<EranosSplit> {
-            Box::new(EranosSplit(self.0.split.clone()))
-        }
-
-        /// Sets how the line total divides.
-        pub fn set_split(&mut self, split: &EranosSplit) {
-            self.0.split.clone_from(&split.0);
-        }
-
         /// The price of one unit, in the expense's currency.
         #[must_use]
         pub fn unit_price(&self) -> Box<EranosMoney> {
@@ -1016,6 +1005,17 @@ pub mod ffi {
         /// Sets the price of one unit, in the expense's currency.
         pub fn set_unit_price(&mut self, unit_price: &EranosMoney) {
             self.0.unit_price.clone_from(&unit_price.0);
+        }
+
+        /// How the line total divides.
+        #[must_use]
+        pub fn split(&self) -> Box<EranosSplit> {
+            Box::new(EranosSplit(self.0.split.clone()))
+        }
+
+        /// Sets how the line total divides.
+        pub fn set_split(&mut self, split: &EranosSplit) {
+            self.0.split.clone_from(&split.0);
         }
 
         /// How many units, from 1.
@@ -1084,10 +1084,10 @@ pub mod ffi {
             Ok(Box::new(Self(eranos_bindings::Member {
                 id: None,
                 first_name: crate::text(first_name)?,
-                accounts: Vec::new(),
-                email: None,
                 last_name: None,
+                email: None,
                 phone: None,
+                accounts: Vec::new(),
             })))
         }
 
@@ -1129,15 +1129,24 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Where the member can be paid, in the order they were given.
-        #[must_use]
-        pub fn accounts(&self) -> Box<EranosAccountList> {
-            Box::new(EranosAccountList(self.0.accounts.clone()))
+        /// The last name. Writes it, if present; absent otherwise.
+        pub fn last_name(&self, write: &mut DiplomatWrite) -> Option<()> {
+            crate::write_optional(write, self.0.last_name.as_deref())
         }
 
-        /// Sets where the member can be paid, in the order they were given.
-        pub fn set_accounts(&mut self, accounts: &EranosAccountList) {
-            self.0.accounts.clone_from(&accounts.0);
+        /// Sets the last name.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn set_last_name(&mut self, last_name: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.last_name = Some(crate::text(last_name)?);
+            Ok(())
+        }
+
+        /// Clears the last name.
+        pub fn clear_last_name(&mut self) {
+            self.0.last_name = None;
         }
 
         /// The email address, without surrounding whitespace. Writes it, if present; absent
@@ -1159,26 +1168,6 @@ pub mod ffi {
         /// Clears the email address, without surrounding whitespace.
         pub fn clear_email(&mut self) {
             self.0.email = None;
-        }
-
-        /// The last name. Writes it, if present; absent otherwise.
-        pub fn last_name(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.last_name.as_deref())
-        }
-
-        /// Sets the last name.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_last_name(&mut self, last_name: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.last_name = Some(crate::text(last_name)?);
-            Ok(())
-        }
-
-        /// Clears the last name.
-        pub fn clear_last_name(&mut self) {
-            self.0.last_name = None;
         }
 
         /// The phone number, starting with `+` and the country code; a member the group holds has
@@ -1203,6 +1192,17 @@ pub mod ffi {
         pub fn clear_phone(&mut self) {
             self.0.phone = None;
         }
+
+        /// Where the member can be paid, in the order they were given.
+        #[must_use]
+        pub fn accounts(&self) -> Box<EranosAccountList> {
+            Box::new(EranosAccountList(self.0.accounts.clone()))
+        }
+
+        /// Sets where the member can be paid, in the order they were given.
+        pub fn set_accounts(&mut self, accounts: &EranosAccountList) {
+            self.0.accounts.clone_from(&accounts.0);
+        }
     }
 
     /// An exact amount one member pays.
@@ -1218,24 +1218,13 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            amount: &EranosMoney,
             member: &DiplomatStr,
+            amount: &EranosMoney,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::MemberAmount {
-                amount: amount.0.clone(),
                 member: crate::text(member)?,
+                amount: amount.0.clone(),
             })))
-        }
-
-        /// The amount.
-        #[must_use]
-        pub fn amount(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.amount.clone()))
-        }
-
-        /// Sets the amount.
-        pub fn set_amount(&mut self, amount: &EranosMoney) {
-            self.0.amount.clone_from(&amount.0);
         }
 
         /// The member, as their identifier.
@@ -1251,6 +1240,17 @@ pub mod ffi {
         pub fn set_member(&mut self, member: &DiplomatStr) -> Result<(), Box<EranosError>> {
             self.0.member = crate::text(member)?;
             Ok(())
+        }
+
+        /// The amount.
+        #[must_use]
+        pub fn amount(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.amount.clone()))
+        }
+
+        /// Sets the amount.
+        pub fn set_amount(&mut self, amount: &EranosMoney) {
+            self.0.amount.clone_from(&amount.0);
         }
     }
 
@@ -1379,24 +1379,13 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            hundredths: i32,
             member: &DiplomatStr,
+            hundredths: i32,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::MemberParts {
-                hundredths,
                 member: crate::text(member)?,
+                hundredths,
             })))
-        }
-
-        /// The parts, in hundredths: 50 for half a part.
-        #[must_use]
-        pub const fn hundredths(&self) -> i32 {
-            self.0.hundredths
-        }
-
-        /// Sets the parts, in hundredths: 50 for half a part.
-        pub const fn set_hundredths(&mut self, hundredths: i32) {
-            self.0.hundredths = hundredths;
         }
 
         /// The member, as their identifier.
@@ -1412,6 +1401,17 @@ pub mod ffi {
         pub fn set_member(&mut self, member: &DiplomatStr) -> Result<(), Box<EranosError>> {
             self.0.member = crate::text(member)?;
             Ok(())
+        }
+
+        /// The parts, in hundredths: 50 for half a part.
+        #[must_use]
+        pub const fn hundredths(&self) -> i32 {
+            self.0.hundredths
+        }
+
+        /// Sets the parts, in hundredths: 50 for half a part.
+        pub const fn set_hundredths(&mut self, hundredths: i32) {
+            self.0.hundredths = hundredths;
         }
     }
 
@@ -1466,24 +1466,13 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            basis_points: i32,
             member: &DiplomatStr,
+            basis_points: i32,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::MemberPercentage {
-                basis_points,
                 member: crate::text(member)?,
+                basis_points,
             })))
-        }
-
-        /// The percentage, in basis points: 2 500 for 25 %.
-        #[must_use]
-        pub const fn basis_points(&self) -> i32 {
-            self.0.basis_points
-        }
-
-        /// Sets the percentage, in basis points: 2 500 for 25 %.
-        pub const fn set_basis_points(&mut self, basis_points: i32) {
-            self.0.basis_points = basis_points;
         }
 
         /// The member, as their identifier.
@@ -1499,6 +1488,17 @@ pub mod ffi {
         pub fn set_member(&mut self, member: &DiplomatStr) -> Result<(), Box<EranosError>> {
             self.0.member = crate::text(member)?;
             Ok(())
+        }
+
+        /// The percentage, in basis points: 2 500 for 25 %.
+        #[must_use]
+        pub const fn basis_points(&self) -> i32 {
+            self.0.basis_points
+        }
+
+        /// Sets the percentage, in basis points: 2 500 for 25 %.
+        pub const fn set_basis_points(&mut self, basis_points: i32) {
+            self.0.basis_points = basis_points;
         }
     }
 
@@ -1597,21 +1597,9 @@ pub mod ffi {
     pub struct EranosMemberSummary(pub(crate) eranos_bindings::MemberSummary);
 
     impl EranosMemberSummary {
-        /// Where the member stands.
-        #[must_use]
-        pub fn balance(&self) -> Box<EranosBalance> {
-            Box::new(EranosBalance(self.0.balance.clone()))
-        }
-
         /// The member, as their identifier.
         pub fn member(&self, write: &mut DiplomatWrite) {
             crate::write_text(write, &self.0.member);
-        }
-
-        /// What the member is owed, less what they owe: positive when they get money back.
-        #[must_use]
-        pub fn net(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.net.clone()))
         }
 
         /// What the member paid for expenses.
@@ -1620,10 +1608,10 @@ pub mod ffi {
             Box::new(EranosMoney(self.0.paid.clone()))
         }
 
-        /// What the member received in transfers.
+        /// The member's share of the expenses: what they consumed.
         #[must_use]
-        pub fn received(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.received.clone()))
+        pub fn share(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.share.clone()))
         }
 
         /// What the member sent in transfers.
@@ -1632,10 +1620,22 @@ pub mod ffi {
             Box::new(EranosMoney(self.0.sent.clone()))
         }
 
-        /// The member's share of the expenses: what they consumed.
+        /// What the member received in transfers.
         #[must_use]
-        pub fn share(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.share.clone()))
+        pub fn received(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.received.clone()))
+        }
+
+        /// What the member is owed, less what they owe: positive when they get money back.
+        #[must_use]
+        pub fn net(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.net.clone()))
+        }
+
+        /// Where the member stands.
+        #[must_use]
+        pub fn balance(&self) -> Box<EranosBalance> {
+            Box::new(EranosBalance(self.0.balance.clone()))
         }
     }
 
@@ -1679,30 +1679,15 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            currency: &DiplomatStr,
             name: &DiplomatStr,
+            currency: &DiplomatStr,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::NewGroup {
-                currency: crate::text(currency)?,
                 name: crate::text(name)?,
+                currency: crate::text(currency)?,
                 description: None,
                 language: None,
             })))
-        }
-
-        /// The ISO 4217 code of the group currency, which every total is in.
-        pub fn currency(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.currency);
-        }
-
-        /// Sets the ISO 4217 code of the group currency, which every total is in.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_currency(&mut self, currency: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.currency = crate::text(currency)?;
-            Ok(())
         }
 
         /// The group's name.
@@ -1717,6 +1702,21 @@ pub mod ffi {
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
             self.0.name = crate::text(name)?;
+            Ok(())
+        }
+
+        /// The ISO 4217 code of the group currency, which every total is in.
+        pub fn currency(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.currency);
+        }
+
+        /// Sets the ISO 4217 code of the group currency, which every total is in.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn set_currency(&mut self, currency: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.currency = crate::text(currency)?;
             Ok(())
         }
 
@@ -1771,12 +1771,6 @@ pub mod ffi {
     pub struct EranosPayment(pub(crate) eranos_bindings::Payment);
 
     impl EranosPayment {
-        /// The amount, in the group currency.
-        #[must_use]
-        pub fn amount(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.amount.clone()))
-        }
-
         /// The member who pays, as their identifier.
         pub fn from(&self, write: &mut DiplomatWrite) {
             crate::write_text(write, &self.0.from);
@@ -1785,6 +1779,12 @@ pub mod ffi {
         /// The member who is paid, as their identifier.
         pub fn to(&self, write: &mut DiplomatWrite) {
             crate::write_text(write, &self.0.to);
+        }
+
+        /// The amount, in the group currency.
+        #[must_use]
+        pub fn amount(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.amount.clone()))
         }
     }
 
@@ -1842,13 +1842,13 @@ pub mod ffi {
         /// The fewest payments while at most 20 balances are left after exact opposites pay each
         /// other, the greedy plan beyond; the settlement names the strategy whose plan it is.
         Adaptive,
-        /// Everyone pays back the people who paid for them.
-        Direct,
+        /// The fewest payments possible.
+        MinimumTransfers,
         /// The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each
         /// other where that saves a payment.
         Greedy,
-        /// The fewest payments possible.
-        MinimumTransfers,
+        /// Everyone pays back the people who paid for them.
+        Direct,
     }
 
     /// How an amount divides among members.
@@ -1857,14 +1857,6 @@ pub mod ffi {
     pub struct EranosSplit(pub(crate) eranos_bindings::Split);
 
     impl EranosSplit {
-        /// Every member pays an exact amount; the amounts add up to what they divide.
-        #[must_use]
-        pub fn create_amounts(shares: &EranosMemberAmountList) -> Box<Self> {
-            Box::new(Self(eranos_bindings::Split::Amounts {
-                shares: shares.0.clone(),
-            }))
-        }
-
         /// Every member pays the same.
         #[must_use]
         pub fn create_equal(members: &EranosTextList) -> Box<Self> {
@@ -1889,14 +1881,22 @@ pub mod ffi {
             }))
         }
 
+        /// Every member pays an exact amount; the amounts add up to what they divide.
+        #[must_use]
+        pub fn create_amounts(shares: &EranosMemberAmountList) -> Box<Self> {
+            Box::new(Self(eranos_bindings::Split::Amounts {
+                shares: shares.0.clone(),
+            }))
+        }
+
         /// Which kind of split it is.
         #[must_use]
         pub const fn kind(&self) -> EranosSplitKind {
             match &self.0 {
-                eranos_bindings::Split::Amounts { .. } => EranosSplitKind::Amounts,
                 eranos_bindings::Split::Equal { .. } => EranosSplitKind::Equal,
                 eranos_bindings::Split::Parts { .. } => EranosSplitKind::Parts,
                 eranos_bindings::Split::Percentages { .. } => EranosSplitKind::Percentages,
+                eranos_bindings::Split::Amounts { .. } => EranosSplitKind::Amounts,
             }
         }
 
@@ -1920,9 +1920,9 @@ pub mod ffi {
                 eranos_bindings::Split::Equal { members, .. } => {
                     Some(Box::new(EranosTextList(members.clone())))
                 }
-                eranos_bindings::Split::Amounts { .. }
-                | eranos_bindings::Split::Parts { .. }
-                | eranos_bindings::Split::Percentages { .. } => None,
+                eranos_bindings::Split::Parts { .. }
+                | eranos_bindings::Split::Percentages { .. }
+                | eranos_bindings::Split::Amounts { .. } => None,
             }
         }
 
@@ -1933,9 +1933,9 @@ pub mod ffi {
                 eranos_bindings::Split::Parts { shares, .. } => {
                     Some(Box::new(EranosMemberPartsList(shares.clone())))
                 }
-                eranos_bindings::Split::Amounts { .. }
-                | eranos_bindings::Split::Equal { .. }
-                | eranos_bindings::Split::Percentages { .. } => None,
+                eranos_bindings::Split::Equal { .. }
+                | eranos_bindings::Split::Percentages { .. }
+                | eranos_bindings::Split::Amounts { .. } => None,
             }
         }
 
@@ -1946,9 +1946,9 @@ pub mod ffi {
                 eranos_bindings::Split::Percentages { shares, .. } => {
                     Some(Box::new(EranosMemberPercentageList(shares.clone())))
                 }
-                eranos_bindings::Split::Amounts { .. }
-                | eranos_bindings::Split::Equal { .. }
-                | eranos_bindings::Split::Parts { .. } => None,
+                eranos_bindings::Split::Equal { .. }
+                | eranos_bindings::Split::Parts { .. }
+                | eranos_bindings::Split::Amounts { .. } => None,
             }
         }
 
@@ -1967,14 +1967,14 @@ pub mod ffi {
     /// The kinds of split.
     #[derive(Debug)]
     pub enum EranosSplitKind {
-        /// Every member pays an exact amount; the amounts add up to what they divide.
-        Amounts,
         /// Every member pays the same.
         Equal,
         /// Every member pays in proportion to their parts.
         Parts,
         /// Every member pays a percentage; the percentages add up to 100 %.
         Percentages,
+        /// Every member pays an exact amount; the amounts add up to what they divide.
+        Amounts,
     }
 
     /// The group's totals: overall, per member, per category, and per member per category, all in
@@ -1984,6 +1984,18 @@ pub mod ffi {
     pub struct EranosSummary(pub(crate) eranos_bindings::Summary);
 
     impl EranosSummary {
+        /// What the group spent.
+        #[must_use]
+        pub fn total_spent(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.total_spent.clone()))
+        }
+
+        /// The totals of every member.
+        #[must_use]
+        pub fn members(&self) -> Box<EranosMemberSummaryList> {
+            Box::new(EranosMemberSummaryList(self.0.members.clone()))
+        }
+
         /// The total of every category.
         #[must_use]
         pub fn category_totals(&self) -> Box<EranosCategoryTotalList> {
@@ -1996,18 +2008,6 @@ pub mod ffi {
             Box::new(EranosMemberCategoryTotalsList(
                 self.0.member_category_totals.clone(),
             ))
-        }
-
-        /// The totals of every member.
-        #[must_use]
-        pub fn members(&self) -> Box<EranosMemberSummaryList> {
-            Box::new(EranosMemberSummaryList(self.0.members.clone()))
-        }
-
-        /// What the group spent.
-        #[must_use]
-        pub fn total_spent(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.total_spent.clone()))
         }
     }
 
@@ -2053,10 +2053,10 @@ pub mod ffi {
     #[derive(Debug)]
     #[diplomat::enum_convert(eranos_bindings::TipDistribution)]
     pub enum EranosTipDistribution {
-        /// The same for every participant.
-        Equal,
         /// In proportion to each participant's share of the amount.
         Proportional,
+        /// The same for every participant.
+        Equal,
     }
 
     /// How a tip is expressed.
@@ -2065,6 +2065,12 @@ pub mod ffi {
     pub struct EranosTipValue(pub(crate) eranos_bindings::TipValue);
 
     impl EranosTipValue {
+        /// A percentage of the expense's amount.
+        #[must_use]
+        pub fn create_percentage(basis_points: i32) -> Box<Self> {
+            Box::new(Self(eranos_bindings::TipValue::Percentage { basis_points }))
+        }
+
         /// A fixed amount in the expense's currency.
         #[must_use]
         pub fn create_fixed(amount: &EranosMoney) -> Box<Self> {
@@ -2073,18 +2079,12 @@ pub mod ffi {
             }))
         }
 
-        /// A percentage of the expense's amount.
-        #[must_use]
-        pub fn create_percentage(basis_points: i32) -> Box<Self> {
-            Box::new(Self(eranos_bindings::TipValue::Percentage { basis_points }))
-        }
-
         /// Which kind of tip value it is.
         #[must_use]
         pub const fn kind(&self) -> EranosTipValueKind {
             match &self.0 {
-                eranos_bindings::TipValue::Fixed { .. } => EranosTipValueKind::Fixed,
                 eranos_bindings::TipValue::Percentage { .. } => EranosTipValueKind::Percentage,
+                eranos_bindings::TipValue::Fixed { .. } => EranosTipValueKind::Fixed,
             }
         }
 
@@ -2112,10 +2112,10 @@ pub mod ffi {
     /// The kinds of tip value.
     #[derive(Debug)]
     pub enum EranosTipValueKind {
-        /// A fixed amount in the expense's currency.
-        Fixed,
         /// A percentage of the expense's amount.
         Percentage,
+        /// A fixed amount in the expense's currency.
+        Fixed,
     }
 
     /// Money one member paid another, such as a repayment.
@@ -2131,19 +2131,19 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
-            cost: &EranosCost,
-            date: EranosCalendarDate,
             from: &DiplomatStr,
             to: &DiplomatStr,
+            cost: &EranosCost,
+            date: EranosCalendarDate,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Transfer {
                 id: None,
-                cost: cost.0.clone(),
-                date: date.into(),
                 from: crate::text(from)?,
                 to: crate::text(to)?,
-                note: None,
+                cost: cost.0.clone(),
+                date: date.into(),
                 time: None,
+                note: None,
             })))
         }
 
@@ -2168,28 +2168,6 @@ pub mod ffi {
         /// one to replace.
         pub fn clear_id(&mut self) {
             self.0.id = None;
-        }
-
-        /// What was paid.
-        #[must_use]
-        pub fn cost(&self) -> Box<EranosCost> {
-            Box::new(EranosCost(self.0.cost.clone()))
-        }
-
-        /// Sets what was paid.
-        pub fn set_cost(&mut self, cost: &EranosCost) {
-            self.0.cost.clone_from(&cost.0);
-        }
-
-        /// The day it was paid.
-        #[must_use]
-        pub fn date(&self) -> EranosCalendarDate {
-            self.0.date.into()
-        }
-
-        /// Sets the day it was paid.
-        pub fn set_date(&mut self, date: EranosCalendarDate) {
-            self.0.date = date.into();
         }
 
         /// The member who paid, as their identifier.
@@ -2222,6 +2200,44 @@ pub mod ffi {
             Ok(())
         }
 
+        /// What was paid.
+        #[must_use]
+        pub fn cost(&self) -> Box<EranosCost> {
+            Box::new(EranosCost(self.0.cost.clone()))
+        }
+
+        /// Sets what was paid.
+        pub fn set_cost(&mut self, cost: &EranosCost) {
+            self.0.cost.clone_from(&cost.0);
+        }
+
+        /// The day it was paid.
+        #[must_use]
+        pub fn date(&self) -> EranosCalendarDate {
+            self.0.date.into()
+        }
+
+        /// Sets the day it was paid.
+        pub fn set_date(&mut self, date: EranosCalendarDate) {
+            self.0.date = date.into();
+        }
+
+        /// The time of day it was paid.
+        #[must_use]
+        pub fn time(&self) -> Option<EranosTimeOfDay> {
+            self.0.time.map(Into::into)
+        }
+
+        /// Sets the time of day it was paid.
+        pub fn set_time(&mut self, time: EranosTimeOfDay) {
+            self.0.time = Some(time.into());
+        }
+
+        /// Clears the time of day it was paid.
+        pub const fn clear_time(&mut self) {
+            self.0.time = None;
+        }
+
         /// A note on the transfer. Writes it, if present; absent otherwise.
         pub fn note(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.note.as_deref())
@@ -2240,22 +2256,6 @@ pub mod ffi {
         /// Clears a note on the transfer.
         pub fn clear_note(&mut self) {
             self.0.note = None;
-        }
-
-        /// The time of day it was paid.
-        #[must_use]
-        pub fn time(&self) -> Option<EranosTimeOfDay> {
-            self.0.time.map(Into::into)
-        }
-
-        /// Sets the time of day it was paid.
-        pub fn set_time(&mut self, time: EranosTimeOfDay) {
-            self.0.time = Some(time.into());
-        }
-
-        /// Clears the time of day it was paid.
-        pub const fn clear_time(&mut self) {
-            self.0.time = None;
         }
     }
 

@@ -13,7 +13,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * the thread, for code outside a coroutine:
  *
  * ```kotlin
- * val group = Group(Currency.of("EUR"), "Flat")
+ * val group = Group("Flat", Currency.of("EUR"))
  * val ana = group.addBlocking(Member("Ana")) // outside a coroutine
  * val bob = group.add(Member("Bob")) // in a coroutine
  * ```
@@ -33,11 +33,11 @@ public class Group private constructor(
      */
     @Throws(EranosException::class)
     public constructor(
-        currency: Currency,
         name: String,
+        currency: Currency,
         description: String? = null,
         language: Language? = null,
-    ) : this(converting { eranos.internal.Group(NewGroup(currency.code, name, description, language?.toString())) })
+    ) : this(converting { eranos.internal.Group(NewGroup(name, currency.code, description, language?.toString())) })
 
     /** Frees the group; every call after it throws [IllegalStateException], and closing a closed group does nothing. */
     override fun close() {
@@ -75,7 +75,7 @@ public class Group private constructor(
      */
     public inline fun <T> withReadBlocking(block: (GroupReader) -> T): T = readBlocking().use(block)
 
-    // The group's own details: its identifier, name, description, language, currency, and saved form.
+    // The group's own details: its identifier, name, currency, description, language, and saved form.
 
     /**
      * The group's identifier.
@@ -91,6 +91,42 @@ public class Group private constructor(
      * Waits for the group's lock by blocking its thread; in a coroutine, [id] waits without blocking it.
      */
     public fun idBlocking(): GroupId = converting { GroupId(handle.id()) }
+
+    /**
+     * The group's name.
+     *
+     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
+     * group as it was. [nameBlocking] blocks instead.
+     */
+    public suspend fun name(): String = converting { handle.nameAsync(null) }
+
+    /**
+     * The group's name.
+     *
+     * Waits for the group's lock by blocking its thread; in a coroutine, [name] waits without blocking it.
+     */
+    public fun nameBlocking(): String = converting { handle.name() }
+
+    /**
+     * Renames the group.
+     *
+     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
+     * group as it was. [renameBlocking] blocks instead.
+     *
+     * @throws EranosException.Group with [GroupFailure.EmptyName] for a blank name.
+     */
+    @Throws(EranosException::class, CancellationException::class)
+    public suspend fun rename(name: String): Unit = converting { handle.setNameAsync(name, null) }
+
+    /**
+     * Renames the group.
+     *
+     * Waits for the group's lock by blocking its thread; in a coroutine, [rename] waits without blocking it.
+     *
+     * @throws EranosException.Group with [GroupFailure.EmptyName] for a blank name.
+     */
+    @Throws(EranosException::class)
+    public fun renameBlocking(name: String): Unit = converting { handle.setName(name) }
 
     /**
      * The group currency, which every total is in.
@@ -135,42 +171,6 @@ public class Group private constructor(
         currency: Currency,
         rates: Map<Currency, ExchangeRate>,
     ): Unit = converting { handle.changeCurrency(currency.code, rates.generated()) }
-
-    /**
-     * The group's name.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [nameBlocking] blocks instead.
-     */
-    public suspend fun name(): String = converting { handle.nameAsync(null) }
-
-    /**
-     * The group's name.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [name] waits without blocking it.
-     */
-    public fun nameBlocking(): String = converting { handle.name() }
-
-    /**
-     * Renames the group.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [renameBlocking] blocks instead.
-     *
-     * @throws EranosException.Group with [GroupFailure.EmptyName] for a blank name.
-     */
-    @Throws(EranosException::class, CancellationException::class)
-    public suspend fun rename(name: String): Unit = converting { handle.setNameAsync(name, null) }
-
-    /**
-     * Renames the group.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [rename] waits without blocking it.
-     *
-     * @throws EranosException.Group with [GroupFailure.EmptyName] for a blank name.
-     */
-    @Throws(EranosException::class)
-    public fun renameBlocking(name: String): Unit = converting { handle.setName(name) }
 
     /**
      * The group's description.

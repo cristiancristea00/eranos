@@ -68,7 +68,7 @@ final class Tour {
 
     /** A date of the trip, in October 2026. */
     static CalendarDate october(int date) throws EranosException {
-        return CalendarDate.of(date, 10, 2026);
+        return CalendarDate.of(2026, 10, date);
     }
 
     static String name(Group group, MemberId member) throws EranosException {
@@ -116,7 +116,7 @@ final class Tour {
 
     /** The sum of {@code amounts}, all in {@code currency}. */
     static Money sum(Currency currency, List<Money> amounts) throws EranosException {
-        Money total = new Money(currency, 0);
+        Money total = new Money(0, currency);
         for (Money amount : amounts) {
             total = total.plus(amount);
         }
@@ -126,8 +126,8 @@ final class Tour {
     /** The rate {@code cost} was entered at: 1 for a cost in the group currency. */
     static ExchangeRate rate(Cost cost) throws EranosException {
         return switch (cost) {
-            case Cost.Converted converted -> converted.rate();
             case Cost.Local _ -> ExchangeRate.parse("1");
+            case Cost.Converted converted -> converted.rate();
         };
     }
 }

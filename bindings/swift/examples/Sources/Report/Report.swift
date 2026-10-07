@@ -59,10 +59,10 @@ public func names(_ group: Group, _ members: [Member.ID]) throws(EranosError) ->
 /// Every member who shares the cost of `split`, once each, in the order of their identifiers.
 public func participants(_ split: ExpenseSplit) -> [Member.ID] {
     let members = switch split {
-    case let .itemised(items):
-        items.flatMap(\.split.members)
     case let .whole(split):
         split.members
+    case let .itemised(items):
+        items.flatMap(\.split.members)
     }
     return Set(members).sorted { first, second in first.rawValue < second.rawValue }
 }

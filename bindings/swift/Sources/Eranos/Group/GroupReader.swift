@@ -26,19 +26,11 @@ public final class GroupReader: Sendable {
         try converting { Group.ID(rawValue: try handle.id()) }
     }
 
-    /// Every category, the built-in one first.
+    /// The group's name.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
-    public func categories() throws(EranosError) -> [Category] {
-        try converting { try handle.categories().map(Category.init) }
-    }
-
-    /// The category with the identifier `id`, if the group holds it.
-    ///
-    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
-    ///   ``EranosError/released(detail:)`` after ``release()``.
-    public func category(withID id: Category.ID) throws(EranosError) -> Category? {
-        try converting { try handle.category(id: id.rawValue).map(Category.init) }
+    public func name() throws(EranosError) -> String {
+        try converting { try handle.name() }
     }
 
     /// The group currency, which every total is in.
@@ -48,35 +40,18 @@ public final class GroupReader: Sendable {
         try converting { Currency(known: try handle.currency()) }
     }
 
-    /// Every expense, in the order they were created.
+    /// The group's description.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
-    public func expenses() throws(EranosError) -> [Expense] {
-        try converting { try handle.expenses().map(Expense.init) }
+    public func description() throws(EranosError) -> String? {
+        try converting { try handle.description() }
     }
 
-    /// The expense with the identifier `id`, if the group holds it.
-    ///
-    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
-    ///   ``EranosError/released(detail:)`` after ``release()``.
-    public func expense(withID id: Expense.ID) throws(EranosError) -> Expense? {
-        try converting { try handle.expense(id: id.rawValue).map(Expense.init) }
-    }
-
-    /// How the expense with the identifier `id` divides, in the group currency, if the group holds
-    /// it.
-    ///
-    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
-    ///   ``EranosError/released(detail:)`` after ``release()``.
-    public func shares(of id: Expense.ID) throws(EranosError) -> ExpenseShares? {
-        try converting { try handle.expenseShares(id: id.rawValue).map(ExpenseShares.init) }
-    }
-
-    /// The group's totals.
+    /// The language the apps show the group in.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
-    public func summary() throws(EranosError) -> Summary {
-        try converting { Summary(try handle.summary()) }
+    public func language() throws(EranosError) -> Language? {
+        try converting { try handle.language().map { Language(known: $0) } }
     }
 
     /// Every member, archived ones included, in the order they were added.
@@ -103,20 +78,43 @@ public final class GroupReader: Sendable {
         try converting { try handle.isArchived(id: id.rawValue) }
     }
 
-    /// The group's name.
+    /// Every category, the built-in one first.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
-    public func name() throws(EranosError) -> String {
-        try converting { try handle.name() }
+    public func categories() throws(EranosError) -> [Category] {
+        try converting { try handle.categories().map(Category.init) }
     }
 
-    /// The payments that settle every balance by `strategy`.
+    /// The category with the identifier `id`, if the group holds it.
     ///
-    /// - Throws: ``EranosError/settlement(_:detail:)`` with
-    ///   ``SettlementFailure/outOfMemory(balances:)`` for an exact plan of more open balances than
-    ///   the table fits; ``EranosError/released(detail:)`` after ``release()``.
-    public func settlement(by strategy: SettlementStrategy) throws(EranosError) -> Settlement {
-        try converting { Settlement(try handle.settlement(strategy: strategy.generated)) }
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
+    ///   ``EranosError/released(detail:)`` after ``release()``.
+    public func category(withID id: Category.ID) throws(EranosError) -> Category? {
+        try converting { try handle.category(id: id.rawValue).map(Category.init) }
+    }
+
+    /// Every expense, in the order they were created.
+    ///
+    /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
+    public func expenses() throws(EranosError) -> [Expense] {
+        try converting { try handle.expenses().map(Expense.init) }
+    }
+
+    /// The expense with the identifier `id`, if the group holds it.
+    ///
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
+    ///   ``EranosError/released(detail:)`` after ``release()``.
+    public func expense(withID id: Expense.ID) throws(EranosError) -> Expense? {
+        try converting { try handle.expense(id: id.rawValue).map(Expense.init) }
+    }
+
+    /// How the expense with the identifier `id` divides, in the group currency, if the group holds
+    /// it.
+    ///
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
+    ///   ``EranosError/released(detail:)`` after ``release()``.
+    public func shares(of id: Expense.ID) throws(EranosError) -> ExpenseShares? {
+        try converting { try handle.expenseShares(id: id.rawValue).map(ExpenseShares.init) }
     }
 
     /// Every transfer, in the order they were created.
@@ -143,18 +141,20 @@ public final class GroupReader: Sendable {
         try converting { try handle.transferAmount(id: id.rawValue).map(Money.init) }
     }
 
-    /// The group's description.
+    /// The group's totals.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
-    public func description() throws(EranosError) -> String? {
-        try converting { try handle.description() }
+    public func summary() throws(EranosError) -> Summary {
+        try converting { Summary(try handle.summary()) }
     }
 
-    /// The language the apps show the group in.
+    /// The payments that settle every balance by `strategy`.
     ///
-    /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
-    public func language() throws(EranosError) -> Language? {
-        try converting { try handle.language().map { Language(known: $0) } }
+    /// - Throws: ``EranosError/settlement(_:detail:)`` with
+    ///   ``SettlementFailure/outOfMemory(balances:)`` for an exact plan of more open balances than
+    ///   the table fits; ``EranosError/released(detail:)`` after ``release()``.
+    public func settlement(by strategy: SettlementStrategy) throws(EranosError) -> Settlement {
+        try converting { Settlement(try handle.settlement(strategy: strategy.generated)) }
     }
 
     /// The group in its saved form, as JSON, which `Group.load(_:)` reads back.

@@ -8,10 +8,10 @@ import { type Columns, load, names, printLines, printTable, refusal, section, to
 
 /** A member's rule, payment, and consumption in one expense, as the table of shares prints them. */
 interface ShareRow {
-    readonly consumed: Money;
     readonly name: string;
-    readonly paid: Money;
     readonly rule: string;
+    readonly paid: Money;
+    readonly consumed: Money;
 }
 
 const shareColumns: Columns<ShareRow> = [
@@ -23,10 +23,10 @@ const shareColumns: Columns<ShareRow> = [
 
 /** A member's totals over the holiday, as the table of totals prints them. */
 interface TotalRow {
-    readonly balance: string;
-    readonly consumed: Money;
     readonly name: string;
     readonly paid: Money;
+    readonly consumed: Money;
+    readonly balance: string;
 }
 
 const totalColumns: Columns<TotalRow> = [
@@ -44,8 +44,8 @@ function eur(text: string): Money {
 interface Family {
     readonly ana: MemberId;
     readonly bob: MemberId;
-    readonly day: CalendarDate;
     readonly mia: MemberId;
+    readonly day: CalendarDate;
 }
 
 /** The rule of an expense shared equally by the three. */
@@ -68,10 +68,10 @@ function report(group: Group, id: ExpenseId, rules: ReadonlyMap<MemberId, string
     printTable(
         shareColumns,
         shares.members.map((share) => ({
-            consumed: share.share,
             name: names(group, [share.member]),
-            paid: share.paid,
             rule: rules.get(share.member) ?? '(payer only)',
+            paid: share.paid,
+            consumed: share.share,
         })),
         2,
     );
@@ -85,11 +85,11 @@ function equally(group: Group, family: Family): void {
         'nobody always pays it.',
     );
     const taxi = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('10.00') },
-        date: family.day,
         name: 'Taxi',
+        cost: { kind: 'local', amount: eur('10.00') },
         payers: { kind: 'equal', members: [family.ana] },
         split: { kind: 'whole', split: { kind: 'equal', members: [family.ana, family.bob, family.mia] } },
+        date: family.day,
     });
     report(group, taxi, thirds(family));
 }
@@ -101,9 +101,8 @@ function byPercentage(group: Group, family: Family): void {
         "100 %. Mia's room is smaller, so she takes 20 %.",
     );
     const rent = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('500.00') },
-        date: family.day,
         name: 'Flat',
+        cost: { kind: 'local', amount: eur('500.00') },
         payers: { kind: 'equal', members: [family.bob] },
         split: {
             kind: 'whole',
@@ -116,6 +115,7 @@ function byPercentage(group: Group, family: Family): void {
                 ],
             },
         },
+        date: family.day,
     });
     report(
         group,
@@ -135,9 +135,8 @@ function byParts(group: Group, family: Family): ExpenseId {
         '2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.',
     );
     const food = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('125.00') },
-        date: family.day,
         name: 'Food',
+        cost: { kind: 'local', amount: eur('125.00') },
         payers: { kind: 'equal', members: [family.ana] },
         split: {
             kind: 'whole',
@@ -150,6 +149,7 @@ function byParts(group: Group, family: Family): ExpenseId {
                 ],
             },
         },
+        date: family.day,
     });
     report(
         group,
@@ -167,21 +167,21 @@ function byAmounts(group: Group, family: Family): void {
     section('4. By exact amounts');
     printLines('Everyone pays a fixed amount, such as a ticket price; the amounts must add up to', 'exactly the expense amount.');
     const tickets = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('35.00') },
-        date: family.day,
         name: 'Museum',
+        cost: { kind: 'local', amount: eur('35.00') },
         payers: { kind: 'equal', members: [family.bob] },
         split: {
             kind: 'whole',
             split: {
                 kind: 'amounts',
                 shares: [
-                    { amount: eur('15.00'), member: family.ana },
-                    { amount: eur('15.00'), member: family.bob },
-                    { amount: eur('5.00'), member: family.mia },
+                    { member: family.ana, amount: eur('15.00') },
+                    { member: family.bob, amount: eur('15.00') },
+                    { member: family.mia, amount: eur('5.00') },
                 ],
             },
         },
+        date: family.day,
     });
     report(
         group,
@@ -201,17 +201,17 @@ function severalPayers(group: Group, family: Family): void {
         'divided with the same methods as the participants.',
     );
     const dinner = group.addExpenseSync({
-        cost: { kind: 'local', amount: eur('90.00') },
-        date: family.day,
         name: 'Dinner',
+        cost: { kind: 'local', amount: eur('90.00') },
         payers: {
             kind: 'amounts',
             shares: [
-                { amount: eur('50.00'), member: family.ana },
-                { amount: eur('40.00'), member: family.bob },
+                { member: family.ana, amount: eur('50.00') },
+                { member: family.bob, amount: eur('40.00') },
             ],
         },
         split: { kind: 'whole', split: { kind: 'equal', members: [family.ana, family.bob, family.mia] } },
+        date: family.day,
     });
     report(group, dinner, thirds(family));
 }
@@ -221,9 +221,8 @@ function mistakes(group: Group, family: Family): void {
     printLines('A percentage split that adds up to 90 % is refused when the expense is built:');
     const refused = refusal(() =>
         group.addExpenseSync({
-            cost: { kind: 'local', amount: eur('10.00') },
-            date: family.day,
             name: 'Invalid',
+            cost: { kind: 'local', amount: eur('10.00') },
             payers: { kind: 'equal', members: [family.ana] },
             split: {
                 kind: 'whole',
@@ -235,6 +234,7 @@ function mistakes(group: Group, family: Family): void {
                     ],
                 },
             },
+            date: family.day,
         }),
     );
     assert.ok(undefined !== refused, 'the split must be refused');
@@ -251,19 +251,19 @@ function printTotals(group: Group): void {
             const found = undefined === member.id ? undefined : totals(member.id, summary);
             return undefined === found
                 ? []
-                : [{ balance: formatBalance(found.balance), consumed: found.share, name: member.firstName, paid: found.paid }];
+                : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: formatBalance(found.balance) }];
         }),
         1,
     );
 }
 
 await load();
-using group = Group.create(Currency.of('EUR'), 'Family holiday');
+using group = Group.create('Family holiday', Currency.of('EUR'));
 const family: Family = {
     ana: group.addMemberSync({ firstName: 'Ana' }),
     bob: group.addMemberSync({ firstName: 'Bob' }),
-    day: CalendarDate.of(14, 7, 2026),
     mia: group.addMemberSync({ firstName: 'Mia' }),
+    day: CalendarDate.of(2026, 7, 14),
 };
 
 printLines('Family holiday: every way to split an expense', '═════════════════════════════════════════════');

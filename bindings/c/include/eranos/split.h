@@ -1,5 +1,5 @@
 /// @file eranos/split.h
-/// How an amount divides among members: equally, by exact amounts, by parts, or by percentages.
+/// How an amount divides among members: equally, by parts, by percentages, or by exact amounts.
 
 #ifndef ERANOS_SPLIT_H
 #define ERANOS_SPLIT_H
@@ -23,46 +23,30 @@
 /// The kind of a split. The values of EranosSplitKind, by the names of the C layer.
 typedef enum EranosSplitKind EranosSplitKind;
 
-/// Every member pays an exact amount; the amounts add up to what they divide.
-static constexpr EranosSplitKind ERANOS_SPLIT_KIND_AMOUNTS = EranosSplitKind_Amounts;
 /// Every member pays the same.
 static constexpr EranosSplitKind ERANOS_SPLIT_KIND_EQUAL = EranosSplitKind_Equal;
 /// Every member pays in proportion to their parts.
 static constexpr EranosSplitKind ERANOS_SPLIT_KIND_PARTS = EranosSplitKind_Parts;
 /// Every member pays a percentage; the percentages add up to 100 %.
 static constexpr EranosSplitKind ERANOS_SPLIT_KIND_PERCENTAGES = EranosSplitKind_Percentages;
+/// Every member pays an exact amount; the amounts add up to what they divide.
+static constexpr EranosSplitKind ERANOS_SPLIT_KIND_AMOUNTS = EranosSplitKind_Amounts;
 
 /// A member's exact amount in a split.
 typedef struct EranosMemberAmount EranosMemberAmount;
 
 /// A new member amount of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param amount The amount
 /// @param member The member's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param amount The amount
 /// @param memberAmount Receives the member amount on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosMemberAmountCreate(EranosMoney const *const amount, char const *const member,
+[[nodiscard]] static inline EranosError *eranosMemberAmountCreate(char const *const member, EranosMoney const *const amount,
                                                                   EranosMemberAmount **const memberAmount) {
-    EranosMemberAmount_create_result const result = EranosMemberAmount_create(amount, eranosDetailView(member));
+    EranosMemberAmount_create_result const result = EranosMemberAmount_create(eranosDetailView(member), amount);
     *memberAmount = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
-}
-
-/// The amount.
-///
-/// @param memberAmount The member amount
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosMemberAmountAmount(EranosMemberAmount const *const memberAmount) {
-    return EranosMemberAmount_amount(memberAmount);
-}
-
-/// Sets the amount.
-///
-/// @param memberAmount The member amount
-/// @param amount The amount
-static inline void eranosMemberAmountSetAmount(EranosMemberAmount *const memberAmount, EranosMoney const *const amount) {
-    EranosMemberAmount_set_amount(memberAmount, amount);
 }
 
 /// The member's identifier.
@@ -84,6 +68,22 @@ static inline void eranosMemberAmountMember(EranosMemberAmount const *const memb
 [[nodiscard]] static inline EranosError *eranosMemberAmountSetMember(EranosMemberAmount *const memberAmount, char const *const member) {
     EranosMemberAmount_set_member_result const result = EranosMemberAmount_set_member(memberAmount, eranosDetailView(member));
     return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The amount.
+///
+/// @param memberAmount The member amount
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosMoney *eranosMemberAmountAmount(EranosMemberAmount const *const memberAmount) {
+    return EranosMemberAmount_amount(memberAmount);
+}
+
+/// Sets the amount.
+///
+/// @param memberAmount The member amount
+/// @param amount The amount
+static inline void eranosMemberAmountSetAmount(EranosMemberAmount *const memberAmount, EranosMoney const *const amount) {
+    EranosMemberAmount_set_amount(memberAmount, amount);
 }
 
 /// Destroys @p memberAmount; destroying nullptr does nothing, as free() does.
@@ -148,32 +148,16 @@ typedef struct EranosMemberParts EranosMemberParts;
 
 /// A new member parts of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param hundredths The parts, in hundredths: 100 for one part
 /// @param member The member's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param hundredths The parts, in hundredths: 100 for one part
 /// @param memberParts Receives the member parts on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosMemberPartsCreate(int32_t const hundredths, char const *const member,
+[[nodiscard]] static inline EranosError *eranosMemberPartsCreate(char const *const member, int32_t const hundredths,
                                                                  EranosMemberParts **const memberParts) {
-    EranosMemberParts_create_result const result = EranosMemberParts_create(hundredths, eranosDetailView(member));
+    EranosMemberParts_create_result const result = EranosMemberParts_create(eranosDetailView(member), hundredths);
     *memberParts = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
-}
-
-/// The parts, in hundredths: 100 for one part.
-///
-/// @param memberParts The member parts
-/// @return The parts, in hundredths: 100 for one part
-[[nodiscard]] static inline int32_t eranosMemberPartsHundredths(EranosMemberParts const *const memberParts) {
-    return EranosMemberParts_hundredths(memberParts);
-}
-
-/// Sets the parts, in hundredths: 100 for one part.
-///
-/// @param memberParts The member parts
-/// @param hundredths The parts, in hundredths: 100 for one part
-static inline void eranosMemberPartsSetHundredths(EranosMemberParts *const memberParts, int32_t const hundredths) {
-    EranosMemberParts_set_hundredths(memberParts, hundredths);
 }
 
 /// The member's identifier.
@@ -195,6 +179,22 @@ static inline void eranosMemberPartsMember(EranosMemberParts const *const member
 [[nodiscard]] static inline EranosError *eranosMemberPartsSetMember(EranosMemberParts *const memberParts, char const *const member) {
     EranosMemberParts_set_member_result const result = EranosMemberParts_set_member(memberParts, eranosDetailView(member));
     return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The parts, in hundredths: 100 for one part.
+///
+/// @param memberParts The member parts
+/// @return The parts, in hundredths: 100 for one part
+[[nodiscard]] static inline int32_t eranosMemberPartsHundredths(EranosMemberParts const *const memberParts) {
+    return EranosMemberParts_hundredths(memberParts);
+}
+
+/// Sets the parts, in hundredths: 100 for one part.
+///
+/// @param memberParts The member parts
+/// @param hundredths The parts, in hundredths: 100 for one part
+static inline void eranosMemberPartsSetHundredths(EranosMemberParts *const memberParts, int32_t const hundredths) {
+    EranosMemberParts_set_hundredths(memberParts, hundredths);
 }
 
 /// Destroys @p memberParts; destroying nullptr does nothing, as free() does.
@@ -259,32 +259,16 @@ typedef struct EranosMemberPercentage EranosMemberPercentage;
 
 /// A new member percentage of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param basisPoints The percentage, in basis points: 10000 for 100 %
 /// @param member The member's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param basisPoints The percentage, in basis points: 10000 for 100 %
 /// @param memberPercentage Receives the member percentage on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosMemberPercentageCreate(int32_t const basisPoints, char const *const member,
+[[nodiscard]] static inline EranosError *eranosMemberPercentageCreate(char const *const member, int32_t const basisPoints,
                                                                       EranosMemberPercentage **const memberPercentage) {
-    EranosMemberPercentage_create_result const result = EranosMemberPercentage_create(basisPoints, eranosDetailView(member));
+    EranosMemberPercentage_create_result const result = EranosMemberPercentage_create(eranosDetailView(member), basisPoints);
     *memberPercentage = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
-}
-
-/// The percentage, in basis points: 10000 for 100 %.
-///
-/// @param memberPercentage The member percentage
-/// @return The percentage, in basis points: 10000 for 100 %
-[[nodiscard]] static inline int32_t eranosMemberPercentageBasisPoints(EranosMemberPercentage const *const memberPercentage) {
-    return EranosMemberPercentage_basis_points(memberPercentage);
-}
-
-/// Sets the percentage, in basis points: 10000 for 100 %.
-///
-/// @param memberPercentage The member percentage
-/// @param basisPoints The percentage, in basis points: 10000 for 100 %
-static inline void eranosMemberPercentageSetBasisPoints(EranosMemberPercentage *const memberPercentage, int32_t const basisPoints) {
-    EranosMemberPercentage_set_basis_points(memberPercentage, basisPoints);
 }
 
 /// The member's identifier.
@@ -306,6 +290,22 @@ static inline void eranosMemberPercentageMember(EranosMemberPercentage const *co
 [[nodiscard]] static inline EranosError *eranosMemberPercentageSetMember(EranosMemberPercentage *const memberPercentage, char const *const member) {
     EranosMemberPercentage_set_member_result const result = EranosMemberPercentage_set_member(memberPercentage, eranosDetailView(member));
     return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The percentage, in basis points: 10000 for 100 %.
+///
+/// @param memberPercentage The member percentage
+/// @return The percentage, in basis points: 10000 for 100 %
+[[nodiscard]] static inline int32_t eranosMemberPercentageBasisPoints(EranosMemberPercentage const *const memberPercentage) {
+    return EranosMemberPercentage_basis_points(memberPercentage);
+}
+
+/// Sets the percentage, in basis points: 10000 for 100 %.
+///
+/// @param memberPercentage The member percentage
+/// @param basisPoints The percentage, in basis points: 10000 for 100 %
+static inline void eranosMemberPercentageSetBasisPoints(EranosMemberPercentage *const memberPercentage, int32_t const basisPoints) {
+    EranosMemberPercentage_set_basis_points(memberPercentage, basisPoints);
 }
 
 /// Destroys @p memberPercentage; destroying nullptr does nothing, as free() does.
@@ -370,14 +370,6 @@ static inline void eranosMemberPercentageListDestroy(EranosMemberPercentageList 
 /// How an amount is divided among members.
 typedef struct EranosSplit EranosSplit;
 
-/// Every member pays an exact amount; the amounts add up to what they divide.
-///
-/// @param shares Each member's amount
-/// @return The split, which the caller destroys
-[[nodiscard]] static inline EranosSplit *eranosSplitCreateAmounts(EranosMemberAmountList const *const shares) {
-    return EranosSplit_create_amounts(shares);
-}
-
 /// Every member pays the same.
 ///
 /// @param members The identifiers of the members who share the amount
@@ -398,6 +390,14 @@ typedef struct EranosSplit EranosSplit;
 /// @return The split, which the caller destroys
 [[nodiscard]] static inline EranosSplit *eranosSplitCreatePercentages(EranosMemberPercentageList const *const shares) {
     return EranosSplit_create_percentages(shares);
+}
+
+/// Every member pays an exact amount; the amounts add up to what they divide.
+///
+/// @param shares Each member's amount
+/// @return The split, which the caller destroys
+[[nodiscard]] static inline EranosSplit *eranosSplitCreateAmounts(EranosMemberAmountList const *const shares) {
+    return EranosSplit_create_amounts(shares);
 }
 
 /// Which kind of split it is.

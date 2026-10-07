@@ -20,30 +20,30 @@ class TotalsTest {
         Summary summary = flat.group.summary();
         assertEquals(flat.euros(3_000), summary.totalSpent());
         assertEquals(
+                List.of(
+                        new MemberSummary(
+                                flat.ana,
+                                flat.euros(3_000),
+                                flat.euros(1_500),
+                                flat.euros(0),
+                                flat.euros(1_000),
+                                flat.euros(500),
+                                new Balance.GetsBack(flat.euros(500))),
+                        new MemberSummary(
+                                flat.bob,
+                                flat.euros(0),
+                                flat.euros(1_500),
+                                flat.euros(1_000),
+                                flat.euros(0),
+                                flat.euros(-500),
+                                new Balance.Owes(flat.euros(500)))),
+                summary.members());
+        assertEquals(
                 List.of(flat.food),
                 summary.categoryTotals().stream().map(CategoryTotal::category).toList());
         assertEquals(
                 List.of(flat.euros(3_000)),
                 summary.categoryTotals().stream().map(CategoryTotal::total).toList());
-        assertEquals(
-                List.of(
-                        new MemberSummary(
-                                new Balance.GetsBack(flat.euros(500)),
-                                flat.ana,
-                                flat.euros(500),
-                                flat.euros(3_000),
-                                flat.euros(1_000),
-                                flat.euros(0),
-                                flat.euros(1_500)),
-                        new MemberSummary(
-                                new Balance.Owes(flat.euros(500)),
-                                flat.bob,
-                                flat.euros(-500),
-                                flat.euros(0),
-                                flat.euros(0),
-                                flat.euros(1_000),
-                                flat.euros(1_500))),
-                summary.members());
         MemberCategoryTotals anaTotals = summary.memberCategoryTotals().get(0);
         assertEquals(flat.ana, anaTotals.member());
         assertEquals(
@@ -59,12 +59,12 @@ class TotalsTest {
     @Test
     void aBalancePrintsAsTheLibraryWritesIt() throws EranosException {
         Flat flat = new Flat();
-        Balance getsBack = new Balance.GetsBack(flat.euros(1_200));
         Balance owes = new Balance.Owes(flat.euros(1_200));
-        assertEquals("gets back 12.00 EUR", getsBack.toString());
+        Balance getsBack = new Balance.GetsBack(flat.euros(1_200));
         assertEquals("owes 12.00 EUR", owes.toString());
         assertEquals("settled", new Balance.Settled().toString());
-        for (Balance balance : List.of(getsBack, owes, new Balance.Settled())) {
+        assertEquals("gets back 12.00 EUR", getsBack.toString());
+        for (Balance balance : List.of(owes, new Balance.Settled(), getsBack)) {
             assertEquals(balance, Conversions.converted(Conversions.generated(balance)));
         }
     }
@@ -84,15 +84,15 @@ class TotalsTest {
                                                 flat.ana, flat.euros(3_000), flat.euros(1_500)),
                                         new MemberShare(
                                                 flat.bob, flat.euros(0), flat.euros(1_500))),
-                                flat.euros(0),
-                                flat.euros(3_000))),
+                                flat.euros(3_000),
+                                flat.euros(0))),
                 flat.group.expenseShares(flat.dinner));
         assertEquals(
                 List.of(
                         SettlementStrategy.ADAPTIVE,
-                        SettlementStrategy.DIRECT,
+                        SettlementStrategy.MINIMUM_TRANSFERS,
                         SettlementStrategy.GREEDY,
-                        SettlementStrategy.MINIMUM_TRANSFERS),
+                        SettlementStrategy.DIRECT),
                 List.of(SettlementStrategy.values()));
         for (SettlementStrategy strategy : SettlementStrategy.values()) {
             // Two balances are within the adaptive strategy's limit, so its plan is the minimum
@@ -103,7 +103,7 @@ class TotalsTest {
                             : strategy;
             assertEquals(
                     new Settlement(
-                            List.of(new Payment(flat.euros(500), flat.bob, flat.ana)), computedBy),
+                            List.of(new Payment(flat.bob, flat.ana, flat.euros(500))), computedBy),
                     flat.group.settlement(strategy));
             assertEquals(strategy, SettlementStrategy.converted(strategy.generated()));
         }

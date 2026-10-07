@@ -35,17 +35,17 @@ class ExpenseRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Expense', 'Paid by', 'Shared by', 'Amount')
 
-    amount: Money
-    """What the expense cost."""
-
     name: str
     """What the expense was."""
+
+    payer: str
+    """Who paid it."""
 
     participants: str
     """Who share it."""
 
-    payer: str
-    """Who paid it."""
+    amount: Money
+    """What the expense cost."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -59,17 +59,17 @@ class BalanceRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Balance')
 
-    balance: Balance
-    """Where the member stands."""
-
-    consumed: Money
-    """What the member consumed."""
-
     name: str
     """The member's first name."""
 
     paid: Money
     """What the member paid."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    balance: Balance
+    """Where the member stands."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -83,14 +83,14 @@ class PaymentRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('From', 'To', 'Amount')
 
-    amount: Money
-    """What is paid."""
-
     from_: str
     """Who pays."""
 
     to: str
     """Who is paid."""
+
+    amount: Money
+    """What is paid."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -104,17 +104,17 @@ class StrategyRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Strategy', 'Guarantee', 'Cost', 'Payments here')
 
-    cost: str
-    """How the strategy's time grows with the open balances."""
+    strategy: str
+    """The strategy's name."""
 
     guarantee: str
     """What the strategy promises."""
 
+    cost: str
+    """How the strategy's time grows with the open balances."""
+
     payments: int
     """The number of payments of the strategy's plan for the group."""
-
-    strategy: str
-    """The strategy's name."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -129,14 +129,14 @@ class Counts:
     adaptive: int
     """The payments of the adaptive plan."""
 
-    direct: int
-    """The payments of the direct plan."""
+    minimum: int
+    """The payments of the minimum plan."""
 
     greedy: int
     """The payments of the greedy plan."""
 
-    minimum: int
-    """The payments of the minimum plan."""
+    direct: int
+    """The payments of the direct plan."""
 
 
 def strategy_name(strategy: SettlementStrategy) -> str:
@@ -153,12 +153,12 @@ def strategy_name(strategy: SettlementStrategy) -> str:
     match strategy:
         case SettlementStrategy.ADAPTIVE:
             return 'Adaptive'
-        case SettlementStrategy.DIRECT:
-            return 'Direct'
-        case SettlementStrategy.GREEDY:
-            return 'Greedy'
         case SettlementStrategy.MINIMUM_TRANSFERS:
             return 'MinimumTransfers'
+        case SettlementStrategy.GREEDY:
+            return 'Greedy'
+        case SettlementStrategy.DIRECT:
+            return 'Direct'
         case _:
             assert_never(strategy)
 
@@ -177,11 +177,11 @@ def spend(group: Group, name: str, amount: str, payer: MemberId, members: tuple[
     """
     group.add_expense(
         Expense(
-            cost=LocalCost(Money.parse(amount, Currency('EUR'))),
-            date=CalendarDate(20, 9, 2026),
             name=name,
+            cost=LocalCost(Money.parse(amount, Currency('EUR'))),
             payers=EqualSplit((payer,)),
             split=WholeExpenseSplit(EqualSplit(members)),
+            date=CalendarDate(2026, 9, 20),
         )
     )
 
@@ -198,7 +198,7 @@ def print_balances(group: Group) -> None:
     print_table(
         BalanceRow,
         [
-            BalanceRow(balance=found.balance, consumed=found.share, name=member.first_name, paid=found.paid)
+            BalanceRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=found.balance)
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],
@@ -218,7 +218,7 @@ def print_payments(group: Group, settlement: Settlement) -> None:
     print_table(
         PaymentRow,
         [
-            PaymentRow(amount=payment.amount, from_=names(group, (payment.sender,)), to=names(group, (payment.receiver,)))
+            PaymentRow(from_=names(group, (payment.sender,)), to=names(group, (payment.receiver,)), amount=payment.amount)
             for payment in settlement.payments
         ],
         2,
@@ -278,34 +278,34 @@ def strategies(group: Group) -> Counts:
         StrategyRow,
         [
             StrategyRow(
-                cost='O(2ⁿ·n) for n open balances',
-                guarantee='the fewest payments',
-                payments=len(minimum.payments),
                 strategy='MinimumTransfers',
+                guarantee='the fewest payments',
+                cost='O(2ⁿ·n) for n open balances',
+                payments=len(minimum.payments),
             ),
             StrategyRow(
-                cost='O(n log n)',
+                strategy='Greedy',
                 # The minus sign goes by its name: Ruff refuses the character itself, which reads as a hyphen.
                 guarantee='at most n \N{MINUS SIGN} 1 payments',
+                cost='O(n log n)',
                 payments=len(greedy.payments),
-                strategy='Greedy',
             ),
             StrategyRow(
-                cost='O(pairs)',
-                guarantee='one payment per pair in debt',
-                payments=len(direct.payments),
                 strategy='Direct',
+                guarantee='one payment per pair in debt',
+                cost='O(pairs)',
+                payments=len(direct.payments),
             ),
             StrategyRow(
-                cost='as MinimumTransfers, then Greedy',
-                guarantee='the fewest up to 20 balances',
-                payments=len(adaptive.payments),
                 strategy='Adaptive',
+                guarantee='the fewest up to 20 balances',
+                cost='as MinimumTransfers, then Greedy',
+                payments=len(adaptive.payments),
             ),
         ],
         3,
     )
-    return Counts(adaptive=len(adaptive.payments), direct=len(direct.payments), greedy=len(greedy.payments), minimum=len(minimum.payments))
+    return Counts(adaptive=len(adaptive.payments), minimum=len(minimum.payments), greedy=len(greedy.payments), direct=len(direct.payments))
 
 
 def festival() -> int:
@@ -318,18 +318,18 @@ def festival() -> int:
     """
     section('8. A larger group')
     euro = Currency('EUR')
-    group = Group.create(euro, 'Festival')
+    group = Group.create('Festival', euro)
     friends = tuple(group.add_member(Member(first_name=f'Friend {number}')) for number in range(1, 22))
     # Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's balance is 21·i² - 3311
     # cents: never zero, and never the opposite of another's.
     for number, payer in enumerate(friends, start=1):
         group.add_expense(
             Expense(
-                cost=LocalCost(Money(euro, 21 * number**2)),
-                date=CalendarDate(18, 9, 2026),
                 name='Round',
+                cost=LocalCost(Money(21 * number**2, euro)),
                 payers=EqualSplit((payer,)),
                 split=WholeExpenseSplit(EqualSplit(friends)),
+                date=CalendarDate(2026, 9, 18),
             )
         )
     open_balances = sum(1 for member in group.summary().members if member.net.minor_units != 0)
@@ -349,7 +349,7 @@ def festival() -> int:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create(Currency('EUR'), 'Ski week')
+    group = Group.create('Ski week', Currency('EUR'))
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     carol = group.add_member(Member(first_name='Carol'))
@@ -373,10 +373,10 @@ def main() -> None:
         ExpenseRow,
         [
             ExpenseRow(
-                amount=expense.total(),
                 name=expense.name,
-                participants=names(group, participants(expense.split)),
                 payer=names(group, expense.payers.members),
+                participants=names(group, participants(expense.split)),
+                amount=expense.total(),
             )
             for expense in group.expenses()
         ],
@@ -394,7 +394,7 @@ def main() -> None:
     plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
     for payment in plan.payments:
         # A settlement's payments are in the group currency, so the transfer that records one has a local cost.
-        group.add_transfer(Transfer(cost=LocalCost(payment.amount), date=CalendarDate(27, 9, 2026), receiver=payment.receiver, sender=payment.sender))
+        group.add_transfer(Transfer(sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=CalendarDate(2026, 9, 27)))
     print_lines(
         'Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards',
         'every balance is zero and a new settlement has nothing left to pay:',
@@ -404,7 +404,7 @@ def main() -> None:
 
     # {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that one; greedy pays
     # the largest amounts first and needs five; the unsimplified debts between pairs need seven.
-    assert counts == Counts(adaptive=4, direct=7, greedy=5, minimum=4)
+    assert counts == Counts(adaptive=4, minimum=4, greedy=5, direct=7)
     # Greedy settles the festival's 21 balances in 19 payments.
     assert festival_payments == 19
     summary = group.summary()

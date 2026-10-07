@@ -27,9 +27,9 @@ def test_a_currency_holds_what_the_library_knows_of_it() -> None:
     """A currency whose details came out wrong would format every amount in it wrongly."""
     euro = Currency('EUR')
     assert euro.code == 'EUR'
-    assert euro.decimal_places == 2
     assert euro.name == 'Euro'
     assert euro.numeric_code == 978
+    assert euro.decimal_places == 2
     assert Currency('JPY').decimal_places == 0
     assert euro == Currency('EUR')
     assert euro != Currency('JPY')
@@ -65,30 +65,30 @@ def test_an_amount_parses_and_formats_as_the_library_writes_it() -> None:
     """An amount that parsed or formatted otherwise than the library does would show one number in an app and store another."""
     euro = Currency('EUR')
     price = Money.parse('12.5', euro)
-    assert price == Money(euro, 1250)
+    assert price == Money(1250, euro)
     assert str(price) == '12.50 EUR'
     with pytest.raises(MoneyError) as word:
         Money.parse('twelve', euro)
     assert word.value.failure == MoneyError.InvalidAmount()
     with pytest.raises(MoneyError) as precise:
         Money.parse('1.234', euro)
-    assert precise.value.failure == MoneyError.TooManyDecimals(allowed=2, currency=euro)
+    assert precise.value.failure == MoneyError.TooManyDecimals(currency=euro, allowed=2)
 
 
 def test_amounts_in_one_currency_add_and_subtract() -> None:
     """Arithmetic that mixed currencies or wrapped around would put a wrong total in a report."""
     euro = Currency('EUR')
     lei = Currency('RON')
-    assert Money(euro, 1000).plus(Money(euro, 250)) == Money(euro, 1250)
-    assert Money(euro, 1000).minus(Money(euro, 250)) == Money(euro, 750)
+    assert Money(1000, euro).plus(Money(250, euro)) == Money(1250, euro)
+    assert Money(1000, euro).minus(Money(250, euro)) == Money(750, euro)
     with pytest.raises(MoneyError) as mixed:
-        Money(euro, 1).plus(Money(lei, 1))
+        Money(1, euro).plus(Money(1, lei))
     assert mixed.value.failure == MoneyError.CurrencyMismatch(left=euro, right=lei)
     with pytest.raises(MoneyError) as largest:
-        Money(euro, 2**63 - 1).plus(Money(euro, 1))
+        Money(2**63 - 1, euro).plus(Money(1, euro))
     assert largest.value.failure == MoneyError.Overflow()
     with pytest.raises(MoneyError) as smallest:
-        Money(euro, -(2**63)).minus(Money(euro, 1))
+        Money(-(2**63), euro).minus(Money(1, euro))
     assert smallest.value.failure == MoneyError.Overflow()
 
 
@@ -103,12 +103,12 @@ def test_a_rate_parses_and_converts_as_the_library_does() -> None:
     assert rate != Percentage(497)
     assert hash(rate) == hash(ExchangeRate('4.97'))
     assert repr(rate) == "ExchangeRate('4.97')"
-    assert ExchangeRate('0.25').convert(Money(lei, 2), euro) == Money(euro, 1)
+    assert ExchangeRate('0.25').convert(Money(2, lei), euro) == Money(1, euro)
     with pytest.raises(MoneyError) as zero:
         ExchangeRate('0')
     assert zero.value.failure == MoneyError.InvalidExchangeRate()
     with pytest.raises(MoneyError) as overflow:
-        ExchangeRate('2').convert(Money(lei, 2**63 - 1), euro)
+        ExchangeRate('2').convert(Money(2**63 - 1, lei), euro)
     assert overflow.value.failure == MoneyError.Overflow()
 
 
@@ -136,15 +136,15 @@ def test_percentages_and_parts_parse_and_format_as_the_library_does() -> None:
 
 def test_dates_and_times_are_checked_when_made() -> None:
     """A date or a time the calendar does not have, taken, would date an expense on a day that never was."""
-    date = CalendarDate(23, 9, 2026)
-    assert date.day == 23
-    assert date.month == 9
+    date = CalendarDate(2026, 9, 23)
     assert date.year == 2026
+    assert date.month == 9
+    assert date.day == 23
     assert str(date) == '2026-09-23'
     assert CalendarDate.parse('2026-09-23') == date
-    assert CalendarDate(24, 8, 2026) < date < CalendarDate(1, 1, 2027)
+    assert CalendarDate(2026, 8, 24) < date < CalendarDate(2027, 1, 1)
     with pytest.raises(CalendarError) as february:
-        CalendarDate(30, 2, 2026)
+        CalendarDate(2026, 2, 30)
     assert february.value.failure == CalendarError.InvalidDate()
     with pytest.raises(CalendarError) as parsed:
         CalendarDate.parse('2026-02-30')

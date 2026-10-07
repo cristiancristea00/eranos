@@ -9,14 +9,14 @@
 
 /// A row of the table of expenses: what was bought, who paid it, who shares it, and its amount.
 typedef struct ExpenseRow {
-    /// What it cost.
-    Line amount;
     /// What was bought.
     Line name;
-    /// Who shares it.
-    Line participants;
     /// Who paid it.
     Line payers;
+    /// Who shares it.
+    Line participants;
+    /// What it cost.
+    Line amount;
 } ExpenseRow;
 
 /// A table of expenses, its columns from @p numbersFrom on aligned to the right.
@@ -31,14 +31,14 @@ static void addExpenseRow(Table *const table, ExpenseRow const *const row) {
 
 /// A row of the table of members: what a member paid and consumed, and their balance.
 typedef struct MemberRow {
-    /// What is left: what they paid minus what they consumed.
-    Line balance;
-    /// What they consumed.
-    Line consumed;
     /// Their first name.
     Line name;
     /// What they paid.
     Line paid;
+    /// What they consumed.
+    Line consumed;
+    /// What is left: what they paid minus what they consumed.
+    Line balance;
 } MemberRow;
 
 /// A table of members, its columns from @p numbersFrom on aligned to the right.
@@ -53,12 +53,12 @@ static void addMemberRow(Table *const table, MemberRow const *const row) {
 
 /// A row of the table of payments: who pays whom, and how much.
 typedef struct PaymentRow {
-    /// How much is paid.
-    Line amount;
     /// Who pays.
     Line from;
     /// Who is paid.
     Line to;
+    /// How much is paid.
+    Line amount;
 } PaymentRow;
 
 /// A table of payments, its columns from @p numbersFrom on aligned to the right.
@@ -85,10 +85,10 @@ static void printExpenses(EranosGroup const *const group) {
         EranosMoney *total = nullptr;
         must(eranosExpenseTotal(expense, &total));
         addExpenseRow(table, &(ExpenseRow){
-                                 .amount = moneyLine(total),
                                  .name = textLine(name),
-                                 .participants = names(group, &sharedBy),
                                  .payers = names(group, &paidBy),
+                                 .participants = names(group, &sharedBy),
+                                 .amount = moneyLine(total),
                              });
         eranosSplitDestroy(payers);
         eranosExpenseDestroy(expense);
@@ -111,10 +111,10 @@ static void printMembers(EranosGroup const *const group, EranosSummary const *co
         check(nullptr != totals, "every member has totals");
         eranosMemberFirstName(member, text);
         addMemberRow(table, &(MemberRow){
-                                .balance = balanceLine(eranosMemberSummaryBalance(totals)),
-                                .consumed = moneyLine(eranosMemberSummaryShare(totals)),
                                 .name = textLine(text),
                                 .paid = moneyLine(eranosMemberSummaryPaid(totals)),
+                                .consumed = moneyLine(eranosMemberSummaryShare(totals)),
+                                .balance = balanceLine(eranosMemberSummaryBalance(totals)),
                             });
         eranosMemberSummaryDestroy(totals);
         eranosMemberDestroy(member);
@@ -134,9 +134,9 @@ static void printPayments(EranosGroup const *const group, EranosPaymentList cons
         eranosPaymentFrom(payment, from);
         eranosPaymentTo(payment, to);
         addPaymentRow(table, &(PaymentRow){
-                                 .amount = moneyLine(eranosPaymentAmount(payment)),
                                  .from = firstName(group, eranosTextData(from)),
                                  .to = firstName(group, eranosTextData(to)),
+                                 .amount = moneyLine(eranosPaymentAmount(payment)),
                              });
         eranosPaymentDestroy(payment);
     }
@@ -147,7 +147,7 @@ static void printPayments(EranosGroup const *const group, EranosPaymentList cons
 
 int main(void) {
     EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("EUR", "Weekend in Sinaia", &details));
+    must(eranosNewGroupCreate("Weekend in Sinaia", "EUR", &details));
     EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
@@ -173,9 +173,9 @@ int main(void) {
     section("2. Expenses");
     printLine("Each expense records who paid and who shares it. Here everyone shares everything\n"
               "equally.");
-    EranosCalendarDate const friday = {.day = 25, .month = 9, .year = 2026};
-    addExpense(group, expenseOf(localCost(euros("240.00")), friday, "Cabin", soleSplit(ana), equalSplit(&everyone)));
-    addExpense(group, expenseOf(localCost(euros("60.00")), friday, "Groceries", soleSplit(bob), equalSplit(&everyone)));
+    EranosCalendarDate const friday = {.year = 2026, .month = 9, .day = 25};
+    addExpense(group, expenseOf("Cabin", localCost(euros("240.00")), soleSplit(ana), equalSplit(&everyone), friday));
+    addExpense(group, expenseOf("Groceries", localCost(euros("60.00")), soleSplit(bob), equalSplit(&everyone), friday));
     printExpenses(group);
 
     section("3. Who paid and who consumed");

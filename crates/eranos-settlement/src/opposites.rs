@@ -55,11 +55,11 @@ pub(super) fn pair_opposites(balances: &[OpenBalance]) -> Pairing<'_> {
         {
             *candidate += 1;
             flows.push(Flow {
-                amount: debt,
                 members: MemberPair {
                     from: debtor.member,
                     to: creditor.member,
                 },
+                amount: debt,
             });
             paired.push(debtor.member);
             paired.push(creditor.member);

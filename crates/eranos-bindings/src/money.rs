@@ -11,10 +11,10 @@ use crate::EranosError;
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Money {
-    /// The ISO 4217 code of the currency.
-    pub currency: String,
     /// The amount in minor units: cents for the euro, none for the yen.
     pub minor_units: i64,
+    /// The ISO 4217 code of the currency.
+    pub currency: String,
 }
 
 impl Money {
@@ -34,8 +34,8 @@ impl Money {
     /// for a code that is not an ISO 4217 currency with minor units.
     pub(crate) fn to_library(&self) -> Result<library::Money, EranosError> {
         Ok(library::Money::from_minor_units(
-            currency(&self.currency)?,
             self.minor_units,
+            currency(&self.currency)?,
         ))
     }
 }
@@ -45,17 +45,17 @@ impl Money {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Cost {
+    /// An amount in the group currency.
+    Local {
+        /// The amount.
+        amount: Money,
+    },
     /// An amount in another currency than the group's, converted at `rate`.
     Converted {
         /// The amount, in its own currency.
         amount: Money,
         /// The rate into the group currency, as a decimal: "4.97".
         rate: String,
-    },
-    /// An amount in the group currency.
-    Local {
-        /// The amount.
-        amount: Money,
     },
 }
 
@@ -70,23 +70,23 @@ impl Cost {
     /// for a rate that is not a positive decimal.
     pub(crate) fn to_library(&self) -> Result<library::Cost, EranosError> {
         match self {
-            Self::Converted { amount, rate } => Ok(amount.to_library()?.at(exchange_rate(rate)?)),
             Self::Local { amount } => Ok(library::Cost::from(amount.to_library()?)),
+            Self::Converted { amount, rate } => Ok(amount.to_library()?.at(exchange_rate(rate)?)),
         }
     }
 }
 
 impl FromCost for Cost {
+    fn local(amount: library::Money) -> Self {
+        Self::Local {
+            amount: Money::from_library(amount),
+        }
+    }
+
     fn converted(amount: library::Money, rate: library::ExchangeRate) -> Self {
         Self::Converted {
             amount: Money::from_library(amount),
             rate: rate.to_string(),
-        }
-    }
-
-    fn local(amount: library::Money) -> Self {
-        Self::Local {
-            amount: Money::from_library(amount),
         }
     }
 }
@@ -124,12 +124,12 @@ impl CurrencyRate {
 pub struct CurrencyDetails {
     /// The three-letter code: "EUR".
     pub code: String,
-    /// How many decimal places its minor unit has: 2 for the euro.
-    pub decimal_places: i32,
     /// The English name: "Euro".
     pub name: String,
     /// The three-digit numeric code: 978 for the euro.
     pub numeric_code: i32,
+    /// How many decimal places its minor unit has: 2 for the euro.
+    pub decimal_places: i32,
 }
 
 impl CurrencyDetails {
@@ -137,9 +137,9 @@ impl CurrencyDetails {
     pub(crate) fn from_library(currency: library::Currency) -> Self {
         Self {
             code: currency.code().to_owned(),
-            decimal_places: i32::from(currency.decimal_places()),
             name: currency.name().to_owned(),
             numeric_code: i32::from(currency.numeric_code()),
+            decimal_places: i32::from(currency.decimal_places()),
         }
     }
 }

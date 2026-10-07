@@ -154,7 +154,7 @@ EranosSplit *amountsSplit(char const *const currency, Share const *const shares,
     for (size_t index = 0; count > index; ++index) {
         EranosMoney *const amount = amountOf(shares[index].value, currency);
         EranosMemberAmount *share = nullptr;
-        must(eranosMemberAmountCreate(amount, shares[index].member.text, &share));
+        must(eranosMemberAmountCreate(shares[index].member.text, amount, &share));
         eranosMemberAmountListPush(list, share);
         eranosMemberAmountDestroy(share);
         eranosMoneyDestroy(amount);
@@ -170,7 +170,7 @@ EranosSplit *partsSplit(Share const *const shares, size_t const count) {
         int32_t hundredths = 0;
         must(eranosPartsParse(shares[index].value, &hundredths));
         EranosMemberParts *share = nullptr;
-        must(eranosMemberPartsCreate(hundredths, shares[index].member.text, &share));
+        must(eranosMemberPartsCreate(shares[index].member.text, hundredths, &share));
         eranosMemberPartsListPush(list, share);
         eranosMemberPartsDestroy(share);
     }
@@ -185,7 +185,7 @@ EranosSplit *percentagesSplit(Share const *const shares, size_t const count) {
         int32_t basisPoints = 0;
         must(eranosPercentageParse(shares[index].value, &basisPoints));
         EranosMemberPercentage *share = nullptr;
-        must(eranosMemberPercentageCreate(basisPoints, shares[index].member.text, &share));
+        must(eranosMemberPercentageCreate(shares[index].member.text, basisPoints, &share));
         eranosMemberPercentageListPush(list, share);
         eranosMemberPercentageDestroy(share);
     }
@@ -208,11 +208,11 @@ EranosCost *convertedCost(EranosMoney *const amount, char const *const rate) {
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the payers, then the split, in the order the library's constructor reads them.
-EranosExpense *expenseOf(EranosCost *const cost, EranosCalendarDate const date, char const *const name, EranosSplit *const payers,
-                         EranosSplit *const split) {
+EranosExpense *expenseOf(char const *const name, EranosCost *const cost, EranosSplit *const payers, EranosSplit *const split,
+                         EranosCalendarDate const date) {
     EranosExpenseSplit *const whole = eranosExpenseSplitCreateWhole(split);
     EranosExpense *expense = nullptr;
-    must(eranosExpenseCreate(cost, date, name, payers, whole, &expense));
+    must(eranosExpenseCreate(name, cost, payers, whole, date, &expense));
     eranosExpenseSplitDestroy(whole);
     eranosSplitDestroy(split);
     eranosSplitDestroy(payers);
@@ -238,9 +238,9 @@ EranosError *expenseRefusal(EranosGroup *const group, EranosExpense *const expen
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the sender, then the receiver, in the order the library's constructor reads them.
-EranosTransfer *transferOf(EranosCost *const cost, EranosCalendarDate const date, Id const from, Id const to) {
+EranosTransfer *transferOf(Id const from, Id const to, EranosCost *const cost, EranosCalendarDate const date) {
     EranosTransfer *transfer = nullptr;
-    must(eranosTransferCreate(cost, date, from.text, to.text, &transfer));
+    must(eranosTransferCreate(from.text, to.text, cost, date, &transfer));
     eranosCostDestroy(cost);
     return transfer;
 }

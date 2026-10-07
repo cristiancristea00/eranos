@@ -14,12 +14,12 @@ import eranos.examples.printTable
 import eranos.examples.totals
 
 private data class BalanceRow(
-    val balance: Balance,
-    val consumed: Money,
     val name: String,
     val paid: Money,
-    val received: Money,
+    val consumed: Money,
     val sent: Money,
+    val received: Money,
+    val balance: Balance,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, "$paid", "$consumed", "$sent", "$received", "$balance")
@@ -30,8 +30,8 @@ private data class BalanceRow(
 }
 
 private data class CategoryRow(
-    val expenses: Int,
     val name: String,
+    val expenses: Int,
     val total: Money,
 ) : Row {
     override val cells: List<String>
@@ -43,11 +43,11 @@ private data class CategoryRow(
 }
 
 private data class EntryRow(
-    val converted: Money,
     val name: String,
-    val original: Money,
     val payer: String,
+    val original: Money,
     val rate: ExchangeRate,
+    val converted: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, payer, "$original", "$rate", "$converted")
@@ -58,9 +58,9 @@ private data class EntryRow(
 }
 
 internal data class PaymentRow(
-    val amount: Money,
     val from: String,
     val to: String,
+    val amount: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(from, to, "$amount")
@@ -87,22 +87,22 @@ internal fun builtInCategory(group: Group): CategoryId? = group.categoriesBlocki
 
 internal fun printBalances(group: Group) {
     val summary = group.summaryBlocking()
-    val zero = Money(group.currencyBlocking(), 0)
+    val zero = Money(0, group.currencyBlocking())
     printTable(
         BalanceRow.HEADERS,
         group.membersBlocking().map { member ->
             // The summary lists the members with a total; every total of the others is zero.
             val totals = member.id?.let { id -> totals(id, summary) }
             if (null == totals) {
-                BalanceRow(balance = Balance.Settled, consumed = zero, name = member.firstName, paid = zero, received = zero, sent = zero)
+                BalanceRow(name = member.firstName, paid = zero, consumed = zero, sent = zero, received = zero, balance = Balance.Settled)
             } else {
                 BalanceRow(
-                    balance = totals.balance,
-                    consumed = totals.share,
                     name = member.firstName,
                     paid = totals.paid,
-                    received = totals.received,
+                    consumed = totals.share,
                     sent = totals.sent,
+                    received = totals.received,
+                    balance = totals.balance,
                 )
             }
         },
@@ -117,8 +117,8 @@ internal fun printCategories(group: Group) {
         CategoryRow.HEADERS,
         group.summaryBlocking().categoryTotals.map { total ->
             CategoryRow(
-                expenses = expenses.count { expense -> (expense.category ?: builtIn) == total.category },
                 name = group.categoryBlocking(total.category)?.name ?: "?",
+                expenses = expenses.count { expense -> (expense.category ?: builtIn) == total.category },
                 total = total.total,
             )
         },
@@ -131,25 +131,25 @@ internal fun printEntries(
     group: Group,
     shown: (Currency) -> Boolean,
 ) {
-    val zero = Money(group.currencyBlocking(), 0)
+    val zero = Money(0, group.currencyBlocking())
     val expenses =
         group.expensesBlocking().filter { expense -> shown(expense.cost.amount.currency) }.map { expense ->
             EntryRow(
-                converted = expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero,
                 name = expense.name,
-                original = expense.total(),
                 payer = names(group, expense.payers.members),
+                original = expense.total(),
                 rate = rate(expense.cost),
+                converted = expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero,
             )
         }
     val transfers =
         group.transfersBlocking().filter { transfer -> shown(transfer.cost.amount.currency) }.map { transfer ->
             EntryRow(
-                converted = transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero,
                 name = "Transfer to ${name(group, transfer.to)}",
-                original = transfer.cost.amount,
                 payer = name(group, transfer.from),
+                original = transfer.cost.amount,
                 rate = rate(transfer.cost),
+                converted = transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero,
             )
         }
     printTable(EntryRow.HEADERS, expenses + transfers, numbersFrom = 2)

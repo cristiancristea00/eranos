@@ -32,29 +32,29 @@ class CaseTable:
 class Conversion[Error: EranosError]:
     """A module's generated failure, the layer's table of its cases, and the layer's error that holds it."""
 
-    error: type[Error]
-    """The layer's error that holds the failure."""
-
     kind: type
     """The generated failure: a data enum, or an enum of cases without fields."""
 
     table: Mapping[Any, object]
     """The layer's table, keyed by the cases it converts."""
 
+    error: type[Error]
+    """The layer's error that holds the failure."""
+
 
 FAILURES = {
-    'Account': Conversion(error=_errors.AccountError, kind=generated.AccountFailure, table=_errors._ACCOUNT_FAILURES),
-    'Calendar': Conversion(error=_errors.CalendarError, kind=generated.CalendarFailure, table=_errors._CALENDAR_FAILURES),
-    'Category': Conversion(error=_errors.CategoryError, kind=generated.CategoryFailure, table=_errors._CATEGORY_FAILURES),
-    'Contact': Conversion(error=_errors.ContactError, kind=generated.ContactFailure, table=_errors._CONTACT_FAILURES),
-    'Expense': Conversion(error=_errors.ExpenseError, kind=generated.ExpenseFailure, table=_errors._EXPENSE_FAILURES),
-    'Group': Conversion(error=_errors.GroupError, kind=generated.GroupFailure, table=_errors._GROUP_FAILURES),
-    'Id': Conversion(error=_errors.IdError, kind=generated.IdFailure, table=_errors._ID_FAILURES),
-    'Language': Conversion(error=_errors.LanguageError, kind=generated.LanguageFailure, table=_errors._LANGUAGE_FAILURES),
-    'Member': Conversion(error=_errors.MemberError, kind=generated.MemberFailure, table=_errors._MEMBER_FAILURES),
-    'Money': Conversion(error=_errors.MoneyError, kind=generated.MoneyFailure, table=_errors._MONEY_FAILURES),
-    'Settlement': Conversion(error=_errors.SettlementError, kind=generated.SettlementFailure, table=_errors._SETTLEMENT_FAILURES),
-    'Transfer': Conversion(error=_errors.TransferError, kind=generated.TransferFailure, table=_errors._TRANSFER_FAILURES),
+    'Id': Conversion(kind=generated.IdFailure, table=_errors._ID_FAILURES, error=_errors.IdError),
+    'Account': Conversion(kind=generated.AccountFailure, table=_errors._ACCOUNT_FAILURES, error=_errors.AccountError),
+    'Calendar': Conversion(kind=generated.CalendarFailure, table=_errors._CALENDAR_FAILURES, error=_errors.CalendarError),
+    'Category': Conversion(kind=generated.CategoryFailure, table=_errors._CATEGORY_FAILURES, error=_errors.CategoryError),
+    'Contact': Conversion(kind=generated.ContactFailure, table=_errors._CONTACT_FAILURES, error=_errors.ContactError),
+    'Money': Conversion(kind=generated.MoneyFailure, table=_errors._MONEY_FAILURES, error=_errors.MoneyError),
+    'Member': Conversion(kind=generated.MemberFailure, table=_errors._MEMBER_FAILURES, error=_errors.MemberError),
+    'Expense': Conversion(kind=generated.ExpenseFailure, table=_errors._EXPENSE_FAILURES, error=_errors.ExpenseError),
+    'Settlement': Conversion(kind=generated.SettlementFailure, table=_errors._SETTLEMENT_FAILURES, error=_errors.SettlementError),
+    'Transfer': Conversion(kind=generated.TransferFailure, table=_errors._TRANSFER_FAILURES, error=_errors.TransferError),
+    'Group': Conversion(kind=generated.GroupFailure, table=_errors._GROUP_FAILURES, error=_errors.GroupError),
+    'Language': Conversion(kind=generated.LanguageFailure, table=_errors._LANGUAGE_FAILURES, error=_errors.LanguageError),
 }
 """How each module's failure converts, by the module's name."""
 
@@ -87,7 +87,7 @@ def instance(case: type) -> object:
     examples = {
         'str': 'EUR',
         'int': 1,
-        'Money': generated.Money(currency='EUR', minor_units=1),
+        'Money': generated.Money(minor_units=1, currency='EUR'),
         'typing.List[str]': ['EUR'],
         'IbanReason': generated.IbanReason.INVALID_FORMAT(),
     }
@@ -156,7 +156,7 @@ def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_na
     for module, conversion in FAILURES.items():
         failures = list(conversion.kind) if issubclass(conversion.kind, enum.Enum) else [instance(case) for case in cases(conversion.kind)]
         for failure in failures:
-            raised = converted(getattr(generated.EranosError, module)('the message', failure))
+            raised = converted(getattr(generated.EranosError, module)(failure, 'the message'))
             assert isinstance(raised, conversion.error), failure
             assert isinstance(raised, EranosError), failure
             assert str(raised) == 'the message'
@@ -165,7 +165,7 @@ def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_na
     for case in cases(generated.IbanReason):
         reason = instance(case)
         assert isinstance(reason, generated.IbanReason)
-        raised = converted(generated.EranosError.Account('the message', generated.AccountFailure.INVALID_IBAN(reason)))
+        raised = converted(generated.EranosError.Account(generated.AccountFailure.INVALID_IBAN(reason), 'the message'))
         assert isinstance(raised, _errors.AccountError)
         assert isinstance(raised.failure, _errors.AccountError.InvalidIban)
         assert type(raised.failure.reason).__name__ == title(re.sub(r'.*\.', '', case.__name__))
@@ -173,12 +173,12 @@ def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_na
 
 def test_the_librarys_own_errors_convert_to_the_standard_errors_they_stand_for() -> None:
     """An error a program should not have made that converted to a library error would read as a refusal of valid data."""
-    assert isinstance(converted(generated.EranosError.Cancelled('cancelled')), asyncio.CancelledError)
     assert isinstance(converted(generated.EranosError.IdentifierGiven('given')), ValueError)
     assert isinstance(converted(generated.EranosError.IdentifierMissing('missing')), ValueError)
-    assert isinstance(converted(generated.EranosError.Released('released')), RuntimeError)
-    invalid = converted(generated.EranosError.InvalidJson(3, 'invalid', 2))
+    invalid = converted(generated.EranosError.InvalidJson(2, 3, 'invalid'))
     assert isinstance(invalid, InvalidJsonError)
-    assert invalid.column == 3
     assert invalid.line == 2
+    assert invalid.column == 3
     assert str(invalid) == 'invalid'
+    assert isinstance(converted(generated.EranosError.Cancelled('cancelled')), asyncio.CancelledError)
+    assert isinstance(converted(generated.EranosError.Released('released')), RuntimeError)

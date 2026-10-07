@@ -60,7 +60,7 @@ public final class Main {
     private record Flatmates(MemberId ana, MemberId bob) {}
 
     /** A member with their contact details and accounts, a row of the members' table. */
-    private record MemberRow(String accounts, String email, String name, String phone)
+    private record MemberRow(String name, String email, String phone, String accounts)
             implements Row {
         static final List<String> HEADERS = List.of("Member", "Email", "Phone", "Accounts");
 
@@ -81,7 +81,7 @@ public final class Main {
     }
 
     /** A member's status and totals, a row of the balances' table. */
-    private record BalanceRow(Balance balance, Money consumed, String name, String status)
+    private record BalanceRow(String name, String status, Money consumed, Balance balance)
             implements Row {
         static final List<String> HEADERS = List.of("Member", "Status", "Consumed", "Balance");
 
@@ -131,13 +131,13 @@ public final class Main {
         for (Member member : group.members()) {
             rows.add(
                     new MemberRow(
-                            member.accounts().stream()
-                                    .map(Main::describe)
-                                    .collect(Collectors.joining("\n")),
-                            member.email().map(Email::toString).orElse(""),
                             Stream.concat(Stream.of(member.firstName()), member.lastName().stream())
                                     .collect(Collectors.joining(" ")),
-                            member.phone().map(PhoneNumber::toString).orElse("")));
+                            member.email().map(Email::toString).orElse(""),
+                            member.phone().map(PhoneNumber::toString).orElse(""),
+                            member.accounts().stream()
+                                    .map(Main::describe)
+                                    .collect(Collectors.joining("\n"))));
         }
         printTable(MemberRow.HEADERS, rows, 4);
     }
@@ -151,10 +151,10 @@ public final class Main {
             if (id.isPresent() && found.isPresent()) {
                 rows.add(
                         new BalanceRow(
-                                found.orElseThrow().balance(),
-                                found.orElseThrow().share(),
                                 member.firstName(),
-                                group.isArchived(id.orElseThrow()) ? "archived" : "active"));
+                                group.isArchived(id.orElseThrow()) ? "archived" : "active",
+                                found.orElseThrow().share(),
+                                found.orElseThrow().balance()));
             }
         }
         printTable(BalanceRow.HEADERS, rows, 2);
@@ -164,16 +164,16 @@ public final class Main {
         section("1. Members");
         Account bank =
                 new Account(
-                        new AccountDetails.Iban(Iban.parse("ro49 aaaa 1b31 0075 9384 0000")),
-                        "ING");
-        Account app = new Account(new AccountDetails.Username(Username.parse("@ana")), "Revolut");
+                        "ING",
+                        new AccountDetails.Iban(Iban.parse("ro49 aaaa 1b31 0075 9384 0000")));
+        Account app = new Account("Revolut", new AccountDetails.Username(Username.parse("@ana")));
         MemberId ana =
                 group.addMember(
                         Member.builder("Ana")
-                                .accounts(List.of(bank, app))
-                                .email(Email.parse("ana@example.com"))
                                 .lastName("Popescu")
+                                .email(Email.parse("ana@example.com"))
                                 .phone(PhoneNumber.parse("+40 712 345 678"))
+                                .accounts(List.of(bank, app))
                                 .build());
         MemberId bob = group.addMember(Member.builder("Bob").build());
         printMembers(group);
@@ -229,11 +229,11 @@ public final class Main {
         ExpenseId rent =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(Money.parse("900.00", euro)),
-                                        CalendarDate.of(1, 9, 2026),
                                         "Rent",
+                                        new Cost.Local(Money.parse("900.00", euro)),
                                         new Split.Equal(List.of(ana)),
-                                        both)
+                                        both,
+                                        CalendarDate.of(2026, 9, 1))
                                 .build());
         group.archiveMember(bob);
         System.out.print(
@@ -245,11 +245,11 @@ public final class Main {
 
         Expense utilities =
                 Expense.builder(
-                                new Cost.Local(Money.parse("60.00", euro)),
-                                CalendarDate.of(1, 10, 2026),
                                 "Utilities",
+                                new Cost.Local(Money.parse("60.00", euro)),
                                 new Split.Equal(List.of(ana)),
-                                both)
+                                both,
+                                CalendarDate.of(2026, 10, 1))
                         .build();
         EranosException refused = refusal(() -> group.addExpense(utilities));
         System.out.println(
@@ -278,7 +278,7 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder(Currency.of("EUR"), "Flat 4B").build()) {
+        try (Group group = Group.builder("Flat 4B", Currency.of("EUR")).build()) {
             System.out.println("Flat 4B: members and their accounts");
             System.out.println("═══════════════════════════════════");
             System.out.print(

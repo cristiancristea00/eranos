@@ -23,11 +23,11 @@ internal fun groceriesEqually(
     categories: Categories,
 ): Expense =
     Expense(
-        Cost.Local(eur("10.00")),
-        october(1),
         "Groceries",
+        Cost.Local(eur("10.00")),
         Split.Equal(listOf(people.ana)),
         ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol))),
+        october(1),
         category = categories.food,
     )
 
@@ -37,9 +37,8 @@ internal fun apartmentByPercentage(
     categories: Categories,
 ): Expense =
     Expense(
-        Cost.Local(eur("800.00")),
-        october(1),
         "Apartment",
+        Cost.Local(eur("800.00")),
         Split.Equal(listOf(people.ana)),
         ExpenseSplit.Whole(
             Split.Percentages(
@@ -51,6 +50,7 @@ internal fun apartmentByPercentage(
                 ),
             ),
         ),
+        october(1),
         category = categories.lodging,
     )
 
@@ -60,9 +60,8 @@ internal fun seafoodByParts(
     categories: Categories,
 ): Expense =
     Expense(
-        Cost.Local(eur("90.00")),
-        october(2),
         "Seafood dinner",
+        Cost.Local(eur("90.00")),
         Split.Equal(listOf(people.carol)),
         ExpenseSplit.Whole(
             Split.Parts(
@@ -75,6 +74,7 @@ internal fun seafoodByParts(
                 ),
             ),
         ),
+        october(2),
         category = categories.food,
     )
 
@@ -84,40 +84,41 @@ internal fun trainByAmounts(
     categories: Categories,
 ): Expense =
     Expense(
-        Cost.Local(eur("88.50")),
-        october(3),
         "Train to Porto",
+        Cost.Local(eur("88.50")),
         Split.Equal(listOf(people.bob)),
         ExpenseSplit.Whole(
             Split.Amounts(
                 listOf(
-                    MemberAmount(eur("24.50"), people.ana),
-                    MemberAmount(eur("24.50"), people.bob),
-                    MemberAmount(eur("24.50"), people.carol),
-                    MemberAmount(eur("15.00"), people.eva),
+                    MemberAmount(people.ana, eur("24.50")),
+                    MemberAmount(people.bob, eur("24.50")),
+                    MemberAmount(people.carol, eur("24.50")),
+                    MemberAmount(people.eva, eur("15.00")),
                 ),
             ),
         ),
+        october(3),
         category = categories.transport,
     )
 
 /** The museum, paid by Ana and Bob. */
 internal fun museumWithTwoPayers(people: People): Expense =
     Expense(
-        Cost.Local(eur("60.00")),
-        october(3),
         "Museum",
+        Cost.Local(eur("60.00")),
         Split.Equal(listOf(people.ana, people.bob)),
         ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol, people.dan))),
+        october(3),
     )
 
 /** The receipt of the fado night: every line with its own split. */
 internal fun fadoItems(people: People): List<Item> =
     listOf(
-        Item("Vinho verde", Split.Equal(listOf(people.ana, people.bob, people.dan)), eur("12.00"), quantity = 2),
-        Item("Bacalhau", Split.Equal(listOf(people.carol)), eur("18.00")),
+        Item("Vinho verde", eur("12.00"), Split.Equal(listOf(people.ana, people.bob, people.dan)), quantity = 2),
+        Item("Bacalhau", eur("18.00"), Split.Equal(listOf(people.carol))),
         Item(
             "Custard tarts",
+            eur("1.50"),
             Split.Parts(
                 listOf(
                     MemberParts(people.ana, Parts.parse("1")),
@@ -127,10 +128,9 @@ internal fun fadoItems(people: People): List<Item> =
                     MemberParts(people.eva, Parts.parse("2")),
                 ),
             ),
-            eur("1.50"),
             quantity = 6,
         ),
-        Item("Juice", Split.Equal(listOf(people.eva)), eur("3.00")),
+        Item("Juice", eur("3.00"), Split.Equal(listOf(people.eva))),
     )
 
 /** The fado night, item by item, paid by Carol and Dan, with a 10 % tip. */
@@ -139,15 +139,15 @@ internal fun fadoItemByItem(
     categories: Categories,
 ): Expense =
     Expense(
-        Cost.Local(eur("54.00")),
-        october(4),
         "Fado night",
-        Split.Amounts(listOf(MemberAmount(eur("39.40"), people.carol), MemberAmount(eur("20.00"), people.dan))),
+        Cost.Local(eur("54.00")),
+        Split.Amounts(listOf(MemberAmount(people.carol, eur("39.40")), MemberAmount(people.dan, eur("20.00")))),
         ExpenseSplit.Itemised(fadoItems(people)),
+        october(4),
+        tip = Tip(TipValue.Percentage(Percentage.parse("10"))),
+        time = TimeOfDay.of(hour = 22, minute = 15),
         category = categories.food,
         description = "Tasca do Chico",
-        time = TimeOfDay.of(hour = 22, minute = 15),
-        tip = Tip(TipValue.Percentage(Percentage.parse("10"))),
     )
 
 /** The tuk-tuk tour, with a fixed tip shared equally. */
@@ -156,11 +156,11 @@ internal fun tourWithATip(
     categories: Categories,
 ): Expense =
     Expense(
-        Cost.Local(eur("45.00")),
-        october(5),
         "Tuk-tuk tour",
+        Cost.Local(eur("45.00")),
         Split.Equal(listOf(people.dan)),
         ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol, people.dan, people.eva))),
-        category = categories.transport,
+        october(5),
         tip = Tip(TipValue.Fixed(eur("5.00")), TipDistribution.EQUAL),
+        category = categories.transport,
     )

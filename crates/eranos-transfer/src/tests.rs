@@ -16,16 +16,16 @@ const BOB: MemberId = MemberId::from_bytes([2; 16]);
 const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 fn september_24() -> CalendarDate {
-    CalendarDate::new(24, 9, 2026).unwrap()
+    CalendarDate::new(2026, 9, 24).unwrap()
 }
 
 /// Bob repays Ana 30.00 on 24 September 2026.
 fn repayment() -> TransferBuilder {
-    Transfer::builder(euros(3_000), september_24(), BOB, ANA)
+    Transfer::builder(BOB, ANA, euros(3_000), september_24())
 }
 
 /// The repayment with every optional field set, converted at 1 EUR =
@@ -47,10 +47,10 @@ fn a_transfer_keeps_its_fields_and_defaults() {
     // Required fields; a plain amount is a local cost, at a rate of 1.
     assert_eq!(transfer.from(), BOB);
     assert_eq!(transfer.to(), ANA);
-    assert_eq!(transfer.cost(), Cost::from(euros(3_000)));
     assert_eq!(transfer.amount(), euros(3_000));
-    assert_eq!(transfer.exchange_rate(), ExchangeRate::ONE);
+    assert_eq!(transfer.cost(), Cost::from(euros(3_000)));
     assert_eq!(transfer.date(), september_24());
+    assert_eq!(transfer.exchange_rate(), ExchangeRate::ONE);
     // Optional fields are absent.
     assert_eq!(transfer.time(), None);
     assert_eq!(transfer.note(), None);
@@ -62,12 +62,12 @@ fn a_transfer_keeps_its_fields_and_defaults() {
 fn a_transfer_to_oneself_is_rejected() {
     // Same sender and recipient.
     assert_eq!(
-        Transfer::builder(euros(3_000), september_24(), ANA, ANA).build(),
+        Transfer::builder(ANA, ANA, euros(3_000), september_24()).build(),
         Err(TransferError::SameMember)
     );
     // The members are checked before the amount.
     assert_eq!(
-        Transfer::builder(euros(0), september_24(), ANA, ANA).build(),
+        Transfer::builder(ANA, ANA, euros(0), september_24()).build(),
         Err(TransferError::SameMember)
     );
 }
@@ -152,7 +152,7 @@ fn to_builder_rebuilds_an_equal_transfer() {
 #[test]
 fn builder_setters_replace_each_field() {
     // Members, amount, and date replaced.
-    let september_25 = CalendarDate::new(25, 9, 2026).unwrap();
+    let september_25 = CalendarDate::new(2026, 9, 25).unwrap();
     let transfer = full_repayment()
         .to_builder()
         .from(CAROL)
@@ -211,7 +211,7 @@ fn a_transfer_converts_into_the_group_currency() {
     // In a foreign currency, the rate converts it.
     let cash = repayment()
         .cost(
-            Money::from_minor_units(Currency::RON, 10_000)
+            Money::from_minor_units(10_000, Currency::RON)
                 .at(ExchangeRate::parse("0.2011").unwrap()),
         )
         .build()
@@ -226,7 +226,7 @@ fn a_transfer_converts_into_the_group_currency() {
 fn converting_at_a_rate_converts_the_transfer_at_that_rate() {
     let rate = ExchangeRate::parse("0.2011").unwrap();
     let local = repayment()
-        .cost(Money::from_minor_units(Currency::RON, 10_000))
+        .cost(Money::from_minor_units(10_000, Currency::RON))
         .build()
         .unwrap();
     let converted = local.clone().with_exchange_rate(Some(rate));
@@ -284,7 +284,7 @@ fn transfers_round_trip_through_serde() {
     // No optional field set and a local cost; absent fields are left out.
     let minimal_transfer = repayment().build().unwrap();
     let minimal_json = serde_json::to_string(&minimal_transfer).unwrap();
-    for field in ["note", "time", "exchange_rate"] {
+    for field in ["exchange_rate", "time", "note"] {
         assert!(!minimal_json.contains(field), "{field}");
     }
     assert_eq!(

@@ -15,6 +15,22 @@ public sealed interface Cost {
     Money amount();
 
     /**
+     * An amount in the group currency.
+     *
+     * @param amount the amount
+     */
+    record Local(Money amount) implements Cost {
+        /**
+         * The cost of {@code amount}.
+         *
+         * @param amount the amount
+         */
+        public Local {
+            Objects.requireNonNull(amount, "amount");
+        }
+    }
+
+    /**
      * An amount in another currency than the group's, converted at {@code rate}.
      *
      * @param amount the amount, in its own currency
@@ -30,22 +46,6 @@ public sealed interface Cost {
         public Converted {
             Objects.requireNonNull(amount, "amount");
             Objects.requireNonNull(rate, "rate");
-        }
-    }
-
-    /**
-     * An amount in the group currency.
-     *
-     * @param amount the amount
-     */
-    record Local(Money amount) implements Cost {
-        /**
-         * The cost of {@code amount}.
-         *
-         * @param amount the amount
-         */
-        public Local {
-            Objects.requireNonNull(amount, "amount");
         }
     }
 }

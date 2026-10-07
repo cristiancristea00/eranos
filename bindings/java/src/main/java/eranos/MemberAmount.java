@@ -5,19 +5,19 @@ import java.util.Objects;
 /**
  * The exact amount one member pays of a split.
  *
- * @param amount the amount
  * @param member the member
+ * @param amount the amount
  */
-public record MemberAmount(Money amount, MemberId member) {
+public record MemberAmount(MemberId member, Money amount) {
     /**
      * The share of {@code member}, who pays {@code amount}.
      *
-     * @param amount the amount
      * @param member the member
+     * @param amount the amount
      */
     public MemberAmount {
-        Objects.requireNonNull(amount, "amount");
         Objects.requireNonNull(member, "member");
+        Objects.requireNonNull(amount, "amount");
     }
 
     /**
@@ -27,7 +27,7 @@ public record MemberAmount(Money amount, MemberId member) {
      * @return the share
      */
     static MemberAmount converted(eranos.internal.MemberAmount share) {
-        return new MemberAmount(Money.converted(share.amount()), new MemberId(share.member()));
+        return new MemberAmount(new MemberId(share.member()), Money.converted(share.amount()));
     }
 
     /**
@@ -36,6 +36,6 @@ public record MemberAmount(Money amount, MemberId member) {
      * @return the generated share
      */
     eranos.internal.MemberAmount generated() {
-        return new eranos.internal.MemberAmount(amount.generated(), member.value());
+        return new eranos.internal.MemberAmount(member.value(), amount.generated());
     }
 }

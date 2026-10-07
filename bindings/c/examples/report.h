@@ -177,13 +177,13 @@ EranosCost *convertedCost(EranosMoney *amount, char const *rate);
 
 /// An expense of @p cost, which @p split shares whole; destroys @p cost, @p payers, and @p split.
 ///
-/// @param cost What it cost
-/// @param date The day it was bought
 /// @param name What was bought
+/// @param cost What it cost
 /// @param payers Who paid it
 /// @param split Who shares it
+/// @param date The day it was bought
 /// @return The expense, which the caller destroys
-EranosExpense *expenseOf(EranosCost *cost, EranosCalendarDate date, char const *name, EranosSplit *payers, EranosSplit *split);
+EranosExpense *expenseOf(char const *name, EranosCost *cost, EranosSplit *payers, EranosSplit *split, EranosCalendarDate date);
 
 /// Adds @p expense to @p group, and destroys it.
 ///
@@ -199,14 +199,14 @@ Id addExpense(EranosGroup *group, EranosExpense *expense);
 /// @return The refusal, which the caller destroys, or nullptr
 EranosError *expenseRefusal(EranosGroup *group, EranosExpense *expense);
 
-/// A transfer of @p cost from @p from to @p to; destroys @p cost.
+/// A transfer from @p from to @p to of @p cost; destroys @p cost.
 ///
-/// @param cost What was sent
-/// @param date The day it was sent
 /// @param from Who sent it
 /// @param to Who received it
+/// @param cost What was sent
+/// @param date The day it was sent
 /// @return The transfer, which the caller destroys
-EranosTransfer *transferOf(EranosCost *cost, EranosCalendarDate date, Id from, Id to);
+EranosTransfer *transferOf(Id from, Id to, EranosCost *cost, EranosCalendarDate date);
 
 /// Adds @p transfer to @p group, and destroys it.
 ///

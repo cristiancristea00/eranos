@@ -18,7 +18,7 @@ const BOB: MemberId = MemberId::from_bytes([2; 16]);
 const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 fn per_cent(text: &str) -> Percentage {
@@ -30,8 +30,8 @@ fn parts(text: &str) -> Parts {
 }
 
 /// The share of `member`: `amount` minor units.
-const fn share(amount: i64, member: MemberId) -> Share {
-    Share { amount, member }
+const fn share(member: MemberId, amount: i64) -> Share {
+    Share { member, amount }
 }
 
 /// The member at `index` of a generated split.
@@ -43,10 +43,6 @@ fn member_at(index: usize) -> MemberId {
 /// app reading a split back would show another member's share.
 #[test]
 fn shares_keep_their_member_and_value() {
-    // An exact amount.
-    let amount = MemberAmount::new(euros(1_250), ANA);
-    assert_eq!(amount.amount(), euros(1_250));
-    assert_eq!(amount.member(), ANA);
     // Parts.
     let share = MemberParts::new(BOB, parts("1.5"));
     assert_eq!(share.member(), BOB);
@@ -55,6 +51,10 @@ fn shares_keep_their_member_and_value() {
     let percentage = MemberPercentage::new(CAROL, per_cent("70"));
     assert_eq!(percentage.member(), CAROL);
     assert_eq!(percentage.percentage(), per_cent("70"));
+    // An exact amount.
+    let amount = MemberAmount::new(ANA, euros(1_250));
+    assert_eq!(amount.member(), ANA);
+    assert_eq!(amount.amount(), euros(1_250));
 }
 
 /// Groups saved before shares had names would stop loading, or load with
@@ -65,13 +65,6 @@ fn shares_keep_their_member_and_value() {
 fn every_share_serialises_as_a_member_and_value_array() {
     let member = "01010101-0101-0101-0101-010101010101";
     // Each kind of share, and back.
-    let amount = MemberAmount::new(euros(1_250), ANA);
-    let amount_json = serde_json::json!([member, {"currency": "EUR", "minor_units": 1250}]);
-    assert_eq!(serde_json::to_value(amount).unwrap(), amount_json);
-    assert_eq!(
-        serde_json::from_value::<MemberAmount>(amount_json).unwrap(),
-        amount
-    );
     let share = MemberParts::new(ANA, parts("1.5"));
     assert_eq!(
         serde_json::to_value(share).unwrap(),
@@ -89,6 +82,13 @@ fn every_share_serialises_as_a_member_and_value_array() {
     assert_eq!(
         serde_json::from_value::<MemberPercentage>(serde_json::json!([member, 7000])).unwrap(),
         percentage
+    );
+    let amount = MemberAmount::new(ANA, euros(1_250));
+    let amount_json = serde_json::json!([member, {"currency": "EUR", "minor_units": 1250}]);
+    assert_eq!(serde_json::to_value(amount).unwrap(), amount_json);
+    assert_eq!(
+        serde_json::from_value::<MemberAmount>(amount_json).unwrap(),
+        amount
     );
     // Inside a split.
     assert_eq!(
@@ -112,13 +112,6 @@ fn members_are_listed_in_the_order_given() {
     let order = [CAROL, ANA, BOB];
     // Equal splits.
     assert_eq!(Split::equal(order).members().collect::<Vec<_>>(), order);
-    // Percentages.
-    let split = Split::percentages([
-        MemberPercentage::new(CAROL, per_cent("20")),
-        MemberPercentage::new(ANA, per_cent("30")),
-        MemberPercentage::new(BOB, per_cent("50")),
-    ]);
-    assert_eq!(split.members().collect::<Vec<_>>(), order);
     // Parts.
     let parts_split = Split::parts([
         MemberParts::new(CAROL, Parts::ONE),
@@ -126,11 +119,18 @@ fn members_are_listed_in_the_order_given() {
         MemberParts::new(BOB, Parts::ONE),
     ]);
     assert_eq!(parts_split.members().collect::<Vec<_>>(), order);
+    // Percentages.
+    let split = Split::percentages([
+        MemberPercentage::new(CAROL, per_cent("20")),
+        MemberPercentage::new(ANA, per_cent("30")),
+        MemberPercentage::new(BOB, per_cent("50")),
+    ]);
+    assert_eq!(split.members().collect::<Vec<_>>(), order);
     // Amounts.
     let amounts_split = Split::amounts([
-        MemberAmount::new(euros(1), CAROL),
-        MemberAmount::new(euros(2), ANA),
-        MemberAmount::new(euros(3), BOB),
+        MemberAmount::new(CAROL, euros(1)),
+        MemberAmount::new(ANA, euros(2)),
+        MemberAmount::new(BOB, euros(3)),
     ]);
     assert_eq!(amounts_split.members().collect::<Vec<_>>(), order);
 }
@@ -141,10 +141,6 @@ fn len_counts_the_listed_members() {
     // One of every form.
     assert_eq!(Split::equal([ANA, BOB, CAROL]).len(), 3);
     assert_eq!(
-        Split::percentages([MemberPercentage::new(ANA, Percentage::HUNDRED)]).len(),
-        1
-    );
-    assert_eq!(
         Split::parts([
             MemberParts::new(ANA, Parts::ONE),
             MemberParts::new(BOB, Parts::ONE)
@@ -152,13 +148,17 @@ fn len_counts_the_listed_members() {
         .len(),
         2
     );
-    assert_eq!(Split::amounts([MemberAmount::new(euros(1), ANA)]).len(), 1);
+    assert_eq!(
+        Split::percentages([MemberPercentage::new(ANA, Percentage::HUNDRED)]).len(),
+        1
+    );
+    assert_eq!(Split::amounts([MemberAmount::new(ANA, euros(1))]).len(), 1);
     // Only a split without members is empty.
     assert!(!Split::equal([ANA]).is_empty());
     for split in [
         Split::equal([]),
-        Split::percentages([]),
         Split::parts([]),
+        Split::percentages([]),
         Split::amounts([]),
     ] {
         assert_eq!(split.len(), 0);
@@ -173,8 +173,8 @@ fn an_empty_split_is_rejected() {
     // Every form.
     for split in [
         Split::equal([]),
-        Split::percentages([]),
         Split::parts([]),
+        Split::percentages([]),
         Split::amounts([]),
     ] {
         assert_eq!(split.validate(euros(1_000)), Err(ExpenseError::EmptySplit));
@@ -193,26 +193,26 @@ fn a_member_listed_twice_is_rejected() {
         Split::equal([ANA, BOB, BOB, ANA]).validate(euros(1_000)),
         Err(ExpenseError::DuplicateMember { member: BOB })
     );
-    // Percentages, parts, and amounts.
-    let percentages = Split::percentages([
-        MemberPercentage::new(BOB, per_cent("50")),
-        MemberPercentage::new(BOB, per_cent("50")),
-    ]);
+    // Parts, percentages, and amounts.
     let parts_twice = Split::parts([
         MemberParts::new(CAROL, Parts::ONE),
         MemberParts::new(CAROL, Parts::ONE),
     ]);
-    let amounts = Split::amounts([
-        MemberAmount::new(euros(500), ANA),
-        MemberAmount::new(euros(500), ANA),
+    let percentages = Split::percentages([
+        MemberPercentage::new(BOB, per_cent("50")),
+        MemberPercentage::new(BOB, per_cent("50")),
     ]);
-    assert_eq!(
-        percentages.validate(euros(1_000)),
-        Err(ExpenseError::DuplicateMember { member: BOB })
-    );
+    let amounts = Split::amounts([
+        MemberAmount::new(ANA, euros(500)),
+        MemberAmount::new(ANA, euros(500)),
+    ]);
     assert_eq!(
         parts_twice.validate(euros(1_000)),
         Err(ExpenseError::DuplicateMember { member: CAROL })
+    );
+    assert_eq!(
+        percentages.validate(euros(1_000)),
+        Err(ExpenseError::DuplicateMember { member: BOB })
     );
     assert_eq!(
         amounts.validate(euros(1_000)),
@@ -299,10 +299,10 @@ fn percentages_must_add_up_to_exactly_100() {
 #[test]
 fn amounts_in_another_currency_are_rejected() {
     // A dollar share of a euro total.
-    let dollars = Money::from_minor_units(Currency::USD, 500);
+    let dollars = Money::from_minor_units(500, Currency::USD);
     let split = Split::amounts([
-        MemberAmount::new(euros(500), ANA),
-        MemberAmount::new(dollars, BOB),
+        MemberAmount::new(ANA, euros(500)),
+        MemberAmount::new(BOB, dollars),
     ]);
     assert_eq!(
         split.validate(euros(1_000)),
@@ -319,8 +319,8 @@ fn amounts_in_another_currency_are_rejected() {
 fn zero_or_negative_amounts_are_rejected() {
     // Zero.
     let split = Split::amounts([
-        MemberAmount::new(euros(0), ANA),
-        MemberAmount::new(euros(1_000), BOB),
+        MemberAmount::new(ANA, euros(0)),
+        MemberAmount::new(BOB, euros(1_000)),
     ]);
     assert_eq!(
         split.validate(euros(1_000)),
@@ -328,8 +328,8 @@ fn zero_or_negative_amounts_are_rejected() {
     );
     // Negative.
     let negative_share_split = Split::amounts([
-        MemberAmount::new(euros(1_500), ANA),
-        MemberAmount::new(euros(-500), BOB),
+        MemberAmount::new(ANA, euros(1_500)),
+        MemberAmount::new(BOB, euros(-500)),
     ]);
     assert_eq!(
         negative_share_split.validate(euros(1_000)),
@@ -343,31 +343,31 @@ fn zero_or_negative_amounts_are_rejected() {
 fn amounts_must_add_up_to_the_total() {
     // Exactly the total.
     let split = Split::amounts([
-        MemberAmount::new(euros(500), ANA),
-        MemberAmount::new(euros(500), BOB),
+        MemberAmount::new(ANA, euros(500)),
+        MemberAmount::new(BOB, euros(500)),
     ]);
     assert_eq!(split.validate(euros(1_000)), Ok(()));
     // One cent short or over.
     let short = Split::amounts([
-        MemberAmount::new(euros(500), ANA),
-        MemberAmount::new(euros(499), BOB),
+        MemberAmount::new(ANA, euros(500)),
+        MemberAmount::new(BOB, euros(499)),
     ]);
     let over = Split::amounts([
-        MemberAmount::new(euros(500), ANA),
-        MemberAmount::new(euros(501), BOB),
+        MemberAmount::new(ANA, euros(500)),
+        MemberAmount::new(BOB, euros(501)),
     ]);
     assert_eq!(
         short.validate(euros(1_000)),
         Err(ExpenseError::AmountsDoNotAddUp {
-            actual: euros(999),
-            expected: euros(1_000)
+            expected: euros(1_000),
+            actual: euros(999)
         })
     );
     assert_eq!(
         over.validate(euros(1_000)),
         Err(ExpenseError::AmountsDoNotAddUp {
-            actual: euros(1_001),
-            expected: euros(1_000)
+            expected: euros(1_000),
+            actual: euros(1_001)
         })
     );
 }
@@ -378,14 +378,14 @@ fn amounts_must_add_up_to_the_total() {
 fn amounts_summing_past_the_range_report_overflow() {
     // Far past the range.
     let split = Split::amounts([
-        MemberAmount::new(euros(i64::MAX), ANA),
-        MemberAmount::new(euros(i64::MAX), BOB),
+        MemberAmount::new(ANA, euros(i64::MAX)),
+        MemberAmount::new(BOB, euros(i64::MAX)),
     ]);
     assert_eq!(split.validate(euros(1)), Err(ExpenseError::Overflow));
     // One minor unit past the range.
     let barely_overflowing_split = Split::amounts([
-        MemberAmount::new(euros(i64::MAX), ANA),
-        MemberAmount::new(euros(1), BOB),
+        MemberAmount::new(ANA, euros(i64::MAX)),
+        MemberAmount::new(BOB, euros(1)),
     ]);
     assert_eq!(
         barely_overflowing_split.validate(euros(i64::MAX)),
@@ -401,7 +401,7 @@ fn shares_are_sorted_by_member_whatever_the_listing_order() {
     for order in [[CAROL, BOB, ANA], [BOB, CAROL, ANA], [ANA, BOB, CAROL]] {
         assert_eq!(
             Split::equal(order).divide(300, 0),
-            vec![share(100, ANA), share(100, BOB), share(100, CAROL)]
+            vec![share(ANA, 100), share(BOB, 100), share(CAROL, 100)]
         );
     }
 }
@@ -424,15 +424,15 @@ fn the_rotation_decides_who_gets_the_leftover_cent() {
     // Each rotation starts at the next member in ID order.
     assert_eq!(
         split.divide(1_000, 0),
-        vec![share(334, ANA), share(333, BOB), share(333, CAROL)]
+        vec![share(ANA, 334), share(BOB, 333), share(CAROL, 333)]
     );
     assert_eq!(
         split.divide(1_000, 1),
-        vec![share(333, ANA), share(334, BOB), share(333, CAROL)]
+        vec![share(ANA, 333), share(BOB, 334), share(CAROL, 333)]
     );
     assert_eq!(
         split.divide(1_000, 2),
-        vec![share(333, ANA), share(333, BOB), share(334, CAROL)]
+        vec![share(ANA, 333), share(BOB, 333), share(CAROL, 334)]
     );
     // The rotation wraps around.
     assert_eq!(split.divide(1_000, 3), split.divide(1_000, 0));
@@ -440,7 +440,7 @@ fn the_rotation_decides_who_gets_the_leftover_cent() {
     // Positions count in ID order, not in listing order.
     assert_eq!(
         Split::equal([CAROL, BOB, ANA]).divide(1_000, 1),
-        vec![share(333, ANA), share(334, BOB), share(333, CAROL)]
+        vec![share(ANA, 333), share(BOB, 334), share(CAROL, 333)]
     );
 }
 
@@ -454,7 +454,7 @@ fn parts_divide_in_proportion() {
     ]);
     assert_eq!(
         split.divide(3_000, 0),
-        vec![share(2_000, ANA), share(1_000, BOB)]
+        vec![share(ANA, 2_000), share(BOB, 1_000)]
     );
     // Fractional parts.
     let fractional_parts_split = Split::parts([
@@ -464,7 +464,7 @@ fn parts_divide_in_proportion() {
     ]);
     assert_eq!(
         fractional_parts_split.divide(3_000, 0),
-        vec![share(500, ANA), share(1_000, BOB), share(1_500, CAROL)]
+        vec![share(ANA, 500), share(BOB, 1_000), share(CAROL, 1_500)]
     );
 }
 
@@ -478,7 +478,7 @@ fn percentages_divide_in_proportion() {
     ]);
     assert_eq!(
         split.divide(10_000, 0),
-        vec![share(7_000, ANA), share(3_000, BOB)]
+        vec![share(ANA, 7_000), share(BOB, 3_000)]
     );
     // The leftover cent goes to the largest remainder, whatever the
     // rotation.
@@ -490,7 +490,7 @@ fn percentages_divide_in_proportion() {
     for rotation in 0..3 {
         assert_eq!(
             uneven_thirds_split.divide(100, rotation),
-            vec![share(33, ANA), share(33, BOB), share(34, CAROL)]
+            vec![share(ANA, 33), share(BOB, 33), share(CAROL, 34)]
         );
     }
 }
@@ -500,13 +500,13 @@ fn percentages_divide_in_proportion() {
 fn amounts_are_returned_exactly() {
     // Whatever the rotation.
     let split = Split::amounts([
-        MemberAmount::new(euros(750), BOB),
-        MemberAmount::new(euros(1_250), ANA),
+        MemberAmount::new(BOB, euros(750)),
+        MemberAmount::new(ANA, euros(1_250)),
     ]);
     for rotation in 0..4 {
         assert_eq!(
             split.divide(2_000, rotation),
-            vec![share(1_250, ANA), share(750, BOB)]
+            vec![share(ANA, 1_250), share(BOB, 750)]
         );
     }
 }
@@ -517,13 +517,13 @@ fn a_zero_total_gives_every_member_zero() {
     // Equal splits and parts.
     assert_eq!(
         Split::equal([ANA, BOB, CAROL]).divide(0, 1),
-        vec![share(0, ANA), share(0, BOB), share(0, CAROL)]
+        vec![share(ANA, 0), share(BOB, 0), share(CAROL, 0)]
     );
     let split = Split::parts([
         MemberParts::new(ANA, parts("2")),
         MemberParts::new(BOB, Parts::ONE),
     ]);
-    assert_eq!(split.divide(0, 0), vec![share(0, ANA), share(0, BOB)]);
+    assert_eq!(split.divide(0, 0), vec![share(ANA, 0), share(BOB, 0)]);
 }
 
 /// A refund would be divided differently from the expense it reverses.
@@ -533,7 +533,7 @@ fn negative_totals_divide_like_positive_ones() {
     let split = Split::equal([ANA, BOB, CAROL]);
     assert_eq!(
         split.divide(-1_000, 0),
-        vec![share(-334, ANA), share(-333, BOB), share(-333, CAROL)]
+        vec![share(ANA, -334), share(BOB, -333), share(CAROL, -333)]
     );
 }
 
@@ -568,7 +568,7 @@ proptest! {
         // Fair: |share − total × weight / Σ weights| < 1.
         let weight_sum: i128 = hundredths.iter().map(|&weight| i128::from(weight)).sum();
         for (index, &weight) in hundredths.iter().enumerate() {
-            let Share { amount, member } = shares[index];
+            let Share { member, amount } = shares[index];
             prop_assert_eq!(member, member_at(index));
             let deviation =
                 i128::from(amount) * weight_sum - i128::from(total) * i128::from(weight);
@@ -602,17 +602,13 @@ proptest! {
 /// A split as a crate outside this one converts it.
 #[derive(Debug, PartialEq, Eq)]
 enum ConvertedSplit {
-    Amounts(Vec<MemberAmount>),
     Equal(Vec<MemberId>),
     Parts(Vec<MemberParts>),
     Percentages(Vec<MemberPercentage>),
+    Amounts(Vec<MemberAmount>),
 }
 
 impl FromSplit for ConvertedSplit {
-    fn amounts(shares: &[MemberAmount]) -> Self {
-        Self::Amounts(shares.to_vec())
-    }
-
     fn equal(members: &[MemberId]) -> Self {
         Self::Equal(members.to_vec())
     }
@@ -624,16 +620,16 @@ impl FromSplit for ConvertedSplit {
     fn percentages(shares: &[MemberPercentage]) -> Self {
         Self::Percentages(shares.to_vec())
     }
+
+    fn amounts(shares: &[MemberAmount]) -> Self {
+        Self::Amounts(shares.to_vec())
+    }
 }
 
 /// A conversion that called another variant's method, or lost a share,
 /// would hand the bindings another division than the library's.
 #[test]
 fn a_split_converts_through_the_method_of_its_variant() {
-    let amounts = vec![
-        MemberAmount::new(euros(700), ANA),
-        MemberAmount::new(euros(300), BOB),
-    ];
     let shares = vec![
         MemberParts::new(ANA, parts("2")),
         MemberParts::new(BOB, parts("0.5")),
@@ -642,10 +638,10 @@ fn a_split_converts_through_the_method_of_its_variant() {
         MemberPercentage::new(ANA, per_cent("60")),
         MemberPercentage::new(BOB, per_cent("40")),
     ];
-    assert_eq!(
-        ConvertedSplit::from_split(&Split::amounts(amounts.clone())),
-        ConvertedSplit::Amounts(amounts)
-    );
+    let amounts = vec![
+        MemberAmount::new(ANA, euros(700)),
+        MemberAmount::new(BOB, euros(300)),
+    ];
     assert_eq!(
         ConvertedSplit::from_split(&Split::equal([ANA, CAROL])),
         ConvertedSplit::Equal(vec![ANA, CAROL])
@@ -657,5 +653,9 @@ fn a_split_converts_through_the_method_of_its_variant() {
     assert_eq!(
         ConvertedSplit::from_split(&Split::percentages(percentages.clone())),
         ConvertedSplit::Percentages(percentages)
+    );
+    assert_eq!(
+        ConvertedSplit::from_split(&Split::amounts(amounts.clone())),
+        ConvertedSplit::Amounts(amounts)
     );
 }

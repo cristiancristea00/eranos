@@ -40,17 +40,17 @@ class ShareRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Rule', 'Paid', 'Consumed')
 
-    consumed: Money
-    """What the member consumed."""
-
     name: str
     """The member's first name."""
+
+    rule: str
+    """The rule the member's share follows."""
 
     paid: Money
     """What the member paid."""
 
-    rule: str
-    """The rule the member's share follows."""
+    consumed: Money
+    """What the member consumed."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -64,17 +64,17 @@ class TotalRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Balance')
 
-    balance: str
-    """Where the member stands."""
-
-    consumed: Money
-    """What the member consumed."""
-
     name: str
     """The member's first name."""
 
     paid: Money
     """What the member paid."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    balance: str
+    """Where the member stands."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -92,11 +92,11 @@ class Family:
     bob: MemberId
     """Bob, a parent."""
 
-    day: CalendarDate
-    """The day every expense happened."""
-
     mia: MemberId
     """Mia, their daughter, who counts as half an adult."""
+
+    day: CalendarDate
+    """The day every expense happened."""
 
 
 def euros(text: str) -> Money:
@@ -131,7 +131,7 @@ def report(group: Group, expense_id: ExpenseId, rules: Mapping[MemberId, str]) -
     print_table(
         ShareRow,
         [
-            ShareRow(consumed=share.share, name=names(group, (share.member,)), paid=share.paid, rule=rules.get(share.member, '(payer only)'))
+            ShareRow(name=names(group, (share.member,)), rule=rules.get(share.member, '(payer only)'), paid=share.paid, consumed=share.share)
             for share in shares.members
         ],
         2,
@@ -169,11 +169,11 @@ def equally(group: Group, family: Family) -> None:
     )
     taxi = group.add_expense(
         Expense(
-            cost=LocalCost(euros('10.00')),
-            date=family.day,
             name='Taxi',
+            cost=LocalCost(euros('10.00')),
             payers=EqualSplit((family.ana,)),
             split=WholeExpenseSplit(EqualSplit((family.ana, family.bob, family.mia))),
+            date=family.day,
         )
     )
     report(group, taxi, thirds(family))
@@ -195,9 +195,8 @@ def by_percentage(group: Group, family: Family) -> None:
     )
     rent = group.add_expense(
         Expense(
-            cost=LocalCost(euros('500.00')),
-            date=family.day,
             name='Flat',
+            cost=LocalCost(euros('500.00')),
             payers=EqualSplit((family.bob,)),
             split=WholeExpenseSplit(
                 PercentagesSplit(
@@ -208,6 +207,7 @@ def by_percentage(group: Group, family: Family) -> None:
                     )
                 )
             ),
+            date=family.day,
         )
     )
     report(group, rent, {family.ana: '40%', family.bob: '40%', family.mia: '20%'})
@@ -232,9 +232,8 @@ def by_parts(group: Group, family: Family) -> ExpenseId:
     )
     food = group.add_expense(
         Expense(
-            cost=LocalCost(euros('125.00')),
-            date=family.day,
             name='Food',
+            cost=LocalCost(euros('125.00')),
             payers=EqualSplit((family.ana,)),
             split=WholeExpenseSplit(
                 PartsSplit(
@@ -245,6 +244,7 @@ def by_parts(group: Group, family: Family) -> ExpenseId:
                     )
                 )
             ),
+            date=family.day,
         )
     )
     report(group, food, {family.ana: '1 part', family.bob: '1 part', family.mia: '0.5 parts'})
@@ -264,19 +264,19 @@ def by_amounts(group: Group, family: Family) -> None:
     print_lines('Everyone pays a fixed amount, such as a ticket price; the amounts must add up to', 'exactly the expense amount.')
     tickets = group.add_expense(
         Expense(
-            cost=LocalCost(euros('35.00')),
-            date=family.day,
             name='Museum',
+            cost=LocalCost(euros('35.00')),
             payers=EqualSplit((family.bob,)),
             split=WholeExpenseSplit(
                 AmountsSplit(
                     (
-                        MemberAmount(euros('15.00'), family.ana),
-                        MemberAmount(euros('15.00'), family.bob),
-                        MemberAmount(euros('5.00'), family.mia),
+                        MemberAmount(family.ana, euros('15.00')),
+                        MemberAmount(family.bob, euros('15.00')),
+                        MemberAmount(family.mia, euros('5.00')),
                     )
                 )
             ),
+            date=family.day,
         )
     )
     report(group, tickets, {family.ana: '15.00 EUR', family.bob: '15.00 EUR', family.mia: '5.00 EUR'})
@@ -298,11 +298,11 @@ def several_payers(group: Group, family: Family) -> None:
     )
     dinner = group.add_expense(
         Expense(
-            cost=LocalCost(euros('90.00')),
-            date=family.day,
             name='Dinner',
-            payers=AmountsSplit((MemberAmount(euros('50.00'), family.ana), MemberAmount(euros('40.00'), family.bob))),
+            cost=LocalCost(euros('90.00')),
+            payers=AmountsSplit((MemberAmount(family.ana, euros('50.00')), MemberAmount(family.bob, euros('40.00')))),
             split=WholeExpenseSplit(EqualSplit((family.ana, family.bob, family.mia))),
+            date=family.day,
         )
     )
     report(group, dinner, thirds(family))
@@ -322,13 +322,13 @@ def mistakes(group: Group, family: Family) -> None:
     section('6. Mistakes are refused')
     print_lines('A percentage split that adds up to 90 % is refused when the expense is built:')
     invalid = Expense(
-        cost=LocalCost(euros('10.00')),
-        date=family.day,
         name='Invalid',
+        cost=LocalCost(euros('10.00')),
         payers=EqualSplit((family.ana,)),
         split=WholeExpenseSplit(
             PercentagesSplit((MemberPercentage(family.ana, Percentage.parse('60')), MemberPercentage(family.bob, Percentage.parse('30'))))
         ),
+        date=family.day,
     )
     refused = refusal(lambda: group.add_expense(invalid))
     assert refused is not None, 'the split must be refused'
@@ -349,7 +349,7 @@ def print_totals(group: Group) -> None:
     print_table(
         TotalRow,
         [
-            TotalRow(balance=str(found.balance), consumed=found.share, name=member.first_name, paid=found.paid)
+            TotalRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=str(found.balance))
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],
@@ -359,12 +359,12 @@ def print_totals(group: Group) -> None:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create(Currency('EUR'), 'Family holiday')
+    group = Group.create('Family holiday', Currency('EUR'))
     family = Family(
         ana=group.add_member(Member(first_name='Ana')),
         bob=group.add_member(Member(first_name='Bob')),
-        day=CalendarDate(14, 7, 2026),
         mia=group.add_member(Member(first_name='Mia')),
+        day=CalendarDate(2026, 7, 14),
     )
 
     title('Family holiday: every way to split an expense')

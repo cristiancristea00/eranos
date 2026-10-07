@@ -5,38 +5,38 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case {
     error: TransferError,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// A [`TransferError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedTransferError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromTransferError for ConvertedTransferError {
-    fn non_positive_amount(message: String) -> Self {
+    fn same_member(message: String) -> Self {
         Self {
+            method: "same_member",
             held: String::new(),
             message,
-            method: "non_positive_amount",
         }
     }
 
-    fn same_member(message: String) -> Self {
+    fn non_positive_amount(message: String) -> Self {
         Self {
+            method: "non_positive_amount",
             held: String::new(),
             message,
-            method: "same_member",
         }
     }
 }
@@ -48,23 +48,23 @@ impl FromTransferError for ConvertedTransferError {
 fn every_failure_of_transfer_error_converts_through_the_method_of_its_variant() {
     let cases = [
         Case {
-            error: TransferError::NonPositiveAmount,
+            error: TransferError::SameMember,
+            method: "same_member",
             held: String::new(),
-            method: "non_positive_amount",
         },
         Case {
-            error: TransferError::SameMember,
+            error: TransferError::NonPositiveAmount,
+            method: "non_positive_amount",
             held: String::new(),
-            method: "same_member",
         },
     ];
     for case in cases {
         assert_eq!(
             ConvertedTransferError::from_transfer_error(case.error),
             ConvertedTransferError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }

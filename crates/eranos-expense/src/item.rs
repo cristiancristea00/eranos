@@ -19,7 +19,7 @@ use crate::error::ExpenseError;
 /// use eranos::{Currency, Item, MemberParts, Money, Parts, Split};
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let beers = Item::builder([ana, bob], "Beer", Money::parse("4.50", Currency::EUR)?)
+/// let beers = Item::builder("Beer", Money::parse("4.50", Currency::EUR)?, [ana, bob])
 ///     .quantity(3)
 ///     .build()?;
 /// assert_eq!(beers.line_total(), Money::parse("13.50", Currency::EUR)?);
@@ -28,7 +28,7 @@ use crate::error::ExpenseError;
 ///     MemberParts::new(ana, Parts::from_whole(2)?),
 ///     MemberParts::new(bob, Parts::from_whole(1)?),
 /// ]);
-/// let pizza = Item::builder_with_split("Pizza", split, Money::parse("12.00", Currency::EUR)?)
+/// let pizza = Item::builder_with_split("Pizza", Money::parse("12.00", Currency::EUR)?, split)
 ///     .build()?;
 /// assert_eq!(pizza.quantity(), 1);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -37,8 +37,8 @@ use crate::error::ExpenseError;
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Item {
     name: String,
-    split: Split,
     unit_price: Money,
+    split: Split,
     quantity: u32,
 }
 
@@ -46,24 +46,24 @@ impl Item {
     /// Starts an item whose line total `members` share equally; the
     /// quantity defaults to 1.
     pub fn builder(
-        members: impl IntoIterator<Item = MemberId>,
         name: impl Into<String>,
         unit_price: Money,
+        members: impl IntoIterator<Item = MemberId>,
     ) -> ItemBuilder {
-        Self::builder_with_split(name, Split::equal(members), unit_price)
+        Self::builder_with_split(name, unit_price, Split::equal(members))
     }
 
     /// Starts an item whose line total is divided by `split`; the quantity
     /// defaults to 1.
     pub fn builder_with_split(
         name: impl Into<String>,
-        split: Split,
         unit_price: Money,
+        split: Split,
     ) -> ItemBuilder {
         ItemBuilder {
             name: name.into(),
-            split,
             unit_price,
+            split,
             quantity: 1,
         }
     }
@@ -72,8 +72,8 @@ impl Item {
     pub fn to_builder(&self) -> ItemBuilder {
         ItemBuilder {
             name: self.name.clone(),
-            split: self.split.clone(),
             unit_price: self.unit_price,
+            split: self.split.clone(),
             quantity: self.quantity,
         }
     }
@@ -84,16 +84,16 @@ impl Item {
         &self.name
     }
 
-    /// How the line total is divided.
-    #[must_use]
-    pub const fn split(&self) -> &Split {
-        &self.split
-    }
-
     /// The price of one unit.
     #[must_use]
     pub const fn unit_price(&self) -> Money {
         self.unit_price
+    }
+
+    /// How the line total is divided.
+    #[must_use]
+    pub const fn split(&self) -> &Split {
+        &self.split
     }
 
     /// The number of units, at least 1.
@@ -110,7 +110,7 @@ impl Item {
             .unit_price
             .minor_units()
             .saturating_mul(i64::from(self.quantity));
-        Money::from_minor_units(self.unit_price.currency(), total)
+        Money::from_minor_units(total, self.unit_price.currency())
     }
 }
 
@@ -120,8 +120,8 @@ impl Item {
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ItemBuilder {
     name: String,
-    split: Split,
     unit_price: Money,
+    split: Split,
     quantity: u32,
 }
 
@@ -129,6 +129,12 @@ impl ItemBuilder {
     /// Replaces the name.
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
+        self
+    }
+
+    /// Replaces the unit price.
+    pub const fn unit_price(mut self, unit_price: Money) -> Self {
+        self.unit_price = unit_price;
         self
     }
 
@@ -142,12 +148,6 @@ impl ItemBuilder {
     /// Replaces the split.
     pub fn split(mut self, split: Split) -> Self {
         self.split = split;
-        self
-    }
-
-    /// Replaces the unit price.
-    pub const fn unit_price(mut self, unit_price: Money) -> Self {
-        self.unit_price = unit_price;
         self
     }
 
@@ -180,13 +180,13 @@ impl ItemBuilder {
             .checked_mul(i64::from(self.quantity))
             .ok_or(ExpenseError::Overflow)?;
         self.split.validate(Money::from_minor_units(
-            self.unit_price.currency(),
             line_total,
+            self.unit_price.currency(),
         ))?;
         Ok(Item {
             name,
-            split: self.split,
             unit_price: self.unit_price,
+            split: self.split,
             quantity: self.quantity,
         })
     }
@@ -197,15 +197,15 @@ impl ItemBuilder {
 #[derive(serde::Deserialize)]
 struct ItemRecord {
     name: String,
-    quantity: u32,
-    split: Split,
     unit_price: Money,
+    split: Split,
+    quantity: u32,
 }
 
 /// Builds the item `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
 fn from_record(record: ItemRecord) -> Result<Item, ExpenseError> {
-    Item::builder_with_split(record.name, record.split, record.unit_price)
+    Item::builder_with_split(record.name, record.unit_price, record.split)
         .quantity(record.quantity)
         .build()
 }

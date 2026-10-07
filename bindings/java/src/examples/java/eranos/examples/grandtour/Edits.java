@@ -61,24 +61,24 @@ final class Edits {
         ExpenseId parking =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Converted(ron("250.00"), rate),
-                                        october(6),
                                         "Airport parking",
+                                        new Cost.Converted(ron("250.00"), rate),
                                         new Split.Equal(List.of(people.ana())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Equal(
-                                                        List.of(people.ana(), people.bob()))))
+                                                        List.of(people.ana(), people.bob()))),
+                                        october(6))
                                 .category(categories.transport())
                                 .build());
         TransferId cash =
                 group.addTransfer(
                         Transfer.builder(
-                                        new Cost.Converted(ron("100.00"), rate),
-                                        october(6),
                                         people.bob(),
-                                        people.ana())
-                                .note("Cash for the parking")
+                                        people.ana(),
+                                        new Cost.Converted(ron("100.00"), rate),
+                                        october(6))
                                 .time(TimeOfDay.of(7, 40))
+                                .note("Cash for the parking")
                                 .build());
         System.out.print(
                 """
@@ -98,7 +98,7 @@ final class Edits {
                         .formatted(
                                 transfer.time().map(TimeOfDay::toString).orElse(""),
                                 transfer.note().orElse(""),
-                                group.transferAmount(cash).orElse(new Money(euro, 0)),
+                                group.transferAmount(cash).orElse(new Money(0, euro)),
                                 converted));
 
         check(eur("50.28").equals(converted));
@@ -123,16 +123,16 @@ final class Edits {
         // Bob entered the coffee twice.
         Expense coffee =
                 Expense.builder(
-                                new Cost.Local(eur("6.00")),
-                                october(5),
                                 "Coffee",
+                                new Cost.Local(eur("6.00")),
                                 new Split.Equal(List.of(people.bob())),
                                 new ExpenseSplit.Whole(
                                         new Split.Equal(
                                                 List.of(
                                                         people.ana(),
                                                         people.bob(),
-                                                        people.carol()))))
+                                                        people.carol()))),
+                                october(5))
                         .category(categories.food())
                         .build();
         group.addExpense(coffee);
@@ -142,10 +142,10 @@ final class Edits {
         TransferId first =
                 group.addTransfer(
                         Transfer.builder(
-                                        new Cost.Local(eur("100.00")),
-                                        october(5),
                                         people.dan(),
-                                        people.ana())
+                                        people.ana(),
+                                        new Cost.Local(eur("100.00")),
+                                        october(5))
                                 .build());
         Transfer fixed =
                 group.transfer(first).orElseThrow().toBuilder()
@@ -157,10 +157,10 @@ final class Edits {
         TransferId mistake =
                 group.addTransfer(
                         Transfer.builder(
-                                        new Cost.Local(eur("10.00")),
-                                        october(5),
                                         people.carol(),
-                                        people.bob())
+                                        people.bob(),
+                                        new Cost.Local(eur("10.00")),
+                                        october(5))
                                 .build());
         Transfer undone = group.removeTransfer(mistake);
 
@@ -168,33 +168,33 @@ final class Edits {
         check(group.expense(copy).isEmpty());
         check(Optional.of(eur("120.00")).equals(group.transferAmount(first)));
         check(group.transfer(mistake).isEmpty());
-        Money zero = new Money(Currency.of("EUR"), 0);
+        Money zero = new Money(0, Currency.of("EUR"));
         Optional<Expense> dinner = group.expense(seafood);
         Optional<Transfer> apartment = group.transfer(first);
         return List.of(
                 new EditRow(
+                        previous.name(),
                         "%s became %s, at %s"
                                 .formatted(
                                         previous.cost().amount(),
                                         dinner.map(expense -> expense.cost().amount()).orElse(zero),
-                                        dinner.flatMap(Expense::description).orElse("")),
-                        previous.name()),
+                                        dinner.flatMap(Expense::description).orElse(""))),
                 new EditRow(
+                        removed.name(),
                         "entered twice; the copy of %s was removed"
-                                .formatted(removed.cost().amount()),
-                        removed.name()),
+                                .formatted(removed.cost().amount())),
                 new EditRow(
+                        name(group, people.dan()) + " to " + name(group, people.ana()),
                         "%s became %s, noted %s"
                                 .formatted(
                                         replaced.cost().amount(),
                                         apartment
                                                 .map(transfer -> transfer.cost().amount())
                                                 .orElse(zero),
-                                        apartment.flatMap(Transfer::note).orElse("")),
-                        name(group, people.dan()) + " to " + name(group, people.ana())),
+                                        apartment.flatMap(Transfer::note).orElse(""))),
                 new EditRow(
-                        "%s sent to the wrong member; removed".formatted(undone.cost().amount()),
-                        name(group, people.carol()) + " to " + name(group, people.bob())));
+                        name(group, people.carol()) + " to " + name(group, people.bob()),
+                        "%s sent to the wrong member; removed".formatted(undone.cost().amount())));
     }
 
     static void edits(Group group, People people, Categories categories, ExpenseId seafood)
@@ -213,9 +213,8 @@ final class Edits {
         Summary before = group.summary();
         Expense taxi =
                 Expense.builder(
-                                new Cost.Local(eur("30.00")),
-                                october(6),
                                 "Taxi",
+                                new Cost.Local(eur("30.00")),
                                 new Split.Equal(List.of(people.ana())),
                                 new ExpenseSplit.Whole(
                                         new Split.Percentages(
@@ -225,21 +224,22 @@ final class Edits {
                                                                 Percentage.parse("50")),
                                                         new MemberPercentage(
                                                                 people.bob(),
-                                                                Percentage.parse("49.99"))))))
+                                                                Percentage.parse("49.99"))))),
+                                october(6))
                         .build();
         Optional<EranosException> unbalanced = refusal(() -> group.addExpense(taxi));
         Transfer toHerself =
                 Transfer.builder(
-                                new Cost.Local(eur("5.00")), october(6), people.ana(), people.ana())
+                                people.ana(), people.ana(), new Cost.Local(eur("5.00")), october(6))
                         .build();
         Optional<EranosException> herself = refusal(() -> group.addTransfer(toHerself));
         Expense souvenirs =
                 Expense.builder(
-                                new Cost.Local(ron("40.00")),
-                                october(6),
                                 "Souvenirs",
+                                new Cost.Local(ron("40.00")),
                                 new Split.Equal(List.of(people.ana())),
-                                new ExpenseSplit.Whole(new Split.Equal(List.of(people.ana()))))
+                                new ExpenseSplit.Whole(new Split.Equal(List.of(people.ana()))),
+                                october(6))
                         .build();
         Optional<EranosException> unrated = refusal(() -> group.addExpense(souvenirs));
         System.out.println("A change that does not fit is refused, and the group stays as it was:");
@@ -278,9 +278,8 @@ final class Edits {
         group.archiveMember(people.dan());
         Expense dinner =
                 Expense.builder(
-                                new Cost.Local(eur("40.00")),
-                                october(6),
                                 "Farewell dinner",
+                                new Cost.Local(eur("40.00")),
                                 new Split.Equal(List.of(people.ana())),
                                 new ExpenseSplit.Whole(
                                         new Split.Equal(
@@ -288,7 +287,8 @@ final class Edits {
                                                         people.ana(),
                                                         people.bob(),
                                                         people.carol(),
-                                                        people.dan()))))
+                                                        people.dan()))),
+                                october(6))
                         .build();
         Optional<EranosException> farewell = refusal(() -> group.addExpense(dinner));
         Optional<EranosException> inUse = refusal(() -> group.removeMember(people.dan()));
@@ -307,11 +307,11 @@ final class Edits {
                 if (found.isPresent()) {
                     rows.add(
                             new StatusRow(
-                                    found.orElseThrow().balance(),
                                     member.firstName(),
                                     group.isArchived(member.id().orElseThrow())
                                             ? "archived"
-                                            : "active"));
+                                            : "active",
+                                    found.orElseThrow().balance()));
                 }
             }
         }

@@ -9,7 +9,7 @@ func sharing(_ group: Group, _ people: People) async throws(EranosError) {
     // Another handle on the same group, as another task holds: a group is shared as it is.
     let other = group
     let everyone = [people.ana, people.bob, people.carol, people.dan, people.eva]
-    let coffee = Expense(cost: .local(try ron("75.00")), date: try october(8), name: "Airport coffee", payers: .equal([people.bob]), split: .whole(.equal(everyone)))
+    let coffee = Expense(name: "Airport coffee", cost: .local(try ron("75.00")), payers: .equal([people.bob]), split: .whole(.equal(everyone)), date: try october(8))
     _ = try await other.add(coffee)
     let plan = try await group.settlement(by: .minimumTransfers)
     print("""
@@ -21,9 +21,9 @@ func sharing(_ group: Group, _ people: People) async throws(EranosError) {
     let rows = try await group.withRead { reader async throws(EranosError) in
         try plan.payments.map { payment throws(EranosError) in
             PaymentRow(
-                amount: payment.amount,
                 from: try reader.member(withID: payment.from)?.firstName ?? "?",
-                to: try reader.member(withID: payment.to)?.firstName ?? "?"
+                to: try reader.member(withID: payment.to)?.firstName ?? "?",
+                amount: payment.amount
             )
         }
     }

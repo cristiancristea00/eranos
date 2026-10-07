@@ -8,9 +8,9 @@ import { type Columns, load, printLines, printTable, refusal, section, title, to
 
 /** A member's balance before saving and after loading, as the table of balances prints it. */
 interface ComparisonRow {
-    readonly after: string;
-    readonly before: string;
     readonly name: string;
+    readonly before: string;
+    readonly after: string;
 }
 
 const comparisonColumns: Columns<ComparisonRow> = [
@@ -27,23 +27,23 @@ function balance(member: MemberId, summary: Summary): string {
 
 await load();
 const euro = Currency.of('EUR');
-const day = CalendarDate.of(23, 9, 2026);
-using group = Group.create(euro, 'Road trip');
+const day = CalendarDate.of(2026, 9, 23);
+using group = Group.create('Road trip', euro);
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 group.addExpenseSync({
-    cost: { kind: 'local', amount: Money.parse('70.00', euro) },
-    date: day,
     name: 'Fuel',
+    cost: { kind: 'local', amount: Money.parse('70.00', euro) },
     payers: { kind: 'equal', members: [ana] },
     split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob] } },
+    date: day,
 });
 group.addExpenseSync({
-    cost: { kind: 'local', amount: Money.parse('30.00', euro) },
-    date: day,
     name: 'Lunch',
+    cost: { kind: 'local', amount: Money.parse('30.00', euro) },
     payers: { kind: 'equal', members: [bob] },
     split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob] } },
+    date: day,
     tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
 });
 
@@ -77,9 +77,9 @@ const after = loaded.summarySync();
 printTable(
     comparisonColumns,
     [ana, bob].map((member) => ({
-        after: balance(member, after),
-        before: balance(member, before),
         name: group.memberSync(member)?.firstName ?? '?',
+        before: balance(member, before),
+        after: balance(member, after),
     })),
     1,
 );
@@ -88,12 +88,13 @@ printLines(`Payments needed to settle the loaded group: ${String(plan.payments.l
 
 section('3. A corrupted file is refused');
 printLines(
-    "Here the fuel's payer was edited to an identifier no member has. Reading the file",
-    'as a SavedGroup and loading it with into_group replays every entry through the',
-    'same checks as adding it, and refuses the file instead of producing balances that',
-    'do not add up:',
+    "Here Ana's identifier was edited in her member entry, so the fuel's payer is an",
+    'identifier no member has. Reading the file as a SavedGroup and loading it with',
+    'into_group replays every entry through the same checks as adding it, and refuses',
+    'the file instead of producing balances that do not add up:',
 );
-// The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
+// Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel
+// she paid is left naming an identifier no member has.
 const corrupted = saved.replace(ana, '0199a000-0000-7000-8000-00000000ffff');
 const refused = refusal(() => {
     Group.loadSync(corrupted).destroy();

@@ -23,13 +23,13 @@ func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
     }
 
     let price = try Money(parsing: "12.5", in: euro)
-    #expect(price == Money(currency: euro, minorUnits: 1_250))
+    #expect(price == Money(minorUnits: 1_250, currency: euro))
     #expect("12.50 EUR" == price.description)
-    #expect(try price.adding(Money(currency: euro, minorUnits: 50)) == Money(currency: euro, minorUnits: 1_300))
-    #expect(try price.subtracting(Money(currency: euro, minorUnits: 50)) == Money(currency: euro, minorUnits: 1_200))
+    #expect(try price.adding(Money(minorUnits: 50, currency: euro)) == Money(minorUnits: 1_300, currency: euro))
+    #expect(try price.subtracting(Money(minorUnits: 50, currency: euro)) == Money(minorUnits: 1_200, currency: euro))
     let lei = try Currency(code: "RON")
     #expect {
-        try price.adding(Money(currency: lei, minorUnits: 1))
+        try price.adding(Money(minorUnits: 1, currency: lei))
     } throws: { error in
         guard case .money(.currencyMismatch(left: euro, right: lei), _) = error as? EranosError else {
             return false
@@ -37,7 +37,7 @@ func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
         return true
     }
     #expect(throws: EranosError.self) {
-        try Money(currency: euro, minorUnits: .max).adding(Money(currency: euro, minorUnits: 1))
+        try Money(minorUnits: .max, currency: euro).adding(Money(minorUnits: 1, currency: euro))
     }
     #expect(throws: EranosError.self) {
         try Money(parsing: "twelve", in: euro)
@@ -53,12 +53,12 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     #expect(rate == ExchangeRate(known: "4.97"))
     let lei = try Currency(code: "RON")
     let euro = try Currency(code: "EUR")
-    #expect(try ExchangeRate(parsing: "0.25").convert(Money(currency: lei, minorUnits: 2), into: euro) == Money(currency: euro, minorUnits: 1))
+    #expect(try ExchangeRate(parsing: "0.25").convert(Money(minorUnits: 2, currency: lei), into: euro) == Money(minorUnits: 1, currency: euro))
     #expect(throws: EranosError.self) {
         try ExchangeRate(parsing: "0")
     }
     #expect(throws: EranosError.self) {
-        try ExchangeRate(parsing: "2").convert(Money(currency: lei, minorUnits: .max), into: euro)
+        try ExchangeRate(parsing: "2").convert(Money(minorUnits: .max, currency: lei), into: euro)
     }
 
     let percentage = try Percentage(parsing: "12.5 %")
@@ -88,14 +88,14 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
 /// would put an entry on another day.
 @Test
 func datesAndTimesReadAndWriteAsTheLibraryDoes() throws {
-    let date = try CalendarDate(day: 23, month: 9, year: 2026)
+    let date = try CalendarDate(year: 2026, month: 9, day: 23)
     #expect("2026-09-23" == date.description)
     #expect(try CalendarDate(parsing: "2026-09-23") == date)
-    #expect(23 == date.day)
-    #expect(9 == date.month)
     #expect(2026 == date.year)
+    #expect(9 == date.month)
+    #expect(23 == date.day)
     #expect(throws: EranosError.calendar(.invalidDate, detail: "invalid date: expected an existing ISO 8601 date between years 1 and 9999")) {
-        try CalendarDate(day: 30, month: 2, year: 2026)
+        try CalendarDate(year: 2026, month: 2, day: 30)
     }
     #expect(throws: EranosError.self) {
         try CalendarDate(parsing: "2026-02-30")

@@ -36,13 +36,13 @@ fn pending_polls<F: Future>(future: F) -> usize {
 }
 
 /// A payment of `amount` from member `from` to member `to`.
-fn flow(amount: i64, from: u8, to: u8) -> Flow {
+fn flow(from: u8, to: u8, amount: i64) -> Flow {
     Flow {
-        amount,
         members: MemberPair {
             from: member(from),
             to: member(to),
         },
+        amount,
     }
 }
 
@@ -139,7 +139,7 @@ fn exact_opposites_pay_each_other_directly() {
     let open = balances(&[500, 500, -500, -500]);
     assert_eq!(
         completed(settle(&open)),
-        Ok(vec![flow(500, 3, 1), flow(500, 4, 2)])
+        Ok(vec![flow(3, 1, 500), flow(4, 2, 500)])
     );
 }
 
@@ -152,7 +152,7 @@ fn a_group_settles_with_one_payment_fewer_than_its_size() {
     assert_eq!(flows.len(), 3);
     assert!(after(&group, &flows).iter().all(|&net| 0 == net));
     // Debtors and creditors are taken in member order.
-    assert_eq!(flows[0], flow(300, 3, 1));
+    assert_eq!(flows[0], flow(3, 1, 300));
 }
 
 /// Settled or empty balances need no payment and no table.
@@ -250,7 +250,7 @@ proptest! {
         let flows = completed(settle(&open)).unwrap();
         prop_assert!(after(&open, &flows).iter().all(|&net| 0 == net));
         prop_assert!(flows.len() <= greedy::settle(&open).len());
-        for &Flow { amount, members: MemberPair { from, to } } in &flows {
+        for &Flow { members: MemberPair { from, to }, amount } in &flows {
             let net = |member: MemberId| open.iter().find(|balance| balance.member == member).map_or(0, |balance| balance.net);
             prop_assert!(0 < amount);
             prop_assert!(0 > net(from) && 0 < net(to));

@@ -14,51 +14,51 @@ public struct Member: Hashable, Sendable {
     /// The first name.
     public var firstName: String
 
-    /// Where the member can be paid, in the order they were given.
-    public var accounts: [Account]
+    /// The last name.
+    public var lastName: String?
 
     /// The email address.
     public var email: Email?
 
-    /// The last name.
-    public var lastName: String?
-
     /// The phone number.
     public var phone: PhoneNumber?
+
+    /// Where the member can be paid, in the order they were given.
+    public var accounts: [Account]
 
     var generated: EranosGenerated.Member {
         .init(
             id: id?.rawValue,
             firstName: firstName,
-            accounts: accounts.map(\.generated),
-            email: email?.description,
             lastName: lastName,
-            phone: phone?.e164
+            email: email?.description,
+            phone: phone?.e164,
+            accounts: accounts.map(\.generated)
         )
     }
 
     /// A member to add, called `firstName`.
     public init(
         firstName: String,
-        accounts: [Account] = [],
-        email: Email? = nil,
         lastName: String? = nil,
-        phone: PhoneNumber? = nil
+        email: Email? = nil,
+        phone: PhoneNumber? = nil,
+        accounts: [Account] = []
     ) {
         self.firstName = firstName
-        self.accounts = accounts
-        self.email = email
         self.lastName = lastName
+        self.email = email
         self.phone = phone
+        self.accounts = accounts
     }
 
     init(_ member: EranosGenerated.Member) {
         self.init(
             firstName: member.firstName,
-            accounts: member.accounts.map(Account.init),
-            email: member.email.map { Email(known: $0) },
             lastName: member.lastName,
-            phone: member.phone.map { PhoneNumber(known: $0) }
+            email: member.email.map { Email(known: $0) },
+            phone: member.phone.map { PhoneNumber(known: $0) },
+            accounts: member.accounts.map(Account.init)
         )
         id = member.id.map { ID(rawValue: $0) }
     }
@@ -66,24 +66,24 @@ public struct Member: Hashable, Sendable {
 
 /// A place to send a member money, with a label: "Main account".
 public struct Account: Hashable, Sendable {
-    /// The IBAN or the username.
-    public var details: AccountDetails
-
     /// The label.
     public var name: String
 
+    /// The IBAN or the username.
+    public var details: AccountDetails
+
     var generated: EranosGenerated.Account {
-        .init(details: details.generated, name: name)
+        .init(name: name, details: details.generated)
     }
 
-    /// The account at `details`, labelled `name`.
-    public init(details: AccountDetails, name: String) {
-        self.details = details
+    /// The account labelled `name`, at `details`.
+    public init(name: String, details: AccountDetails) {
         self.name = name
+        self.details = details
     }
 
     init(_ account: EranosGenerated.Account) {
-        self.init(details: AccountDetails(account.details), name: account.name)
+        self.init(name: account.name, details: AccountDetails(account.details))
     }
 }
 

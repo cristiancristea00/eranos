@@ -27,11 +27,11 @@ internal suspend fun sharing(
         val everyone = listOf(people.ana, people.bob, people.carol, people.dan, people.eva)
         val coffee =
             Expense(
-                Cost.Local(ron("75.00")),
-                october(8),
                 "Airport coffee",
+                Cost.Local(ron("75.00")),
                 Split.Equal(listOf(people.bob)),
                 ExpenseSplit.Whole(Split.Equal(everyone)),
+                october(8),
             )
         other.add(coffee)
         val plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
@@ -47,9 +47,9 @@ internal suspend fun sharing(
             group.read().use { reader ->
                 plan.payments.map { payment ->
                     PaymentRow(
-                        amount = payment.amount,
                         from = reader.member(payment.from)?.firstName ?: "?",
                         to = reader.member(payment.to)?.firstName ?: "?",
+                        amount = payment.amount,
                     )
                 }
             }

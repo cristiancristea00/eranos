@@ -193,11 +193,11 @@ fn settle_group(group: &[OpenBalance]) -> Vec<Flow> {
         // A debtor's net is negative and above i64::MIN, so negating fits.
         let amount = (-owing.net).min(owed.net);
         flows.push(Flow {
-            amount,
             members: MemberPair {
                 from: owing.member,
                 to: owed.member,
             },
+            amount,
         });
         owing.net += amount;
         owed.net -= amount;

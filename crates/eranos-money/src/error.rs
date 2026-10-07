@@ -8,6 +8,17 @@ use crate::Currency;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
 pub enum MoneyError {
+    /// An amount that is not a decimal number.
+    #[error("invalid amount: expected digits with an optional `.` and sign")]
+    InvalidAmount,
+    /// An amount with more decimal places than its currency has.
+    #[error("{currency} amounts have at most {allowed} decimal places")]
+    TooManyDecimals {
+        /// The currency of the amount.
+        currency: Currency,
+        /// The currency's number of decimal places.
+        allowed: u8,
+    },
     /// Arithmetic between amounts of two different currencies.
     #[error("cannot combine {left} and {right} amounts")]
     CurrencyMismatch {
@@ -16,9 +27,9 @@ pub enum MoneyError {
         /// The currency of the right operand.
         right: Currency,
     },
-    /// An amount that is not a decimal number.
-    #[error("invalid amount: expected digits with an optional `.` and sign")]
-    InvalidAmount,
+    /// A currency code that is not an active ISO 4217 code.
+    #[error("unknown currency code")]
+    UnknownCurrency,
     /// An exchange rate that is not a positive decimal number with at most 18
     /// decimal places.
     #[error("invalid exchange rate: expected a positive number with at most 18 decimal places")]
@@ -34,27 +45,22 @@ pub enum MoneyError {
     /// A number or a result that does not fit its range.
     #[error("value out of range")]
     Overflow,
-    /// An amount with more decimal places than its currency has.
-    #[error("{currency} amounts have at most {allowed} decimal places")]
-    TooManyDecimals {
-        /// The currency's number of decimal places.
-        allowed: u8,
-        /// The currency of the amount.
-        currency: Currency,
-    },
-    /// A currency code that is not an active ISO 4217 code.
-    #[error("unknown currency code")]
-    UnknownCurrency,
 }
 
 /// Builds a value from a [`MoneyError`], one method per failure, each
 /// given what its variant holds and the error's message.
 pub trait FromMoneyError: Sized {
-    /// The value for [`MoneyError::CurrencyMismatch`].
-    fn currency_mismatch(left: Currency, message: String, right: Currency) -> Self;
-
     /// The value for [`MoneyError::InvalidAmount`].
     fn invalid_amount(message: String) -> Self;
+
+    /// The value for [`MoneyError::TooManyDecimals`].
+    fn too_many_decimals(currency: Currency, allowed: u8, message: String) -> Self;
+
+    /// The value for [`MoneyError::CurrencyMismatch`].
+    fn currency_mismatch(left: Currency, right: Currency, message: String) -> Self;
+
+    /// The value for [`MoneyError::UnknownCurrency`].
+    fn unknown_currency(message: String) -> Self;
 
     /// The value for [`MoneyError::InvalidExchangeRate`].
     fn invalid_exchange_rate(message: String) -> Self;
@@ -68,30 +74,24 @@ pub trait FromMoneyError: Sized {
     /// The value for [`MoneyError::Overflow`].
     fn overflow(message: String) -> Self;
 
-    /// The value for [`MoneyError::TooManyDecimals`].
-    fn too_many_decimals(allowed: u8, currency: Currency, message: String) -> Self;
-
-    /// The value for [`MoneyError::UnknownCurrency`].
-    fn unknown_currency(message: String) -> Self;
-
     /// The value for `error`, from the method of its variant, given the error's
     /// message.
     #[must_use]
     fn from_money_error(error: &MoneyError) -> Self {
         let message = error.to_string();
         match error {
-            MoneyError::CurrencyMismatch { left, right } => {
-                Self::currency_mismatch(*left, message, *right)
-            }
             MoneyError::InvalidAmount => Self::invalid_amount(message),
+            MoneyError::TooManyDecimals { currency, allowed } => {
+                Self::too_many_decimals(*currency, *allowed, message)
+            }
+            MoneyError::CurrencyMismatch { left, right } => {
+                Self::currency_mismatch(*left, *right, message)
+            }
+            MoneyError::UnknownCurrency => Self::unknown_currency(message),
             MoneyError::InvalidExchangeRate => Self::invalid_exchange_rate(message),
             MoneyError::InvalidParts => Self::invalid_parts(message),
             MoneyError::InvalidPercentage => Self::invalid_percentage(message),
             MoneyError::Overflow => Self::overflow(message),
-            MoneyError::TooManyDecimals { allowed, currency } => {
-                Self::too_many_decimals(*allowed, *currency, message)
-            }
-            MoneyError::UnknownCurrency => Self::unknown_currency(message),
         }
     }
 }

@@ -10,21 +10,21 @@ public import Foundation
 /// ```swift
 /// do {
 ///     try group.remove(memberID)
-/// } catch .group(.memberInUse(let expenses, _, let transfers), _) {
+/// } catch .group(.memberInUse(_, let expenses, let transfers), _) {
 ///     // The member still has entries; archive them instead.
 /// } catch {
 ///     print(error.detail)
 /// }
 /// ```
 public enum EranosError: Error, Sendable, Hashable {
+    /// The library's `IdError`, with the message it words.
+    case id(IDFailure, detail: String)
+
     /// The library's `AccountError`, with the message it words.
     case account(AccountFailure, detail: String)
 
     /// The library's `CalendarError`, with the message it words.
     case calendar(CalendarFailure, detail: String)
-
-    /// The call was cancelled, by its task's cancellation, before it changed anything.
-    case cancelled(detail: String)
 
     /// The library's `CategoryError`, with the message it words.
     case category(CategoryFailure, detail: String)
@@ -32,14 +32,26 @@ public enum EranosError: Error, Sendable, Hashable {
     /// The library's `ContactError`, with the message it words.
     case contact(ContactFailure, detail: String)
 
+    /// The library's `MoneyError`, with the message it words.
+    case money(MoneyFailure, detail: String)
+
+    /// The library's `MemberError`, with the message it words.
+    case member(MemberFailure, detail: String)
+
     /// The library's `ExpenseError`, with the message it words.
     case expense(ExpenseFailure, detail: String)
+
+    /// The library's `SettlementError`, with the message it words.
+    case settlement(SettlementFailure, detail: String)
+
+    /// The library's `TransferError`, with the message it words.
+    case transfer(TransferFailure, detail: String)
 
     /// The library's `GroupError`, with the message it words.
     case group(GroupFailure, detail: String)
 
-    /// The library's `IdError`, with the message it words.
-    case id(IDFailure, detail: String)
+    /// The library's `LanguageError`, with the message it words.
+    case language(LanguageFailure, detail: String)
 
     /// An entry to add carried an identifier; the group gives a new entry its own.
     case identifierGiven(detail: String)
@@ -51,23 +63,11 @@ public enum EranosError: Error, Sendable, Hashable {
     /// the fault but never the text there, which can hold an account number.
     case invalidJSON(line: Int, column: Int, detail: String)
 
-    /// The library's `LanguageError`, with the message it words.
-    case language(LanguageFailure, detail: String)
-
-    /// The library's `MemberError`, with the message it words.
-    case member(MemberFailure, detail: String)
-
-    /// The library's `MoneyError`, with the message it words.
-    case money(MoneyFailure, detail: String)
+    /// The call was cancelled, by its task's cancellation, before it changed anything.
+    case cancelled(detail: String)
 
     /// The read handle was released, so it reads the group no more.
     case released(detail: String)
-
-    /// The library's `SettlementError`, with the message it words.
-    case settlement(SettlementFailure, detail: String)
-
-    /// The library's `TransferError`, with the message it words.
-    case transfer(TransferFailure, detail: String)
 
     /// A failure the library does not describe, such as a defect in the bindings.
     case unexpected(detail: String)
@@ -75,23 +75,23 @@ public enum EranosError: Error, Sendable, Hashable {
     /// What went wrong, as the library words it.
     public var detail: String {
         switch self {
-        case .account(_, let detail),
+        case .id(_, let detail),
+             .account(_, let detail),
              .calendar(_, let detail),
-             .cancelled(let detail),
              .category(_, let detail),
              .contact(_, let detail),
+             .money(_, let detail),
+             .member(_, let detail),
              .expense(_, let detail),
+             .settlement(_, let detail),
+             .transfer(_, let detail),
              .group(_, let detail),
-             .id(_, let detail),
+             .language(_, let detail),
              .identifierGiven(let detail),
              .identifierMissing(let detail),
              .invalidJSON(_, _, let detail),
-             .language(_, let detail),
-             .member(_, let detail),
-             .money(_, let detail),
+             .cancelled(let detail),
              .released(let detail),
-             .settlement(_, let detail),
-             .transfer(_, let detail),
              .unexpected(let detail):
             detail
         }
@@ -108,40 +108,40 @@ extension EranosError: LocalizedError {
 extension EranosError {
     init(_ error: EranosGenerated.EranosError) {
         switch error {
-        case let .Account(detail, failure):
-            self = .account(AccountFailure(failure), detail: detail)
-        case let .Calendar(detail, failure):
-            self = .calendar(CalendarFailure(failure), detail: detail)
-        case let .Category(detail, failure):
-            self = .category(CategoryFailure(failure), detail: detail)
-        case let .Contact(detail, failure):
-            self = .contact(ContactFailure(failure), detail: detail)
-        case let .Expense(detail, failure):
-            self = .expense(ExpenseFailure(failure), detail: detail)
-        case let .Group(detail, failure):
-            self = .group(GroupFailure(failure), detail: detail)
-        case let .Id(detail, failure):
+        case let .Id(failure, detail):
             self = .id(IDFailure(failure), detail: detail)
-        case let .Language(detail, failure):
-            self = .language(LanguageFailure(failure), detail: detail)
-        case let .Member(detail, failure):
-            self = .member(MemberFailure(failure), detail: detail)
-        case let .Money(detail, failure):
+        case let .Account(failure, detail):
+            self = .account(AccountFailure(failure), detail: detail)
+        case let .Calendar(failure, detail):
+            self = .calendar(CalendarFailure(failure), detail: detail)
+        case let .Category(failure, detail):
+            self = .category(CategoryFailure(failure), detail: detail)
+        case let .Contact(failure, detail):
+            self = .contact(ContactFailure(failure), detail: detail)
+        case let .Money(failure, detail):
             self = .money(MoneyFailure(failure), detail: detail)
-        case let .Settlement(detail, failure):
+        case let .Member(failure, detail):
+            self = .member(MemberFailure(failure), detail: detail)
+        case let .Expense(failure, detail):
+            self = .expense(ExpenseFailure(failure), detail: detail)
+        case let .Settlement(failure, detail):
             self = .settlement(SettlementFailure(failure), detail: detail)
-        case let .Transfer(detail, failure):
+        case let .Transfer(failure, detail):
             self = .transfer(TransferFailure(failure), detail: detail)
-        case let .Cancelled(detail):
-            self = .cancelled(detail: detail)
+        case let .Group(failure, detail):
+            self = .group(GroupFailure(failure), detail: detail)
+        case let .Language(failure, detail):
+            self = .language(LanguageFailure(failure), detail: detail)
         case let .IdentifierGiven(detail):
             self = .identifierGiven(detail: detail)
         case let .IdentifierMissing(detail):
             self = .identifierMissing(detail: detail)
+        case let .InvalidJson(line, column, detail):
+            self = .invalidJSON(line: Int(line), column: Int(column), detail: detail)
+        case let .Cancelled(detail):
+            self = .cancelled(detail: detail)
         case let .Released(detail):
             self = .released(detail: detail)
-        case let .InvalidJson(column, detail, line):
-            self = .invalidJSON(line: Int(line), column: Int(column), detail: detail)
         }
     }
 }

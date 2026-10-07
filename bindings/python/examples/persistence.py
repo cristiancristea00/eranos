@@ -25,7 +25,6 @@ from eranos import (
     SettlementStrategy,
     Summary,
     Tip,
-    TipDistribution,
     WholeExpenseSplit,
 )
 from examples.report import Row, names, print_lines, print_table, refusal, section, title, totals
@@ -38,14 +37,14 @@ class ComparisonRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Balance before saving', 'Balance after loading')
 
-    after: str
-    """The member's balance in the loaded group."""
+    name: str
+    """The member's first name."""
 
     before: str
     """The member's balance in the saved group."""
 
-    name: str
-    """The member's first name."""
+    after: str
+    """The member's balance in the loaded group."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -71,27 +70,27 @@ def balance(member: MemberId, summary: Summary) -> str:
 def main() -> None:
     """Print the report, checking its key numbers."""
     euro = Currency('EUR')
-    day = CalendarDate(23, 9, 2026)
-    group = Group.create(euro, 'Road trip')
+    day = CalendarDate(2026, 9, 23)
+    group = Group.create('Road trip', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     group.add_expense(
         Expense(
-            cost=LocalCost(Money.parse('70.00', euro)),
-            date=day,
             name='Fuel',
+            cost=LocalCost(Money.parse('70.00', euro)),
             payers=EqualSplit((ana,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob))),
+            date=day,
         )
     )
     group.add_expense(
         Expense(
-            cost=LocalCost(Money.parse('30.00', euro)),
-            date=day,
             name='Lunch',
+            cost=LocalCost(Money.parse('30.00', euro)),
             payers=EqualSplit((bob,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob))),
-            tip=Tip(distribution=TipDistribution.PROPORTIONAL, value=PercentageTip(Percentage.parse('10'))),
+            date=day,
+            tip=Tip(PercentageTip(Percentage.parse('10'))),
         )
     )
 
@@ -123,7 +122,7 @@ def main() -> None:
     after = loaded.summary()
     print_table(
         ComparisonRow,
-        [ComparisonRow(after=balance(member, after), before=balance(member, before), name=names(group, (member,))) for member in (ana, bob)],
+        [ComparisonRow(name=names(group, (member,)), before=balance(member, before), after=balance(member, after)) for member in (ana, bob)],
         1,
     )
     plan = loaded.settlement(SettlementStrategy.GREEDY)
@@ -131,12 +130,13 @@ def main() -> None:
 
     section('3. A corrupted file is refused')
     print_lines(
-        "Here the fuel's payer was edited to an identifier no member has. Reading the file",
-        'as a SavedGroup and loading it with into_group replays every entry through the',
-        'same checks as adding it, and refuses the file instead of producing balances that',
-        'do not add up:',
+        "Here Ana's identifier was edited in her member entry, so the fuel's payer is an",
+        'identifier no member has. Reading the file as a SavedGroup and loading it with',
+        'into_group replays every entry through the same checks as adding it, and refuses',
+        'the file instead of producing balances that do not add up:',
     )
-    # The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
+    # Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel
+    # she paid is left naming an identifier no member has.
     corrupted = saved.replace(ana, '0199a000-0000-7000-8000-00000000ffff', count=1)
     refused = refusal(lambda: Group.load(corrupted))
     assert refused is not None, 'the file must be refused'

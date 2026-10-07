@@ -8,15 +8,15 @@ use crate::MoneyFailure;
 
 fn euros(minor_units: i64) -> Money {
     Money {
-        currency: "EUR".to_owned(),
         minor_units,
+        currency: "EUR".to_owned(),
     }
 }
 
 fn unknown() -> Money {
     Money {
-        currency: "XYZ".to_owned(),
         minor_units: 1,
+        currency: "XYZ".to_owned(),
     }
 }
 
@@ -43,8 +43,8 @@ fn amounts_convert_both_ways_and_refuse_unknown_currencies() {
 fn costs_convert_both_ways_and_refuse_bad_parts() {
     let converted = Cost::Converted {
         amount: Money {
-            currency: "RON".to_owned(),
             minor_units: 5_000,
+            currency: "RON".to_owned(),
         },
         rate: "0.2".to_owned(),
     };
@@ -123,9 +123,9 @@ fn rates_and_currency_details_convert() {
         CurrencyDetails::from_library(library::Currency::EUR),
         CurrencyDetails {
             code: "EUR".to_owned(),
-            decimal_places: 2,
             name: "Euro".to_owned(),
             numeric_code: 978,
+            decimal_places: 2,
         }
     );
 }

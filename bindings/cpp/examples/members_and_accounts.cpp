@@ -31,14 +31,14 @@ struct MemberRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Member", "Email", "Phone", "Accounts"};
 
-    /// Their accounts, one per line.
-    std::string accounts;
-    /// Their email, or nothing.
-    std::string email;
     /// Their first and last name.
     std::string name;
+    /// Their email, or nothing.
+    std::string email;
     /// Their phone number, or nothing.
     std::string phone;
+    /// Their accounts, one per line.
+    std::string accounts;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -69,14 +69,14 @@ struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Member", "Status", "Consumed", "Balance"};
 
-    /// What is left: what they paid minus what they consumed.
-    std::string balance;
-    /// What they consumed.
-    std::string consumed;
     /// Their first name.
     std::string name;
     /// Whether they are active or archived.
     std::string_view status;
+    /// What they consumed.
+    std::string consumed;
+    /// What is left: what they paid minus what they consumed.
+    std::string balance;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -113,10 +113,10 @@ void printMembers(Group const &group) {
             accounts.push_back(describe(account));
         }
         rows.push_back({
-            .accounts = cell(accounts),
-            .email = member.email.has_value() ? member.email->toString() : "",
             .name = member.lastName.has_value() ? std::format("{} {}", member.firstName, *member.lastName) : member.firstName,
+            .email = member.email.has_value() ? member.email->toString() : "",
             .phone = member.phone.has_value() ? member.phone->international() : "",
+            .accounts = cell(accounts),
         });
     }
     printTable(rows, 4);
@@ -129,10 +129,10 @@ void printBalances(Group const &group) {
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
         rows.push_back({
-            .balance = toString(found.balance),
-            .consumed = found.share.toString(),
             .name = member.firstName,
             .status = must(group.isArchived(member.id.value())) ? "archived" : "active",
+            .consumed = found.share.toString(),
+            .balance = toString(found.balance),
         });
     }
     printTable(rows, 2);
@@ -143,8 +143,8 @@ void printBalances(Group const &group) {
     section("1. Members");
     Member first("Ana");
     first.accounts = {
-        Account(IbanAccountDetails{must(Iban::parse("ro49 aaaa 1b31 0075 9384 0000"))}, "ING"),
-        Account(UsernameAccountDetails{must(Username::parse("@ana"))}, "Revolut"),
+        Account("ING", IbanAccountDetails{must(Iban::parse("ro49 aaaa 1b31 0075 9384 0000"))}),
+        Account("Revolut", UsernameAccountDetails{must(Username::parse("@ana"))}),
     };
     first.email = must(Email::parse("ana@example.com"));
     first.lastName = "Popescu";
@@ -201,14 +201,14 @@ void movingOut(Group &group, Flatmates const &flatmates) {
     section("3. A flatmate moves out");
     WholeExpenseSplit const both{EqualSplit{{flatmates.ana, flatmates.bob}}};
     auto const rent =
-        must(group.addExpense(Expense(LocalCost{euros("900.00")}, must(CalendarDate::of(1, 9, 2026)), "Rent", EqualSplit{{flatmates.ana}}, both)));
+        must(group.addExpense(Expense("Rent", LocalCost{euros("900.00")}, EqualSplit{{flatmates.ana}}, both, must(CalendarDate::of(2026, 9, 1)))));
     must(group.archiveMember(flatmates.bob));
     printLine("Bob shared September's rent, then moved out. He is archived, not removed: his\n"
               "history and his balance stay, and he can still pay Ana back.");
     printBalances(group);
 
     auto const refused = refusal(
-        group.addExpense(Expense(LocalCost{euros("60.00")}, must(CalendarDate::of(1, 10, 2026)), "Utilities", EqualSplit{{flatmates.ana}}, both)));
+        group.addExpense(Expense("Utilities", LocalCost{euros("60.00")}, EqualSplit{{flatmates.ana}}, both, must(CalendarDate::of(2026, 10, 1)))));
     check(refused.has_value(), "the archived member is refused");
     std::println("October's utilities cannot include him:\n  error: {}", message(refused));
     auto const removal = refusal(group.removeMember(flatmates.bob));
@@ -223,7 +223,7 @@ void movingOut(Group &group, Flatmates const &flatmates) {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create(must(Currency::of("EUR")), "Flat 4B"));
+    auto group = must(Group::create("Flat 4B", must(Currency::of("EUR"))));
     printLine("Flat 4B: members and their accounts\n"
               "═══════════════════════════════════");
     printLine("Ana and Bob share a flat. A member needs only a first name; the last name,\n"

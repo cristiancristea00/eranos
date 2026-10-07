@@ -8,7 +8,7 @@ internal import EranosGenerated
 /// so a task never blocks a thread of the pool:
 ///
 /// ```swift
-/// let group = try Group(currency: Currency(code: "EUR"), name: "Flat")
+/// let group = try Group(name: "Flat", currency: Currency(code: "EUR"))
 /// let ana = try group.add(Member(firstName: "Ana"))   // synchronous code
 /// let bob = try await group.add(Member(firstName: "Bob"))   // asynchronous code
 /// ```
@@ -24,8 +24,8 @@ public final class Group: Sendable {
     /// A new group with no members and no entries.
     ///
     /// - Throws: ``EranosError/group(_:detail:)`` with ``GroupFailure/emptyName`` for a blank name.
-    public init(currency: Currency, name: String, description: String? = nil, language: Language? = nil) throws(EranosError) {
-        let group = NewGroup(currency: currency.code, name: name, description: description, language: language?.description)
+    public init(name: String, currency: Currency, description: String? = nil, language: Language? = nil) throws(EranosError) {
+        let group = NewGroup(name: name, currency: currency.code, description: description, language: language?.description)
         handle = try converting { try EranosGenerated.Group(group: group) }
     }
 

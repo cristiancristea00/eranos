@@ -27,27 +27,27 @@ class GroupTest {
         val flat = Flat()
         val group = flat.group
         assertTrue(group.idBlocking().value.isNotEmpty())
-        val categories = group.categoriesBlocking()
-        assertEquals(listOf("Uncategorised", "Food"), categories.map { it.name })
-        assertEquals(categories[1], group.categoryBlocking(flat.food))
+        assertEquals("Flat", group.nameBlocking())
         assertEquals(flat.euro, group.currencyBlocking())
-        val expenses = group.expensesBlocking()
-        assertEquals(listOf("Dinner"), expenses.map { it.name })
-        assertEquals(expenses[0], group.expenseBlocking(flat.dinner))
-        assertEquals(flat.euros(3_000), present(group.expenseSharesBlocking(flat.dinner)).total)
-        assertEquals(flat.euros(3_000), group.summaryBlocking().totalSpent)
+        assertEquals("Rent", group.descriptionBlocking())
+        assertEquals("pt-PT", group.languageBlocking().toString())
         val members = group.membersBlocking()
         assertEquals(listOf("Ana", "Bob"), members.map { it.firstName })
         assertEquals(members[0], group.memberBlocking(flat.ana))
         assertFalse(group.isArchivedBlocking(flat.ana))
-        assertEquals("Flat", group.nameBlocking())
-        assertEquals("Rent", group.descriptionBlocking())
-        assertEquals("pt-PT", group.languageBlocking().toString())
-        assertEquals(listOf(flat.euros(500)), group.settlementBlocking(SettlementStrategy.GREEDY).payments.map { it.amount })
+        val categories = group.categoriesBlocking()
+        assertEquals(listOf("Uncategorised", "Food"), categories.map { it.name })
+        assertEquals(categories[1], group.categoryBlocking(flat.food))
+        val expenses = group.expensesBlocking()
+        assertEquals(listOf("Dinner"), expenses.map { it.name })
+        assertEquals(expenses[0], group.expenseBlocking(flat.dinner))
+        assertEquals(flat.euros(3_000), present(group.expenseSharesBlocking(flat.dinner)).total)
         val transfers = group.transfersBlocking()
         assertEquals(1, transfers.size)
         assertEquals(transfers[0], group.transferBlocking(flat.repayment))
         assertEquals(flat.euros(1_000), group.transferAmountBlocking(flat.repayment))
+        assertEquals(flat.euros(3_000), group.summaryBlocking().totalSpent)
+        assertEquals(listOf(flat.euros(500)), group.settlementBlocking(SettlementStrategy.GREEDY).payments.map { it.amount })
         val json = group.saveBlocking()
         assertEquals(json, Group.loadBlocking(json).saveBlocking())
         val invalid = assertThrows<EranosException.Id> { group.memberBlocking(MemberId("nobody")) }
@@ -65,25 +65,25 @@ class GroupTest {
             val flat = Flat()
             val group = flat.group
             assertEquals(group.idBlocking(), group.id())
-            assertEquals(group.categoriesBlocking(), group.categories())
-            assertEquals(group.categoryBlocking(flat.food), group.category(flat.food))
+            assertEquals(group.nameBlocking(), group.name())
             assertEquals(group.currencyBlocking(), group.currency())
-            assertEquals(group.expensesBlocking(), group.expenses())
-            assertEquals(group.expenseBlocking(flat.dinner), group.expense(flat.dinner))
-            assertEquals(group.expenseSharesBlocking(flat.dinner), group.expenseShares(flat.dinner))
-            assertEquals(group.summaryBlocking(), group.summary())
+            assertEquals(group.descriptionBlocking(), group.description())
+            assertEquals(group.languageBlocking(), group.language())
             assertEquals(group.membersBlocking(), group.members())
             assertEquals(group.memberBlocking(flat.bob), group.member(flat.bob))
             assertEquals(group.isArchivedBlocking(flat.bob), group.isArchived(flat.bob))
-            assertEquals(group.nameBlocking(), group.name())
-            assertEquals(group.descriptionBlocking(), group.description())
-            assertEquals(group.languageBlocking(), group.language())
-            for (strategy in SettlementStrategy.entries) {
-                assertEquals(group.settlementBlocking(strategy), group.settlement(strategy))
-            }
+            assertEquals(group.categoriesBlocking(), group.categories())
+            assertEquals(group.categoryBlocking(flat.food), group.category(flat.food))
+            assertEquals(group.expensesBlocking(), group.expenses())
+            assertEquals(group.expenseBlocking(flat.dinner), group.expense(flat.dinner))
+            assertEquals(group.expenseSharesBlocking(flat.dinner), group.expenseShares(flat.dinner))
             assertEquals(group.transfersBlocking(), group.transfers())
             assertEquals(group.transferBlocking(flat.repayment), group.transfer(flat.repayment))
             assertEquals(group.transferAmountBlocking(flat.repayment), group.transferAmount(flat.repayment))
+            assertEquals(group.summaryBlocking(), group.summary())
+            for (strategy in SettlementStrategy.entries) {
+                assertEquals(group.settlementBlocking(strategy), group.settlement(strategy))
+            }
             val json = group.save()
             assertEquals(group.saveBlocking(), json)
             assertEquals(json, Group.load(json).save())
@@ -118,7 +118,7 @@ class GroupTest {
                 assertNull(reader.transfer(stranger.repayment))
                 assertNull(reader.transferAmount(stranger.repayment))
             }
-            assertNull(Group(flat.euro, "Trip").withRead { it.language() })
+            assertNull(Group("Trip", flat.euro).withRead { it.language() })
         }
 
     /** A blocking change that did not take effect, or took another, would leave the group other than the app changed it. */
@@ -137,7 +137,7 @@ class GroupTest {
         assertFalse(group.isArchivedBlocking(carol))
         assertEquals(renamed, group.removeBlocking(carol))
         val inUse = assertThrows<EranosException.Group> { group.removeBlocking(flat.ana) }
-        assertEquals(GroupFailure.MemberInUse(listOf(flat.dinner), flat.ana, listOf(flat.repayment)), inUse.failure)
+        assertEquals(GroupFailure.MemberInUse(flat.ana, listOf(flat.dinner), listOf(flat.repayment)), inUse.failure)
 
         val travel = group.addBlocking(Category("Travel"))
         val stored = present(group.categoryBlocking(travel))
@@ -149,21 +149,21 @@ class GroupTest {
         assertEquals("Lunch", group.replaceBlocking(stored2.copy(name = "Brunch")).name)
         assertEquals("Brunch", group.removeBlocking(lunch).name)
 
-        val cash = group.addBlocking(Transfer(Cost.Local(flat.euros(100)), flat.day, flat.ana, flat.bob))
+        val cash = group.addBlocking(Transfer(flat.ana, flat.bob, Cost.Local(flat.euros(100)), flat.day))
         val stored3 = present(group.transferBlocking(cash))
         assertEquals(null, group.replaceBlocking(stored3.copy(note = "Cash")).note)
         assertEquals("Cash", group.removeBlocking(cash).note)
 
         group.renameBlocking("Home")
+        val lei = Currency.of("RON")
+        group.changeCurrencyBlocking(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
         group.setDescriptionBlocking(null)
         group.setLanguageBlocking(null)
         assertEquals("Home", group.nameBlocking())
+        assertEquals(lei, group.currencyBlocking())
+        assertEquals(Money(15_000, lei), group.summaryBlocking().totalSpent)
         assertNull(group.descriptionBlocking())
         assertNull(group.languageBlocking())
-        val lei = Currency.of("RON")
-        group.changeCurrencyBlocking(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
-        assertEquals(lei, group.currencyBlocking())
-        assertEquals(Money(lei, 15_000), group.summaryBlocking().totalSpent)
     }
 
     /**
@@ -192,19 +192,19 @@ class GroupTest {
             assertEquals("Lunch", group.replace(present(group.expense(lunch)).copy(name = "Brunch")).name)
             assertEquals("Brunch", group.remove(lunch).name)
 
-            val cash = group.add(Transfer(Cost.Local(flat.euros(100)), flat.day, flat.ana, flat.bob))
+            val cash = group.add(Transfer(flat.ana, flat.bob, Cost.Local(flat.euros(100)), flat.day))
             assertNull(group.replace(present(group.transfer(cash)).copy(note = "Cash")).note)
             assertEquals("Cash", group.remove(cash).note)
 
             group.rename("Home")
+            val lei = Currency.of("RON")
+            group.changeCurrency(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
             group.setDescription("Shared flat")
             group.setLanguage(Language.parse("ro"))
             assertEquals("Home", group.name())
+            assertEquals(lei, group.currency())
             assertEquals("Shared flat", group.description())
             assertEquals("ro", group.language().toString())
-            val lei = Currency.of("RON")
-            group.changeCurrency(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
-            assertEquals(lei, group.currency())
         }
 
     /**
@@ -215,10 +215,10 @@ class GroupTest {
     fun aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() =
         runTest {
             val euro = Currency.of("EUR")
-            val plain = Group(euro, "Trip")
+            val plain = Group("Trip", euro)
             assertNull(plain.description())
             assertNull(plain.language())
-            val blank = assertThrows<EranosException.Group> { Group(euro, " ") }
+            val blank = assertThrows<EranosException.Group> { Group(" ", euro) }
             assertEquals(GroupFailure.EmptyName, blank.failure)
             assertEquals("the group name must not be empty", blank.message)
             val json = assertThrows<EranosException.InvalidJson> { Group.loadBlocking("{") }
@@ -238,24 +238,24 @@ class GroupTest {
         val group = flat.group
         val reader = group.readBlocking()
         assertEquals(group.idBlocking(), reader.id())
-        assertEquals(group.categoriesBlocking(), reader.categories())
-        assertEquals(group.categoryBlocking(flat.food), reader.category(flat.food))
+        assertEquals("Flat", reader.name())
         assertEquals(flat.euro, reader.currency())
-        assertEquals(group.expensesBlocking(), reader.expenses())
-        assertEquals(group.expenseBlocking(flat.dinner), reader.expense(flat.dinner))
-        assertEquals(group.expenseSharesBlocking(flat.dinner), reader.expenseShares(flat.dinner))
-        assertEquals(group.summaryBlocking(), reader.summary())
+        assertEquals("Rent", reader.description())
+        assertEquals("pt-PT", reader.language().toString())
+        assertEquals(group.saveBlocking(), reader.save())
         assertEquals(group.membersBlocking(), reader.members())
         assertEquals(group.memberBlocking(flat.ana), reader.member(flat.ana))
         assertFalse(reader.isArchived(flat.ana))
-        assertEquals("Flat", reader.name())
-        assertEquals("Rent", reader.description())
-        assertEquals("pt-PT", reader.language().toString())
-        assertEquals(group.settlementBlocking(SettlementStrategy.GREEDY), reader.settlement(SettlementStrategy.GREEDY))
+        assertEquals(group.categoriesBlocking(), reader.categories())
+        assertEquals(group.categoryBlocking(flat.food), reader.category(flat.food))
+        assertEquals(group.expensesBlocking(), reader.expenses())
+        assertEquals(group.expenseBlocking(flat.dinner), reader.expense(flat.dinner))
+        assertEquals(group.expenseSharesBlocking(flat.dinner), reader.expenseShares(flat.dinner))
         assertEquals(group.transfersBlocking(), reader.transfers())
         assertEquals(group.transferBlocking(flat.repayment), reader.transfer(flat.repayment))
         assertEquals(flat.euros(1_000), reader.transferAmount(flat.repayment))
-        assertEquals(group.saveBlocking(), reader.save())
+        assertEquals(group.summaryBlocking(), reader.summary())
+        assertEquals(group.settlementBlocking(SettlementStrategy.GREEDY), reader.settlement(SettlementStrategy.GREEDY))
         reader.close()
         reader.close()
         val released = assertThrows<IllegalStateException> { reader.name() }
@@ -311,7 +311,7 @@ class GroupTest {
      */
     @Test
     fun aClosedGroupAnswersNoMore() {
-        val group = Group(Currency.of("EUR"), "Trip")
+        val group = Group("Trip", Currency.of("EUR"))
         group.close()
         group.close()
         assertThrows<IllegalStateException> { group.nameBlocking() }

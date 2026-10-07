@@ -7,34 +7,34 @@ import java.util.Objects;
  * {@code split} divides.
  *
  * @param name what was bought
- * @param split how the line's total divides
  * @param unitPrice the price of one unit, in the expense's currency
+ * @param split how the line's total divides
  * @param quantity how many units, from 1
  */
-public record Item(String name, Split split, Money unitPrice, int quantity) {
+public record Item(String name, Money unitPrice, Split split, int quantity) {
     /**
      * The line of {@code quantity} units.
      *
      * @param name what was bought
-     * @param split how the line's total divides
      * @param unitPrice the price of one unit, in the expense's currency
+     * @param split how the line's total divides
      * @param quantity how many units, from 1
      */
     public Item {
         Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(split, "split");
         Objects.requireNonNull(unitPrice, "unitPrice");
+        Objects.requireNonNull(split, "split");
     }
 
     /**
      * The line of one unit.
      *
      * @param name what was bought
-     * @param split how the line's total divides
      * @param unitPrice the price of the unit, in the expense's currency
+     * @param split how the line's total divides
      */
-    public Item(String name, Split split, Money unitPrice) {
-        this(name, split, unitPrice, 1);
+    public Item(String name, Money unitPrice, Split split) {
+        this(name, unitPrice, split, 1);
     }
 
     /**
@@ -46,8 +46,8 @@ public record Item(String name, Split split, Money unitPrice, int quantity) {
     static Item converted(eranos.internal.Item item) {
         return new Item(
                 item.name(),
-                Conversions.converted(item.split()),
                 Money.converted(item.unitPrice()),
+                Conversions.converted(item.split()),
                 item.quantity());
     }
 
@@ -58,6 +58,6 @@ public record Item(String name, Split split, Money unitPrice, int quantity) {
      */
     eranos.internal.Item generated() {
         return new eranos.internal.Item(
-                name, Conversions.generated(split), unitPrice.generated(), quantity);
+                name, unitPrice.generated(), Conversions.generated(split), quantity);
     }
 }

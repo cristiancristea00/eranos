@@ -26,7 +26,7 @@ use proptest::prelude::*;
 const MEMBERS: usize = 6;
 
 fn day() -> CalendarDate {
-    CalendarDate::new(23, 9, 2026).unwrap()
+    CalendarDate::new(2026, 9, 23).unwrap()
 }
 
 /// A member of a split, by its index among the group's members, and the
@@ -40,8 +40,8 @@ struct MemberRecipe {
 /// How one amount is divided: a method and weighted members.
 #[derive(Debug, Clone)]
 struct SplitRecipe {
-    members: Vec<MemberRecipe>,
     method: u8,
+    members: Vec<MemberRecipe>,
 }
 
 fn split_recipe() -> impl Strategy<Value = SplitRecipe> {
@@ -52,7 +52,7 @@ fn split_recipe() -> impl Strategy<Value = SplitRecipe> {
             1..5,
         ),
     )
-        .prop_map(|(method, members)| SplitRecipe { members, method })
+        .prop_map(|(method, members)| SplitRecipe { method, members })
 }
 
 /// A member of a split and the weight it takes.
@@ -112,8 +112,8 @@ impl SplitRecipe {
             _ => positive_parts(total.minor_units(), &weights).map_or(equal, |amounts| {
                 Split::amounts(chosen.iter().zip(amounts).map(|(weighted, amount)| {
                     MemberAmount::new(
-                        Money::from_minor_units(total.currency(), amount),
                         weighted.member,
+                        Money::from_minor_units(amount, total.currency()),
                     )
                 }))
             }),
@@ -141,17 +141,17 @@ impl ForeignRecipe {
 #[derive(Debug, Clone)]
 struct ItemRecipe {
     price: i64,
-    quantity: u32,
     split: SplitRecipe,
+    quantity: u32,
 }
 
 /// A tip: fixed in minor units or a percentage in basis points, and shared
 /// equally or in proportion.
 #[derive(Debug, Clone, Copy)]
 struct TipRecipe {
-    equal: bool,
     fixed: bool,
     value: u32,
+    equal: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -159,9 +159,9 @@ struct ExpenseRecipe {
     amount: i64,
     payers: SplitRecipe,
     split: SplitRecipe,
-    foreign: Option<ForeignRecipe>,
     items: Option<Vec<ItemRecipe>>,
     tip: Option<TipRecipe>,
+    foreign: Option<ForeignRecipe>,
 }
 
 fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
@@ -173,8 +173,8 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
                 (1_i64..20_000, 1_u32..4, split_recipe()).prop_map(|(price, quantity, split)| {
                     ItemRecipe {
                         price,
-                        quantity,
                         split,
+                        quantity,
                     }
                 }),
                 1..4,
@@ -184,9 +184,9 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
         split_recipe(),
         proptest::option::of((any::<bool>(), 0_u32..3_000, any::<bool>()).prop_map(
             |(fixed, value, equal)| TipRecipe {
-                equal,
                 fixed,
                 value,
+                equal,
             },
         )),
         proptest::option::weighted(
@@ -205,9 +205,9 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
                 amount,
                 payers,
                 split,
-                foreign,
                 items,
                 tip,
+                foreign,
             },
         )
 }
@@ -218,12 +218,12 @@ impl ExpenseRecipe {
             .foreign
             .map_or(Currency::EUR, |foreign| foreign.currency);
         let rate = self.foreign.map(ForeignRecipe::rate);
-        let money = |minor_units| Money::from_minor_units(currency, minor_units);
+        let money = |minor_units| Money::from_minor_units(minor_units, currency);
         let cost = |amount: Money| rate.map_or_else(|| Cost::from(amount), |rate| amount.at(rate));
         let whole = || {
             let amount = money(self.amount);
             let split = self.split.build(members, amount);
-            Expense::builder(cost(amount), day(), "Whole", members[0], split)
+            Expense::builder("Whole", cost(amount), members[0], split, day())
         };
         let itemised = |items: &Vec<ItemRecipe>| {
             let items: Vec<Item> = items
@@ -232,8 +232,8 @@ impl ExpenseRecipe {
                     let line = money(item.price * i64::from(item.quantity));
                     Item::builder_with_split(
                         "Item",
-                        item.split.build(members, line),
                         money(item.price),
+                        item.split.build(members, line),
                     )
                     .quantity(item.quantity)
                     .build()
@@ -244,7 +244,7 @@ impl ExpenseRecipe {
                 .iter()
                 .map(|item| item.line_total().minor_units())
                 .sum();
-            Expense::itemised_builder(cost(money(amount)), day(), items, "Itemised", members[0])
+            Expense::itemised_builder("Itemised", cost(money(amount)), members[0], items, day())
         };
         let mut builder = self.items.as_ref().map_or_else(whole, itemised);
         if let Some(recipe) = self.tip {
@@ -274,9 +274,9 @@ impl ExpenseRecipe {
 /// indices among the group's members.
 #[derive(Debug, Clone, Copy)]
 struct TransferRecipe {
-    amount: i64,
     from: usize,
     to: usize,
+    amount: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -290,7 +290,7 @@ fn group_recipe() -> impl Strategy<Value = GroupRecipe> {
         proptest::collection::vec(expense_recipe(), 0..12),
         proptest::collection::vec(
             (0..MEMBERS, 0..MEMBERS, 1_i64..100_000)
-                .prop_map(|(from, to, amount)| TransferRecipe { amount, from, to }),
+                .prop_map(|(from, to, amount)| TransferRecipe { from, to, amount }),
             0..6,
         ),
     )
@@ -303,8 +303,8 @@ fn group_recipe() -> impl Strategy<Value = GroupRecipe> {
 /// The members of a recipe, and its entries built once, so the same
 /// entries, with the same identifiers, can go into several groups.
 struct Entries {
-    expenses: Vec<Expense>,
     members: Vec<Member>,
+    expenses: Vec<Expense>,
     transfers: Vec<Transfer>,
 }
 
@@ -325,25 +325,25 @@ fn entries(recipe: &GroupRecipe) -> Entries {
         .filter(|transfer| transfer.from != transfer.to)
         .map(|transfer| {
             Transfer::builder(
-                Money::from_minor_units(Currency::EUR, transfer.amount),
-                day(),
                 ids[transfer.from],
                 ids[transfer.to],
+                Money::from_minor_units(transfer.amount, Currency::EUR),
+                day(),
             )
             .build()
             .unwrap()
         })
         .collect();
     Entries {
-        expenses,
         members,
+        expenses,
         transfers,
     }
 }
 
 /// A group of `members` without entries; clones of it share its identifier.
 fn base(members: &[Member]) -> Group {
-    let mut group = Group::builder(Currency::EUR, "Random").build().unwrap();
+    let mut group = Group::builder("Random", Currency::EUR).build().unwrap();
     for member in members {
         group.add_member(member.clone()).unwrap();
     }
@@ -371,7 +371,7 @@ proptest! {
     /// zero, and category totals add up to spending.
     #[test]
     fn the_books_balance(recipe in group_recipe()) {
-        let Entries { expenses, members, transfers } = entries(&recipe);
+        let Entries { members, expenses, transfers } = entries(&recipe);
         let group = group(&base(&members), &expenses, &transfers);
         let summary = group.summary();
         let total = |values: Vec<Money>| values.iter().map(|value| i128::from(value.minor_units())).sum::<i128>();
@@ -391,7 +391,7 @@ proptest! {
     /// adaptive plan of these six members is the fewest-payments plan.
     #[test]
     fn every_plan_clears_every_balance(recipe in group_recipe()) {
-        let Entries { expenses, members, transfers } = entries(&recipe);
+        let Entries { members, expenses, transfers } = entries(&recipe);
         let group = group(&base(&members), &expenses, &transfers);
         let open = group.summary().members().filter(|member| !member.net().is_zero()).count();
         let minimum = group.settlement(SettlementStrategy::MinimumTransfers).unwrap();
@@ -415,7 +415,7 @@ proptest! {
     /// the caller's thread.
     #[test]
     fn an_awaited_plan_equals_a_computed_one(recipe in group_recipe()) {
-        let Entries { expenses, members, transfers } = entries(&recipe);
+        let Entries { members, expenses, transfers } = entries(&recipe);
         let group = group(&base(&members), &expenses, &transfers);
         for strategy in SettlementStrategy::all() {
             // A copy, so each call computes its plan instead of reading the other's.
@@ -428,7 +428,7 @@ proptest! {
     /// than the one made on the caller's thread.
     #[test]
     fn an_awaited_currency_change_equals_a_computed_one(recipe in group_recipe()) {
-        let Entries { expenses, members, transfers } = entries(&recipe);
+        let Entries { members, expenses, transfers } = entries(&recipe);
         let mut computed = group(&base(&members), &expenses, &transfers);
         let mut awaited = computed.clone();
         let rate = |text| ExchangeRate::parse(text).unwrap();
@@ -450,7 +450,7 @@ proptest! {
     /// and plans, so two devices that received them differently agree.
     #[test]
     fn the_order_of_entries_does_not_matter(recipe in group_recipe()) {
-        let Entries { mut expenses, members, mut transfers } = entries(&recipe);
+        let Entries { members, mut expenses, mut transfers } = entries(&recipe);
         let base = base(&members);
         let forward = group(&base, &expenses, &transfers);
         expenses.reverse();
@@ -467,7 +467,7 @@ proptest! {
     /// carries, restores the exact same totals.
     #[test]
     fn removing_and_adding_back_restores_the_totals(recipe in group_recipe()) {
-        let Entries { expenses, members, transfers } = entries(&recipe);
+        let Entries { members, expenses, transfers } = entries(&recipe);
         let mut group = group(&base(&members), &expenses, &transfers);
         let summary = group.summary().clone();
         let ids: Vec<ExpenseId> = group.expenses().map(Expense::id).collect();

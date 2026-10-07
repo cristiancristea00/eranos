@@ -5,19 +5,19 @@ import java.util.Objects;
 /**
  * A place to send a member money, with a label: "Main account".
  *
- * @param details the IBAN or the username
  * @param name the label
+ * @param details the IBAN or the username
  */
-public record Account(AccountDetails details, String name) {
+public record Account(String name, AccountDetails details) {
     /**
      * The account at {@code details}, labelled {@code name}.
      *
-     * @param details the IBAN or the username
      * @param name the label
+     * @param details the IBAN or the username
      */
     public Account {
-        Objects.requireNonNull(details, "details");
         Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(details, "details");
     }
 
     /**
@@ -27,7 +27,7 @@ public record Account(AccountDetails details, String name) {
      * @return the account
      */
     static Account converted(eranos.internal.Account account) {
-        return new Account(Conversions.converted(account.details()), account.name());
+        return new Account(account.name(), Conversions.converted(account.details()));
     }
 
     /**
@@ -36,6 +36,6 @@ public record Account(AccountDetails details, String name) {
      * @return the generated account
      */
     eranos.internal.Account generated() {
-        return new eranos.internal.Account(Conversions.generated(details), name);
+        return new eranos.internal.Account(name, Conversions.generated(details));
     }
 }

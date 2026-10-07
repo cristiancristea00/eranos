@@ -23,10 +23,10 @@ import { type Columns, load, printLines, printTable, refusal, section, totals } 
 
 /** A member with their contact and account details, as the table of members prints them. */
 interface MemberRow {
-    readonly accounts: string;
-    readonly email: string;
     readonly name: string;
+    readonly email: string;
     readonly phone: string;
+    readonly accounts: string;
 }
 
 const memberColumns: Columns<MemberRow> = [
@@ -51,10 +51,10 @@ const checkColumns: Columns<CheckRow> = [
 
 /** A member's status and totals, as the table of balances prints them. */
 interface BalanceRow {
-    readonly balance: Balance;
-    readonly consumed: Money;
     readonly name: string;
     readonly status: string;
+    readonly consumed: Money;
+    readonly balance: Balance;
 }
 
 const balanceColumns: Columns<BalanceRow> = [
@@ -89,10 +89,10 @@ function printMembers(group: Group): void {
     printTable(
         memberColumns,
         group.membersSync().map((member) => ({
-            accounts: (member.accounts ?? []).map(describe).join('\n'),
-            email: member.email?.toString() ?? '',
             name: [member.firstName, member.lastName].filter((name) => undefined !== name).join(' '),
+            email: member.email?.toString() ?? '',
             phone: member.phone?.toString() ?? '',
+            accounts: (member.accounts ?? []).map(describe).join('\n'),
         })),
         4,
     );
@@ -108,10 +108,10 @@ function printBalances(group: Group): void {
                 ? []
                 : [
                       {
-                          balance: found.balance,
-                          consumed: found.share,
                           name: member.firstName,
                           status: group.isArchivedSync(member.id) ? 'archived' : 'active',
+                          consumed: found.share,
+                          balance: found.balance,
                       },
                   ];
         }),
@@ -123,13 +123,13 @@ function members(group: Group): Flatmates {
     section('1. Members');
     const ana = group.addMemberSync({
         firstName: 'Ana',
-        accounts: [
-            { details: { kind: 'iban', iban: Iban.parse('ro49 aaaa 1b31 0075 9384 0000') }, name: 'ING' },
-            { details: { kind: 'username', username: Username.parse('@ana') }, name: 'Revolut' },
-        ],
-        email: Email.parse('ana@example.com'),
         lastName: 'Popescu',
+        email: Email.parse('ana@example.com'),
         phone: PhoneNumber.parse('+40 712 345 678'),
+        accounts: [
+            { name: 'ING', details: { kind: 'iban', iban: Iban.parse('ro49 aaaa 1b31 0075 9384 0000') } },
+            { name: 'Revolut', details: { kind: 'username', username: Username.parse('@ana') } },
+        ],
     });
     const bob = group.addMemberSync({ firstName: 'Bob' });
     printMembers(group);
@@ -184,11 +184,11 @@ function movingOut(group: Group, flatmates: Flatmates): void {
     const euro = Currency.of('EUR');
     const both: Split = { kind: 'equal', members: [ana, bob] };
     const rent = group.addExpenseSync({
-        cost: { kind: 'local', amount: Money.parse('900.00', euro) },
-        date: CalendarDate.of(1, 9, 2026),
         name: 'Rent',
+        cost: { kind: 'local', amount: Money.parse('900.00', euro) },
         payers: { kind: 'equal', members: [ana] },
         split: { kind: 'whole', split: both },
+        date: CalendarDate.of(2026, 9, 1),
     });
     group.archiveMemberSync(bob);
     printLines(
@@ -199,11 +199,11 @@ function movingOut(group: Group, flatmates: Flatmates): void {
 
     const refused = refusal(() =>
         group.addExpenseSync({
-            cost: { kind: 'local', amount: Money.parse('60.00', euro) },
-            date: CalendarDate.of(1, 10, 2026),
             name: 'Utilities',
+            cost: { kind: 'local', amount: Money.parse('60.00', euro) },
             payers: { kind: 'equal', members: [ana] },
             split: { kind: 'whole', split: both },
+            date: CalendarDate.of(2026, 10, 1),
         }),
     );
     assert.ok(refused instanceof GroupError, 'the archived member must be refused');
@@ -219,7 +219,7 @@ function movingOut(group: Group, flatmates: Flatmates): void {
 }
 
 await load();
-using group = Group.create(Currency.of('EUR'), 'Flat 4B');
+using group = Group.create('Flat 4B', Currency.of('EUR'));
 printLines('Flat 4B: members and their accounts', '═══════════════════════════════════');
 printLines(
     'Ana and Bob share a flat. A member needs only a first name; the last name,',

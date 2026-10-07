@@ -9,21 +9,21 @@ use crate::EranosError;
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CalendarDate {
-    /// The day of the month, from 1.
-    pub day: i32,
-    /// The month, from 1 for January.
-    pub month: i32,
     /// The year, from 1 to 9999.
     pub year: i32,
+    /// The month, from 1 for January.
+    pub month: i32,
+    /// The day of the month, from 1.
+    pub day: i32,
 }
 
 impl CalendarDate {
     /// The record of `date`.
     pub(crate) fn from_library(date: library::CalendarDate) -> Self {
         Self {
-            day: i32::from(date.day()),
-            month: i32::from(date.month()),
             year: i32::from(date.year()),
+            month: i32::from(date.month()),
+            day: i32::from(date.day()),
         }
     }
 
@@ -37,9 +37,9 @@ impl CalendarDate {
     pub(crate) fn to_library(self) -> Result<library::CalendarDate, EranosError> {
         let invalid = |_| CalendarError::InvalidDate;
         Ok(library::CalendarDate::new(
-            u8::try_from(self.day).map_err(invalid)?,
-            u8::try_from(self.month).map_err(invalid)?,
             u16::try_from(self.year).map_err(invalid)?,
+            u8::try_from(self.month).map_err(invalid)?,
+            u8::try_from(self.day).map_err(invalid)?,
         )?)
     }
 }

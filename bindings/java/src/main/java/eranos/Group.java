@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  * the group as it was:
  *
  * <pre>{@code
- * Group group = Group.builder(Currency.of("EUR"), "Flat").build();
+ * Group group = Group.builder("Flat", Currency.of("EUR")).build();
  * MemberId ana = group.addMember(Member.builder("Ana").build());
  * CompletableFuture<MemberId> bob = group.addMemberAsync(Member.builder("Bob").build());
  * }</pre>
@@ -39,12 +39,12 @@ public final class Group implements AutoCloseable {
      * A builder of a new group with no members and no entries, called {@code name}, whose totals
      * are in {@code currency}.
      *
-     * @param currency the group currency
      * @param name the name
+     * @param currency the group currency
      * @return the builder
      */
-    public static Builder builder(Currency currency, String name) {
-        return new Builder(currency, name);
+    public static Builder builder(String name, Currency currency) {
+        return new Builder(name, currency);
     }
 
     /**
@@ -107,7 +107,7 @@ public final class Group implements AutoCloseable {
         return Converting.future(handle.readAsync(null), GroupReader::new);
     }
 
-    // The group's own details: its identifier, name, description, language, currency, and saved
+    // The group's own details: its identifier, name, currency, description, language, and saved
     // form.
 
     /**
@@ -132,6 +132,59 @@ public final class Group implements AutoCloseable {
      */
     public CompletableFuture<GroupId> idAsync() {
         return Converting.future(handle.idAsync(null), value -> new GroupId(value));
+    }
+
+    /**
+     * The group's name.
+     *
+     * <p>Waits for the group's lock by blocking its thread; {@link #nameAsync} waits without
+     * blocking it.
+     *
+     * @return the text
+     */
+    public String name() {
+        return Converting.callUnfailing(() -> handle.name());
+    }
+
+    /**
+     * The group's name.
+     *
+     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
+     * call, which leaves the group as it was.
+     *
+     * @return a future of the text
+     */
+    public CompletableFuture<String> nameAsync() {
+        return Converting.future(handle.nameAsync(null), value -> value);
+    }
+
+    /**
+     * Renames the group.
+     *
+     * <p>Waits for the group's lock by blocking its thread; {@link #setNameAsync} waits without
+     * blocking it.
+     *
+     * @param name the new name
+     * @throws EranosException.Group with {@link GroupFailure.EmptyName} for a blank name
+     */
+    public void setName(String name) throws EranosException {
+        Converting.run(() -> handle.setName(name));
+    }
+
+    /**
+     * Renames the group.
+     *
+     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
+     * call, which leaves the group as it was.
+     *
+     * <p>The future fails with {@link EranosException.Group} with {@link GroupFailure.EmptyName}
+     * for a blank name.
+     *
+     * @param name the new name
+     * @return a future of the call's end
+     */
+    public CompletableFuture<Void> setNameAsync(String name) {
+        return Converting.future(handle.setNameAsync(name, null), _ -> null);
     }
 
     /**
@@ -195,59 +248,6 @@ public final class Group implements AutoCloseable {
             Currency currency, Map<Currency, ExchangeRate> rates) {
         return Converting.future(
                 handle.changeCurrencyAsync(currency.code(), rates(rates), null), _ -> null);
-    }
-
-    /**
-     * The group's name.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #nameAsync} waits without
-     * blocking it.
-     *
-     * @return the text
-     */
-    public String name() {
-        return Converting.callUnfailing(() -> handle.name());
-    }
-
-    /**
-     * The group's name.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
-     * @return a future of the text
-     */
-    public CompletableFuture<String> nameAsync() {
-        return Converting.future(handle.nameAsync(null), value -> value);
-    }
-
-    /**
-     * Renames the group.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #setNameAsync} waits without
-     * blocking it.
-     *
-     * @param name the new name
-     * @throws EranosException.Group with {@link GroupFailure.EmptyName} for a blank name
-     */
-    public void setName(String name) throws EranosException {
-        Converting.run(() -> handle.setName(name));
-    }
-
-    /**
-     * Renames the group.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
-     * <p>The future fails with {@link EranosException.Group} with {@link GroupFailure.EmptyName}
-     * for a blank name.
-     *
-     * @param name the new name
-     * @return a future of the call's end
-     */
-    public CompletableFuture<Void> setNameAsync(String name) {
-        return Converting.future(handle.setNameAsync(name, null), _ -> null);
     }
 
     /**
@@ -1346,14 +1346,14 @@ public final class Group implements AutoCloseable {
 
     /** A builder of a new group, whose every setter replaces what was set before. */
     public static final class Builder {
-        private final Currency currency;
         private final String name;
+        private final Currency currency;
         private String description;
         private Language language;
 
-        private Builder(Currency currency, String name) {
-            this.currency = Objects.requireNonNull(currency, "currency");
+        private Builder(String name, Currency currency) {
             this.name = Objects.requireNonNull(name, "name");
+            this.currency = Objects.requireNonNull(currency, "currency");
         }
 
         /**
@@ -1387,8 +1387,8 @@ public final class Group implements AutoCloseable {
         public Group build() throws EranosException {
             NewGroup group =
                     new NewGroup(
-                            currency.code(),
                             name,
+                            currency.code(),
                             description,
                             null == language ? null : language.toString());
             return new Group(Converting.call(() -> new eranos.internal.Group(group)));

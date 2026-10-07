@@ -15,7 +15,6 @@ void describe('the summary, the balances, the shares of an expense, and the sett
         const flat = new Flat();
         const summary = flat.group.summarySync();
         assert.ok(summary.totalSpent.equals(flat.euros(3_000n)));
-        assert.deepEqual(summary.categoryTotals, [{ category: flat.food, total: flat.euros(3_000n) }]);
         const [ana, bob] = summary.members;
         assert.ok(undefined !== ana && undefined !== bob);
         assert.equal(ana.member, flat.ana);
@@ -27,6 +26,7 @@ void describe('the summary, the balances, the shares of an expense, and the sett
         assert.equal(ana.net.toString(), '5.00 EUR');
         assert.equal(formatBalance(ana.balance), 'gets back 5.00 EUR');
         assert.equal(formatBalance(bob.balance), 'owes 5.00 EUR');
+        assert.deepEqual(summary.categoryTotals, [{ category: flat.food, total: flat.euros(3_000n) }]);
         assert.deepEqual(summary.memberCategoryTotals, [
             { member: flat.ana, totals: [{ category: flat.food, total: flat.euros(1_500n) }] },
             { member: flat.bob, totals: [{ category: flat.food, total: flat.euros(1_500n) }] },
@@ -36,11 +36,11 @@ void describe('the summary, the balances, the shares of an expense, and the sett
     /** A balance that printed on its own would tell a member they owe what they are owed. */
     void it('prints a balance as the library writes it', () => {
         const flat = new Flat();
-        assert.equal(formatBalance({ kind: 'getsBack', amount: flat.euros(1_200n) }), 'gets back 12.00 EUR');
         assert.equal(formatBalance({ kind: 'owes', amount: flat.euros(1_200n) }), 'owes 12.00 EUR');
         assert.equal(formatBalance({ kind: 'settled' }), 'settled');
+        assert.equal(formatBalance({ kind: 'getsBack', amount: flat.euros(1_200n) }), 'gets back 12.00 EUR');
         const group = flat.group;
-        group.addTransferSync({ cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day, from: flat.bob, to: flat.ana });
+        group.addTransferSync({ from: flat.bob, to: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day });
         assert.deepEqual(
             group.summarySync().members.map((member) => formatBalance(member.balance)),
             ['settled', 'settled'],
@@ -62,7 +62,7 @@ void describe('the summary, the balances, the shares of an expense, and the sett
             const settlement = flat.group.settlementSync(strategy);
             // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
             assert.equal(settlement.strategy, SettlementStrategy.ADAPTIVE === strategy ? SettlementStrategy.MINIMUM_TRANSFERS : strategy);
-            assert.deepEqual(settlement.payments, [{ amount: flat.euros(500n), from: flat.bob, to: flat.ana }]);
+            assert.deepEqual(settlement.payments, [{ from: flat.bob, to: flat.ana, amount: flat.euros(500n) }]);
         }
     });
 

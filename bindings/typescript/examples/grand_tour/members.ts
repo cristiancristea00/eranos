@@ -20,10 +20,10 @@ const detailColumns: Columns<DetailRow> = [
 
 /** A member with their contact and account details, as the table of members prints them. */
 interface MemberRow {
-    readonly accounts: string;
-    readonly email: string;
     readonly name: string;
+    readonly email: string;
     readonly phone: string;
+    readonly accounts: string;
 }
 
 const memberColumns: Columns<MemberRow> = [
@@ -48,7 +48,7 @@ const checkColumns: Columns<CheckRow> = [
 
 export function theGroup(): Group {
     section('1. The group');
-    const group = Group.create(Currency.of('EUR'), 'Lisbon', { description: 'A week by the Atlantic', language: Language.parse('pt-pt') });
+    const group = Group.create('Lisbon', Currency.of('EUR'), { description: 'A week by the Atlantic', language: Language.parse('pt-pt') });
     const blank = refusal(() => {
         group.setNameSync('   ');
     });
@@ -90,10 +90,10 @@ function printMembers(group: Group): void {
     printTable(
         memberColumns,
         group.membersSync().map((member) => ({
-            accounts: cell((member.accounts ?? []).map(describe)),
-            email: member.email?.toString() ?? '',
             name: [member.firstName, member.lastName].filter((part) => undefined !== part).join(' '),
+            email: member.email?.toString() ?? '',
             phone: member.phone?.toString() ?? '',
+            accounts: cell((member.accounts ?? []).map(describe)),
         })),
         4,
     );
@@ -140,13 +140,13 @@ export function members(group: Group): People {
     section('2. Members');
     const ana = group.addMemberSync({
         firstName: 'Ana',
-        accounts: [
-            { details: { kind: 'iban', iban: Iban.parse('RO49 AAAA 1B31 0075 9384 0000') }, name: 'ING' },
-            { details: { kind: 'username', username: Username.parse('@ana') }, name: 'Revolut' },
-        ],
-        email: Email.parse('ana@example.com'),
         lastName: 'Popescu',
+        email: Email.parse('ana@example.com'),
         phone: PhoneNumber.parse('+40 712 345 678'),
+        accounts: [
+            { name: 'ING', details: { kind: 'iban', iban: Iban.parse('RO49 AAAA 1B31 0075 9384 0000') } },
+            { name: 'Revolut', details: { kind: 'username', username: Username.parse('@ana') } },
+        ],
     });
     const bob = group.addMemberSync({ firstName: 'Bob' });
     const carol = group.addMemberSync({ firstName: 'Carol' });
@@ -156,7 +156,7 @@ export function members(group: Group): People {
     // An edit starts from a copy of the member, which keeps its identifier.
     const stored = group.memberSync(bob);
     assert.ok(undefined !== stored, 'Bob is a member');
-    const before = group.replaceMemberSync({ ...stored, email: Email.parse('bob@example.com'), lastName: 'Ionescu' });
+    const before = group.replaceMemberSync({ ...stored, lastName: 'Ionescu', email: Email.parse('bob@example.com') });
     printMembers(group);
     printLines(
         'Only a first name is required. Ana gave every detail; Bob added his last name and',

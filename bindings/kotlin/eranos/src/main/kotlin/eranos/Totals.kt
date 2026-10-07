@@ -6,94 +6,94 @@ import eranos.internal.balanceFormat
 
 /** The group's totals: overall, per member, per category, and per member per category, all in the group currency. */
 public class Summary internal constructor(
+    /** What the group spent. */
+    public val totalSpent: Money,
+    /** The totals of every member. */
+    public val members: List<MemberSummary>,
     /** The total of every category. */
     public val categoryTotals: List<CategoryTotal>,
     /** The totals per category of every member. */
     public val memberCategoryTotals: List<MemberCategoryTotals>,
-    /** The totals of every member. */
-    public val members: List<MemberSummary>,
-    /** What the group spent. */
-    public val totalSpent: Money,
 ) {
     /**
-     * Whether [other] is of the same class, with the same [categoryTotals], [memberCategoryTotals], [members], and
-     * [totalSpent].
+     * Whether [other] is of the same class, with the same [totalSpent], [members], [categoryTotals], and
+     * [memberCategoryTotals].
      */
     override fun equals(other: Any?): Boolean =
         other is Summary &&
-            categoryTotals == other.categoryTotals &&
-            memberCategoryTotals == other.memberCategoryTotals &&
+            totalSpent == other.totalSpent &&
             members == other.members &&
-            totalSpent == other.totalSpent
+            categoryTotals == other.categoryTotals &&
+            memberCategoryTotals == other.memberCategoryTotals
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(categoryTotals, memberCategoryTotals, members, totalSpent)
+    override fun hashCode(): Int = hashOf(totalSpent, members, categoryTotals, memberCategoryTotals)
 
     /** A description of every field, for logs. */
     override fun toString(): String =
-        "Summary(categoryTotals=$categoryTotals, memberCategoryTotals=$memberCategoryTotals, members=$members, " +
-            "totalSpent=$totalSpent)"
+        "Summary(totalSpent=$totalSpent, members=$members, categoryTotals=$categoryTotals, " +
+            "memberCategoryTotals=$memberCategoryTotals)"
 }
 
 /** The totals the generated code holds as [this]. */
 internal fun eranos.internal.Summary.converted(): Summary =
     Summary(
+        totalSpent.converted(),
+        members.map { it.converted() },
         categoryTotals.map { it.converted() },
         memberCategoryTotals.map { it.converted() },
-        members.map { it.converted() },
-        totalSpent.converted(),
     )
 
 /** A member's totals, in the group currency. */
 @Suppress("LongParameterList") // A member's totals are the library's, one field each.
 public class MemberSummary internal constructor(
-    /** Where the member stands. */
-    public val balance: Balance,
     /** The member. */
     public val member: MemberId,
-    /** What the member is owed, less what they owe: positive when they get money back. */
-    public val net: Money,
     /** What the member paid for expenses. */
     public val paid: Money,
-    /** What the member received in transfers. */
-    public val received: Money,
-    /** What the member sent in transfers. */
-    public val sent: Money,
     /** The member's share of the expenses: what they consumed. */
     public val share: Money,
+    /** What the member sent in transfers. */
+    public val sent: Money,
+    /** What the member received in transfers. */
+    public val received: Money,
+    /** What the member is owed, less what they owe: positive when they get money back. */
+    public val net: Money,
+    /** Where the member stands. */
+    public val balance: Balance,
 ) {
     /**
-     * Whether [other] is of the same class, with the same [balance], [member], [net], [paid], [received], [sent], and
-     * [share].
+     * Whether [other] is of the same class, with the same [member], [paid], [share], [sent], [received], [net], and
+     * [balance].
      */
     override fun equals(other: Any?): Boolean =
         other is MemberSummary &&
-            balance == other.balance &&
             member == other.member &&
-            net == other.net &&
             paid == other.paid &&
-            received == other.received &&
+            share == other.share &&
             sent == other.sent &&
-            share == other.share
+            received == other.received &&
+            net == other.net &&
+            balance == other.balance
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(balance, member, net, paid, received, sent, share)
+    override fun hashCode(): Int = hashOf(member, paid, share, sent, received, net, balance)
 
     /** A description of every field, for logs. */
     override fun toString(): String =
-        "MemberSummary(balance=$balance, member=$member, net=$net, paid=$paid, received=$received, sent=$sent, share=$share)"
+        "MemberSummary(member=$member, paid=$paid, share=$share, sent=$sent, received=$received, net=$net, balance=$balance)"
 }
 
 /** The member's totals the generated code holds as [this]. */
 internal fun eranos.internal.MemberSummary.converted(): MemberSummary =
     MemberSummary(
-        balance.converted(),
         MemberId(member),
-        net.converted(),
         paid.converted(),
-        received.converted(),
-        sent.converted(),
         share.converted(),
+        sent.converted(),
+        received.converted(),
+        net.converted(),
+        balance.converted(),
     )
 
 /** What the expenses of a category add up to, in the group currency. */
@@ -139,21 +139,6 @@ internal fun eranos.internal.MemberCategoryTotals.converted(): MemberCategoryTot
 
 /** Where a member stands with the group; it prints as the library writes it, "owes 12.00 EUR". */
 public sealed interface Balance {
-    /** The others owe the member [amount]. */
-    public class GetsBack(
-        /** What the member gets back. */
-        public val amount: Money,
-    ) : Balance {
-        /** Whether [other] is of the same class, with the same [amount]. */
-        override fun equals(other: Any?): Boolean = other is GetsBack && amount == other.amount
-
-        /** A hash of what [equals] compares. */
-        override fun hashCode(): Int = amount.hashCode()
-
-        /** The balance as the library writes it: "gets back 12.00 EUR". */
-        override fun toString(): String = formatted()
-    }
-
     /** The member owes the others [amount]. */
     public class Owes(
         /** What the member owes. */
@@ -174,15 +159,30 @@ public sealed interface Balance {
         /** The balance as the library writes it: "settled". */
         override fun toString(): String = formatted()
     }
+
+    /** The others owe the member [amount]. */
+    public class GetsBack(
+        /** What the member gets back. */
+        public val amount: Money,
+    ) : Balance {
+        /** Whether [other] is of the same class, with the same [amount]. */
+        override fun equals(other: Any?): Boolean = other is GetsBack && amount == other.amount
+
+        /** A hash of what [equals] compares. */
+        override fun hashCode(): Int = amount.hashCode()
+
+        /** The balance as the library writes it: "gets back 12.00 EUR". */
+        override fun toString(): String = formatted()
+    }
 }
 
 /** The balance as the generated code holds it. */
 internal val Balance.generated: eranos.internal.Balance
     get() =
         when (this) {
-            is Balance.GetsBack -> eranos.internal.Balance.GetsBack(amount.generated)
             is Balance.Owes -> eranos.internal.Balance.Owes(amount.generated)
             Balance.Settled -> eranos.internal.Balance.Settled
+            is Balance.GetsBack -> eranos.internal.Balance.GetsBack(amount.generated)
         }
 
 /** The balance as the library writes it; its description by the generated code if the library cannot format its amount. */
@@ -196,33 +196,33 @@ internal fun Balance.formatted(): String =
 /** The balance the generated code holds as [this]. */
 internal fun eranos.internal.Balance.converted(): Balance =
     when (this) {
-        is eranos.internal.Balance.GetsBack -> Balance.GetsBack(amount.converted())
         is eranos.internal.Balance.Owes -> Balance.Owes(amount.converted())
         eranos.internal.Balance.Settled -> Balance.Settled
+        is eranos.internal.Balance.GetsBack -> Balance.GetsBack(amount.converted())
     }
 
 /** How one expense divides, in the group currency. */
 public class ExpenseShares internal constructor(
     /** What every member paid and consumed. */
     public val members: List<MemberShare>,
-    /** The tip. */
-    public val tip: Money,
     /** The total: the amount and the tip. */
     public val total: Money,
+    /** The tip. */
+    public val tip: Money,
 ) {
-    /** Whether [other] is of the same class, with the same [members], [tip], and [total]. */
-    override fun equals(other: Any?): Boolean = other is ExpenseShares && members == other.members && tip == other.tip && total == other.total
+    /** Whether [other] is of the same class, with the same [members], [total], and [tip]. */
+    override fun equals(other: Any?): Boolean = other is ExpenseShares && members == other.members && total == other.total && tip == other.tip
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(members, tip, total)
+    override fun hashCode(): Int = hashOf(members, total, tip)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "ExpenseShares(members=$members, tip=$tip, total=$total)"
+    override fun toString(): String = "ExpenseShares(members=$members, total=$total, tip=$tip)"
 }
 
 /** The expense's shares the generated code holds as [this]. */
 internal fun eranos.internal.ExpenseShares.converted(): ExpenseShares =
-    ExpenseShares(members.map { it.converted() }, tip.converted(), total.converted())
+    ExpenseShares(members.map { it.converted() }, total.converted(), tip.converted())
 
 /** What one member paid of an expense and what their share of it is. */
 public class MemberShare internal constructor(
@@ -268,25 +268,25 @@ internal fun eranos.internal.Settlement.converted(): Settlement = Settlement(pay
 
 /** One payment of a settlement: one member pays another an amount. */
 public class Payment internal constructor(
-    /** The amount, in the group currency. */
-    public val amount: Money,
     /** The member who pays. */
     public val from: MemberId,
     /** The member who is paid. */
     public val to: MemberId,
+    /** The amount, in the group currency. */
+    public val amount: Money,
 ) {
-    /** Whether [other] is of the same class, with the same [amount], [from], and [to]. */
-    override fun equals(other: Any?): Boolean = other is Payment && amount == other.amount && from == other.from && to == other.to
+    /** Whether [other] is of the same class, with the same [from], [to], and [amount]. */
+    override fun equals(other: Any?): Boolean = other is Payment && from == other.from && to == other.to && amount == other.amount
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(amount, from, to)
+    override fun hashCode(): Int = hashOf(from, to, amount)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "Payment(amount=$amount, from=$from, to=$to)"
+    override fun toString(): String = "Payment(from=$from, to=$to, amount=$amount)"
 }
 
 /** The payment the generated code holds as [this]. */
-internal fun eranos.internal.Payment.converted(): Payment = Payment(amount.converted(), MemberId(from), MemberId(to))
+internal fun eranos.internal.Payment.converted(): Payment = Payment(MemberId(from), MemberId(to), amount.converted())
 
 /** How balances turn into payments. */
 public enum class SettlementStrategy {
@@ -296,14 +296,14 @@ public enum class SettlementStrategy {
      */
     ADAPTIVE,
 
-    /** Everyone pays back the people who paid for them. */
-    DIRECT,
+    /** The fewest payments possible. */
+    MINIMUM_TRANSFERS,
 
     /** The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each other where that saves a payment. */
     GREEDY,
 
-    /** The fewest payments possible. */
-    MINIMUM_TRANSFERS,
+    /** Everyone pays back the people who paid for them. */
+    DIRECT,
 }
 
 /** The strategy as the generated code holds it. */
@@ -311,16 +311,16 @@ internal val SettlementStrategy.generated: eranos.internal.SettlementStrategy
     get() =
         when (this) {
             SettlementStrategy.ADAPTIVE -> eranos.internal.SettlementStrategy.ADAPTIVE
-            SettlementStrategy.DIRECT -> eranos.internal.SettlementStrategy.DIRECT
-            SettlementStrategy.GREEDY -> eranos.internal.SettlementStrategy.GREEDY
             SettlementStrategy.MINIMUM_TRANSFERS -> eranos.internal.SettlementStrategy.MINIMUM_TRANSFERS
+            SettlementStrategy.GREEDY -> eranos.internal.SettlementStrategy.GREEDY
+            SettlementStrategy.DIRECT -> eranos.internal.SettlementStrategy.DIRECT
         }
 
 /** The strategy the generated code holds as [this]. */
 internal fun eranos.internal.SettlementStrategy.converted(): SettlementStrategy =
     when (this) {
         eranos.internal.SettlementStrategy.ADAPTIVE -> SettlementStrategy.ADAPTIVE
-        eranos.internal.SettlementStrategy.DIRECT -> SettlementStrategy.DIRECT
-        eranos.internal.SettlementStrategy.GREEDY -> SettlementStrategy.GREEDY
         eranos.internal.SettlementStrategy.MINIMUM_TRANSFERS -> SettlementStrategy.MINIMUM_TRANSFERS
+        eranos.internal.SettlementStrategy.GREEDY -> SettlementStrategy.GREEDY
+        eranos.internal.SettlementStrategy.DIRECT -> SettlementStrategy.DIRECT
     }

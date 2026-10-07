@@ -7,10 +7,10 @@ import Report
 struct ExpenseRow: TableRow {
     static let headers = ["Expense", "Paid by", "Shared by", "Amount"]
 
-    let amount: Money
     let name: String
-    let participants: String
     let payer: String
+    let participants: String
+    let amount: Money
 
     var cells: [String] {
         [name, payer, participants, "\(amount)"]
@@ -20,10 +20,10 @@ struct ExpenseRow: TableRow {
 struct BalanceRow: TableRow {
     static let headers = ["Member", "Paid", "Consumed", "Balance"]
 
-    let balance: Balance
-    let consumed: Money
     let name: String
     let paid: Money
+    let consumed: Money
+    let balance: Balance
 
     var cells: [String] {
         [name, "\(paid)", "\(consumed)", "\(balance)"]
@@ -33,9 +33,9 @@ struct BalanceRow: TableRow {
 struct PaymentRow: TableRow {
     static let headers = ["From", "To", "Amount"]
 
-    let amount: Money
     let from: String
     let to: String
+    let amount: Money
 
     var cells: [String] {
         [from, to, "\(amount)"]
@@ -45,10 +45,10 @@ struct PaymentRow: TableRow {
 struct StrategyRow: TableRow {
     static let headers = ["Strategy", "Guarantee", "Cost", "Payments here"]
 
-    let cost: String
-    let guarantee: String
-    let payments: Int
     let strategy: String
+    let guarantee: String
+    let cost: String
+    let payments: Int
 
     var cells: [String] {
         [strategy, guarantee, cost, "\(payments)"]
@@ -58,9 +58,9 @@ struct StrategyRow: TableRow {
 /// The number of payments of each strategy's plan.
 struct Counts: Equatable {
     let adaptive: Int
-    let direct: Int
-    let greedy: Int
     let minimum: Int
+    let greedy: Int
+    let direct: Int
 }
 
 let euro = try Currency(code: "EUR")
@@ -70,12 +70,12 @@ func strategyName(_ strategy: SettlementStrategy) -> String {
     switch strategy {
     case .adaptive:
         "Adaptive"
-    case .direct:
-        "Direct"
-    case .greedy:
-        "Greedy"
     case .minimumTransfers:
         "MinimumTransfers"
+    case .greedy:
+        "Greedy"
+    case .direct:
+        "Direct"
     }
 }
 
@@ -83,11 +83,11 @@ func strategyName(_ strategy: SettlementStrategy) -> String {
 func spend(_ group: Group, _ name: String, _ amount: String, _ payer: Member.ID, _ participants: [Member.ID]) throws(EranosError) {
     _ = try group.add(
         Expense(
-            cost: .local(try Money(parsing: amount, in: euro)),
-            date: try CalendarDate(day: 20, month: 9, year: 2026),
             name: name,
+            cost: .local(try Money(parsing: amount, in: euro)),
             payers: .equal([payer]),
-            split: .whole(.equal(participants))
+            split: .whole(.equal(participants)),
+            date: try CalendarDate(year: 2026, month: 9, day: 20)
         )
     )
 }
@@ -97,7 +97,7 @@ func printBalances(_ group: Group) throws(EranosError) {
     printTable(
         try group.members().compactMap { member in
             member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
-                BalanceRow(balance: totals.balance, consumed: totals.share, name: member.firstName, paid: totals.paid)
+                BalanceRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
             }
         },
         numbersFrom: 1
@@ -107,7 +107,7 @@ func printBalances(_ group: Group) throws(EranosError) {
 func printPayments(_ group: Group, _ settlement: Settlement) throws(EranosError) {
     printTable(
         try settlement.payments.map { payment throws(EranosError) in
-            PaymentRow(amount: payment.amount, from: try names(group, [payment.from]), to: try names(group, [payment.to]))
+            PaymentRow(from: try names(group, [payment.from]), to: try names(group, [payment.to]), amount: payment.amount)
         },
         numbersFrom: 2
     )
@@ -155,18 +155,18 @@ func strategies(_ group: Group) throws(EranosError) -> Counts {
     section("7. The strategies side by side")
     printTable(
         [
-            StrategyRow(cost: "O(2ⁿ·n) for n open balances", guarantee: "the fewest payments", payments: minimum.payments.count, strategy: "MinimumTransfers"),
-            StrategyRow(cost: "O(n log n)", guarantee: "at most n − 1 payments", payments: greedy.payments.count, strategy: "Greedy"),
-            StrategyRow(cost: "O(pairs)", guarantee: "one payment per pair in debt", payments: direct.payments.count, strategy: "Direct"),
-            StrategyRow(cost: "as MinimumTransfers, then Greedy", guarantee: "the fewest up to 20 balances", payments: adaptive.payments.count, strategy: "Adaptive")
+            StrategyRow(strategy: "MinimumTransfers", guarantee: "the fewest payments", cost: "O(2ⁿ·n) for n open balances", payments: minimum.payments.count),
+            StrategyRow(strategy: "Greedy", guarantee: "at most n − 1 payments", cost: "O(n log n)", payments: greedy.payments.count),
+            StrategyRow(strategy: "Direct", guarantee: "one payment per pair in debt", cost: "O(pairs)", payments: direct.payments.count),
+            StrategyRow(strategy: "Adaptive", guarantee: "the fewest up to 20 balances", cost: "as MinimumTransfers, then Greedy", payments: adaptive.payments.count)
         ],
         numbersFrom: 3
     )
     return Counts(
         adaptive: adaptive.payments.count,
-        direct: direct.payments.count,
+        minimum: minimum.payments.count,
         greedy: greedy.payments.count,
-        minimum: minimum.payments.count
+        direct: direct.payments.count
     )
 }
 
@@ -174,7 +174,7 @@ func strategies(_ group: Group) throws(EranosError) -> Counts {
 /// strategy's plan it took; returns the number of payments.
 func festival() throws(EranosError) -> Int {
     section("8. A larger group")
-    let group = try Group(currency: euro, name: "Festival")
+    let group = try Group(name: "Festival", currency: euro)
     var friends: [Member.ID] = []
     for number in 1...21 {
         friends.append(try group.add(Member(firstName: "Friend \(number)")))
@@ -184,11 +184,11 @@ func festival() throws(EranosError) -> Int {
     for (number, payer) in zip(Int64(1)..., friends) {
         _ = try group.add(
             Expense(
-                cost: .local(Money(currency: euro, minorUnits: 21 * number * number)),
-                date: try CalendarDate(day: 18, month: 9, year: 2026),
                 name: "Round",
+                cost: .local(Money(minorUnits: 21 * number * number, currency: euro)),
                 payers: .equal([payer]),
-                split: .whole(.equal(friends))
+                split: .whole(.equal(friends)),
+                date: try CalendarDate(year: 2026, month: 9, day: 18)
             )
         )
     }
@@ -208,7 +208,7 @@ func festival() throws(EranosError) -> Int {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(currency: euro, name: "Ski week")
+    let group = try Group(name: "Ski week", currency: euro)
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
     let carol = try group.add(Member(firstName: "Carol"))
@@ -231,10 +231,10 @@ func main() throws(EranosError) {
     printTable(
         try group.expenses().map { expense throws(EranosError) in
             ExpenseRow(
-                amount: try expense.total(),
                 name: expense.name,
+                payer: try names(group, expense.payers.members),
                 participants: try names(group, participants(expense.split)),
-                payer: try names(group, expense.payers.members)
+                amount: try expense.total()
             )
         },
         numbersFrom: 3
@@ -250,7 +250,7 @@ func main() throws(EranosError) {
     section("9. Settling up for real")
     let plan = try group.settlement(by: .minimumTransfers)
     for payment in plan.payments {
-        _ = try group.add(Transfer(cost: .local(payment.amount), date: try CalendarDate(day: 27, month: 9, year: 2026), from: payment.from, to: payment.to))
+        _ = try group.add(Transfer(from: payment.from, to: payment.to, cost: .local(payment.amount), date: try CalendarDate(year: 2026, month: 9, day: 27)))
     }
     print("""
         Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards
@@ -261,7 +261,7 @@ func main() throws(EranosError) {
 
     // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that
     // one; greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
-    precondition(Counts(adaptive: 4, direct: 7, greedy: 5, minimum: 4) == counts)
+    precondition(Counts(adaptive: 4, minimum: 4, greedy: 5, direct: 7) == counts)
     // Greedy settles the festival's 21 balances in 19 payments.
     precondition(19 == festivalPayments)
     let summary = try group.summary()

@@ -14,8 +14,6 @@ class TotalsTest {
         val flat = Flat()
         val summary = flat.group.summaryBlocking()
         assertEquals(flat.euros(3_000), summary.totalSpent)
-        assertEquals(listOf(flat.food), summary.categoryTotals.map { it.category })
-        assertEquals(listOf(flat.euros(3_000)), summary.categoryTotals.map { it.total })
         val (ana, bob) = summary.members
         assertEquals(flat.ana, ana.member)
         assertEquals(flat.bob, bob.member)
@@ -28,6 +26,8 @@ class TotalsTest {
         assertEquals(Balance.Owes(flat.euros(500)), bob.balance)
         assertEquals(flat.euros(1_000), bob.sent)
         assertEquals(flat.euros(0), bob.received)
+        assertEquals(listOf(flat.food), summary.categoryTotals.map { it.category })
+        assertEquals(listOf(flat.euros(3_000)), summary.categoryTotals.map { it.total })
         val (anaTotals, bobTotals) = summary.memberCategoryTotals
         assertEquals(flat.ana, anaTotals.member)
         assertEquals(flat.bob, bobTotals.member)
@@ -45,14 +45,14 @@ class TotalsTest {
     @Test
     fun aBalancePrintsAsTheLibraryWritesIt() {
         val flat = Flat()
-        val getsBack = Balance.GetsBack(flat.euros(1_200))
         val owes = Balance.Owes(flat.euros(1_200))
-        assertEquals("gets back 12.00 EUR", getsBack.toString())
+        val getsBack = Balance.GetsBack(flat.euros(1_200))
         assertEquals("owes 12.00 EUR", owes.toString())
         assertEquals("settled", Balance.Settled.toString())
-        assertValue(getsBack, Balance.GetsBack(flat.euros(1_200)), Balance.GetsBack(flat.euros(1)))
+        assertEquals("gets back 12.00 EUR", getsBack.toString())
         assertValue(owes, Balance.Owes(flat.euros(1_200)), Balance.Owes(flat.euros(1)))
-        for (balance in listOf(getsBack, owes, Balance.Settled)) {
+        assertValue(getsBack, Balance.GetsBack(flat.euros(1_200)), Balance.GetsBack(flat.euros(1)))
+        for (balance in listOf(owes, Balance.Settled, getsBack)) {
             assertEquals(balance, balance.generated.converted())
         }
     }
@@ -72,15 +72,15 @@ class TotalsTest {
         assertEquals(flat.euros(3_000), ana.paid)
         assertEquals(flat.euros(1_500), ana.share)
         val again = present(flat.group.expenseSharesBlocking(flat.dinner))
-        assertValue(shares, again, ExpenseShares(shares.members, flat.euros(1), shares.total))
+        assertValue(shares, again, ExpenseShares(shares.members, shares.total, flat.euros(1)))
         assertValue(ana, again.members[0], bob)
 
         assertEquals(
             listOf(
                 SettlementStrategy.ADAPTIVE,
-                SettlementStrategy.DIRECT,
-                SettlementStrategy.GREEDY,
                 SettlementStrategy.MINIMUM_TRANSFERS,
+                SettlementStrategy.GREEDY,
+                SettlementStrategy.DIRECT,
             ),
             SettlementStrategy.entries,
         )
@@ -94,7 +94,7 @@ class TotalsTest {
             assertEquals(flat.ana, payment.to)
             assertEquals(flat.euros(500), payment.amount)
             assertValue(settlement, flat.group.settlementBlocking(strategy), Settlement(emptyList(), settlement.strategy))
-            assertValue(payment, Payment(flat.euros(500), flat.bob, flat.ana), Payment(flat.euros(500), flat.ana, flat.bob))
+            assertValue(payment, Payment(flat.bob, flat.ana, flat.euros(500)), Payment(flat.ana, flat.bob, flat.euros(500)))
         }
     }
 }

@@ -29,11 +29,11 @@ fn entry(number: u8) -> ExpenseId {
 }
 
 fn eur(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 fn day() -> CalendarDate {
-    CalendarDate::new(23, 9, 2026).unwrap()
+    CalendarDate::new(2026, 9, 23).unwrap()
 }
 
 /// What one member paid and consumed of a resolved expense, in minor
@@ -81,13 +81,13 @@ fn debt_nets(resolved: &ResolvedExpense) -> BTreeMap<MemberId, i64> {
 }
 
 /// A debt of `amount` from `debtor` to `creditor`.
-const fn debt(amount: i64, debtor: MemberId, creditor: MemberId) -> Debt {
+const fn debt(debtor: MemberId, creditor: MemberId, amount: i64) -> Debt {
     Debt {
-        amount,
         members: MemberPair {
             from: debtor,
             to: creditor,
         },
+        amount,
     }
 }
 
@@ -97,11 +97,11 @@ const fn debt(amount: i64, debtor: MemberId, creditor: MemberId) -> Debt {
 fn a_single_payer_is_owed_every_other_share() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let taxi = Expense::builder(
-        eur(1000),
-        day(),
         "Taxi",
+        eur(1000),
         ana,
         Split::equal([ana, bob, carol]),
+        day(),
     )
     .build()
     .unwrap();
@@ -126,14 +126,14 @@ fn a_single_payer_is_owed_every_other_share() {
 fn a_proportional_tip_follows_the_shares() {
     let (ana, bob) = (member(1), member(2));
     let dinner = Expense::builder(
-        eur(9000),
-        day(),
         "Dinner",
+        eur(9000),
         ana,
         Split::parts([
             MemberParts::new(ana, Parts::from_whole(2).unwrap()),
             MemberParts::new(bob, Parts::ONE),
         ]),
+        day(),
     )
     .tip(Tip::percentage(Percentage::parse("10").unwrap()))
     .build()
@@ -153,14 +153,14 @@ fn a_proportional_tip_follows_the_shares() {
 fn an_equal_tip_ignores_the_shares() {
     let (ana, bob) = (member(1), member(2));
     let dinner = Expense::builder(
-        eur(9000),
-        day(),
         "Dinner",
+        eur(9000),
         ana,
         Split::parts([
             MemberParts::new(ana, Parts::from_whole(2).unwrap()),
             MemberParts::new(bob, Parts::ONE),
         ]),
+        day(),
     )
     .tip(Tip::percentage(Percentage::parse("10").unwrap()).distributed(TipDistribution::Equal))
     .build()
@@ -178,12 +178,12 @@ fn an_equal_tip_ignores_the_shares() {
 #[test]
 fn items_divide_by_their_own_splits() {
     let (ana, bob) = (member(1), member(2));
-    let pizza = Item::builder([ana], "Pizza", eur(1200)).build().unwrap();
-    let beer = Item::builder([ana, bob], "Beer", eur(450))
+    let pizza = Item::builder("Pizza", eur(1200), [ana]).build().unwrap();
+    let beer = Item::builder("Beer", eur(450), [ana, bob])
         .quantity(2)
         .build()
         .unwrap();
-    let bill = Expense::itemised_builder(eur(2100), day(), [pizza, beer], "Bill", bob)
+    let bill = Expense::itemised_builder("Bill", eur(2100), bob, [pizza, beer], day())
         .tip(Tip::fixed(eur(210)))
         .build()
         .unwrap();
@@ -195,7 +195,7 @@ fn items_divide_by_their_own_splits() {
         rows(&resolved),
         vec![row(ana, 0, 1815), row(bob, 2310, 495)]
     );
-    assert_eq!(resolved.debts, vec![debt(1815, ana, bob)]);
+    assert_eq!(resolved.debts, vec![debt(ana, bob, 1815)]);
 }
 
 /// With several payers every participant owes every payer in proportion to
@@ -204,14 +204,14 @@ fn items_divide_by_their_own_splits() {
 fn several_payers_are_each_owed_their_proportion() {
     let (ana, bob, carol, dan) = (member(1), member(2), member(3), member(4));
     let hotel = Expense::builder_with_payers(
-        eur(10_000),
-        day(),
         "Hotel",
+        eur(10_000),
         Split::amounts([
-            MemberAmount::new(eur(6000), ana),
-            MemberAmount::new(eur(4000), bob),
+            MemberAmount::new(ana, eur(6000)),
+            MemberAmount::new(bob, eur(4000)),
         ]),
         Split::equal([ana, bob, carol, dan]),
+        day(),
     )
     .build()
     .unwrap();
@@ -221,12 +221,12 @@ fn several_payers_are_each_owed_their_proportion() {
     assert_eq!(
         resolved.debts,
         vec![
-            debt(1500, bob, ana),
-            debt(1500, carol, ana),
-            debt(1500, dan, ana),
-            debt(1000, ana, bob),
-            debt(1000, carol, bob),
-            debt(1000, dan, bob),
+            debt(bob, ana, 1500),
+            debt(carol, ana, 1500),
+            debt(dan, ana, 1500),
+            debt(ana, bob, 1000),
+            debt(carol, bob, 1000),
+            debt(dan, bob, 1000),
         ]
     );
     // Every member's debts net to what they paid minus what they consumed.
@@ -247,11 +247,11 @@ fn several_payers_are_each_owed_their_proportion() {
 fn a_foreign_expense_converts_its_total_once() {
     let (ana, bob) = (member(1), member(2));
     let museum = Expense::builder(
-        eur(1000).at(ExchangeRate::parse("4.9765").unwrap()),
-        day(),
         "Museum",
+        eur(1000).at(ExchangeRate::parse("4.9765").unwrap()),
         ana,
         Split::equal([ana, bob]),
+        day(),
     )
     .build()
     .unwrap();
@@ -260,7 +260,7 @@ fn a_foreign_expense_converts_its_total_once() {
     // 10.00 EUR × 4.9765 = 49.765 RON, rounded half up to 49.77.
     assert_eq!(
         resolved.shares.total(),
-        Money::from_minor_units(Currency::RON, 4977)
+        Money::from_minor_units(4977, Currency::RON)
     );
     let consumed: Vec<i64> = rows(&resolved).iter().map(|row| row.share).collect();
     assert_eq!(consumed.iter().sum::<i64>(), 4977);
@@ -276,7 +276,7 @@ fn resolving_at_a_rate_resolves_the_expense_at_that_rate() {
     let (ana, bob) = (member(1), member(2));
     let rate = ExchangeRate::parse("4.9765").unwrap();
     let local = identified(
-        &Expense::builder(eur(1000), day(), "Museum", ana, Split::equal([ana, bob]))
+        &Expense::builder("Museum", eur(1000), ana, Split::equal([ana, bob]), day())
             .build()
             .unwrap(),
         entry(1),
@@ -298,13 +298,13 @@ fn resolving_at_a_rate_resolves_the_expense_at_that_rate() {
 fn a_foreign_tip_is_part_of_the_converted_total() {
     let ana = member(1);
     let lunch = Expense::builder(
-        Money::from_minor_units(Currency::JPY, 3000).at(ExchangeRate::parse("0.0061").unwrap()),
-        day(),
         "Lunch",
+        Money::from_minor_units(3000, Currency::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
         ana,
         Split::equal([ana]),
+        day(),
     )
-    .tip(Tip::fixed(Money::from_minor_units(Currency::JPY, 300)))
+    .tip(Tip::fixed(Money::from_minor_units(300, Currency::JPY)))
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&lunch, entry(1)), Currency::EUR).unwrap();
@@ -319,21 +319,21 @@ fn a_foreign_tip_is_part_of_the_converted_total() {
 #[test]
 fn a_conversion_at_one_converts_a_pegged_currency() {
     let ana = member(1);
-    let bermudian_dollars = Money::from_minor_units(Currency::BMD, 5_000);
+    let bermudian_dollars = Money::from_minor_units(5_000, Currency::BMD);
     // At 1, the amount is taken as is.
     let pegged = Expense::builder(
-        bermudian_dollars.at(ExchangeRate::ONE),
-        day(),
         "Ferry",
+        bermudian_dollars.at(ExchangeRate::ONE),
         ana,
         Split::equal([ana]),
+        day(),
     )
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&pegged, entry(1)), Currency::USD).unwrap();
     assert_eq!(
         resolved.shares.total(),
-        Money::from_minor_units(Currency::USD, 5_000)
+        Money::from_minor_units(5_000, Currency::USD)
     );
 }
 
@@ -343,12 +343,12 @@ fn a_conversion_at_one_converts_a_pegged_currency() {
 fn a_conversion_out_of_range_is_an_overflow() {
     let ana = member(1);
     let huge = Expense::builder(
-        Money::from_minor_units(Currency::JPY, i64::MAX / 2)
-            .at(ExchangeRate::parse("1000").unwrap()),
-        day(),
         "Huge",
+        Money::from_minor_units(i64::MAX / 2, Currency::JPY)
+            .at(ExchangeRate::parse("1000").unwrap()),
         ana,
         Split::equal([ana]),
+        day(),
     )
     .build()
     .unwrap();
@@ -365,11 +365,11 @@ fn a_payer_converted_to_nothing_is_owed_nothing() {
     let (ana, bob) = (member(1), member(2));
     // 2 JPY paid 1 + 1 at 0.0061 EUR per JPY is 1 cent in total.
     let sweets = Expense::builder_with_payers(
-        Money::from_minor_units(Currency::JPY, 2).at(ExchangeRate::parse("0.0061").unwrap()),
-        day(),
         "Sweets",
+        Money::from_minor_units(2, Currency::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
         Split::equal([ana, bob]),
         Split::equal([ana, bob]),
+        day(),
     )
     .build()
     .unwrap();
@@ -395,7 +395,7 @@ fn a_payer_converted_to_nothing_is_owed_nothing() {
 #[test]
 fn the_leftover_cent_rotates_with_the_expense_id() {
     let members = [member(1), member(2), member(3)];
-    let expense = Expense::builder(eur(100), day(), "Coffee", members[0], Split::equal(members))
+    let expense = Expense::builder("Coffee", eur(100), members[0], Split::equal(members), day())
         .build()
         .unwrap();
     let carrier = |id: ExpenseId| {
@@ -431,15 +431,15 @@ fn random_expense(
     };
     let cost = match foreign {
         None => Cost::from(eur(amount)),
-        Some((mantissa, scale)) => Money::from_minor_units(Currency::JPY, amount)
+        Some((mantissa, scale)) => Money::from_minor_units(amount, Currency::JPY)
             .at(ExchangeRate::from_decimal(mantissa, scale).unwrap()),
     };
     let mut builder = Expense::builder_with_payers(
-        cost,
-        day(),
         "Random",
+        cost,
         parts(payer_parts),
         parts(participant_parts),
+        day(),
     );
     if let Some(basis_points) = tip_basis_points {
         let distribution = if equal_tip {
@@ -509,16 +509,16 @@ fn the_rotation_of_every_pass_is_pinned() {
     // Three items with a leftover cent or two each, an equal tip of 2 cents
     // among three, and 3.03 paid by two: every pass has ties to break.
     let items = [100, 100, 101].map(|price| {
-        Item::builder([ana, bob, carol], "Item", eur(price))
+        Item::builder("Item", eur(price), [ana, bob, carol])
             .build()
             .unwrap()
     });
     let itemised = Expense::itemised_builder_with_payers(
-        eur(301),
-        day(),
-        items,
         "Pinned",
+        eur(301),
         Split::equal([ana, bob]),
+        items,
+        day(),
     )
     .tip(Tip::fixed(eur(2)).distributed(TipDistribution::Equal))
     .build()
@@ -531,20 +531,20 @@ fn the_rotation_of_every_pass_is_pinned() {
     assert_eq!(
         resolved.debts,
         vec![
-            debt(50, bob, ana),
-            debt(51, carol, ana),
-            debt(51, ana, bob),
-            debt(51, carol, bob)
+            debt(bob, ana, 50),
+            debt(carol, ana, 51),
+            debt(ana, bob, 51),
+            debt(carol, bob, 51)
         ]
     );
 
     // A conversion's re-division: 300 JPY at 0.00673 is 2.02 EUR among three.
     let foreign = Expense::builder(
-        Money::from_minor_units(Currency::JPY, 300).at(ExchangeRate::parse("0.00673").unwrap()),
-        day(),
         "Pinned",
+        Money::from_minor_units(300, Currency::JPY).at(ExchangeRate::parse("0.00673").unwrap()),
         ana,
         Split::equal([ana, bob, carol]),
+        day(),
     )
     .build()
     .unwrap();
@@ -558,15 +558,15 @@ fn the_rotation_of_every_pass_is_pinned() {
     // the second payer's division have ties.
     let dan = member(4);
     let hotel = Expense::builder_with_payers(
-        eur(400),
-        day(),
         "Pinned",
+        eur(400),
         Split::amounts([
-            MemberAmount::new(eur(133), ana),
-            MemberAmount::new(eur(133), bob),
-            MemberAmount::new(eur(134), carol),
+            MemberAmount::new(ana, eur(133)),
+            MemberAmount::new(bob, eur(133)),
+            MemberAmount::new(carol, eur(134)),
         ]),
         Split::equal([ana, bob, carol, dan]),
+        day(),
     )
     .build()
     .unwrap();
@@ -575,15 +575,15 @@ fn the_rotation_of_every_pass_is_pinned() {
             .unwrap()
             .debts,
         vec![
-            debt(33, bob, ana),
-            debt(33, carol, ana),
-            debt(34, dan, ana),
-            debt(33, ana, bob),
-            debt(34, carol, bob),
-            debt(33, dan, bob),
-            debt(34, ana, carol),
-            debt(34, bob, carol),
-            debt(33, dan, carol),
+            debt(bob, ana, 33),
+            debt(carol, ana, 33),
+            debt(dan, ana, 34),
+            debt(ana, bob, 33),
+            debt(carol, bob, 34),
+            debt(dan, bob, 33),
+            debt(ana, carol, 34),
+            debt(bob, carol, 34),
+            debt(dan, carol, 33),
         ]
     );
 }
@@ -596,23 +596,23 @@ fn a_zero_portion_is_no_debt() {
     // Ana's 99 cents cover all of Dan's single cent, so Bob's cent is
     // Carol's alone.
     let snack = Expense::builder_with_payers(
-        eur(100),
-        day(),
         "Snack",
+        eur(100),
         Split::amounts([
-            MemberAmount::new(eur(99), ana),
-            MemberAmount::new(eur(1), bob),
+            MemberAmount::new(ana, eur(99)),
+            MemberAmount::new(bob, eur(1)),
         ]),
         Split::amounts([
-            MemberAmount::new(eur(99), carol),
-            MemberAmount::new(eur(1), dan),
+            MemberAmount::new(carol, eur(99)),
+            MemberAmount::new(dan, eur(1)),
         ]),
+        day(),
     )
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&snack, entry(1)), Currency::EUR).unwrap();
     assert_eq!(
         resolved.debts,
-        vec![debt(98, carol, ana), debt(1, dan, ana), debt(1, carol, bob)]
+        vec![debt(carol, ana, 98), debt(dan, ana, 1), debt(carol, bob, 1)]
     );
 }

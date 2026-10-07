@@ -7,21 +7,21 @@ import java.util.Objects;
  * How one expense divides, in the group currency.
  *
  * @param members what every member paid and consumed
- * @param tip the tip
  * @param total the total: the amount and the tip
+ * @param tip the tip
  */
-public record ExpenseShares(List<MemberShare> members, Money tip, Money total) {
+public record ExpenseShares(List<MemberShare> members, Money total, Money tip) {
     /**
      * The expense shares of these components; the lists are copied.
      *
      * @param members what every member paid and consumed
-     * @param tip the tip
      * @param total the total
+     * @param tip the tip
      */
     public ExpenseShares {
         members = List.copyOf(members);
-        Objects.requireNonNull(tip, "tip");
         Objects.requireNonNull(total, "total");
+        Objects.requireNonNull(tip, "tip");
     }
 
     /**
@@ -33,7 +33,7 @@ public record ExpenseShares(List<MemberShare> members, Money tip, Money total) {
     static ExpenseShares converted(eranos.internal.ExpenseShares expenseShares) {
         return new ExpenseShares(
                 expenseShares.members().stream().map(MemberShare::converted).toList(),
-                Money.converted(expenseShares.tip()),
-                Money.converted(expenseShares.total()));
+                Money.converted(expenseShares.total()),
+                Money.converted(expenseShares.tip()));
     }
 }

@@ -70,9 +70,6 @@ class ShareRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Expense', 'Split', 'Member', 'Paid', 'Consumed')
 
-    consumed: str
-    """What each member consumed, a line each."""
-
     expense: str
     """The expense's name."""
 
@@ -84,6 +81,9 @@ class ShareRow(Row):
 
     paid: str
     """What each member paid, a line each, blank for a member who paid nothing."""
+
+    consumed: str
+    """What each member consumed, a line each."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -97,20 +97,20 @@ class ItemRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Item', 'Shared by', 'Quantity', 'Unit price', 'Line total')
 
-    line_total: Money
-    """The unit price times the quantity."""
-
     name: str
     """What the line is."""
-
-    quantity: int
-    """How many were ordered."""
 
     shared_by: str
     """Who had it."""
 
+    quantity: int
+    """How many were ordered."""
+
     unit_price: Money
     """What one costs."""
+
+    line_total: Money
+    """The unit price times the quantity."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -129,14 +129,14 @@ def _divided(split: Split) -> str:
 
     """
     match split:
-        case AmountsSplit():
-            return 'by amounts'
         case EqualSplit():
             return 'equally'
         case PartsSplit():
             return 'by parts'
         case PercentagesSplit():
             return 'by percentage'
+        case AmountsSplit():
+            return 'by amounts'
         case _:
             assert_never(split)
 
@@ -153,10 +153,10 @@ def _worth(value: TipValue) -> str:
 
     """
     match value:
-        case FixedTip(amount=amount):
-            return str(amount)
         case PercentageTip(percentage=percentage):
             return str(percentage)
+        case FixedTip(amount=amount):
+            return str(amount)
         case _:
             assert_never(value)
 
@@ -173,10 +173,10 @@ def _shared(distribution: TipDistribution) -> str:
 
     """
     match distribution:
-        case TipDistribution.EQUAL:
-            return 'equally'
         case TipDistribution.PROPORTIONAL:
             return 'in proportion to what each member ordered'
+        case TipDistribution.EQUAL:
+            return 'equally'
         case _:
             assert_never(distribution)
 
@@ -194,10 +194,10 @@ def _how(expense: Expense) -> str:
     """
     split = expense.split
     match split:
-        case ItemisedExpenseSplit(items=items):
-            divided = f'{len(items)} items'
         case WholeExpenseSplit(split=whole):
             divided = _divided(whole)
+        case ItemisedExpenseSplit(items=items):
+            divided = f'{len(items)} items'
         case _:
             assert_never(split)
     count = len(expense.payers.members)
@@ -224,11 +224,11 @@ def _share_row(group: Group, expense_id: ExpenseId) -> ShareRow | None:
     if expense is None or shares is None:
         return None
     return ShareRow(
-        consumed=cell(str(share.share) for share in shares.members),
         expense=expense.name,
         how=_how(expense),
         members=cell(name(group, share.member) for share in shares.members),
         paid=cell('' if share.paid.minor_units == 0 else str(share.paid) for share in shares.members),
+        consumed=cell(str(share.share) for share in shares.members),
     )
 
 
@@ -259,7 +259,7 @@ def _line_total(item: Item) -> Money:
         The line total, in the expense's currency.
 
     """
-    return Money(item.unit_price.currency, item.unit_price.minor_units * item.quantity)
+    return Money(item.unit_price.minor_units * item.quantity, item.unit_price.currency)
 
 
 def _print_items(group: Group, expense: Expense) -> None:
@@ -278,11 +278,11 @@ def _print_items(group: Group, expense: Expense) -> None:
         ItemRow,
         [
             ItemRow(
-                line_total=_line_total(item),
                 name=item.name,
-                quantity=item.quantity,
                 shared_by=names(group, item.split.members),
+                quantity=item.quantity,
                 unit_price=item.unit_price,
+                line_total=_line_total(item),
             )
             for item in split.items
         ],
@@ -303,10 +303,11 @@ def _fado_items(people: People) -> tuple[Item, ...]:
     """
     one = Parts.parse('1')
     return (
-        Item(name='Vinho verde', split=EqualSplit((people.ana, people.bob, people.dan)), unit_price=eur('12.00'), quantity=2),
-        Item(name='Bacalhau', split=EqualSplit((people.carol,)), unit_price=eur('18.00')),
+        Item(name='Vinho verde', unit_price=eur('12.00'), split=EqualSplit((people.ana, people.bob, people.dan)), quantity=2),
+        Item(name='Bacalhau', unit_price=eur('18.00'), split=EqualSplit((people.carol,))),
         Item(
             name='Custard tarts',
+            unit_price=eur('1.50'),
             split=PartsSplit(
                 (
                     MemberParts(people.ana, one),
@@ -316,10 +317,9 @@ def _fado_items(people: People) -> tuple[Item, ...]:
                     MemberParts(people.eva, Parts.parse('2')),
                 )
             ),
-            unit_price=eur('1.50'),
             quantity=6,
         ),
-        Item(name='Juice', split=EqualSplit((people.eva,)), unit_price=eur('3.00')),
+        Item(name='Juice', unit_price=eur('3.00'), split=EqualSplit((people.eva,))),
     )
 
 
@@ -342,19 +342,18 @@ def _add_expenses(group: Group, people: People, categories: Categories) -> Expen
     one = Parts.parse('1')
     groceries = group.add_expense(
         Expense(
-            cost=LocalCost(eur('10.00')),
-            date=october(1),
             name='Groceries',
+            cost=LocalCost(eur('10.00')),
             payers=EqualSplit((ana,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob, carol))),
+            date=october(1),
             category=categories.food,
         )
     )
     apartment = group.add_expense(
         Expense(
-            cost=LocalCost(eur('800.00')),
-            date=october(1),
             name='Apartment',
+            cost=LocalCost(eur('800.00')),
             payers=EqualSplit((ana,)),
             split=WholeExpenseSplit(
                 PercentagesSplit(
@@ -366,14 +365,14 @@ def _add_expenses(group: Group, people: People, categories: Categories) -> Expen
                     )
                 )
             ),
+            date=october(1),
             category=categories.lodging,
         )
     )
     seafood = group.add_expense(
         Expense(
-            cost=LocalCost(eur('90.00')),
-            date=october(2),
             name='Seafood dinner',
+            cost=LocalCost(eur('90.00')),
             payers=EqualSplit((carol,)),
             split=WholeExpenseSplit(
                 PartsSplit(
@@ -386,59 +385,60 @@ def _add_expenses(group: Group, people: People, categories: Categories) -> Expen
                     )
                 )
             ),
+            date=october(2),
             category=categories.food,
         )
     )
     train = group.add_expense(
         Expense(
-            cost=LocalCost(eur('88.50')),
-            date=october(3),
             name='Train to Porto',
+            cost=LocalCost(eur('88.50')),
             payers=EqualSplit((bob,)),
             split=WholeExpenseSplit(
                 AmountsSplit(
                     (
-                        MemberAmount(eur('24.50'), ana),
-                        MemberAmount(eur('24.50'), bob),
-                        MemberAmount(eur('24.50'), carol),
-                        MemberAmount(eur('15.00'), eva),
+                        MemberAmount(ana, eur('24.50')),
+                        MemberAmount(bob, eur('24.50')),
+                        MemberAmount(carol, eur('24.50')),
+                        MemberAmount(eva, eur('15.00')),
                     )
                 )
             ),
+            date=october(3),
             category=categories.transport,
         )
     )
     museum = group.add_expense(
         Expense(
-            cost=LocalCost(eur('60.00')),
-            date=october(3),
             name='Museum',
+            cost=LocalCost(eur('60.00')),
             payers=EqualSplit((ana, bob)),
             split=WholeExpenseSplit(EqualSplit((ana, bob, carol, dan))),
+            date=october(3),
         )
     )
     fado = group.add_expense(
         Expense(
-            cost=LocalCost(eur('54.00')),
-            date=october(4),
             name='Fado night',
-            payers=AmountsSplit((MemberAmount(eur('39.40'), carol), MemberAmount(eur('20.00'), dan))),
+            cost=LocalCost(eur('54.00')),
+            payers=AmountsSplit((MemberAmount(carol, eur('39.40')), MemberAmount(dan, eur('20.00')))),
             split=ItemisedExpenseSplit(_fado_items(people)),
+            date=october(4),
+            tip=Tip(PercentageTip(Percentage.parse('10'))),
+            time=TimeOfDay(22, 15),
             category=categories.food,
             description='Tasca do Chico',
-            time=TimeOfDay(22, 15),
-            tip=Tip(TipDistribution.PROPORTIONAL, PercentageTip(Percentage.parse('10'))),
         )
     )
     tour = group.add_expense(
         Expense(
-            cost=LocalCost(eur('45.00')),
-            date=october(5),
             name='Tuk-tuk tour',
+            cost=LocalCost(eur('45.00')),
             payers=EqualSplit((dan,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob, carol, dan, eva))),
+            date=october(5),
+            tip=Tip(FixedTip(eur('5.00')), TipDistribution.EQUAL),
             category=categories.transport,
-            tip=Tip(TipDistribution.EQUAL, FixedTip(eur('5.00'))),
         )
     )
     return Expenses(apartment=apartment, fado=fado, groceries=groceries, museum=museum, seafood=seafood, tour=tour, train=train)

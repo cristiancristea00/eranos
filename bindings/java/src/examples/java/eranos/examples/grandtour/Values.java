@@ -44,9 +44,9 @@ final class Values {
             rows.add(
                     new CurrencyRow(
                             currency.code(),
-                            currency.decimalPlaces(),
                             currency.name(),
-                            currency.numericCode()));
+                            currency.numericCode(),
+                            currency.decimalPlaces()));
         }
         Optional<EranosException> unknown = refusal(() -> Currency.of("XYZ"));
         System.out.print(
@@ -64,8 +64,8 @@ final class Values {
         Money change = eur("5.00").minus(eur("7.50"));
         Optional<EranosException> mixed = refusal(() -> eur("1.00").plus(ron("1.00")));
         Money yen = Money.parse("1500", Currency.of("JPY"));
-        Money dinars = new Money(Currency.of("BHD"), 1_234);
-        Money nothing = new Money(Currency.of("RON"), 0);
+        Money dinars = new Money(1_234, Currency.of("BHD"));
+        Money nothing = new Money(0, Currency.of("RON"));
         Cost cost = new Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"));
         Cost doubled = new Cost.Converted(eur("20.00"), rate(cost));
         System.out.println("Amounts are exact minor units in their currency:");
@@ -136,7 +136,7 @@ final class Values {
                                         .formatted(date, date.day(), date.month(), date.year())),
                         new ValueRow(
                                 "29 February 2027",
-                                message(refusal(() -> CalendarDate.of(29, 2, 2027)))),
+                                message(refusal(() -> CalendarDate.of(2027, 2, 29)))),
                         new ValueRow(
                                 "22:15",
                                 "%s: hour %d, minute %d"

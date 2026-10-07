@@ -35,9 +35,9 @@ class Currency:
         with _errors.library_errors():
             details = generated.currency_details(code)
         self._code = details.code
-        self._decimal_places = details.decimal_places
         self._name = details.name
         self._numeric_code = details.numeric_code
+        self._decimal_places = details.decimal_places
 
     @classmethod
     def all(cls) -> tuple[Currency, ...]:
@@ -56,11 +56,6 @@ class Currency:
         return self._code
 
     @property
-    def decimal_places(self) -> int:
-        """How many decimal places its minor unit has, 2 for the euro and 0 for the yen."""
-        return self._decimal_places
-
-    @property
     def name(self) -> str:
         """The English name, such as ``"Euro"``."""
         return self._name
@@ -69,6 +64,11 @@ class Currency:
     def numeric_code(self) -> int:
         """The three-digit numeric code, 978 for the euro."""
         return self._numeric_code
+
+    @property
+    def decimal_places(self) -> int:
+        """How many decimal places its minor unit has, 2 for the euro and 0 for the yen."""
+        return self._decimal_places
 
     @override
     def __eq__(self, other: object) -> bool:

@@ -33,15 +33,14 @@ use crate::error::MoneyError;
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Currency {
+    iso: IsoCurrency,
     /// The minor unit of `iso`: `lookup` refuses a code without one, so
     /// `decimal_places` needs no fallback.
     decimal_places: u8,
-    iso: IsoCurrency,
 }
 
-// Written out because the fields are in alphabetical order: a derived
-// ordering would compare the decimal places first, and currencies order by
-// their three-letter code.
+// Written out: `IsoCurrency` orders by its numeric code, and currencies order
+// by their three-letter code.
 impl Ord for Currency {
     fn cmp(&self, other: &Self) -> Ordering {
         self.code().cmp(other.code())
@@ -108,21 +107,9 @@ impl Currency {
             return None;
         };
         Some(Self {
-            decimal_places,
             iso,
+            decimal_places,
         })
-    }
-
-    /// The number of decimal places of the minor unit: 2 for `EUR` (cents),
-    /// 0 for `JPY`, 3 for `BHD`.
-    #[must_use]
-    pub const fn decimal_places(self) -> u8 {
-        self.decimal_places
-    }
-
-    /// `10^decimal_places`: how many minor units make one major unit.
-    pub(crate) fn minor_units_per_major(self) -> i64 {
-        10_i64.pow(u32::from(self.decimal_places()))
     }
 
     /// The three-letter code, such as `"EUR"`.
@@ -150,6 +137,18 @@ impl Currency {
     )]
     pub const fn numeric_code(self) -> u16 {
         self.iso as u16
+    }
+
+    /// The number of decimal places of the minor unit: 2 for `EUR` (cents),
+    /// 0 for `JPY`, 3 for `BHD`.
+    #[must_use]
+    pub const fn decimal_places(self) -> u8 {
+        self.decimal_places
+    }
+
+    /// `10^decimal_places`: how many minor units make one major unit.
+    pub(crate) fn minor_units_per_major(self) -> i64 {
+        10_i64.pow(u32::from(self.decimal_places()))
     }
 }
 

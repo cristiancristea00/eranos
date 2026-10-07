@@ -138,7 +138,7 @@ class GroupTest {
                 assertEquals(Optional.empty(), lookup);
             }
         }
-        try (GroupReader reader = Group.builder(flat.euro, "Trip").build().read()) {
+        try (GroupReader reader = Group.builder("Trip", flat.euro).build().read()) {
             assertEquals(Optional.empty(), reader.language());
         }
     }
@@ -164,7 +164,7 @@ class GroupTest {
                 assertThrows(EranosException.Group.class, () -> group.removeMember(flat.ana));
         assertEquals(
                 new GroupFailure.MemberInUse(
-                        List.of(flat.dinner), flat.ana, List.of(flat.repayment)),
+                        flat.ana, List.of(flat.dinner), List.of(flat.repayment)),
                 inUse.failure());
 
         CategoryId travel = group.addCategory(new Category("Travel"));
@@ -188,10 +188,10 @@ class GroupTest {
         TransferId cash =
                 group.addTransfer(
                         Transfer.builder(
-                                        new Cost.Local(flat.euros(100)),
-                                        flat.day,
                                         flat.ana,
-                                        flat.bob)
+                                        flat.bob,
+                                        new Cost.Local(flat.euros(100)),
+                                        flat.day)
                                 .build());
         assertEquals(
                 Optional.empty(),
@@ -213,7 +213,7 @@ class GroupTest {
         Currency lei = Currency.of("RON");
         group.changeCurrency(lei, Map.of(flat.euro, ExchangeRate.parse("5")));
         assertEquals(lei, group.currency());
-        assertEquals(new Money(lei, 15_000), group.summary().totalSpent());
+        assertEquals(new Money(15_000, lei), group.summary().totalSpent());
     }
 
     /**
@@ -258,10 +258,10 @@ class GroupTest {
         TransferId cash =
                 group.addTransferAsync(
                                 Transfer.builder(
-                                                new Cost.Local(flat.euros(100)),
-                                                flat.day,
                                                 flat.ana,
-                                                flat.bob)
+                                                flat.bob,
+                                                new Cost.Local(flat.euros(100)),
+                                                flat.day)
                                         .build())
                         .join();
         assertEquals(
@@ -297,11 +297,11 @@ class GroupTest {
     @Test
     void aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() throws EranosException {
         Currency euro = Currency.of("EUR");
-        Group plain = Group.builder(euro, "Trip").build();
+        Group plain = Group.builder("Trip", euro).build();
         assertEquals(Optional.empty(), plain.description());
         assertEquals(Optional.empty(), plain.language());
         EranosException.Group blank =
-                assertThrows(EranosException.Group.class, () -> Group.builder(euro, " ").build());
+                assertThrows(EranosException.Group.class, () -> Group.builder(" ", euro).build());
         assertEquals(new GroupFailure.EmptyName(), blank.failure());
         assertEquals("the group name must not be empty", blank.getMessage());
         EranosException.InvalidJson json =
@@ -381,7 +381,7 @@ class GroupTest {
      */
     @Test
     void aClosedGroupAnswersNoMore() throws EranosException {
-        Group group = Group.builder(Currency.of("EUR"), "Trip").build();
+        Group group = Group.builder("Trip", Currency.of("EUR")).build();
         group.close();
         group.close();
         assertThrows(IllegalStateException.class, group::name);

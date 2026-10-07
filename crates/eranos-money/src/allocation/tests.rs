@@ -10,15 +10,15 @@ use super::*;
 /// A rational number in 128-bit arithmetic.
 #[derive(Debug, Clone, Copy)]
 struct Fraction {
-    denominator: i128,
     numerator: i128,
+    denominator: i128,
 }
 
 /// The exact share `total × weight / Σ weights`.
 fn exact_share(total: i64, weights: &[u64], index: usize) -> Fraction {
     Fraction {
-        denominator: weights.iter().map(|&weight| i128::from(weight)).sum(),
         numerator: i128::from(total) * i128::from(weights[index]),
+        denominator: weights.iter().map(|&weight| i128::from(weight)).sum(),
     }
 }
 

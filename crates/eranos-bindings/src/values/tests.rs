@@ -16,22 +16,22 @@ use crate::{
 
 fn euros(minor_units: i64) -> Money {
     Money {
-        currency: "EUR".to_owned(),
         minor_units,
+        currency: "EUR".to_owned(),
     }
 }
 
 fn lei(minor_units: i64) -> Money {
     Money {
-        currency: "RON".to_owned(),
         minor_units,
+        currency: "RON".to_owned(),
     }
 }
 
 fn unknown_money() -> Money {
     Money {
-        currency: "XYZ".to_owned(),
         minor_units: 1,
+        currency: "XYZ".to_owned(),
     }
 }
 
@@ -50,33 +50,33 @@ fn equal(members: &[String]) -> Split {
 fn dinner() -> Expense {
     Expense {
         id: None,
+        name: "Dinner".to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
         },
-        date: CalendarDate {
-            day: 23,
-            month: 9,
-            year: 2026,
-        },
-        name: "Dinner".to_owned(),
         payers: Split::Amounts {
             shares: vec![MemberAmount {
-                amount: euros(3_300),
                 member: member(1),
+                amount: euros(3_300),
             }],
         },
         split: ExpenseSplit::Whole {
             split: equal(&[member(3), member(2)]),
         },
-        category: None,
-        description: None,
-        time: None,
+        date: CalendarDate {
+            year: 2026,
+            month: 9,
+            day: 23,
+        },
         tip: Some(Tip {
             value: TipValue::Percentage {
                 basis_points: 1_000,
             },
             distribution: TipDistribution::Proportional,
         }),
+        time: None,
+        category: None,
+        description: None,
     }
 }
 
@@ -247,9 +247,9 @@ fn percentages_and_parts_parse_and_format_as_the_library_does() {
 #[test]
 fn dates_times_and_languages_parse_and_format_as_the_library_does() {
     let date = CalendarDate {
-        day: 23,
-        month: 9,
         year: 2026,
+        month: 9,
+        day: 23,
     };
     assert_eq!(calendar_date_parse("2026-09-23"), Ok(date));
     assert_eq!(calendar_date_format(date).as_deref(), Ok("2026-09-23"));
@@ -262,8 +262,8 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
     ));
     assert!(matches!(
         calendar_date_format(CalendarDate {
-            day: 30,
             month: 2,
+            day: 30,
             ..date
         }),
         Err(EranosError::Calendar {
@@ -506,8 +506,8 @@ fn an_expense_and_a_split_list_their_members() {
         split: ExpenseSplit::Itemised {
             items: vec![Item {
                 name: "Soup".to_owned(),
-                split: equal(&[member(3), member(2)]),
                 unit_price: euros(3_000),
+                split: equal(&[member(3), member(2)]),
                 quantity: 1,
             }],
         },
@@ -547,8 +547,8 @@ fn an_expense_and_a_split_list_their_members() {
         split: ExpenseSplit::Itemised {
             items: vec![Item {
                 name: "Soup".to_owned(),
-                split: equal(&[member(2)]),
                 unit_price: euros(3_000),
+                split: equal(&[member(2)]),
                 quantity: 0,
             }],
         },

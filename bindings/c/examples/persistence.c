@@ -11,12 +11,12 @@
 
 /// A row of the table of balances: a member's balance before saving and after loading.
 typedef struct ComparisonRow {
-    /// The balance after loading.
-    Line after;
-    /// The balance before saving.
-    Line before;
     /// The member's first name.
     Line name;
+    /// The balance before saving.
+    Line before;
+    /// The balance after loading.
+    Line after;
 } ComparisonRow;
 
 /// A table of balances before and after, its columns from @p numbersFrom on aligned to the right.
@@ -42,7 +42,7 @@ static Line balanceOf(EranosGroup const *const group, Id const member) {
 
 /// The lunch that Bob paid, with a tip of 10 % shared in proportion to what each consumed.
 static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCalendarDate const day) {
-    EranosExpense *const expense = expenseOf(localCost(amountOf("30.00", "EUR")), day, "Lunch", soleSplit(bob), equalSplit(both));
+    EranosExpense *const expense = expenseOf("Lunch", localCost(amountOf("30.00", "EUR")), soleSplit(bob), equalSplit(both), day);
     int32_t basisPoints = 0;
     must(eranosPercentageParse("10", &basisPoints));
     EranosTipValue *const value = eranosTipValueCreatePercentage(basisPoints);
@@ -54,16 +54,16 @@ static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCal
 }
 
 int main(void) {
-    EranosCalendarDate const day = {.day = 23, .month = 9, .year = 2026};
+    EranosCalendarDate const day = {.year = 2026, .month = 9, .day = 23};
     EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("EUR", "Road trip", &details));
+    must(eranosNewGroupCreate("Road trip", "EUR", &details));
     EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
     Members const both = {.count = 2, .ids = {ana, bob}};
-    addExpense(group, expenseOf(localCost(amountOf("70.00", "EUR")), day, "Fuel", soleSplit(ana), equalSplit(&both)));
+    addExpense(group, expenseOf("Fuel", localCost(amountOf("70.00", "EUR")), soleSplit(ana), equalSplit(&both), day));
     addExpense(group, lunchOf(&both, bob, day));
 
     title("Road trip: saving and loading a group");
@@ -93,7 +93,7 @@ int main(void) {
         Line const before = balanceOf(group, members[index]);
         Line const after = balanceOf(loaded, members[index]);
         check(0 == strcmp(before.text, after.text), "the loaded group has the saved one's balances");
-        addComparisonRow(table, &(ComparisonRow){.after = after, .before = before, .name = firstName(group, members[index].text)});
+        addComparisonRow(table, &(ComparisonRow){.name = firstName(group, members[index].text), .before = before, .after = after});
     }
     tablePrint(table);
     EranosSettlement *plan = nullptr;
@@ -102,11 +102,12 @@ int main(void) {
     printFormatted("Payments needed to settle the loaded group: %zu.", eranosPaymentListLength(payments));
 
     section("3. A corrupted file is refused");
-    printLine("Here the fuel's payer was edited to an identifier no member has. Reading the file\n"
-              "as a SavedGroup and loading it with into_group replays every entry through the\n"
-              "same checks as adding it, and refuses the file instead of producing balances that\n"
-              "do not add up:");
-    // The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
+    printLine("Here Ana's identifier was edited in her member entry, so the fuel's payer is an\n"
+              "identifier no member has. Reading the file as a SavedGroup and loading it with\n"
+              "into_group replays every entry through the same checks as adding it, and refuses\n"
+              "the file instead of producing balances that do not add up:");
+    // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel she
+    // paid is left naming an identifier no member has.
     char *const corrupted = replaceFirst(eranosTextData(saved), ana.text, "0199a000-0000-7000-8000-00000000ffff");
     EranosGroup *refusedGroup = nullptr;
     EranosError *const refused = eranosGroupLoad(corrupted, &refusedGroup);

@@ -19,10 +19,10 @@ import { type Columns, load, names, participants, printLines, printTable, sectio
 
 /** An expense, as the table of expenses prints it. */
 interface ExpenseRow {
-    readonly amount: Money;
     readonly name: string;
-    readonly participants: string;
     readonly payers: string;
+    readonly participants: string;
+    readonly amount: Money;
 }
 
 const expenseColumns: Columns<ExpenseRow> = [
@@ -34,10 +34,10 @@ const expenseColumns: Columns<ExpenseRow> = [
 
 /** A member's totals, as the table of members prints them. */
 interface MemberRow {
-    readonly balance: Balance;
-    readonly consumed: Money;
     readonly name: string;
     readonly paid: Money;
+    readonly consumed: Money;
+    readonly balance: Balance;
 }
 
 const memberColumns: Columns<MemberRow> = [
@@ -49,9 +49,9 @@ const memberColumns: Columns<MemberRow> = [
 
 /** A payment of the plan, as the table of payments prints it. */
 interface PaymentRow {
-    readonly amount: Money;
     readonly from: string;
     readonly to: string;
+    readonly amount: Money;
 }
 
 const paymentColumns: Columns<PaymentRow> = [
@@ -62,7 +62,7 @@ const paymentColumns: Columns<PaymentRow> = [
 
 await load();
 const euro = Currency.of('EUR');
-const group = Group.create(euro, 'Weekend in Sinaia');
+const group = Group.create('Weekend in Sinaia', euro);
 title(group.nameSync());
 printLines(
     `Three friends rent a cabin and buy groceries. The group keeps its books in ${group.currencySync().toString()}, so`,
@@ -77,29 +77,29 @@ printLines(`${String(group.membersSync().length)} people joined the group: ${nam
 
 section('2. Expenses');
 printLines('Each expense records who paid and who shares it. Here everyone shares everything', 'equally.');
-const friday = CalendarDate.of(25, 9, 2026);
+const friday = CalendarDate.of(2026, 9, 25);
 const everyone: Split = { kind: 'equal', members: [ana, bob, carol] };
 group.addExpenseSync({
-    cost: { kind: 'local', amount: Money.parse('240.00', euro) },
-    date: friday,
     name: 'Cabin',
+    cost: { kind: 'local', amount: Money.parse('240.00', euro) },
     payers: { kind: 'equal', members: [ana] },
     split: { kind: 'whole', split: everyone },
+    date: friday,
 });
 group.addExpenseSync({
-    cost: { kind: 'local', amount: Money.parse('60.00', euro) },
-    date: friday,
     name: 'Groceries',
+    cost: { kind: 'local', amount: Money.parse('60.00', euro) },
     payers: { kind: 'equal', members: [bob] },
     split: { kind: 'whole', split: everyone },
+    date: friday,
 });
 printTable(
     expenseColumns,
     group.expensesSync().map((expense) => ({
-        amount: expenseTotal(expense),
         name: expense.name,
-        participants: names(group, participants(expense.split)),
         payers: names(group, splitMembers(expense.payers)),
+        participants: names(group, participants(expense.split)),
+        amount: expenseTotal(expense),
     })),
     3,
 );
@@ -114,7 +114,7 @@ printTable(
     memberColumns,
     group.membersSync().flatMap((member) => {
         const found = undefined === member.id ? undefined : totals(member.id, summary);
-        return undefined === found ? [] : [{ balance: found.balance, consumed: found.share, name: member.firstName, paid: found.paid }];
+        return undefined === found ? [] : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance }];
     }),
     1,
 );
@@ -128,7 +128,7 @@ const settlement = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 printLines(`The fewest payments that bring every balance to zero (${String(settlement.payments.length)} in total):`);
 printTable(
     paymentColumns,
-    settlement.payments.map((payment) => ({ amount: payment.amount, from: names(group, [payment.from]), to: names(group, [payment.to]) })),
+    settlement.payments.map((payment) => ({ from: names(group, [payment.from]), to: names(group, [payment.to]), amount: payment.amount })),
     2,
 );
 printLines('Once these payments are made, nobody owes anything.');

@@ -22,32 +22,32 @@ use crate::{Cost, Currency, ExchangeRate};
 /// assert_eq!(price.minor_units(), 1234);
 /// assert_eq!(price.to_string(), "12.34 EUR");
 ///
-/// let tip = Money::from_minor_units(Currency::EUR, 166);
+/// let tip = Money::from_minor_units(166, Currency::EUR);
 /// assert_eq!(price.checked_add(tip)?, Money::parse("14.00", Currency::EUR)?);
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Money {
-    currency: Currency,
     minor_units: i64,
+    currency: Currency,
 }
 
 impl Money {
-    /// Returns `minor_units` of `currency`: `from_minor_units(Currency::EUR,
-    /// 1234)` is 12.34 EUR.
+    /// Returns `minor_units` of `currency`: `from_minor_units(1234,
+    /// Currency::EUR)` is 12.34 EUR.
     #[must_use]
-    pub const fn from_minor_units(currency: Currency, minor_units: i64) -> Self {
+    pub const fn from_minor_units(minor_units: i64, currency: Currency) -> Self {
         Self {
-            currency,
             minor_units,
+            currency,
         }
     }
 
     /// Returns zero in `currency`.
     #[must_use]
     pub const fn zero(currency: Currency) -> Self {
-        Self::from_minor_units(currency, 0)
+        Self::from_minor_units(0, currency)
     }
 
     /// Parses a decimal amount such as `12.34`, `-5`, or `0.5`.
@@ -109,19 +109,19 @@ impl Money {
             .ok_or(MoneyError::Overflow)?;
         let signed = if negative { -magnitude } else { magnitude };
         let minor_units = i64::try_from(signed).map_err(|_| MoneyError::Overflow)?;
-        Ok(Self::from_minor_units(currency, minor_units))
-    }
-
-    /// The currency.
-    #[must_use]
-    pub const fn currency(self) -> Currency {
-        self.currency
+        Ok(Self::from_minor_units(minor_units, currency))
     }
 
     /// The amount in minor units: 1234 for 12.34 EUR.
     #[must_use]
     pub const fn minor_units(self) -> i64 {
         self.minor_units
+    }
+
+    /// The currency.
+    #[must_use]
+    pub const fn currency(self) -> Currency {
+        self.currency
     }
 
     /// Whether the amount is zero.
@@ -176,7 +176,7 @@ impl Money {
             .minor_units
             .checked_add(other.minor_units)
             .ok_or(MoneyError::Overflow)?;
-        Ok(Self::from_minor_units(self.currency, sum))
+        Ok(Self::from_minor_units(sum, self.currency))
     }
 
     /// Subtracts an amount of the same currency.
@@ -192,7 +192,7 @@ impl Money {
             .minor_units
             .checked_sub(other.minor_units)
             .ok_or(MoneyError::Overflow)?;
-        Ok(Self::from_minor_units(self.currency, difference))
+        Ok(Self::from_minor_units(difference, self.currency))
     }
 
     fn same_currency(self, other: Self) -> Result<(), MoneyError> {

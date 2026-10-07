@@ -42,9 +42,6 @@ class LineRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Item', 'Shared by', 'Quantity', 'Unit price', 'Line total')
 
-    line_total: Money
-    """The unit price times the quantity."""
-
     name: str
     """What the line is."""
 
@@ -56,6 +53,9 @@ class LineRow(Row):
 
     unit_price: Money
     """What one costs."""
+
+    line_total: Money
+    """The unit price times the quantity."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -69,14 +69,11 @@ class TipRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Ordered', 'Tip by consumption', 'Pays', 'Tip shared equally', 'Pays')
 
-    equal_tip: Money
-    """The member's part of the tip, shared equally."""
-
-    equal_total: Money
-    """What the member pays with the tip shared equally."""
-
     name: str
     """The member's first name."""
+
+    subtotal: Money
+    """What the member ordered."""
 
     proportional_tip: Money
     """The member's part of the tip, shared in proportion to what each person ordered."""
@@ -84,8 +81,11 @@ class TipRow(Row):
     proportional_total: Money
     """What the member pays with the tip shared in proportion to what each person ordered."""
 
-    subtotal: Money
-    """What the member ordered."""
+    equal_tip: Money
+    """The member's part of the tip, shared equally."""
+
+    equal_total: Money
+    """What the member pays with the tip shared equally."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -127,10 +127,10 @@ def receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[Item, ...]:
 
     """
     return (
-        Item(name='Ciorbă', split=EqualSplit((ana,)), unit_price=euros('8.00')),
-        Item(name='Sarmale', split=EqualSplit((bob, carol)), unit_price=euros('14.00'), quantity=2),
-        Item(name='Papanași', split=PartsSplit((MemberParts(ana, Parts.parse('1')), MemberParts(carol, Parts.parse('2')))), unit_price=euros('9.00')),
-        Item(name='Lemonade', split=EqualSplit((ana, bob, carol)), unit_price=euros('3.00'), quantity=3),
+        Item(name='Ciorbă', unit_price=euros('8.00'), split=EqualSplit((ana,))),
+        Item(name='Sarmale', unit_price=euros('14.00'), split=EqualSplit((bob, carol)), quantity=2),
+        Item(name='Papanași', unit_price=euros('9.00'), split=PartsSplit((MemberParts(ana, Parts.parse('1')), MemberParts(carol, Parts.parse('2'))))),
+        Item(name='Lemonade', unit_price=euros('3.00'), split=EqualSplit((ana, bob, carol)), quantity=3),
     )
 
 
@@ -147,7 +147,7 @@ def line_total(item: Item) -> Money:
         The line's total.
 
     """
-    return Money(item.unit_price.currency, item.unit_price.minor_units * item.quantity)
+    return Money(item.unit_price.minor_units * item.quantity, item.unit_price.currency)
 
 
 def preview(group: Group, expense: Expense) -> ExpenseShares:
@@ -199,7 +199,7 @@ def bill(untipped: Expense, distribution: TipDistribution) -> Expense:
         The dinner with its tip.
 
     """
-    return copy.replace(untipped, tip=Tip(distribution, PercentageTip(Percentage.parse('10'))))
+    return copy.replace(untipped, tip=Tip(PercentageTip(Percentage.parse('10')), distribution))
 
 
 def tip_row(group: Group, member: MemberId, ordered: ExpenseShares, by_consumption: ExpenseShares, even: ExpenseShares) -> TipRow:
@@ -221,22 +221,22 @@ def tip_row(group: Group, member: MemberId, ordered: ExpenseShares, by_consumpti
     proportional_total = consumed(by_consumption, member)
     equal_total = consumed(even, member)
     return TipRow(
-        equal_tip=equal_total.minus(subtotal),
-        equal_total=equal_total,
         name=names(group, (member,)),
+        subtotal=subtotal,
         proportional_tip=proportional_total.minus(subtotal),
         proportional_total=proportional_total,
-        subtotal=subtotal,
+        equal_tip=equal_total.minus(subtotal),
+        equal_total=equal_total,
     )
 
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create(Currency('EUR'), "Dinner at Caru' cu Bere")
+    group = Group.create("Dinner at Caru' cu Bere", Currency('EUR'))
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     carol = group.add_member(Member(first_name='Carol'))
-    day = CalendarDate(23, 9, 2026)
+    day = CalendarDate(2026, 9, 23)
 
     title(f'{group.name()}: an itemised bill')
     print_lines(
@@ -250,11 +250,11 @@ def main() -> None:
         LineRow,
         [
             LineRow(
-                line_total=line_total(item),
                 name=item.name,
                 participants=names(group, item.split.members),
                 quantity=item.quantity,
                 unit_price=item.unit_price,
+                line_total=line_total(item),
             )
             for item in lines
         ],
@@ -266,7 +266,7 @@ def main() -> None:
     )
 
     section('2. Who ordered what, and the tip')
-    untipped = Expense(cost=LocalCost(euros('54.00')), date=day, name='Dinner', payers=EqualSplit((ana,)), split=ItemisedExpenseSplit(lines))
+    untipped = Expense(name='Dinner', cost=LocalCost(euros('54.00')), payers=EqualSplit((ana,)), split=ItemisedExpenseSplit(lines), date=day)
     ordered = preview(group, untipped)
     proportional = group.add_expense(bill(untipped, TipDistribution.PROPORTIONAL))
     by_consumption = group.expense_shares(proportional)

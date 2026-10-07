@@ -23,7 +23,7 @@ fn eur(text: &str) -> Money {
 }
 
 fn day() -> CalendarDate {
-    CalendarDate::new(23, 9, 2026).unwrap()
+    CalendarDate::new(2026, 9, 23).unwrap()
 }
 
 fn person(name: &str) -> Member {
@@ -32,40 +32,40 @@ fn person(name: &str) -> Member {
 
 /// A group with three members, and the members in creation order.
 struct Trip {
+    group: Group,
     ana: MemberId,
     bob: MemberId,
     carol: MemberId,
-    group: Group,
 }
 
 /// A group with three members, in creation order.
 fn trip() -> Trip {
-    let mut group = Group::builder(Currency::EUR, "Trip").build().unwrap();
+    let mut group = Group::builder("Trip", Currency::EUR).build().unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
     let bob = group.add_member(person("Bob")).unwrap();
     let carol = group.add_member(person("Carol")).unwrap();
     Trip {
+        group,
         ana,
         bob,
         carol,
-        group,
     }
 }
 
 fn shared(amount: &str, payer: MemberId, participants: &[MemberId]) -> Expense {
     Expense::builder(
-        eur(amount),
-        day(),
         "Shared",
+        eur(amount),
         payer,
         Split::equal(participants.iter().copied()),
+        day(),
     )
     .build()
     .unwrap()
 }
 
 fn transfer(from: MemberId, to: MemberId, amount: &str) -> Transfer {
-    Transfer::builder(eur(amount), day(), from, to)
+    Transfer::builder(from, to, eur(amount), day())
         .build()
         .unwrap()
 }
@@ -136,12 +136,12 @@ fn assert_unchanged<T: std::fmt::Debug>(
 /// identifier of its own.
 #[test]
 fn a_new_group_starts_empty() {
-    let group = Group::builder(Currency::EUR, "  Lisbon ")
+    let group = Group::builder("  Lisbon ", Currency::EUR)
         .description(" ")
         .language(Language::parse("pt-PT").unwrap())
         .build()
         .unwrap();
-    let other = Group::builder(Currency::EUR, "Lisbon").build().unwrap();
+    let other = Group::builder("Lisbon", Currency::EUR).build().unwrap();
     assert_ne!(group.id(), other.id());
     assert_eq!(group.name(), "Lisbon");
     assert_eq!(group.description(), None);
@@ -150,16 +150,16 @@ fn a_new_group_starts_empty() {
     assert_eq!(group.members().len(), 0);
     assert_eq!(group.summary().total_spent(), eur("0"));
     // A blank name is refused.
-    assert!(Group::builder(Currency::EUR, " ").build().is_err());
+    assert!(Group::builder(" ", Currency::EUR).build().is_err());
 }
 
 /// Group details change without touching entries or totals.
 #[test]
 fn details_change_in_place() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group
@@ -187,10 +187,10 @@ fn details_change_in_place() {
 #[test]
 fn members_are_added_replaced_and_listed_in_creation_order() {
     let Trip {
+        mut group,
         ana,
         bob,
         carol,
-        mut group,
     } = trip();
     let ids: Vec<MemberId> = group.members().map(Member::id).collect();
     assert_eq!(ids, vec![ana, bob, carol]);
@@ -227,10 +227,10 @@ fn members_are_added_replaced_and_listed_in_creation_order() {
 #[test]
 fn an_archived_member_keeps_history_but_joins_no_new_expense() {
     let Trip {
+        mut group,
         ana,
         bob,
         carol,
-        mut group,
     } = trip();
     let dinner = group
         .add_expense(shared("30.00", ana, &[ana, bob, carol]))
@@ -291,10 +291,10 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
 #[test]
 fn only_an_unreferenced_member_can_be_removed() {
     let Trip {
+        mut group,
         ana,
         bob,
         carol,
-        mut group,
     } = trip();
     let dinner = group
         .add_expense(shared("20.00", ana, &[ana, bob]))
@@ -304,8 +304,8 @@ fn only_an_unreferenced_member_can_be_removed() {
     assert_unchanged(
         &mut group,
         &GroupError::MemberInUse {
-            expenses: vec![dinner],
             member: bob,
+            expenses: vec![dinner],
             transfers: vec![repayment],
         },
         |group| group.remove_member(bob),
@@ -313,8 +313,8 @@ fn only_an_unreferenced_member_can_be_removed() {
     assert_unchanged(
         &mut group,
         &GroupError::MemberInUse {
-            expenses: vec![],
             member: carol,
+            expenses: vec![],
             transfers: vec![repayment],
         },
         |group| group.remove_member(carol),
@@ -432,13 +432,13 @@ fn the_built_in_category_stays() {
 #[test]
 fn removing_a_category_moves_its_expenses_to_uncategorised() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
-    let lunch = Expense::builder(eur("20.00"), day(), "Lunch", ana, Split::equal([ana, bob]))
+    let lunch = Expense::builder("Lunch", eur("20.00"), ana, Split::equal([ana, bob]), day())
         .category(food)
         .build()
         .unwrap();
@@ -482,9 +482,9 @@ fn removing_a_category_moves_its_expenses_to_uncategorised() {
 #[test]
 fn an_expense_must_fit_the_group() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     let stranger = MemberId::from_bytes([200; 16]);
@@ -503,11 +503,11 @@ fn an_expense_must_fit_the_group() {
     // A foreign expense needs a converted cost; one in the group currency
     // must not have one, even at a rate of 1.
     let foreign = Expense::builder(
-        Money::parse("50.00", Currency::RON).unwrap(),
-        day(),
         "Taxi",
+        Money::parse("50.00", Currency::RON).unwrap(),
         ana,
         Split::equal([ana, bob]),
+        day(),
     )
     .build()
     .unwrap();
@@ -541,10 +541,10 @@ fn an_expense_must_fit_the_group() {
 #[test]
 fn expenses_move_the_totals_incrementally() {
     let Trip {
+        mut group,
         ana,
         bob,
         carol,
-        mut group,
     } = trip();
     let empty = group.ledger.clone();
     let hotel = group
@@ -603,10 +603,10 @@ fn expenses_move_the_totals_incrementally() {
 #[test]
 fn transfers_move_balances_exactly() {
     let Trip {
+        mut group,
         ana,
         bob,
         carol,
-        mut group,
     } = trip();
     group
         .add_expense(shared("30.00", ana, &[ana, bob, carol]))
@@ -671,10 +671,10 @@ fn transfers_move_balances_exactly() {
 #[test]
 fn settlements_are_cached_until_a_balance_changes() {
     let Trip {
+        mut group,
         ana,
         bob,
         carol,
-        mut group,
     } = trip();
     group
         .add_expense(shared("30.00", ana, &[ana, bob, carol]))
@@ -717,7 +717,7 @@ fn settlements_are_cached_until_a_balance_changes() {
 fn an_asynchronous_settlement_fills_the_cache_the_synchronous_call_reads() {
     // Sixteen members each paid a different amount for a seventeenth:
     // seventeen open balances, so the exact solver yields once.
-    let mut group = Group::builder(Currency::EUR, "Club").build().unwrap();
+    let mut group = Group::builder("Club", Currency::EUR).build().unwrap();
     let hub = group.add_member(person("Hub")).unwrap();
     let mut last = hub;
     for minor_units in 1..=16 {
@@ -754,22 +754,22 @@ fn an_asynchronous_settlement_fills_the_cache_the_synchronous_call_reads() {
 #[test]
 fn a_currency_change_reconverts_every_entry() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     let local = group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
     let foreign = Expense::builder(
+        "Taxi",
         Money::parse("50.00", Currency::RON)
             .unwrap()
             .at(ExchangeRate::parse("0.2").unwrap()),
-        day(),
-        "Taxi",
         bob,
         Split::equal([ana, bob]),
+        day(),
     )
     .build()
     .unwrap();
@@ -831,9 +831,9 @@ fn a_currency_change_reconverts_every_entry() {
 fn a_currency_change_changes_nothing_until_it_completes() {
     // 2 100 entries: the change yields after the 1 024th and the 2 048th.
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     for _ in 0..2_000 {
@@ -880,17 +880,17 @@ fn a_currency_change_changes_nothing_until_it_completes() {
 #[test]
 fn a_transfer_cost_must_suit_the_group_currency() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     let lei = || {
         Transfer::builder(
-            Money::parse("100.00", Currency::RON).unwrap(),
-            day(),
             ana,
             bob,
+            Money::parse("100.00", Currency::RON).unwrap(),
+            day(),
         )
         .build()
         .unwrap()
@@ -900,10 +900,10 @@ fn a_transfer_cost_must_suit_the_group_currency() {
     };
     assert_unchanged(&mut group, &missing, |group| group.add_transfer(lei()));
     let rated = Transfer::builder(
-        eur("25.00").at(ExchangeRate::parse("2").unwrap()),
-        day(),
         ana,
         bob,
+        eur("25.00").at(ExchangeRate::parse("2").unwrap()),
+        day(),
     )
     .build()
     .unwrap();
@@ -923,11 +923,11 @@ fn a_transfer_cost_must_suit_the_group_currency() {
 /// dollars.
 #[test]
 fn a_pegged_currency_needs_its_rate_even_at_par() {
-    let mut group = Group::builder(Currency::USD, "Bermuda").build().unwrap();
+    let mut group = Group::builder("Bermuda", Currency::USD).build().unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
-    let bermudian_dollars = Money::from_minor_units(Currency::BMD, 5_000);
+    let bermudian_dollars = Money::from_minor_units(5_000, Currency::BMD);
     let ferry = |cost: Cost| {
-        Expense::builder(cost, day(), "Ferry", ana, Split::equal([ana]))
+        Expense::builder("Ferry", cost, ana, Split::equal([ana]), day())
             .build()
             .unwrap()
     };
@@ -943,7 +943,7 @@ fn a_pegged_currency_needs_its_rate_even_at_par() {
         .unwrap();
     assert_eq!(
         group.summary().total_spent(),
-        Money::from_minor_units(Currency::USD, 5_000)
+        Money::from_minor_units(5_000, Currency::USD)
     );
 }
 
@@ -951,9 +951,9 @@ fn a_pegged_currency_needs_its_rate_even_at_par() {
 #[test]
 fn equality_ignores_the_caches() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group
@@ -976,14 +976,14 @@ fn equality_ignores_the_caches() {
 #[test]
 fn an_overflowing_expense_is_refused() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     let huge = || {
-        let amount = Money::from_minor_units(Currency::EUR, i64::MAX);
-        Expense::builder(amount, day(), "Huge", ana, Split::equal([bob]))
+        let amount = Money::from_minor_units(i64::MAX, Currency::EUR);
+        Expense::builder("Huge", amount, ana, Split::equal([bob]), day())
             .build()
             .unwrap()
     };
@@ -992,11 +992,11 @@ fn an_overflowing_expense_is_refused() {
         group.add_expense(huge())
     });
     let foreign = Expense::builder(
-        huge_in_lei().at(two()),
-        day(),
         "Foreign",
+        huge_in_lei().at(two()),
         ana,
         Split::equal([bob]),
+        day(),
     )
     .build()
     .unwrap();
@@ -1025,22 +1025,22 @@ const HUGE: i64 = 9_000_000_000_000_000_000;
 const EXTRA: i64 = 1_000_000_000_000_000_000;
 
 fn cents(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 fn paid_for(amount: Money, payer: MemberId, participant: MemberId) -> Expense {
-    Expense::builder(amount, day(), "Large", payer, Split::equal([participant]))
+    Expense::builder("Large", amount, payer, Split::equal([participant]), day())
         .build()
         .unwrap()
 }
 
 fn sent(from: MemberId, to: MemberId, amount: Money) -> Transfer {
-    Transfer::builder(amount, day(), from, to).build().unwrap()
+    Transfer::builder(from, to, amount, day()).build().unwrap()
 }
 
 /// `HUGE` in lei: out of range once converted at two euros per leu.
 fn huge_in_lei() -> Money {
-    Money::from_minor_units(Currency::RON, HUGE)
+    Money::from_minor_units(HUGE, Currency::RON)
 }
 
 fn two() -> ExchangeRate {
@@ -1057,21 +1057,21 @@ fn doubled(group: &mut Group) -> Result<(), GroupError> {
 #[test]
 fn a_currency_change_needs_a_rate_for_every_transfer_too() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
     let cash = Transfer::builder(
+        bob,
+        ana,
         Money::parse("100", Currency::HUF)
             .unwrap()
             .at(ExchangeRate::parse("0.0025").unwrap()),
         day(),
-        bob,
-        ana,
     )
     .build()
     .unwrap();
@@ -1099,9 +1099,9 @@ fn a_currency_change_needs_a_rate_for_every_transfer_too() {
 #[test]
 fn a_currency_change_converting_an_expense_out_of_range_changes_nothing() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group.add_expense(paid_for(cents(HUGE), ana, bob)).unwrap();
@@ -1113,9 +1113,9 @@ fn a_currency_change_converting_an_expense_out_of_range_changes_nothing() {
 #[test]
 fn a_currency_change_converting_a_transfer_out_of_range_changes_nothing() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group.add_transfer(sent(ana, bob, cents(HUGE))).unwrap();
@@ -1128,9 +1128,9 @@ fn a_currency_change_converting_a_transfer_out_of_range_changes_nothing() {
 fn a_currency_change_with_totals_out_of_range_changes_nothing() {
     // Each doubles to 8e18; together they are past i64::MAX.
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     for _ in 0..2 {
@@ -1144,9 +1144,9 @@ fn a_currency_change_with_totals_out_of_range_changes_nothing() {
 #[test]
 fn a_replacement_out_of_range_is_refused() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
@@ -1171,9 +1171,9 @@ fn removing_an_expense_out_of_range_is_refused() {
     // Ana and Bob pay LARGE for each other and Bob sends Ana HUGE: without
     // Ana's payment for Bob, Ana would owe 1.3e19.
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group.add_expense(paid_for(cents(LARGE), bob, ana)).unwrap();
@@ -1191,10 +1191,10 @@ fn removing_a_transfer_out_of_range_is_refused() {
     // Ana is owed HUGE and passes on to Carol what Bob paid her back:
     // without Bob's repayment, Ana would be owed 1e19.
     let Trip {
+        mut group,
         ana,
         bob,
         carol,
-        mut group,
     } = trip();
     group.add_expense(paid_for(cents(HUGE), ana, bob)).unwrap();
     let repayment = group.add_transfer(sent(bob, ana, cents(EXTRA))).unwrap();
@@ -1210,9 +1210,9 @@ fn removing_a_transfer_out_of_range_is_refused() {
 #[test]
 fn a_transfer_out_of_range_is_refused() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     group.add_expense(paid_for(cents(HUGE), ana, bob)).unwrap();
@@ -1220,7 +1220,7 @@ fn a_transfer_out_of_range_is_refused() {
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
         group.add_transfer(sent(ana, bob, cents(EXTRA)))
     });
-    let foreign = Transfer::builder(huge_in_lei().at(two()), day(), bob, ana)
+    let foreign = Transfer::builder(bob, ana, huge_in_lei().at(two()), day())
         .build()
         .unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
@@ -1248,55 +1248,55 @@ fn a_transfer_out_of_range_is_refused() {
 /// and their parts in hundredths.
 #[derive(Debug, Clone, Copy)]
 struct DrawnParts {
-    hundredths: u32,
     member: usize,
+    hundredths: u32,
 }
 
 /// Draws one change to apply to a five-member group.
 #[derive(Debug, Clone)]
 enum Operation {
-    AddExpense {
-        amount: i64,
-        category: usize,
-        participants: Vec<DrawnParts>,
-        payer: usize,
-    },
-    AddTransfer {
-        amount: i64,
-        from: usize,
-        to: usize,
-    },
     Archive {
+        member: usize,
+    },
+    Unarchive {
         member: usize,
     },
     RemoveCategory {
         category: usize,
     },
+    AddExpense {
+        amount: i64,
+        payer: usize,
+        participants: Vec<DrawnParts>,
+        category: usize,
+    },
+    ReplaceExpense {
+        position: usize,
+        amount: i64,
+        payer: usize,
+    },
     RemoveExpense {
         position: usize,
     },
+    AddTransfer {
+        from: usize,
+        to: usize,
+        amount: i64,
+    },
     RemoveTransfer {
         position: usize,
-    },
-    ReplaceExpense {
-        amount: i64,
-        payer: usize,
-        position: usize,
-    },
-    Unarchive {
-        member: usize,
     },
 }
 
 /// Draws a participant of a random expense.
 fn drawn_parts() -> impl Strategy<Value = DrawnParts> {
-    (0_usize..5, 1_u32..400).prop_map(|(member, hundredths)| DrawnParts { hundredths, member })
+    (0_usize..5, 1_u32..400).prop_map(|(member, hundredths)| DrawnParts { member, hundredths })
 }
 
 fn operation() -> impl Strategy<Value = Operation> {
     prop_oneof![
         4 => (1_i64..100_000, 0_usize..3, 0_usize..5, proptest::collection::vec(drawn_parts(), 1..5))
-            .prop_map(|(amount, category, payer, participants)| Operation::AddExpense { amount, category, participants, payer }),
+            .prop_map(|(amount, category, payer, participants)| Operation::AddExpense { amount, payer, participants, category }),
         2 => (0_usize..8, 1_i64..100_000, 0_usize..5)
             .prop_map(|(position, amount, payer)| Operation::ReplaceExpense { position, amount, payer }),
         1 => (0_usize..8).prop_map(|position| Operation::RemoveExpense { position }),
@@ -1316,17 +1316,22 @@ fn apply(
     categories: &[CategoryId],
     operation: &Operation,
 ) -> bool {
-    let money = |amount| Money::from_minor_units(Currency::EUR, amount);
+    let money = |amount| Money::from_minor_units(amount, Currency::EUR);
     let expense_at =
         |current: &Group, position: usize| current.expenses().map(Expense::id).nth(position);
     let transfer_at =
         |current: &Group, position: usize| current.transfers().map(Transfer::id).nth(position);
     match operation.clone() {
+        Operation::Archive { member } => group.archive_member(members[member]).is_ok(),
+        Operation::Unarchive { member } => group.unarchive_member(members[member]).is_ok(),
+        Operation::RemoveCategory { category } => {
+            group.remove_category(categories[category]).is_ok()
+        }
         Operation::AddExpense {
             amount,
-            category,
-            participants,
             payer,
+            participants,
+            category,
         } => {
             let mut chosen: Vec<MemberParts> = Vec::new();
             for participant in participants {
@@ -1339,39 +1344,21 @@ fn apply(
                 }
             }
             let expense = Expense::builder(
-                money(amount),
-                day(),
                 "Random",
+                money(amount),
                 members[payer],
                 Split::parts(chosen),
+                day(),
             )
             .category(categories[category])
             .build()
             .unwrap();
             group.add_expense(expense).is_ok()
         }
-        Operation::AddTransfer { amount, from, to } => {
-            let Ok(transfer) =
-                Transfer::builder(money(amount), day(), members[from], members[to]).build()
-            else {
-                return false;
-            };
-            group.add_transfer(transfer).is_ok()
-        }
-        Operation::Archive { member } => group.archive_member(members[member]).is_ok(),
-        Operation::RemoveCategory { category } => {
-            group.remove_category(categories[category]).is_ok()
-        }
-        Operation::RemoveExpense { position } => {
-            expense_at(group, position).is_some_and(|id| group.remove_expense(id).is_ok())
-        }
-        Operation::RemoveTransfer { position } => {
-            transfer_at(group, position).is_some_and(|id| group.remove_transfer(id).is_ok())
-        }
         Operation::ReplaceExpense {
+            position,
             amount,
             payer,
-            position,
         } => {
             let Some(id) = expense_at(group, position) else {
                 return false;
@@ -1387,7 +1374,20 @@ fn apply(
             };
             group.replace_expense(expense).is_ok()
         }
-        Operation::Unarchive { member } => group.unarchive_member(members[member]).is_ok(),
+        Operation::RemoveExpense { position } => {
+            expense_at(group, position).is_some_and(|id| group.remove_expense(id).is_ok())
+        }
+        Operation::AddTransfer { from, to, amount } => {
+            let Ok(transfer) =
+                Transfer::builder(members[from], members[to], money(amount), day()).build()
+            else {
+                return false;
+            };
+            group.add_transfer(transfer).is_ok()
+        }
+        Operation::RemoveTransfer { position } => {
+            transfer_at(group, position).is_some_and(|id| group.remove_transfer(id).is_ok())
+        }
     }
 }
 
@@ -1397,7 +1397,7 @@ proptest! {
     /// the group untouched, and every settlement clears every balance.
     #[test]
     fn random_changes_keep_the_group_consistent(operations in proptest::collection::vec(operation(), 1..40)) {
-        let mut group = Group::builder(Currency::EUR, "Random").build().unwrap();
+        let mut group = Group::builder("Random", Currency::EUR).build().unwrap();
         let members: Vec<MemberId> = ["Ana", "Bob", "Carol", "Dan", "Eve"].iter().map(|name| group.add_member(person(name)).unwrap()).collect();
         let mut categories = vec![CategoryId::UNCATEGORISED];
         for name in ["Food", "Fuel"] {

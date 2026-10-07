@@ -31,14 +31,14 @@ class ValuesTest {
         assertEquals("unknown currency code", unknown.message)
 
         val price = Money.parse("12.5", euro)
-        assertValue(price, Money(euro, 1_250), Money(euro, 1_251))
+        assertValue(price, Money(1_250, euro), Money(1_251, euro))
         assertEquals("12.50 EUR", price.toString())
-        assertEquals(Money(euro, 1_300), price + Money(euro, 50))
-        assertEquals(Money(euro, 1_200), price - Money(euro, 50))
-        val mismatch = assertThrows<EranosException.Money> { price + Money(lei, 1) }
+        assertEquals(Money(1_300, euro), price + Money(50, euro))
+        assertEquals(Money(1_200, euro), price - Money(50, euro))
+        val mismatch = assertThrows<EranosException.Money> { price + Money(1, lei) }
         assertEquals(MoneyFailure.CurrencyMismatch(euro, lei), mismatch.failure)
-        assertThrows<EranosException.Money> { Money(euro, Long.MAX_VALUE) + Money(euro, 1) }
-        assertThrows<EranosException.Money> { Money(euro, Long.MIN_VALUE) - Money(euro, 1) }
+        assertThrows<EranosException.Money> { Money(Long.MAX_VALUE, euro) + Money(1, euro) }
+        assertThrows<EranosException.Money> { Money(Long.MIN_VALUE, euro) - Money(1, euro) }
         assertThrows<EranosException.Money> { Money.parse("twelve", euro) }
     }
 
@@ -53,9 +53,9 @@ class ValuesTest {
         assertValue(rate, ExchangeRate.parse("4.97"), ExchangeRate.parse("5"))
         val lei = Currency.of("RON")
         val euro = Currency.of("EUR")
-        assertEquals(Money(euro, 1), ExchangeRate.parse("0.25").convert(Money(lei, 2), euro))
+        assertEquals(Money(1, euro), ExchangeRate.parse("0.25").convert(Money(2, lei), euro))
         assertThrows<EranosException.Money> { ExchangeRate.parse("0") }
-        assertThrows<EranosException.Money> { ExchangeRate.parse("2").convert(Money(lei, Long.MAX_VALUE), euro) }
+        assertThrows<EranosException.Money> { ExchangeRate.parse("2").convert(Money(Long.MAX_VALUE, lei), euro) }
 
         val percentage = Percentage.parse("12.5 %")
         assertEquals(1_250, percentage.basisPoints)
@@ -78,13 +78,13 @@ class ValuesTest {
      */
     @Test
     fun datesAndTimesReadAndWriteAsTheLibraryDoes() {
-        val date = CalendarDate.of(23, 9, 2026)
+        val date = CalendarDate.of(2026, 9, 23)
         assertEquals("2026-09-23", date.toString())
-        assertEquals(23, date.day)
-        assertEquals(9, date.month)
         assertEquals(2026, date.year)
-        assertValue(date, CalendarDate.parse("2026-09-23"), CalendarDate.of(24, 9, 2026))
-        val invalid = assertThrows<EranosException.Calendar> { CalendarDate.of(30, 2, 2026) }
+        assertEquals(9, date.month)
+        assertEquals(23, date.day)
+        assertValue(date, CalendarDate.parse("2026-09-23"), CalendarDate.of(2026, 9, 24))
+        val invalid = assertThrows<EranosException.Calendar> { CalendarDate.of(2026, 2, 30) }
         assertEquals(CalendarFailure.InvalidDate, invalid.failure)
         assertEquals("invalid date: expected an existing ISO 8601 date between years 1 and 9999", invalid.message)
         assertThrows<EranosException.Calendar> { CalendarDate.parse("2026-02-30") }
@@ -165,15 +165,15 @@ class ValuesTest {
         val unlisted = Currency.known("XYZ")
         assertEquals("XYZ", unlisted.code)
         assertEquals("XYZ", unlisted.name)
-        assertEquals(0, unlisted.decimalPlaces)
         assertEquals(0, unlisted.numericCode)
-        assertEquals("5 XYZ", Money(unlisted, 5).toString())
+        assertEquals(0, unlisted.decimalPlaces)
+        assertEquals("5 XYZ", Money(5, unlisted).toString())
         assertEquals("-1 bp", Percentage(-1).toString())
         assertEquals("0/100", Parts(0).toString())
-        assertEquals("2026/2/30", CalendarDate(30, 2, 2026).toString())
+        assertEquals("2026/2/30", CalendarDate(2026, 2, 30).toString())
         assertEquals("25h0", TimeOfDay(25, 0).toString())
         assertEquals("0712", PhoneNumber("0712").toString())
         assertEquals("XY", Iban("XY").countryCode)
-        assertTrue("XYZ" in Balance.Owes(Money(unlisted, 1)).toString())
+        assertTrue("XYZ" in Balance.Owes(Money(1, unlisted)).toString())
     }
 }

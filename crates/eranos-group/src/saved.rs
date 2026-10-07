@@ -27,19 +27,19 @@ use crate::error::GroupError;
 struct GroupView<'group> {
     format: u32,
     id: GroupId,
-    categories: Vec<&'group Category>,
-    currency: Currency,
-    expenses: Vec<&'group Expense>,
-    members: Vec<&'group Member>,
     name: &'group str,
-    transfers: Vec<&'group Transfer>,
-    /// The archived members, in identifier order.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    archived: Vec<MemberId>,
+    currency: Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<&'group str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     language: Option<&'group Language>,
+    members: Vec<&'group Member>,
+    /// The archived members, in identifier order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    archived: Vec<MemberId>,
+    categories: Vec<&'group Category>,
+    expenses: Vec<&'group Expense>,
+    transfers: Vec<&'group Transfer>,
 }
 
 /// A saved group, read but not yet loaded: its details and entries, before
@@ -63,7 +63,7 @@ struct GroupView<'group> {
 /// # // which a test of this crate alone does not turn on.
 /// use eranos_group::SavedGroup;
 ///
-/// let group = Group::builder(Currency::EUR, "Lisbon").build()?;
+/// let group = Group::builder("Lisbon", Currency::EUR).build()?;
 /// let json = serde_json::to_string(&group)?;
 ///
 /// // A file this version wrote loads.
@@ -82,20 +82,20 @@ struct GroupView<'group> {
 pub struct SavedGroup {
     format: u32,
     id: GroupId,
-    currency: Currency,
     name: String,
+    currency: Currency,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    language: Option<Language>,
+    #[serde(default)]
+    members: Vec<Member>,
     #[serde(default)]
     archived: Vec<MemberId>,
     #[serde(default)]
     categories: Vec<Category>,
     #[serde(default)]
-    description: Option<String>,
-    #[serde(default)]
     expenses: Vec<Expense>,
-    #[serde(default)]
-    language: Option<Language>,
-    #[serde(default)]
-    members: Vec<Member>,
     #[serde(default)]
     transfers: Vec<Transfer>,
 }
@@ -105,33 +105,33 @@ impl Serialize for Group {
         GroupView {
             format: FORMAT,
             id: self.id,
-            // Every group has the built-in category, so it is not written.
-            categories: self
-                .categories
-                .values()
-                .filter(|category| CategoryId::UNCATEGORISED != category.id())
-                .collect(),
-            currency: self.currency,
-            expenses: self
-                .expenses
-                .values()
-                .map(|record| &record.expense)
-                .collect(),
-            members: self.members.values().map(|record| &record.member).collect(),
             name: &self.name,
-            transfers: self
-                .transfers
-                .values()
-                .map(|record| &record.transfer)
-                .collect(),
+            currency: self.currency,
+            description: self.description.as_deref(),
+            language: self.language.as_ref(),
+            members: self.members.values().map(|record| &record.member).collect(),
             archived: self
                 .members
                 .iter()
                 .filter(|(_, record)| record.archived)
                 .map(|(&id, _)| id)
                 .collect(),
-            description: self.description.as_deref(),
-            language: self.language.as_ref(),
+            // Every group has the built-in category, so it is not written.
+            categories: self
+                .categories
+                .values()
+                .filter(|category| CategoryId::UNCATEGORISED != category.id())
+                .collect(),
+            expenses: self
+                .expenses
+                .values()
+                .map(|record| &record.expense)
+                .collect(),
+            transfers: self
+                .transfers
+                .values()
+                .map(|record| &record.transfer)
+                .collect(),
         }
         .serialize(serialiser)
     }
@@ -185,7 +185,7 @@ impl SavedGroup {
     /// # // which a test of this crate alone does not turn on.
     /// use eranos_group::SavedGroup;
     ///
-    /// let group = Group::builder(Currency::EUR, "Lisbon").build()?;
+    /// let group = Group::builder("Lisbon", Currency::EUR).build()?;
     /// let saved: SavedGroup = serde_json::from_str(&serde_json::to_string(&group)?)?;
     ///
     /// // Awaited like any future; `block_on` runs it on this thread.
@@ -205,11 +205,11 @@ impl SavedGroup {
                 format: self.format,
             });
         }
-        let mut builder = Group::builder(self.currency, self.name).language(self.language);
+        let mut builder = Group::builder(self.name, self.currency);
         if let Some(description) = self.description {
             builder = builder.description(description);
         }
-        let mut group = builder.build()?;
+        let mut group = builder.language(self.language).build()?;
         group.id = self.id;
         let mut pacer = Pacer::new(ENTRIES_PER_YIELD);
         for member in self.members {

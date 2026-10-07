@@ -43,7 +43,7 @@ public final class Main {
     private Main() {}
 
     /** The family and the day every expense happened. */
-    private record Family(MemberId ana, MemberId bob, CalendarDate day, MemberId mia) {
+    private record Family(MemberId ana, MemberId bob, MemberId mia, CalendarDate day) {
         /** The rule of an expense shared equally by the three. */
         Map<MemberId, String> thirds() {
             return Map.of(ana, "an equal third", bob, "an equal third", mia, "an equal third");
@@ -51,7 +51,7 @@ public final class Main {
     }
 
     /** A member's rule, payment, and consumption in one expense, a row of its table. */
-    private record ShareRow(Money consumed, String name, Money paid, String rule) implements Row {
+    private record ShareRow(String name, String rule, Money paid, Money consumed) implements Row {
         static final List<String> HEADERS = List.of("Member", "Rule", "Paid", "Consumed");
 
         @Override
@@ -61,7 +61,7 @@ public final class Main {
     }
 
     /** A member's totals over the holiday, a row of the totals' table. */
-    private record TotalRow(String balance, Money consumed, String name, Money paid)
+    private record TotalRow(String name, Money paid, Money consumed, String balance)
             implements Row {
         static final List<String> HEADERS = List.of("Member", "Paid", "Consumed", "Balance");
 
@@ -91,10 +91,10 @@ public final class Main {
         for (MemberShare share : shares.orElseThrow().members()) {
             rows.add(
                     new ShareRow(
-                            share.share(),
                             names(group, List.of(share.member())),
+                            rules.getOrDefault(share.member(), "(payer only)"),
                             share.paid(),
-                            rules.getOrDefault(share.member(), "(payer only)")));
+                            share.share()));
         }
         printTable(ShareRow.HEADERS, rows, 2);
     }
@@ -110,16 +110,16 @@ public final class Main {
         ExpenseId taxi =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("10.00")),
-                                        family.day(),
                                         "Taxi",
+                                        new Cost.Local(eur("10.00")),
                                         new Split.Equal(List.of(family.ana())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Equal(
                                                         List.of(
                                                                 family.ana(),
                                                                 family.bob(),
-                                                                family.mia()))))
+                                                                family.mia()))),
+                                        family.day())
                                 .build());
         report(group, taxi, family.thirds());
     }
@@ -134,9 +134,8 @@ public final class Main {
         ExpenseId rent =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("500.00")),
-                                        family.day(),
                                         "Flat",
+                                        new Cost.Local(eur("500.00")),
                                         new Split.Equal(List.of(family.bob())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Percentages(
@@ -149,7 +148,8 @@ public final class Main {
                                                                         Percentage.parse("40")),
                                                                 new MemberPercentage(
                                                                         family.mia(),
-                                                                        Percentage.parse("20"))))))
+                                                                        Percentage.parse("20"))))),
+                                        family.day())
                                 .build());
         report(group, rent, Map.of(family.ana(), "40%", family.bob(), "40%", family.mia(), "20%"));
     }
@@ -164,9 +164,8 @@ public final class Main {
         ExpenseId food =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("125.00")),
-                                        family.day(),
                                         "Food",
+                                        new Cost.Local(eur("125.00")),
                                         new Split.Equal(List.of(family.ana())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Parts(
@@ -179,7 +178,8 @@ public final class Main {
                                                                         Parts.parse("1")),
                                                                 new MemberParts(
                                                                         family.mia(),
-                                                                        Parts.parse("0.5"))))))
+                                                                        Parts.parse("0.5"))))),
+                                        family.day())
                                 .build());
         report(
                 group,
@@ -198,20 +198,20 @@ public final class Main {
         ExpenseId tickets =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("35.00")),
-                                        family.day(),
                                         "Museum",
+                                        new Cost.Local(eur("35.00")),
                                         new Split.Equal(List.of(family.bob())),
                                         new ExpenseSplit.Whole(
                                                 new Split.Amounts(
                                                         List.of(
                                                                 new MemberAmount(
-                                                                        eur("15.00"), family.ana()),
+                                                                        family.ana(), eur("15.00")),
                                                                 new MemberAmount(
-                                                                        eur("15.00"), family.bob()),
+                                                                        family.bob(), eur("15.00")),
                                                                 new MemberAmount(
-                                                                        eur("5.00"),
-                                                                        family.mia())))))
+                                                                        family.mia(),
+                                                                        eur("5.00"))))),
+                                        family.day())
                                 .build());
         report(
                 group,
@@ -235,21 +235,21 @@ public final class Main {
         ExpenseId dinner =
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("90.00")),
-                                        family.day(),
                                         "Dinner",
+                                        new Cost.Local(eur("90.00")),
                                         new Split.Amounts(
                                                 List.of(
                                                         new MemberAmount(
-                                                                eur("50.00"), family.ana()),
+                                                                family.ana(), eur("50.00")),
                                                         new MemberAmount(
-                                                                eur("40.00"), family.bob()))),
+                                                                family.bob(), eur("40.00")))),
                                         new ExpenseSplit.Whole(
                                                 new Split.Equal(
                                                         List.of(
                                                                 family.ana(),
                                                                 family.bob(),
-                                                                family.mia()))))
+                                                                family.mia()))),
+                                        family.day())
                                 .build());
         report(group, dinner, family.thirds());
     }
@@ -260,9 +260,8 @@ public final class Main {
                 "A percentage split that adds up to 90 % is refused when the expense is built:");
         Expense invalid =
                 Expense.builder(
-                                new Cost.Local(eur("10.00")),
-                                family.day(),
                                 "Invalid",
+                                new Cost.Local(eur("10.00")),
                                 new Split.Equal(List.of(family.ana())),
                                 new ExpenseSplit.Whole(
                                         new Split.Percentages(
@@ -272,7 +271,8 @@ public final class Main {
                                                                 Percentage.parse("60")),
                                                         new MemberPercentage(
                                                                 family.bob(),
-                                                                Percentage.parse("30"))))))
+                                                                Percentage.parse("30"))))),
+                                family.day())
                         .build();
         try {
             group.addExpense(invalid);
@@ -293,10 +293,10 @@ public final class Main {
                     totals ->
                             rows.add(
                                     new TotalRow(
-                                            totals.balance().toString(),
-                                            totals.share(),
                                             member.firstName(),
-                                            totals.paid())));
+                                            totals.paid(),
+                                            totals.share(),
+                                            totals.balance().toString())));
         }
         printTable(TotalRow.HEADERS, rows, 1);
     }
@@ -308,12 +308,12 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder(Currency.of("EUR"), "Family holiday").build()) {
+        try (Group group = Group.builder("Family holiday", Currency.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
-            CalendarDate day = CalendarDate.of(14, 7, 2026);
+            CalendarDate day = CalendarDate.of(2026, 7, 14);
             MemberId mia = group.addMember(Member.builder("Mia").build());
-            Family family = new Family(ana, bob, day, mia);
+            Family family = new Family(ana, bob, mia, day);
 
             System.out.println("Family holiday: every way to split an expense");
             System.out.println("═════════════════════════════════════════════");

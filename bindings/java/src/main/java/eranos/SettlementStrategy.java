@@ -8,8 +8,8 @@ public enum SettlementStrategy {
      */
     ADAPTIVE,
 
-    /** Everyone pays back the people who paid for them. */
-    DIRECT,
+    /** The fewest payments possible. */
+    MINIMUM_TRANSFERS,
 
     /**
      * The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each
@@ -17,8 +17,8 @@ public enum SettlementStrategy {
      */
     GREEDY,
 
-    /** The fewest payments possible. */
-    MINIMUM_TRANSFERS;
+    /** Everyone pays back the people who paid for them. */
+    DIRECT;
 
     /**
      * The strategy the generated code holds as {@code strategy}.
@@ -29,9 +29,9 @@ public enum SettlementStrategy {
     static SettlementStrategy converted(eranos.internal.SettlementStrategy strategy) {
         return switch (strategy) {
             case ADAPTIVE -> ADAPTIVE;
-            case DIRECT -> DIRECT;
-            case GREEDY -> GREEDY;
             case MINIMUM_TRANSFERS -> MINIMUM_TRANSFERS;
+            case GREEDY -> GREEDY;
+            case DIRECT -> DIRECT;
         };
     }
 
@@ -43,9 +43,9 @@ public enum SettlementStrategy {
     eranos.internal.SettlementStrategy generated() {
         return switch (this) {
             case ADAPTIVE -> eranos.internal.SettlementStrategy.ADAPTIVE;
-            case DIRECT -> eranos.internal.SettlementStrategy.DIRECT;
-            case GREEDY -> eranos.internal.SettlementStrategy.GREEDY;
             case MINIMUM_TRANSFERS -> eranos.internal.SettlementStrategy.MINIMUM_TRANSFERS;
+            case GREEDY -> eranos.internal.SettlementStrategy.GREEDY;
+            case DIRECT -> eranos.internal.SettlementStrategy.DIRECT;
         };
     }
 }

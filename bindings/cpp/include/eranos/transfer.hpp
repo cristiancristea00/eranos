@@ -25,21 +25,15 @@ namespace eranos {
 struct Transfer final {
     /// The record of its required fields; the others start absent, empty, or at their default.
     ///
-    /// @param cost What was paid.
-    /// @param date The day it was paid.
     /// @param from The identifier of the member who paid.
     /// @param to The identifier of the member who was paid.
-    Transfer(Cost cost, CalendarDate const date, MemberId from, MemberId to) noexcept
-        : cost(std::move(cost)), date(date), from(std::move(from)), to(std::move(to)) {}
+    /// @param cost What was paid.
+    /// @param date The day it was paid.
+    Transfer(MemberId from, MemberId to, Cost cost, CalendarDate const date) noexcept
+        : from(std::move(from)), to(std::move(to)), cost(std::move(cost)), date(date) {}
 
     /// The identifier: absent for a transfer to add, present for one the group holds.
     std::optional<TransferId> id;
-
-    /// What was paid.
-    Cost cost;
-
-    /// The day it was paid.
-    CalendarDate date;
 
     /// The identifier of the member who paid.
     MemberId from;
@@ -47,11 +41,17 @@ struct Transfer final {
     /// The identifier of the member who was paid.
     MemberId to;
 
-    /// A note on the transfer.
-    std::optional<std::string> note;
+    /// What was paid.
+    Cost cost;
+
+    /// The day it was paid.
+    CalendarDate date;
 
     /// The time of day it was paid.
     std::optional<TimeOfDay> time;
+
+    /// A note on the transfer.
+    std::optional<std::string> note;
 
     /// Whether every field of two records is equal.
     ///

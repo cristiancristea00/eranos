@@ -9,33 +9,33 @@ import org.junit.jupiter.api.fail
 /** A group of two with a category, an expense, and a transfer, and the identifiers the group gave them. */
 internal class Flat {
     val euro: Currency = Currency.of("EUR")
-    val day: CalendarDate = CalendarDate.of(23, 9, 2026)
-    val group: Group = Group(euro, "Flat", "Rent", Language.parse("pt-pt"))
+    val day: CalendarDate = CalendarDate.of(2026, 9, 23)
+    val group: Group = Group("Flat", euro, "Rent", Language.parse("pt-pt"))
     val ana: MemberId = group.addBlocking(Member("Ana"))
     val bob: MemberId = group.addBlocking(Member("Bob"))
     val food: CategoryId = group.addBlocking(Category("Food"))
     val dinner: ExpenseId =
         group.addBlocking(
             Expense(
-                Cost.Local(euros(3_000)),
-                day,
                 "Dinner",
+                Cost.Local(euros(3_000)),
                 Split.Equal(listOf(ana)),
                 ExpenseSplit.Whole(Split.Equal(listOf(ana, bob))),
+                day,
                 category = food,
             ),
         )
-    val repayment: TransferId = group.addBlocking(Transfer(Cost.Local(euros(1_000)), day, bob, ana))
+    val repayment: TransferId = group.addBlocking(Transfer(bob, ana, Cost.Local(euros(1_000)), day))
 
     /** [minorUnits] cents. */
-    fun euros(minorUnits: Long): Money = Money(euro, minorUnits)
+    fun euros(minorUnits: Long): Money = Money(minorUnits, euro)
 
     /** An expense of 30.00 EUR, called [name], that [payer] paid and [members] share equally. */
     fun expense(
         name: String,
         payer: MemberId,
         members: List<MemberId>,
-    ): Expense = Expense(Cost.Local(euros(3_000)), day, name, Split.Equal(listOf(payer)), ExpenseSplit.Whole(Split.Equal(members)))
+    ): Expense = Expense(name, Cost.Local(euros(3_000)), Split.Equal(listOf(payer)), ExpenseSplit.Whole(Split.Equal(members)), day)
 }
 
 /**

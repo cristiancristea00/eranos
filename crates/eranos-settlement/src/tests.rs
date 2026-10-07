@@ -81,18 +81,18 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
             settlement.payments(),
             [
                 Payment {
-                    amount: Money::from_minor_units(Currency::RON, 500),
                     members: MemberPair {
                         from: member(3),
                         to: member(1),
                     },
+                    amount: Money::from_minor_units(500, Currency::RON),
                 },
                 Payment {
-                    amount: Money::from_minor_units(Currency::RON, 300),
                     members: MemberPair {
                         from: member(4),
                         to: member(2),
                     },
+                    amount: Money::from_minor_units(300, Currency::RON),
                 },
             ]
         );
@@ -122,8 +122,8 @@ fn a_kept_settlement_lasts_until_it_is_cleared() {
 /// A request dropped at a yield would keep a plan it never finished, or
 /// leave the next request nothing to compute: it keeps nothing, and the
 /// next request computes the plan in full. Seventeen open balances make the
-/// exact solver yield once, for the fewest payments and for the adaptive
-/// strategy alike.
+/// exact solver yield once, for the adaptive strategy and for the fewest
+/// payments alike.
 #[test]
 fn a_dropped_request_keeps_no_plan() {
     let ledger = owed_by_a_hub(16);
@@ -173,9 +173,9 @@ fn all_lists_every_strategy_in_declaration_order() {
         SettlementStrategy::all(),
         [
             SettlementStrategy::Adaptive,
-            SettlementStrategy::Direct,
+            SettlementStrategy::MinimumTransfers,
             SettlementStrategy::Greedy,
-            SettlementStrategy::MinimumTransfers
+            SettlementStrategy::Direct
         ]
     );
 }
@@ -237,16 +237,16 @@ impl FromSettlementStrategy for StrategyName {
         Self("adaptive")
     }
 
-    fn direct() -> Self {
-        Self("direct")
+    fn minimum_transfers() -> Self {
+        Self("minimum transfers")
     }
 
     fn greedy() -> Self {
         Self("greedy")
     }
 
-    fn minimum_transfers() -> Self {
-        Self("minimum transfers")
+    fn direct() -> Self {
+        Self("direct")
     }
 }
 
@@ -258,5 +258,5 @@ fn a_strategy_converts_through_the_method_of_its_variant() {
         .into_iter()
         .map(|strategy| StrategyName::from_settlement_strategy(strategy).0)
         .collect();
-    assert_eq!(names, ["adaptive", "direct", "greedy", "minimum transfers"]);
+    assert_eq!(names, ["adaptive", "minimum transfers", "greedy", "direct"]);
 }

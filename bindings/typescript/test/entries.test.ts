@@ -54,15 +54,15 @@ interface Expenses {
 function expenses(flat: Flat): Expenses {
     const lei = Currency.of('RON');
     const taxi: Expense = {
-        cost: { kind: 'converted', amount: new Money(lei, 5_000n), rate: ExchangeRate.parse('0.2') },
-        date: flat.day,
         name: 'Taxi',
+        cost: { kind: 'converted', amount: new Money(5_000n, lei), rate: ExchangeRate.parse('0.2') },
         payers: { kind: 'percentages', shares: [{ member: flat.ana, percentage: Percentage.ofBasisPoints(10_000) }] },
         split: {
             kind: 'itemised',
             items: [
                 {
                     name: 'Fare',
+                    unitPrice: new Money(2_000n, lei),
                     split: {
                         kind: 'parts',
                         shares: [
@@ -70,23 +70,23 @@ function expenses(flat: Flat): Expenses {
                             { member: flat.bob, parts: Parts.ofHundredths(50) },
                         ],
                     },
-                    unitPrice: new Money(lei, 2_000n),
                     quantity: 2,
                 },
-                { name: 'Toll', split: { kind: 'equal', members: [flat.bob] }, unitPrice: new Money(lei, 1_000n) },
+                { name: 'Toll', unitPrice: new Money(1_000n, lei), split: { kind: 'equal', members: [flat.bob] } },
             ],
         },
+        date: flat.day,
+        tip: { value: { kind: 'fixed', amount: new Money(500n, lei) }, distribution: TipDistribution.EQUAL },
+        time: TimeOfDay.of(9, 5),
         category: flat.food,
         description: 'To the airport',
-        time: TimeOfDay.of(9, 5),
-        tip: { value: { kind: 'fixed', amount: new Money(lei, 500n) }, distribution: TipDistribution.EQUAL },
     };
     const dinner: Expense = {
-        cost: { kind: 'local', amount: flat.euros(3_000n) },
-        date: flat.day,
         name: 'Dinner',
-        payers: { kind: 'amounts', shares: [{ amount: flat.euros(3_300n), member: flat.ana }] },
+        cost: { kind: 'local', amount: flat.euros(3_000n) },
+        payers: { kind: 'amounts', shares: [{ member: flat.ana, amount: flat.euros(3_300n) }] },
         split: { kind: 'whole', split: { kind: 'equal', members: [flat.ana, flat.bob] } },
+        date: flat.day,
         tip: { value: { kind: 'percentage', percentage: Percentage.ofBasisPoints(1_000) } },
     };
     return { dinner, taxi };
@@ -113,13 +113,13 @@ void describe('the expenses, members, categories, and transfers', () => {
             const stored = flat.group.expenseSync(id);
             assert.ok(undefined !== stored);
             assert.equal(stored.id, id);
-            assert.deepEqual(stored.cost, expense.cost);
-            assert.deepEqual(stored.date, expense.date);
             assert.equal(stored.name, expense.name);
+            assert.deepEqual(stored.cost, expense.cost);
             assert.deepEqual(stored.payers, expense.payers);
+            assert.deepEqual(stored.date, expense.date);
+            assert.deepEqual(stored.time, expense.time);
             assert.equal(stored.category, expense.category);
             assert.equal(stored.description, expense.description);
-            assert.deepEqual(stored.time, expense.time);
         }
     });
 
@@ -128,25 +128,25 @@ void describe('the expenses, members, categories, and transfers', () => {
         const flat = new Flat();
         const lei = Currency.of('RON');
         const { dinner, taxi } = expenses(flat);
-        assert.ok(expenseTipAmount(taxi).equals(new Money(lei, 500n)));
-        assert.ok(expenseTotal(taxi).equals(new Money(lei, 5_500n)));
+        assert.ok(expenseTipAmount(taxi).equals(new Money(500n, lei)));
+        assert.ok(expenseTotal(taxi).equals(new Money(5_500n, lei)));
         assert.deepEqual(expenseMembers(taxi), [flat.ana, flat.bob]);
         assert.ok(expenseTipAmount(dinner).equals(flat.euros(300n)));
         assert.throws(() => expenseMembers({ ...taxi, payers: { kind: 'equal', members: [memberId('nobody')] } }), IdError);
         assert.throws(() => expenseTipAmount({ ...taxi, tip: { value: { kind: 'fixed', amount: flat.euros(1n) } } }), ExpenseError);
-        assert.throws(() => expenseTotal({ ...taxi, tip: { value: { kind: 'fixed', amount: new Money(lei, -1n) } } }), ExpenseError);
+        assert.throws(() => expenseTotal({ ...taxi, tip: { value: { kind: 'fixed', amount: new Money(-1n, lei) } } }), ExpenseError);
     });
 
     /** A split that listed other members than it divides among would show an app another set of participants. */
     void it('lists the members of every split', () => {
         const flat = new Flat();
         const splits: readonly Split[] = [
-            { kind: 'amounts', shares: [{ amount: flat.euros(1n), member: flat.bob }] },
             { kind: 'equal', members: [flat.bob, flat.ana] },
             { kind: 'parts', shares: [{ member: flat.bob, parts: Parts.ofHundredths(1) }] },
             { kind: 'percentages', shares: [{ member: flat.ana, percentage: Percentage.ofBasisPoints(1) }] },
+            { kind: 'amounts', shares: [{ member: flat.bob, amount: flat.euros(1n) }] },
         ];
-        assert.deepEqual(splits.map(splitMembers), [[flat.bob], [flat.bob, flat.ana], [flat.bob], [flat.ana]]);
+        assert.deepEqual(splits.map(splitMembers), [[flat.bob, flat.ana], [flat.bob], [flat.ana], [flat.bob]]);
     });
 
     /**
@@ -157,13 +157,13 @@ void describe('the expenses, members, categories, and transfers', () => {
         const flat = new Flat();
         const carol: Member = {
             firstName: 'Carol',
-            accounts: [
-                { details: { kind: 'iban', iban: Iban.parse('RO49AAAA1B31007593840000') }, name: 'Main account' },
-                { details: { kind: 'username', username: Username.parse('carol.pays') }, name: 'Payment app' },
-            ],
-            email: Email.parse('carol@example.com'),
             lastName: 'Popa',
+            email: Email.parse('carol@example.com'),
             phone: PhoneNumber.parse('+40712345678'),
+            accounts: [
+                { name: 'Main account', details: { kind: 'iban', iban: Iban.parse('RO49AAAA1B31007593840000') } },
+                { name: 'Payment app', details: { kind: 'username', username: Username.parse('carol.pays') } },
+            ],
         };
         assert.deepEqual(convertedMember(generatedMember(carol)), carol);
         assert.deepEqual(convertedMember(generatedMember({ firstName: 'Dan' })), { firstName: 'Dan', accounts: [] });
@@ -173,12 +173,12 @@ void describe('the expenses, members, categories, and transfers', () => {
 
         const lei = Currency.of('RON');
         const cash = {
-            cost: { kind: 'converted', amount: new Money(lei, 1_000n), rate: ExchangeRate.parse('0.2') },
-            date: flat.day,
             from: flat.bob,
             to: flat.ana,
-            note: 'Cash',
+            cost: { kind: 'converted', amount: new Money(1_000n, lei), rate: ExchangeRate.parse('0.2') },
+            date: flat.day,
             time: TimeOfDay.of(10, 0),
+            note: 'Cash',
         } as const;
         assert.deepEqual(convertedTransfer(generatedTransfer(cash)), cash);
         const payment = flat.group.addTransferSync(cash);
@@ -197,6 +197,6 @@ void describe('the expenses, members, categories, and transfers', () => {
             () => flat.group.replaceMemberSync(carol),
             (error: unknown) => error instanceof TypeError && 'an entry to replace must carry its identifier' === error.message,
         );
-        assert.deepEqual(CalendarDate.of(1, 1, 2026).toString(), '2026-01-01');
+        assert.deepEqual(CalendarDate.of(2026, 1, 1).toString(), '2026-01-01');
     });
 });

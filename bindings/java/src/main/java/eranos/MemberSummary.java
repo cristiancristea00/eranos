@@ -5,41 +5,41 @@ import java.util.Objects;
 /**
  * A member's totals, in the group currency.
  *
- * @param balance where the member stands
  * @param member the member
- * @param net what the member is owed, less what they owe: positive when they get money back
  * @param paid what the member paid for expenses
- * @param received what the member received in transfers
- * @param sent what the member sent in transfers
  * @param share the member's share of the expenses: what they consumed
+ * @param sent what the member sent in transfers
+ * @param received what the member received in transfers
+ * @param net what the member is owed, less what they owe: positive when they get money back
+ * @param balance where the member stands
  */
 public record MemberSummary(
-        Balance balance,
         MemberId member,
-        Money net,
         Money paid,
-        Money received,
+        Money share,
         Money sent,
-        Money share) {
+        Money received,
+        Money net,
+        Balance balance) {
     /**
      * The member summary of these components.
      *
-     * @param balance where the member stands
      * @param member the member
-     * @param net what the member is owed, less what they owe
      * @param paid what the member paid for expenses
-     * @param received what the member received in transfers
-     * @param sent what the member sent in transfers
      * @param share the member's share of the expenses
+     * @param sent what the member sent in transfers
+     * @param received what the member received in transfers
+     * @param net what the member is owed, less what they owe
+     * @param balance where the member stands
      */
     public MemberSummary {
-        Objects.requireNonNull(balance, "balance");
         Objects.requireNonNull(member, "member");
-        Objects.requireNonNull(net, "net");
         Objects.requireNonNull(paid, "paid");
-        Objects.requireNonNull(received, "received");
-        Objects.requireNonNull(sent, "sent");
         Objects.requireNonNull(share, "share");
+        Objects.requireNonNull(sent, "sent");
+        Objects.requireNonNull(received, "received");
+        Objects.requireNonNull(net, "net");
+        Objects.requireNonNull(balance, "balance");
     }
 
     /**
@@ -50,12 +50,12 @@ public record MemberSummary(
      */
     static MemberSummary converted(eranos.internal.MemberSummary memberSummary) {
         return new MemberSummary(
-                Conversions.converted(memberSummary.balance()),
                 new MemberId(memberSummary.member()),
-                Money.converted(memberSummary.net()),
                 Money.converted(memberSummary.paid()),
-                Money.converted(memberSummary.received()),
+                Money.converted(memberSummary.share()),
                 Money.converted(memberSummary.sent()),
-                Money.converted(memberSummary.share()));
+                Money.converted(memberSummary.received()),
+                Money.converted(memberSummary.net()),
+                Conversions.converted(memberSummary.balance()));
     }
 }

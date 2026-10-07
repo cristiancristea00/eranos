@@ -1,5 +1,5 @@
 /// @file eranos/split.hpp
-/// How an amount divides among members: equally, by exact amounts, by parts, or by percentages.
+/// How an amount divides among members: equally, by parts, by percentages, or by exact amounts.
 ///
 /// A part of eranos.hpp, which includes every part and then the conversions their functions call: include eranos.hpp.
 
@@ -21,28 +21,6 @@
 #include <vector>
 
 namespace eranos {
-
-/// A member's exact amount in a split.
-struct MemberAmount final {
-    /// The record of its fields.
-    ///
-    /// @param amount The amount.
-    /// @param member The member's identifier.
-    MemberAmount(Money amount, MemberId member) noexcept : amount(std::move(amount)), member(std::move(member)) {}
-
-    /// The amount.
-    Money amount;
-
-    /// The member's identifier.
-    MemberId member;
-
-    /// Whether every field of two records is equal.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberAmount const &left, MemberAmount const &right) noexcept = default;
-};
 
 /// A member's parts in a split, in hundredths of a part.
 struct MemberParts final {
@@ -88,17 +66,26 @@ struct MemberPercentage final {
     [[nodiscard]] friend bool operator==(MemberPercentage const &left, MemberPercentage const &right) noexcept = default;
 };
 
-/// Every member pays an exact amount; the amounts add up to what they divide.
-struct AmountsSplit final {
-    /// Each member's amount.
-    std::vector<MemberAmount> shares;
-
-    /// Whether every field of two alternatives is equal.
+/// A member's exact amount in a split.
+struct MemberAmount final {
+    /// The record of its fields.
     ///
-    /// @param left An alternative
-    /// @param right Another alternative
+    /// @param member The member's identifier.
+    /// @param amount The amount.
+    MemberAmount(MemberId member, Money amount) noexcept : member(std::move(member)), amount(std::move(amount)) {}
+
+    /// The member's identifier.
+    MemberId member;
+
+    /// The amount.
+    Money amount;
+
+    /// Whether every field of two records is equal.
+    ///
+    /// @param left A record
+    /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(AmountsSplit const &left, AmountsSplit const &right) noexcept = default;
+    [[nodiscard]] friend bool operator==(MemberAmount const &left, MemberAmount const &right) noexcept = default;
 };
 
 /// Every member pays the same.
@@ -140,8 +127,21 @@ struct PercentagesSplit final {
     [[nodiscard]] friend bool operator==(PercentagesSplit const &left, PercentagesSplit const &right) noexcept = default;
 };
 
-/// How an amount is divided among members. One of its alternatives: AmountsSplit, EqualSplit, PartsSplit, PercentagesSplit.
-using Split = std::variant<AmountsSplit, EqualSplit, PartsSplit, PercentagesSplit>;
+/// Every member pays an exact amount; the amounts add up to what they divide.
+struct AmountsSplit final {
+    /// Each member's amount.
+    std::vector<MemberAmount> shares;
+
+    /// Whether every field of two alternatives is equal.
+    ///
+    /// @param left An alternative
+    /// @param right Another alternative
+    /// @return Whether they are equal
+    [[nodiscard]] friend bool operator==(AmountsSplit const &left, AmountsSplit const &right) noexcept = default;
+};
+
+/// How an amount is divided among members. One of its alternatives: EqualSplit, PartsSplit, PercentagesSplit, AmountsSplit.
+using Split = std::variant<EqualSplit, PartsSplit, PercentagesSplit, AmountsSplit>;
 
 /// The members a split divides among, in the order it lists them.
 ///
@@ -152,21 +152,21 @@ using Split = std::variant<AmountsSplit, EqualSplit, PartsSplit, PercentagesSpli
 namespace detail {
 
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosTextList>, Error> toDetail(std::vector<MemberId> const &members);
-[[nodiscard]] inline MemberAmount fromDetail(EranosMemberAmount const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value);
 [[nodiscard]] inline MemberParts fromDetail(EranosMemberParts const &value);
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberParts>, Error> toDetail(MemberParts const &value);
 [[nodiscard]] inline MemberPercentage fromDetail(EranosMemberPercentage const &value);
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberPercentage>, Error> toDetail(MemberPercentage const &value);
+[[nodiscard]] inline MemberAmount fromDetail(EranosMemberAmount const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value);
 [[nodiscard]] inline Split fromDetail(EranosSplit const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value);
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(EqualSplit const &value);
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PartsSplit const &value);
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PercentagesSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value);
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(Split const &value);
-[[nodiscard]] inline std::vector<MemberAmount> fromDetail(EranosMemberAmountList const &list);
 [[nodiscard]] inline std::vector<MemberParts> fromDetail(EranosMemberPartsList const &list);
 [[nodiscard]] inline std::vector<MemberPercentage> fromDetail(EranosMemberPercentageList const &list);
+[[nodiscard]] inline std::vector<MemberAmount> fromDetail(EranosMemberAmountList const &list);
 
 } // namespace detail
 

@@ -15,13 +15,13 @@ fn member(number: u8) -> MemberId {
 }
 
 /// A payment of `amount` from member `from` to member `to`.
-fn flow(amount: i64, from: u8, to: u8) -> Flow {
+fn flow(from: u8, to: u8, amount: i64) -> Flow {
     Flow {
-        amount,
         members: MemberPair {
             from: member(from),
             to: member(to),
         },
+        amount,
     }
 }
 
@@ -41,7 +41,7 @@ fn balances(nets: &[i64]) -> Vec<OpenBalance> {
 fn the_largest_debtor_pays_the_largest_creditor_first() {
     // Owed 50 and 30; owing 60 and 20.
     let flows = settle(&balances(&[50, 30, -60, -20]));
-    assert_eq!(flows, vec![flow(50, 3, 1), flow(20, 4, 2), flow(10, 3, 2)]);
+    assert_eq!(flows, vec![flow(3, 1, 50), flow(4, 2, 20), flow(3, 2, 10)]);
 }
 
 /// Equal amounts are taken in member order, so the plan is the same on
@@ -49,7 +49,7 @@ fn the_largest_debtor_pays_the_largest_creditor_first() {
 #[test]
 fn ties_go_to_the_lower_member() {
     let flows = settle(&balances(&[10, 10, -10, -10]));
-    assert_eq!(flows, vec![flow(10, 3, 1), flow(10, 4, 2)]);
+    assert_eq!(flows, vec![flow(3, 1, 10), flow(4, 2, 10)]);
 }
 
 /// Settled members are ignored and an all-settled group needs nothing.
@@ -57,7 +57,7 @@ fn ties_go_to_the_lower_member() {
 fn settled_balances_need_no_payment() {
     assert_eq!(settle(&[]), Vec::<Flow>::new());
     assert_eq!(settle(&balances(&[0, 0])), Vec::<Flow>::new());
-    assert_eq!(settle(&balances(&[0, 5, -5])), vec![flow(5, 3, 2)]);
+    assert_eq!(settle(&balances(&[0, 5, -5])), vec![flow(3, 2, 5)]);
 }
 
 /// Where the largest amounts meet first, the 5.00 owed and the 5.00 owing
@@ -69,7 +69,7 @@ fn settling_exact_opposites_first_saves_a_payment() {
     assert_eq!(largest_first(&open).len(), 4);
     assert_eq!(
         settle(&open),
-        vec![flow(5, 3, 5), flow(3, 1, 4), flow(3, 2, 4)]
+        vec![flow(3, 5, 5), flow(1, 4, 3), flow(2, 4, 3)]
     );
 }
 

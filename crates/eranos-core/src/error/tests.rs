@@ -5,30 +5,30 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case {
     error: IdError,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// An [`IdError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedIdError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromIdError for ConvertedIdError {
     fn invalid_id(message: String) -> Self {
         Self {
+            method: "invalid_id",
             held: String::new(),
             message,
-            method: "invalid_id",
         }
     }
 }
@@ -40,16 +40,16 @@ impl FromIdError for ConvertedIdError {
 fn every_failure_of_id_error_converts_through_the_method_of_its_variant() {
     let cases = [Case {
         error: IdError::InvalidId,
-        held: String::new(),
         method: "invalid_id",
+        held: String::new(),
     }];
     for case in cases {
         assert_eq!(
             ConvertedIdError::from_id_error(case.error),
             ConvertedIdError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }

@@ -51,11 +51,6 @@ class Currency final {
     /// @return The code
     [[nodiscard]] std::string const &code() const noexcept { return fields.code; }
 
-    /// The number of decimal places of its amounts: 2 for the euro, 0 for the yen.
-    ///
-    /// @return The decimal places
-    [[nodiscard]] std::int32_t decimalPlaces() const noexcept { return fields.decimalPlaces; }
-
     /// The English name: "Euro".
     ///
     /// @return The name
@@ -65,6 +60,11 @@ class Currency final {
     ///
     /// @return The numeric code
     [[nodiscard]] std::int32_t numericCode() const noexcept { return fields.numericCode; }
+
+    /// The number of decimal places of its amounts: 2 for the euro, 0 for the yen.
+    ///
+    /// @return The decimal places
+    [[nodiscard]] std::int32_t decimalPlaces() const noexcept { return fields.decimalPlaces; }
 
     /// Whether two currencies have one code.
     ///
@@ -88,9 +88,9 @@ class Currency final {
     /// What the library knows of the currency.
     struct Fields final {
         std::string code;
-        std::int32_t decimalPlaces;
         std::string name;
         std::int32_t numericCode;
+        std::int32_t decimalPlaces;
     };
 
     explicit Currency(Fields fields) noexcept : fields(std::move(fields)) {}

@@ -32,7 +32,7 @@ struct Expected<Error> {
 }
 
 const fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 /// Every `IdError` variant, with its exact message.
@@ -89,8 +89,8 @@ fn money_errors() -> Vec<Expected<MoneyError>> {
         },
         Expected {
             error: MoneyError::TooManyDecimals {
-                allowed: 0,
                 currency: Currency::JPY,
+                allowed: 0,
             },
             message: "JPY amounts have at most 0 decimal places",
         },
@@ -195,8 +195,8 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
     vec![
         Expected {
             error: ExpenseError::AmountsDoNotAddUp {
-                actual: euros(999),
                 expected: euros(1_000),
+                actual: euros(999),
             },
             message: "the amounts add up to 9.99 EUR instead of 10.00 EUR",
         },
@@ -225,8 +225,8 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
         },
         Expected {
             error: ExpenseError::ItemsDoNotAddUp {
-                actual: euros(8_000),
                 expected: euros(9_000),
+                actual: euros(8_000),
             },
             message: "the items add up to 80.00 EUR instead of 90.00 EUR",
         },
@@ -324,8 +324,8 @@ fn group_errors() -> Vec<Expected<GroupError>> {
         },
         Expected {
             error: GroupError::MemberInUse {
-                expenses: vec![EXPENSE, ExpenseId::from_bytes([0x55; 16])],
                 member: MEMBER,
+                expenses: vec![EXPENSE, ExpenseId::from_bytes([0x55; 16])],
                 transfers: vec![TRANSFER],
             },
             message: "member 11111111-1111-1111-1111-111111111111 is used by 2 expenses and 1 transfer",

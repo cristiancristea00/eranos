@@ -1,6 +1,6 @@
 internal import EranosGenerated
 
-// The group's own details: its identifier, name, description, language, currency, and saved form.
+// The group's own details: its identifier, name, currency, description, language, and saved form.
 public extension Group {
     /// The group's identifier.
     ///
@@ -19,6 +19,48 @@ public extension Group {
     func id() async throws(EranosError) -> Group.ID {
         try await converting { [handle] cancellation in
             Group.ID(rawValue: try await handle.idAsync(cancellation: cancellation))
+        }
+    }
+
+    /// The group's name.
+    ///
+    /// - Throws: On wasm, ``EranosError/group(_:detail:)`` with ``GroupFailure/busy`` while another
+    ///   call holds the lock.
+    func name() throws(EranosError) -> String {
+        try converting { try handle.name() }
+    }
+
+    /// The group's name.
+    ///
+    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
+    /// which leaves the group as it was.
+    ///
+    /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
+    func name() async throws(EranosError) -> String {
+        try await converting { [handle] cancellation in
+            try await handle.nameAsync(cancellation: cancellation)
+        }
+    }
+
+    /// Renames the group.
+    ///
+    /// - Throws: ``EranosError/group(_:detail:)`` with ``GroupFailure/emptyName`` for a blank name;
+    ///   on wasm, ``EranosError/group(_:detail:)`` with ``GroupFailure/busy`` while another call
+    ///   holds the lock.
+    func rename(to name: String) throws(EranosError) {
+        try converting { try handle.setName(name: name) }
+    }
+
+    /// Renames the group.
+    ///
+    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
+    /// which leaves the group as it was.
+    ///
+    /// - Throws: ``EranosError/group(_:detail:)`` with ``GroupFailure/emptyName`` for a blank name;
+    ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
+    func rename(to name: String) async throws(EranosError) {
+        try await converting { [handle] cancellation in
+            try await handle.setNameAsync(name: name, cancellation: cancellation)
         }
     }
 
@@ -65,48 +107,6 @@ public extension Group {
     func changeCurrency(to currency: Currency, rates: [Currency: ExchangeRate]) async throws(EranosError) {
         try await converting { [handle] cancellation in
             try await handle.changeCurrencyAsync(currency: currency.code, rates: rates.map { CurrencyRate(currency: $0.key.code, rate: $0.value.description) }, cancellation: cancellation)
-        }
-    }
-
-    /// The group's name.
-    ///
-    /// - Throws: On wasm, ``EranosError/group(_:detail:)`` with ``GroupFailure/busy`` while another
-    ///   call holds the lock.
-    func name() throws(EranosError) -> String {
-        try converting { try handle.name() }
-    }
-
-    /// The group's name.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
-    /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func name() async throws(EranosError) -> String {
-        try await converting { [handle] cancellation in
-            try await handle.nameAsync(cancellation: cancellation)
-        }
-    }
-
-    /// Renames the group.
-    ///
-    /// - Throws: ``EranosError/group(_:detail:)`` with ``GroupFailure/emptyName`` for a blank name;
-    ///   on wasm, ``EranosError/group(_:detail:)`` with ``GroupFailure/busy`` while another call
-    ///   holds the lock.
-    func rename(to name: String) throws(EranosError) {
-        try converting { try handle.setName(name: name) }
-    }
-
-    /// Renames the group.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
-    /// - Throws: ``EranosError/group(_:detail:)`` with ``GroupFailure/emptyName`` for a blank name;
-    ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func rename(to name: String) async throws(EranosError) {
-        try await converting { [handle] cancellation in
-            try await handle.setNameAsync(name: name, cancellation: cancellation)
         }
     }
 

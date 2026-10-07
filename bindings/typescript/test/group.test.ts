@@ -116,7 +116,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
             assert.equal(reader.transfer(stranger.repayment), undefined);
             assert.equal(reader.transferAmount(stranger.repayment), undefined);
         }
-        using plain = Group.create(flat.euro, 'Trip');
+        using plain = Group.create('Trip', flat.euro);
         assert.equal(plain.descriptionSync(), undefined);
         assert.equal(plain.languageSync(), undefined);
         using reader = plain.readSync();
@@ -155,7 +155,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(group.replaceExpenseSync({ ...flat.expense('Brunch', flat.bob, [flat.ana]), id: lunch }).name, 'Lunch');
         assert.equal(group.removeExpenseSync(lunch).name, 'Brunch');
 
-        const cash = group.addTransferSync({ cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day, from: flat.ana, to: flat.bob });
+        const cash = group.addTransferSync({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day });
         const storedCash = group.transferSync(cash);
         assert.ok(undefined !== storedCash);
         assert.equal(group.replaceTransferSync({ ...storedCash, note: 'Cash' }).note, undefined);
@@ -174,7 +174,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         const lei = Currency.of('RON');
         group.changeCurrencySync(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
-        assert.ok(group.summarySync().totalSpent.equals(new Money(lei, 15_000n)));
+        assert.ok(group.summarySync().totalSpent.equals(new Money(15_000n, lei)));
     });
 
     /**
@@ -202,16 +202,16 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal((await group.replaceExpense({ ...flat.expense('Brunch', flat.bob, [flat.ana]), id: lunch })).name, 'Lunch');
         assert.equal((await group.removeExpense(lunch)).name, 'Brunch');
 
-        const cash = await group.addTransfer({ cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day, from: flat.ana, to: flat.bob });
+        const cash = await group.addTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day });
         assert.equal(
             (
                 await group.replaceTransfer({
-                    cost: { kind: 'local', amount: flat.euros(100n) },
-                    date: flat.day,
+                    id: cash,
                     from: flat.ana,
                     to: flat.bob,
+                    cost: { kind: 'local', amount: flat.euros(100n) },
+                    date: flat.day,
                     note: 'Cash',
-                    id: cash,
                 })
             ).note,
             undefined,
@@ -240,7 +240,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     void it('starts a group with what it is given and loads only its saved form', async () => {
         const euro = Currency.of('EUR');
         assert.throws(
-            () => Group.create(euro, ' '),
+            () => Group.create(' ', euro),
             (error: unknown) =>
                 error instanceof GroupError && 'emptyName' === error.failure.kind && 'the group name must not be empty' === error.message,
         );
@@ -341,11 +341,11 @@ void describe('every call of the group, synchronous and asynchronous, and every 
 
     /** A destroyed group that still answered would read memory the library freed. */
     void it('answers no more once destroyed', () => {
-        const group = Group.create(Currency.of('EUR'), 'Trip');
+        const group = Group.create('Trip', Currency.of('EUR'));
         group.destroy();
         group.destroy();
         assert.throws(() => group.nameSync());
-        const disposed = Group.create(Currency.of('EUR'), 'Trip');
+        const disposed = Group.create('Trip', Currency.of('EUR'));
         disposed[Symbol.dispose]();
         assert.throws(() => disposed.nameSync());
     });

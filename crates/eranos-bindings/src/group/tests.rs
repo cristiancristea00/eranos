@@ -53,8 +53,8 @@ struct Flat {
 
 fn euros(minor_units: i64) -> Money {
     Money {
-        currency: "EUR".to_owned(),
         minor_units,
+        currency: "EUR".to_owned(),
     }
 }
 
@@ -67,8 +67,8 @@ fn rate(currency: &str, rate: &str) -> CurrencyRate {
 
 fn new_group() -> NewGroup {
     NewGroup {
-        currency: "EUR".to_owned(),
         name: "Flat".to_owned(),
+        currency: "EUR".to_owned(),
         description: Some("Rent".to_owned()),
         language: Some("pt-pt".to_owned()),
     }
@@ -78,10 +78,10 @@ fn new_member(first_name: &str) -> Member {
     Member {
         id: None,
         first_name: first_name.to_owned(),
-        accounts: Vec::new(),
-        email: None,
         last_name: None,
+        email: None,
         phone: None,
+        accounts: Vec::new(),
     }
 }
 
@@ -96,15 +96,10 @@ fn new_category(name: &str) -> Category {
 fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
     Expense {
         id: None,
+        name: name.to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
         },
-        date: CalendarDate {
-            day: 23,
-            month: 9,
-            year: 2026,
-        },
-        name: name.to_owned(),
         payers: Split::Equal {
             members: vec![payer.to_owned()],
         },
@@ -113,28 +108,33 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
                 members: members.iter().map(|&member| member.to_owned()).collect(),
             },
         },
+        date: CalendarDate {
+            year: 2026,
+            month: 9,
+            day: 23,
+        },
+        tip: None,
+        time: None,
         category: None,
         description: None,
-        time: None,
-        tip: None,
     }
 }
 
 fn new_transfer(from: &str, to: &str, minor_units: i64) -> Transfer {
     Transfer {
         id: None,
+        from: from.to_owned(),
+        to: to.to_owned(),
         cost: Cost::Local {
             amount: euros(minor_units),
         },
         date: CalendarDate {
-            day: 24,
-            month: 9,
             year: 2026,
+            month: 9,
+            day: 24,
         },
-        from: from.to_owned(),
-        to: to.to_owned(),
-        note: None,
         time: None,
+        note: None,
     }
 }
 
@@ -162,14 +162,14 @@ fn flat() -> Flat {
 }
 
 fn library_day() -> eranos::CalendarDate {
-    eranos::CalendarDate::new(23, 9, 2026).unwrap()
+    eranos::CalendarDate::new(2026, 9, 23).unwrap()
 }
 
 /// A group in which `payers` members each paid a different amount for one
 /// more: with 16, seventeen open balances, so the exact settlement yields
 /// once, holding the shared lock; with 63, a table the solver cannot hold.
 fn owed_by_a_hub(payers: i64) -> GroupHandle {
-    let mut group = Group::builder(Currency::EUR, "Club").build().unwrap();
+    let mut group = Group::builder("Club", Currency::EUR).build().unwrap();
     let hub = group
         .add_member(eranos::Member::builder("Hub").build().unwrap())
         .unwrap();
@@ -177,9 +177,9 @@ fn owed_by_a_hub(payers: i64) -> GroupHandle {
         let payer = group
             .add_member(eranos::Member::builder("Payer").build().unwrap())
             .unwrap();
-        let amount = eranos::Money::from_minor_units(Currency::EUR, minor_units);
+        let amount = eranos::Money::from_minor_units(minor_units, Currency::EUR);
         let split = eranos::Split::equal([hub]);
-        let expense = eranos::Expense::builder(amount, library_day(), "Share", payer, split)
+        let expense = eranos::Expense::builder("Share", amount, payer, split, library_day())
             .build()
             .unwrap();
         group.add_expense(expense).unwrap();
@@ -190,7 +190,7 @@ fn owed_by_a_hub(payers: i64) -> GroupHandle {
 /// A group of 1 100 expenses, so a currency change yields once, holding the
 /// exclusive lock.
 fn busy() -> GroupHandle {
-    let mut group = Group::builder(Currency::EUR, "Office").build().unwrap();
+    let mut group = Group::builder("Office", Currency::EUR).build().unwrap();
     let ana = group
         .add_member(eranos::Member::builder("Ana").build().unwrap())
         .unwrap();
@@ -198,9 +198,9 @@ fn busy() -> GroupHandle {
         .add_member(eranos::Member::builder("Bob").build().unwrap())
         .unwrap();
     for _ in 0..1_100 {
-        let amount = eranos::Money::from_minor_units(Currency::EUR, 100);
+        let amount = eranos::Money::from_minor_units(100, Currency::EUR);
         let split = eranos::Split::equal([ana, bob]);
-        let expense = eranos::Expense::builder(amount, library_day(), "Coffee", ana, split)
+        let expense = eranos::Expense::builder("Coffee", amount, ana, split, library_day())
             .build()
             .unwrap();
         group.add_expense(expense).unwrap();

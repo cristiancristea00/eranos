@@ -22,9 +22,9 @@ import { type People, eur, rate, ron } from './tour.js';
 /** A currency of the library's list, as the table of currencies prints it. */
 interface CurrencyRow {
     readonly code: string;
-    readonly decimalPlaces: number;
     readonly name: string;
     readonly numericCode: number;
+    readonly decimalPlaces: number;
 }
 
 const currencyColumns: Columns<CurrencyRow> = [
@@ -48,7 +48,7 @@ const valueColumns: Columns<ValueRow> = [
 function currencies(): void {
     const rows = ['EUR', 'RON', 'JPY', 'BHD'].map((code): CurrencyRow => {
         const currency = Currency.of(code);
-        return { code: currency.code, decimalPlaces: currency.decimalPlaces, name: currency.name, numericCode: currency.numericCode };
+        return { code: currency.code, name: currency.name, numericCode: currency.numericCode, decimalPlaces: currency.decimalPlaces };
     });
     const unknown = refusal(() => Currency.of('XYZ'));
     printLines(
@@ -64,8 +64,8 @@ function amounts(): void {
     const change = eur('5.00').minus(eur('7.50'));
     const mixed = refusal(() => eur('1.00').plus(ron('1.00')));
     const yen = Money.parse('1500', Currency.of('JPY'));
-    const dinars = new Money(Currency.of('BHD'), 1_234n);
-    const nothing = new Money(Currency.of('RON'), 0n);
+    const dinars = new Money(1_234n, Currency.of('BHD'));
+    const nothing = new Money(0n, Currency.of('RON'));
     const cost: Cost = { kind: 'converted', amount: eur('10.00'), rate: ExchangeRate.parse('4.9765') };
     const doubled: Cost = { kind: 'converted', amount: eur('20.00'), rate: rate(cost) };
     printLines('Amounts are exact minor units in their currency:');
@@ -127,7 +127,7 @@ function datesAndIdentifiers(group: Group, people: People): void {
         valueColumns,
         [
             { input: '2026-10-01', result: `${date.toString()}: day ${String(date.day)}, month ${String(date.month)}, year ${String(date.year)}` },
-            { input: '29 February 2027', result: message(refusal(() => CalendarDate.of(29, 2, 2027))) },
+            { input: '29 February 2027', result: message(refusal(() => CalendarDate.of(2027, 2, 29))) },
             { input: '22:15', result: `${time.toString()}: hour ${String(time.hour)}, minute ${String(time.minute)}` },
             { input: '24:00', result: message(refusal(() => TimeOfDay.of(24, 0))) },
             { input: "Ana's identifier", result: `${parsed}, the same after a round trip: ${String(people.ana === found)}` },

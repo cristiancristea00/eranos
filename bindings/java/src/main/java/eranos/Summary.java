@@ -7,29 +7,29 @@ import java.util.Objects;
  * The group's totals: overall, per member, per category, and per member per category, all in the
  * group currency.
  *
+ * @param totalSpent what the group spent
+ * @param members the totals of every member
  * @param categoryTotals the total of every category
  * @param memberCategoryTotals the totals per category of every member
- * @param members the totals of every member
- * @param totalSpent what the group spent
  */
 public record Summary(
-        List<CategoryTotal> categoryTotals,
-        List<MemberCategoryTotals> memberCategoryTotals,
+        Money totalSpent,
         List<MemberSummary> members,
-        Money totalSpent) {
+        List<CategoryTotal> categoryTotals,
+        List<MemberCategoryTotals> memberCategoryTotals) {
     /**
      * The summary of these components; the lists are copied.
      *
+     * @param totalSpent what the group spent
+     * @param members the totals of every member
      * @param categoryTotals the total of every category
      * @param memberCategoryTotals the totals per category of every member
-     * @param members the totals of every member
-     * @param totalSpent what the group spent
      */
     public Summary {
+        Objects.requireNonNull(totalSpent, "totalSpent");
+        members = List.copyOf(members);
         categoryTotals = List.copyOf(categoryTotals);
         memberCategoryTotals = List.copyOf(memberCategoryTotals);
-        members = List.copyOf(members);
-        Objects.requireNonNull(totalSpent, "totalSpent");
     }
 
     /**
@@ -40,11 +40,11 @@ public record Summary(
      */
     static Summary converted(eranos.internal.Summary summary) {
         return new Summary(
+                Money.converted(summary.totalSpent()),
+                summary.members().stream().map(MemberSummary::converted).toList(),
                 summary.categoryTotals().stream().map(CategoryTotal::converted).toList(),
                 summary.memberCategoryTotals().stream()
                         .map(MemberCategoryTotals::converted)
-                        .toList(),
-                summary.members().stream().map(MemberSummary::converted).toList(),
-                Money.converted(summary.totalSpent()));
+                        .toList());
     }
 }

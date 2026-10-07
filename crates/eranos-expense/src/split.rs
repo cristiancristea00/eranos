@@ -38,8 +38,8 @@ use crate::error::ExpenseError;
 ///     MemberPercentage::new(bob, Percentage::parse("30")?),
 /// ]);
 /// let exact = Split::amounts([
-///     MemberAmount::new(Money::parse("12.50", Currency::EUR)?, ana),
-///     MemberAmount::new(Money::parse("7.50", Currency::EUR)?, bob),
+///     MemberAmount::new(ana, Money::parse("12.50", Currency::EUR)?),
+///     MemberAmount::new(bob, Money::parse("7.50", Currency::EUR)?),
 /// ]);
 /// assert_eq!(exact.members().collect::<Vec<_>>(), [ana, bob]);
 /// # let _ = (even, couple, fixed);
@@ -53,9 +53,6 @@ use crate::error::ExpenseError;
 )]
 #[non_exhaustive]
 pub enum Split {
-    /// Every member pays an exact amount; the amounts add up to exactly the
-    /// amount being split.
-    Amounts(Vec<MemberAmount>),
     /// Every member pays the same.
     Equal(Vec<MemberId>),
     /// Every member pays in proportion to their parts.
@@ -63,6 +60,9 @@ pub enum Split {
     /// Every member pays a percentage; the percentages add up to exactly
     /// 100 %.
     Percentages(Vec<MemberPercentage>),
+    /// Every member pays an exact amount; the amounts add up to exactly the
+    /// amount being split.
+    Amounts(Vec<MemberAmount>),
 }
 
 impl Split {
@@ -71,14 +71,14 @@ impl Split {
         Self::Equal(members.into_iter().collect())
     }
 
-    /// Divides by percentage; the percentages must add up to exactly 100 %.
-    pub fn percentages(shares: impl IntoIterator<Item = MemberPercentage>) -> Self {
-        Self::Percentages(shares.into_iter().collect())
-    }
-
     /// Divides in proportion to each member's parts.
     pub fn parts(shares: impl IntoIterator<Item = MemberParts>) -> Self {
         Self::Parts(shares.into_iter().collect())
+    }
+
+    /// Divides by percentage; the percentages must add up to exactly 100 %.
+    pub fn percentages(shares: impl IntoIterator<Item = MemberPercentage>) -> Self {
+        Self::Percentages(shares.into_iter().collect())
     }
 
     /// Assigns each member an exact amount; the amounts must add up to
@@ -90,9 +90,6 @@ impl Split {
     /// The members, in the order they were listed.
     pub fn members(&self) -> impl Iterator<Item = MemberId> + '_ {
         match self {
-            Self::Amounts(shares) => Members::Amounts {
-                shares: shares.iter(),
-            },
             Self::Equal(members) => Members::Equal {
                 members: members.iter(),
             },
@@ -102,6 +99,9 @@ impl Split {
             Self::Percentages(shares) => Members::Percentages {
                 shares: shares.iter(),
             },
+            Self::Amounts(shares) => Members::Amounts {
+                shares: shares.iter(),
+            },
         }
     }
 
@@ -109,10 +109,10 @@ impl Split {
     #[must_use]
     pub const fn len(&self) -> usize {
         match self {
-            Self::Amounts(shares) => shares.len(),
             Self::Equal(members) => members.len(),
             Self::Parts(shares) => shares.len(),
             Self::Percentages(shares) => shares.len(),
+            Self::Amounts(shares) => shares.len(),
         }
     }
 
@@ -133,32 +133,6 @@ impl Split {
             return Err(ExpenseError::DuplicateMember { member });
         }
         match self {
-            Self::Amounts(shares) => {
-                for &MemberAmount { amount, member } in shares {
-                    if amount.currency() != total.currency() {
-                        return Err(ExpenseError::CurrencyMismatch {
-                            expected: total.currency(),
-                            found: amount.currency(),
-                        });
-                    }
-                    if !amount.is_positive() {
-                        return Err(ExpenseError::NonPositiveShare { member });
-                    }
-                }
-                let sum: i128 = shares
-                    .iter()
-                    .map(|share| i128::from(share.amount.minor_units()))
-                    .sum();
-                if sum == i128::from(total.minor_units()) {
-                    Ok(())
-                } else {
-                    let actual = i64::try_from(sum).map_err(|_| ExpenseError::Overflow)?;
-                    Err(ExpenseError::AmountsDoNotAddUp {
-                        actual: Money::from_minor_units(total.currency(), actual),
-                        expected: total,
-                    })
-                }
-            }
             Self::Equal(_) | Self::Parts(_) => Ok(()),
             Self::Percentages(shares) => {
                 if let Some(share) = shares
@@ -179,6 +153,32 @@ impl Split {
                     Err(ExpenseError::PercentagesDoNotAddUp { total_basis_points })
                 }
             }
+            Self::Amounts(shares) => {
+                for &MemberAmount { member, amount } in shares {
+                    if amount.currency() != total.currency() {
+                        return Err(ExpenseError::CurrencyMismatch {
+                            expected: total.currency(),
+                            found: amount.currency(),
+                        });
+                    }
+                    if !amount.is_positive() {
+                        return Err(ExpenseError::NonPositiveShare { member });
+                    }
+                }
+                let sum: i128 = shares
+                    .iter()
+                    .map(|share| i128::from(share.amount.minor_units()))
+                    .sum();
+                if sum == i128::from(total.minor_units()) {
+                    Ok(())
+                } else {
+                    let actual = i64::try_from(sum).map_err(|_| ExpenseError::Overflow)?;
+                    Err(ExpenseError::AmountsDoNotAddUp {
+                        expected: total,
+                        actual: Money::from_minor_units(actual, total.currency()),
+                    })
+                }
+            }
         }
     }
 
@@ -189,13 +189,6 @@ impl Split {
     /// the order they were listed in.
     pub(crate) fn divide(&self, total: i64, rotation: u64) -> Vec<Share> {
         let mut entries: Vec<MemberWeight> = match self {
-            Self::Amounts(shares) => shares
-                .iter()
-                .map(|share| MemberWeight {
-                    member: share.member,
-                    weight: share.amount.minor_units().unsigned_abs(),
-                })
-                .collect(),
             Self::Equal(members) => members
                 .iter()
                 .map(|&member| MemberWeight { member, weight: 1 })
@@ -214,6 +207,13 @@ impl Split {
                     weight: u64::from(share.percentage.basis_points()),
                 })
                 .collect(),
+            Self::Amounts(shares) => shares
+                .iter()
+                .map(|share| MemberWeight {
+                    member: share.member,
+                    weight: share.amount.minor_units().unsigned_abs(),
+                })
+                .collect(),
         };
         entries.sort_unstable_by_key(|entry| entry.member);
         let weights: Vec<u64> = entries.iter().map(|entry| entry.weight).collect();
@@ -221,8 +221,8 @@ impl Split {
             .into_iter()
             .zip(allocate(total, &weights, rotation))
             .map(|(entry, amount)| Share {
-                amount,
                 member: entry.member,
+                amount,
             })
             .collect()
     }
@@ -232,9 +232,6 @@ impl Split {
 /// for every kind of split, so that listing them allocates nothing.
 #[derive(Debug, Clone)]
 enum Members<'split> {
-    Amounts {
-        shares: slice::Iter<'split, MemberAmount>,
-    },
     Equal {
         members: slice::Iter<'split, MemberId>,
     },
@@ -244,6 +241,9 @@ enum Members<'split> {
     Percentages {
         shares: slice::Iter<'split, MemberPercentage>,
     },
+    Amounts {
+        shares: slice::Iter<'split, MemberAmount>,
+    },
 }
 
 impl Iterator for Members<'_> {
@@ -251,10 +251,10 @@ impl Iterator for Members<'_> {
 
     fn next(&mut self) -> Option<MemberId> {
         match self {
-            Self::Amounts { shares } => shares.next().map(|share| share.member),
             Self::Equal { members } => members.next().copied(),
             Self::Parts { shares } => shares.next().map(|share| share.member),
             Self::Percentages { shares } => shares.next().map(|share| share.member),
+            Self::Amounts { shares } => shares.next().map(|share| share.member),
         }
     }
 }
@@ -262,10 +262,10 @@ impl Iterator for Members<'_> {
 /// A member's share of an amount a split divides, in minor units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Share {
-    /// The member's part of the amount.
-    pub(crate) amount: i64,
     /// The member.
     pub(crate) member: MemberId,
+    /// The member's part of the amount.
+    pub(crate) amount: i64,
 }
 
 /// A member's weight in a division: what their share is proportional to.
@@ -273,35 +273,6 @@ pub(crate) struct Share {
 struct MemberWeight {
     member: MemberId,
     weight: u64,
-}
-
-/// A member's exact amount in a [`Split::Amounts`].
-///
-/// Serialised as the two-element array `[member, amount]`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MemberAmount {
-    amount: Money,
-    member: MemberId,
-}
-
-impl MemberAmount {
-    /// The share of `member`: exactly `amount`.
-    #[must_use]
-    pub const fn new(amount: Money, member: MemberId) -> Self {
-        Self { amount, member }
-    }
-
-    /// The amount the member pays.
-    #[must_use]
-    pub const fn amount(self) -> Money {
-        self.amount
-    }
-
-    /// The member.
-    #[must_use]
-    pub const fn member(self) -> MemberId {
-        self.member
-    }
 }
 
 /// A member's parts in a [`Split::Parts`].
@@ -362,6 +333,35 @@ impl MemberPercentage {
     }
 }
 
+/// A member's exact amount in a [`Split::Amounts`].
+///
+/// Serialised as the two-element array `[member, amount]`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MemberAmount {
+    member: MemberId,
+    amount: Money,
+}
+
+impl MemberAmount {
+    /// The share of `member`: exactly `amount`.
+    #[must_use]
+    pub const fn new(member: MemberId, amount: Money) -> Self {
+        Self { member, amount }
+    }
+
+    /// The member.
+    #[must_use]
+    pub const fn member(self) -> MemberId {
+        self.member
+    }
+
+    /// The amount the member pays.
+    #[must_use]
+    pub const fn amount(self) -> Money {
+        self.amount
+    }
+}
+
 /// The shares serialise as the `[member, value]` arrays of format 2, which a
 /// derived implementation would write as objects.
 #[cfg(feature = "serde")]
@@ -371,19 +371,6 @@ mod serde_impls {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     use super::{MemberAmount, MemberParts, MemberPercentage};
-
-    impl Serialize for MemberAmount {
-        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-            (self.member, self.amount).serialize(serialiser)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for MemberAmount {
-        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            let (member, amount) = <(MemberId, Money)>::deserialize(deserialiser)?;
-            Ok(Self::new(amount, member))
-        }
-    }
 
     impl Serialize for MemberParts {
         fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
@@ -410,13 +397,23 @@ mod serde_impls {
             Ok(Self::new(member, percentage))
         }
     }
+
+    impl Serialize for MemberAmount {
+        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+            (self.member, self.amount).serialize(serialiser)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for MemberAmount {
+        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+            let (member, amount) = <(MemberId, Money)>::deserialize(deserialiser)?;
+            Ok(Self::new(member, amount))
+        }
+    }
 }
 
 /// Builds a value from a [`Split`], one method per way of dividing.
 pub trait FromSplit: Sized {
-    /// The value for an exact amount per member.
-    fn amounts(shares: &[MemberAmount]) -> Self;
-
     /// The value for an equal division among `members`.
     fn equal(members: &[MemberId]) -> Self;
 
@@ -426,14 +423,17 @@ pub trait FromSplit: Sized {
     /// The value for a percentage per member.
     fn percentages(shares: &[MemberPercentage]) -> Self;
 
+    /// The value for an exact amount per member.
+    fn amounts(shares: &[MemberAmount]) -> Self;
+
     /// The value for `split`, from the method of its variant.
     #[must_use]
     fn from_split(split: &Split) -> Self {
         match split {
-            Split::Amounts(shares) => Self::amounts(shares),
             Split::Equal(members) => Self::equal(members),
             Split::Parts(shares) => Self::parts(shares),
             Split::Percentages(shares) => Self::percentages(shares),
+            Split::Amounts(shares) => Self::amounts(shares),
         }
     }
 }

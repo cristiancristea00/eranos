@@ -20,10 +20,10 @@ import { type Columns, load, names, participants, printLines, printTable, sectio
 
 /** An expense, as the table of expenses prints it. */
 interface ExpenseRow {
-    readonly amount: Money;
     readonly name: string;
-    readonly participants: string;
     readonly payer: string;
+    readonly participants: string;
+    readonly amount: Money;
 }
 
 const expenseColumns: Columns<ExpenseRow> = [
@@ -35,10 +35,10 @@ const expenseColumns: Columns<ExpenseRow> = [
 
 /** A member's totals, as the table of balances prints them. */
 interface BalanceRow {
-    readonly balance: Balance;
-    readonly consumed: Money;
     readonly name: string;
     readonly paid: Money;
+    readonly consumed: Money;
+    readonly balance: Balance;
 }
 
 const balanceColumns: Columns<BalanceRow> = [
@@ -50,9 +50,9 @@ const balanceColumns: Columns<BalanceRow> = [
 
 /** A payment of a plan, as the table of payments prints it. */
 interface PaymentRow {
-    readonly amount: Money;
     readonly from: string;
     readonly to: string;
+    readonly amount: Money;
 }
 
 const paymentColumns: Columns<PaymentRow> = [
@@ -63,10 +63,10 @@ const paymentColumns: Columns<PaymentRow> = [
 
 /** A strategy with what it promises, as the table of strategies prints it. */
 interface StrategyRow {
-    readonly cost: string;
-    readonly guarantee: string;
-    readonly payments: number;
     readonly strategy: string;
+    readonly guarantee: string;
+    readonly cost: string;
+    readonly payments: number;
 }
 
 const strategyColumns: Columns<StrategyRow> = [
@@ -79,9 +79,9 @@ const strategyColumns: Columns<StrategyRow> = [
 /** The number of payments of each strategy's plan. */
 interface Counts {
     readonly adaptive: number;
-    readonly direct: number;
-    readonly greedy: number;
     readonly minimum: number;
+    readonly greedy: number;
+    readonly direct: number;
 }
 
 /** The name of `strategy` as the apps show it. */
@@ -89,23 +89,23 @@ function strategyName(strategy: SettlementStrategy): string {
     switch (strategy) {
         case SettlementStrategy.ADAPTIVE:
             return 'Adaptive';
-        case SettlementStrategy.DIRECT:
-            return 'Direct';
-        case SettlementStrategy.GREEDY:
-            return 'Greedy';
         case SettlementStrategy.MINIMUM_TRANSFERS:
             return 'MinimumTransfers';
+        case SettlementStrategy.GREEDY:
+            return 'Greedy';
+        case SettlementStrategy.DIRECT:
+            return 'Direct';
     }
 }
 
 /** Records an expense of `amount` EUR paid by `payer` and split equally. */
 function spend(group: Group, name: string, amount: string, payer: MemberId, members: MemberId[]): void {
     group.addExpenseSync({
-        cost: { kind: 'local', amount: Money.parse(amount, Currency.of('EUR')) },
-        date: CalendarDate.of(20, 9, 2026),
         name,
+        cost: { kind: 'local', amount: Money.parse(amount, Currency.of('EUR')) },
         payers: { kind: 'equal', members: [payer] },
         split: { kind: 'whole', split: { kind: 'equal', members } },
+        date: CalendarDate.of(2026, 9, 20),
     });
 }
 
@@ -115,7 +115,7 @@ function printBalances(group: Group): void {
         balanceColumns,
         group.membersSync().flatMap((member) => {
             const found = undefined === member.id ? undefined : totals(member.id, summary);
-            return undefined === found ? [] : [{ balance: found.balance, consumed: found.share, name: member.firstName, paid: found.paid }];
+            return undefined === found ? [] : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance }];
         }),
         1,
     );
@@ -124,7 +124,7 @@ function printBalances(group: Group): void {
 function printPayments(group: Group, settlement: Settlement): void {
     printTable(
         paymentColumns,
-        settlement.payments.map((payment) => ({ amount: payment.amount, from: names(group, [payment.from]), to: names(group, [payment.to]) })),
+        settlement.payments.map((payment) => ({ from: names(group, [payment.from]), to: names(group, [payment.to]), amount: payment.amount })),
         2,
     );
 }
@@ -173,27 +173,27 @@ function strategies(group: Group): Counts {
         strategyColumns,
         [
             {
-                cost: 'O(2ⁿ·n) for n open balances',
-                guarantee: 'the fewest payments',
-                payments: minimum.payments.length,
                 strategy: 'MinimumTransfers',
+                guarantee: 'the fewest payments',
+                cost: 'O(2ⁿ·n) for n open balances',
+                payments: minimum.payments.length,
             },
-            { cost: 'O(n log n)', guarantee: 'at most n − 1 payments', payments: greedy.payments.length, strategy: 'Greedy' },
-            { cost: 'O(pairs)', guarantee: 'one payment per pair in debt', payments: direct.payments.length, strategy: 'Direct' },
+            { strategy: 'Greedy', guarantee: 'at most n − 1 payments', cost: 'O(n log n)', payments: greedy.payments.length },
+            { strategy: 'Direct', guarantee: 'one payment per pair in debt', cost: 'O(pairs)', payments: direct.payments.length },
             {
-                cost: 'as MinimumTransfers, then Greedy',
-                guarantee: 'the fewest up to 20 balances',
-                payments: adaptive.payments.length,
                 strategy: 'Adaptive',
+                guarantee: 'the fewest up to 20 balances',
+                cost: 'as MinimumTransfers, then Greedy',
+                payments: adaptive.payments.length,
             },
         ],
         3,
     );
     return {
         adaptive: adaptive.payments.length,
-        direct: direct.payments.length,
-        greedy: greedy.payments.length,
         minimum: minimum.payments.length,
+        greedy: greedy.payments.length,
+        direct: direct.payments.length,
     };
 }
 
@@ -204,7 +204,7 @@ function strategies(group: Group): Counts {
 function festival(): number {
     section('8. A larger group');
     const euro = Currency.of('EUR');
-    using group = Group.create(euro, 'Festival');
+    using group = Group.create('Festival', euro);
     const friends: MemberId[] = [];
     for (let number = 1; 21 >= number; number += 1) {
         friends.push(group.addMemberSync({ firstName: `Friend ${String(number)}` }));
@@ -214,11 +214,11 @@ function festival(): number {
     for (const [index, payer] of friends.entries()) {
         const number = BigInt(index + 1);
         group.addExpenseSync({
-            cost: { kind: 'local', amount: new Money(euro, 21n * number * number) },
-            date: CalendarDate.of(18, 9, 2026),
             name: 'Round',
+            cost: { kind: 'local', amount: new Money(21n * number * number, euro) },
             payers: { kind: 'equal', members: [payer] },
             split: { kind: 'whole', split: { kind: 'equal', members: friends } },
+            date: CalendarDate.of(2026, 9, 18),
         });
     }
     const open = group.summarySync().members.filter((member) => 0n !== member.net.minorUnits).length;
@@ -237,7 +237,7 @@ function festival(): number {
 }
 
 await load();
-using group = Group.create(Currency.of('EUR'), 'Ski week');
+using group = Group.create('Ski week', Currency.of('EUR'));
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 const carol = group.addMemberSync({ firstName: 'Carol' });
@@ -257,10 +257,10 @@ spend(group, 'Snacks', '1.00', filip, [ana]);
 printTable(
     expenseColumns,
     group.expensesSync().map((expense) => ({
-        amount: expenseTotal(expense),
         name: expense.name,
-        participants: names(group, participants(expense.split)),
         payer: names(group, splitMembers(expense.payers)),
+        participants: names(group, participants(expense.split)),
+        amount: expenseTotal(expense),
     })),
     3,
 );
@@ -276,10 +276,10 @@ section('9. Settling up for real');
 const plan = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 for (const payment of plan.payments) {
     group.addTransferSync({
-        cost: { kind: 'local', amount: payment.amount },
-        date: CalendarDate.of(27, 9, 2026),
         from: payment.from,
         to: payment.to,
+        cost: { kind: 'local', amount: payment.amount },
+        date: CalendarDate.of(2026, 9, 27),
     });
 }
 printLines(
@@ -291,7 +291,7 @@ printLines(`Payments still needed: ${String(group.settlementSync(SettlementStrat
 
 // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that one;
 // greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
-assert.deepEqual(counts, { adaptive: 4, direct: 7, greedy: 5, minimum: 4 });
+assert.deepEqual(counts, { adaptive: 4, minimum: 4, greedy: 5, direct: 7 });
 // Greedy settles the festival's 21 balances in 19 payments.
 assert.equal(festivalPayments, 19);
 const summary = group.summarySync();

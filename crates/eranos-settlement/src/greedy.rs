@@ -16,8 +16,8 @@ use crate::opposites::{Pairing, pair_opposites};
 /// the largest amount first and, among equal amounts, the lower member ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Outstanding {
-    amount: u64,
     member: MemberId,
+    amount: u64,
 }
 
 impl Ord for Outstanding {
@@ -72,8 +72,8 @@ fn largest_first(balances: &[OpenBalance]) -> Vec<Flow> {
     let mut debtors: BinaryHeap<Outstanding> = BinaryHeap::new();
     for &OpenBalance { member, net } in balances {
         let outstanding = Outstanding {
-            amount: net.unsigned_abs(),
             member,
+            amount: net.unsigned_abs(),
         };
         match net.signum() {
             1 => creditors.push(outstanding),
@@ -85,23 +85,23 @@ fn largest_first(balances: &[OpenBalance]) -> Vec<Flow> {
     while let (Some(creditor), Some(debtor)) = (creditors.pop(), debtors.pop()) {
         let amount = creditor.amount.min(debtor.amount);
         flows.push(Flow {
-            // Balances are within ±i64::MAX, so every amount fits back in i64.
-            amount: i64::try_from(amount).unwrap_or(i64::MAX),
             members: MemberPair {
                 from: debtor.member,
                 to: creditor.member,
             },
+            // Balances are within ±i64::MAX, so every amount fits back in i64.
+            amount: i64::try_from(amount).unwrap_or(i64::MAX),
         });
         if creditor.amount > amount {
             creditors.push(Outstanding {
-                amount: creditor.amount - amount,
                 member: creditor.member,
+                amount: creditor.amount - amount,
             });
         }
         if debtor.amount > amount {
             debtors.push(Outstanding {
-                amount: debtor.amount - amount,
                 member: debtor.member,
+                amount: debtor.amount - amount,
             });
         }
     }

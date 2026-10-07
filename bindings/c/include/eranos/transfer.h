@@ -18,16 +18,16 @@ typedef struct EranosTransfer EranosTransfer;
 
 /// A new transfer of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param cost What was paid
-/// @param date The day it was paid
 /// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param cost What was paid
+/// @param date The day it was paid
 /// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosTransferCreate(EranosCost const *const cost, EranosCalendarDate const date, char const *const from,
-                                                              char const *const to, EranosTransfer **const transfer) {
-    EranosTransfer_create_result const result = EranosTransfer_create(cost, date, eranosDetailView(from), eranosDetailView(to));
+[[nodiscard]] static inline EranosError *eranosTransferCreate(char const *const from, char const *const to, EranosCost const *const cost,
+                                                              EranosCalendarDate const date, EranosTransfer **const transfer) {
+    EranosTransfer_create_result const result = EranosTransfer_create(eranosDetailView(from), eranosDetailView(to), cost, date);
     *transfer = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -59,30 +59,6 @@ typedef struct EranosTransfer EranosTransfer;
 ///
 /// @param transfer The transfer
 static inline void eranosTransferClearId(EranosTransfer *const transfer) { EranosTransfer_clear_id(transfer); }
-
-/// What was paid.
-///
-/// @param transfer The transfer
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosCost *eranosTransferCost(EranosTransfer const *const transfer) { return EranosTransfer_cost(transfer); }
-
-/// Sets what was paid.
-///
-/// @param transfer The transfer
-/// @param cost What was paid
-static inline void eranosTransferSetCost(EranosTransfer *const transfer, EranosCost const *const cost) { EranosTransfer_set_cost(transfer, cost); }
-
-/// The day it was paid.
-///
-/// @param transfer The transfer
-/// @return The day it was paid
-[[nodiscard]] static inline EranosCalendarDate eranosTransferDate(EranosTransfer const *const transfer) { return EranosTransfer_date(transfer); }
-
-/// Sets the day it was paid.
-///
-/// @param transfer The transfer
-/// @param date The day it was paid
-static inline void eranosTransferSetDate(EranosTransfer *const transfer, EranosCalendarDate const date) { EranosTransfer_set_date(transfer, date); }
 
 /// The identifier of the member who paid.
 ///
@@ -126,6 +102,51 @@ static inline void eranosTransferTo(EranosTransfer const *const transfer, Eranos
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
+/// What was paid.
+///
+/// @param transfer The transfer
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosCost *eranosTransferCost(EranosTransfer const *const transfer) { return EranosTransfer_cost(transfer); }
+
+/// Sets what was paid.
+///
+/// @param transfer The transfer
+/// @param cost What was paid
+static inline void eranosTransferSetCost(EranosTransfer *const transfer, EranosCost const *const cost) { EranosTransfer_set_cost(transfer, cost); }
+
+/// The day it was paid.
+///
+/// @param transfer The transfer
+/// @return The day it was paid
+[[nodiscard]] static inline EranosCalendarDate eranosTransferDate(EranosTransfer const *const transfer) { return EranosTransfer_date(transfer); }
+
+/// Sets the day it was paid.
+///
+/// @param transfer The transfer
+/// @param date The day it was paid
+static inline void eranosTransferSetDate(EranosTransfer *const transfer, EranosCalendarDate const date) { EranosTransfer_set_date(transfer, date); }
+
+/// The time of day it was paid.
+///
+/// @param transfer The transfer
+/// @param time Receives the time, when there is one
+/// @return Whether there is one
+[[nodiscard]] static inline bool eranosTransferTime(EranosTransfer const *const transfer, EranosTimeOfDay *const time) {
+    EranosTransfer_time_result const result = EranosTransfer_time(transfer);
+    return eranosDetailPresentTimeOfDay(result.is_ok, &result.ok, time);
+}
+
+/// Sets the time of day it was paid.
+///
+/// @param transfer The transfer
+/// @param time The time of day it was paid
+static inline void eranosTransferSetTime(EranosTransfer *const transfer, EranosTimeOfDay const time) { EranosTransfer_set_time(transfer, time); }
+
+/// Clears the time of day it was paid.
+///
+/// @param transfer The transfer
+static inline void eranosTransferClearTime(EranosTransfer *const transfer) { EranosTransfer_clear_time(transfer); }
+
 /// A note on the transfer. Writes it, if present; absent otherwise.
 ///
 /// @param transfer The transfer
@@ -153,27 +174,6 @@ static inline void eranosTransferTo(EranosTransfer const *const transfer, Eranos
 ///
 /// @param transfer The transfer
 static inline void eranosTransferClearNote(EranosTransfer *const transfer) { EranosTransfer_clear_note(transfer); }
-
-/// The time of day it was paid.
-///
-/// @param transfer The transfer
-/// @param time Receives the time, when there is one
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosTransferTime(EranosTransfer const *const transfer, EranosTimeOfDay *const time) {
-    EranosTransfer_time_result const result = EranosTransfer_time(transfer);
-    return eranosDetailPresentTimeOfDay(result.is_ok, &result.ok, time);
-}
-
-/// Sets the time of day it was paid.
-///
-/// @param transfer The transfer
-/// @param time The time of day it was paid
-static inline void eranosTransferSetTime(EranosTransfer *const transfer, EranosTimeOfDay const time) { EranosTransfer_set_time(transfer, time); }
-
-/// Clears the time of day it was paid.
-///
-/// @param transfer The transfer
-static inline void eranosTransferClearTime(EranosTransfer *const transfer) { EranosTransfer_clear_time(transfer); }
 
 /// Destroys @p transfer; destroying nullptr does nothing, as free() does.
 ///

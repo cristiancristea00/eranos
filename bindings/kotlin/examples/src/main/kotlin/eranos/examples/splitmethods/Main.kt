@@ -26,10 +26,10 @@ import eranos.examples.section
 import eranos.examples.totals
 
 private data class ShareRow(
-    val consumed: Money,
     val name: String,
-    val paid: Money,
     val rule: String,
+    val paid: Money,
+    val consumed: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, rule, "$paid", "$consumed")
@@ -40,10 +40,10 @@ private data class ShareRow(
 }
 
 private data class TotalRow(
-    val balance: String,
-    val consumed: Money,
     val name: String,
     val paid: Money,
+    val consumed: Money,
+    val balance: String,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, "$paid", "$consumed", balance)
@@ -68,10 +68,10 @@ private fun report(
         ShareRow.HEADERS,
         shares.members.map { share ->
             ShareRow(
-                consumed = share.share,
                 name = names(group, listOf(share.member)),
-                paid = share.paid,
                 rule = rules[share.member] ?: "(payer only)",
+                paid = share.paid,
+                consumed = share.share,
             )
         },
         numbersFrom = 2,
@@ -82,8 +82,8 @@ private fun report(
 private class Family(
     val ana: MemberId,
     val bob: MemberId,
-    val day: CalendarDate,
     val mia: MemberId,
+    val day: CalendarDate,
 ) {
     /** The rule of an expense shared equally by the three. */
     val thirds: Map<MemberId, String>
@@ -105,11 +105,11 @@ private fun equally(
     val taxi =
         group.addBlocking(
             Expense(
-                Cost.Local(eur("10.00")),
-                family.day,
                 "Taxi",
+                Cost.Local(eur("10.00")),
                 Split.Equal(listOf(family.ana)),
                 ExpenseSplit.Whole(Split.Equal(listOf(family.ana, family.bob, family.mia))),
+                family.day,
             ),
         )
     report(group, taxi, family.thirds)
@@ -129,9 +129,8 @@ private fun byPercentage(
     val rent =
         group.addBlocking(
             Expense(
-                Cost.Local(eur("500.00")),
-                family.day,
                 "Flat",
+                Cost.Local(eur("500.00")),
                 Split.Equal(listOf(family.bob)),
                 ExpenseSplit.Whole(
                     Split.Percentages(
@@ -142,6 +141,7 @@ private fun byPercentage(
                         ),
                     ),
                 ),
+                family.day,
             ),
         )
     report(group, rent, mapOf(family.ana to "40%", family.bob to "40%", family.mia to "20%"))
@@ -161,9 +161,8 @@ private fun byParts(
     val food =
         group.addBlocking(
             Expense(
-                Cost.Local(eur("125.00")),
-                family.day,
                 "Food",
+                Cost.Local(eur("125.00")),
                 Split.Equal(listOf(family.ana)),
                 ExpenseSplit.Whole(
                     Split.Parts(
@@ -174,6 +173,7 @@ private fun byParts(
                         ),
                     ),
                 ),
+                family.day,
             ),
         )
     report(group, food, mapOf(family.ana to "1 part", family.bob to "1 part", family.mia to "0.5 parts"))
@@ -194,19 +194,19 @@ private fun byAmounts(
     val tickets =
         group.addBlocking(
             Expense(
-                Cost.Local(eur("35.00")),
-                family.day,
                 "Museum",
+                Cost.Local(eur("35.00")),
                 Split.Equal(listOf(family.bob)),
                 ExpenseSplit.Whole(
                     Split.Amounts(
                         listOf(
-                            MemberAmount(eur("15.00"), family.ana),
-                            MemberAmount(eur("15.00"), family.bob),
-                            MemberAmount(eur("5.00"), family.mia),
+                            MemberAmount(family.ana, eur("15.00")),
+                            MemberAmount(family.bob, eur("15.00")),
+                            MemberAmount(family.mia, eur("5.00")),
                         ),
                     ),
                 ),
+                family.day,
             ),
         )
     report(group, tickets, mapOf(family.ana to "15.00 EUR", family.bob to "15.00 EUR", family.mia to "5.00 EUR"))
@@ -226,11 +226,11 @@ private fun severalPayers(
     val dinner =
         group.addBlocking(
             Expense(
-                Cost.Local(eur("90.00")),
-                family.day,
                 "Dinner",
-                Split.Amounts(listOf(MemberAmount(eur("50.00"), family.ana), MemberAmount(eur("40.00"), family.bob))),
+                Cost.Local(eur("90.00")),
+                Split.Amounts(listOf(MemberAmount(family.ana, eur("50.00")), MemberAmount(family.bob, eur("40.00")))),
                 ExpenseSplit.Whole(Split.Equal(listOf(family.ana, family.bob, family.mia))),
+                family.day,
             ),
         )
     report(group, dinner, family.thirds)
@@ -244,15 +244,15 @@ private fun mistakes(
     println("A percentage split that adds up to 90 % is refused when the expense is built:")
     val invalid =
         Expense(
-            Cost.Local(eur("10.00")),
-            family.day,
             "Invalid",
+            Cost.Local(eur("10.00")),
             Split.Equal(listOf(family.ana)),
             ExpenseSplit.Whole(
                 Split.Percentages(
                     listOf(MemberPercentage(family.ana, Percentage.parse("60")), MemberPercentage(family.bob, Percentage.parse("30"))),
                 ),
             ),
+            family.day,
         )
     try {
         group.addBlocking(invalid)
@@ -270,7 +270,7 @@ private fun printTotals(group: Group) {
         TotalRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id -> totals(id, summary) }?.let { totals ->
-                TotalRow(balance = "${totals.balance}", consumed = totals.share, name = member.firstName, paid = totals.paid)
+                TotalRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = "${totals.balance}")
             }
         },
         numbersFrom = 1,
@@ -279,13 +279,13 @@ private fun printTotals(group: Group) {
 
 /** Prints the report of the family holiday. */
 fun main() {
-    Group(Currency.of("EUR"), "Family holiday").use { group ->
+    Group("Family holiday", Currency.of("EUR")).use { group ->
         val family =
             Family(
                 ana = group.addBlocking(Member("Ana")),
                 bob = group.addBlocking(Member("Bob")),
-                day = CalendarDate.of(day = 14, month = 7, year = 2026),
                 mia = group.addBlocking(Member("Mia")),
+                day = CalendarDate.of(year = 2026, month = 7, day = 14),
             )
 
         println("Family holiday: every way to split an expense")

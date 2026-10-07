@@ -36,6 +36,6 @@ public record MemberParts(MemberId member, Parts parts) {
      * @return the generated share
      */
     eranos.internal.MemberParts generated() {
-        return new eranos.internal.MemberParts(parts.hundredths(), member.value());
+        return new eranos.internal.MemberParts(member.value(), parts.hundredths());
     }
 }

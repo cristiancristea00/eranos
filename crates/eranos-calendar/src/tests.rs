@@ -4,78 +4,80 @@
 //! saved date reads back as the same day, and keep ordering chronological,
 //! which every list sorted by date relies on.
 
-use super::*;
+use std::cmp::Ordering;
 
 use proptest::prelude::*;
+
+use super::*;
 
 /// A month and its last day.
 #[derive(Debug, Clone, Copy)]
 struct MonthLength {
-    last_day: u8,
     month: u8,
+    last_day: u8,
 }
 
 /// The last day of every month of 2026, a common year.
 const MONTH_LENGTHS: [MonthLength; 12] = [
     MonthLength {
-        last_day: 31,
         month: 1,
+        last_day: 31,
     },
     MonthLength {
-        last_day: 28,
         month: 2,
+        last_day: 28,
     },
     MonthLength {
-        last_day: 31,
         month: 3,
+        last_day: 31,
     },
     MonthLength {
-        last_day: 30,
         month: 4,
+        last_day: 30,
     },
     MonthLength {
-        last_day: 31,
         month: 5,
+        last_day: 31,
     },
     MonthLength {
-        last_day: 30,
         month: 6,
+        last_day: 30,
     },
     MonthLength {
-        last_day: 31,
         month: 7,
+        last_day: 31,
     },
     MonthLength {
-        last_day: 31,
         month: 8,
+        last_day: 31,
     },
     MonthLength {
-        last_day: 30,
         month: 9,
-    },
-    MonthLength {
-        last_day: 31,
-        month: 10,
-    },
-    MonthLength {
         last_day: 30,
-        month: 11,
     },
     MonthLength {
+        month: 10,
         last_day: 31,
+    },
+    MonthLength {
+        month: 11,
+        last_day: 30,
+    },
+    MonthLength {
         month: 12,
+        last_day: 31,
     },
 ];
 
 fn date(year: u16, month: u8, day: u8) -> CalendarDate {
-    CalendarDate::new(day, month, year).unwrap()
+    CalendarDate::new(year, month, day).unwrap()
 }
 
 /// Any existing date between years 1 and 9999.
 fn any_date() -> impl Strategy<Value = CalendarDate> {
     (1_u16..=9999, 1_u8..=12, 1_u8..=31)
         .prop_filter_map("the day must exist in its month", |(year, month, day)| {
-            CalendarDate::new(day, month, year).ok()
+            CalendarDate::new(year, month, day).ok()
         })
 }
 
@@ -84,10 +86,10 @@ fn any_date() -> impl Strategy<Value = CalendarDate> {
 #[test]
 fn a_day_exists_only_within_its_month() {
     // The last day of every month exists, the day after it does not.
-    for MonthLength { last_day, month } in MONTH_LENGTHS {
-        assert!(CalendarDate::new(last_day, month, 2026).is_ok(), "{month}");
+    for MonthLength { month, last_day } in MONTH_LENGTHS {
+        assert!(CalendarDate::new(2026, month, last_day).is_ok(), "{month}");
         assert_eq!(
-            CalendarDate::new(last_day + 1, month, 2026),
+            CalendarDate::new(2026, month, last_day + 1),
             Err(CalendarError::InvalidDate),
             "{month}"
         );
@@ -95,13 +97,13 @@ fn a_day_exists_only_within_its_month() {
     // Day zero exists in no month.
     for MonthLength { month, .. } in MONTH_LENGTHS {
         assert_eq!(
-            CalendarDate::new(0, month, 2026),
+            CalendarDate::new(2026, month, 0),
             Err(CalendarError::InvalidDate)
         );
     }
     // The first day of every month exists.
     for MonthLength { month, .. } in MONTH_LENGTHS {
-        assert!(CalendarDate::new(1, month, 2026).is_ok());
+        assert!(CalendarDate::new(2026, month, 1).is_ok());
     }
 }
 
@@ -109,19 +111,19 @@ fn a_day_exists_only_within_its_month() {
 #[test]
 fn months_run_from_1_to_12() {
     // Inside the range.
-    assert!(CalendarDate::new(1, 1, 2026).is_ok());
-    assert!(CalendarDate::new(31, 12, 2026).is_ok());
+    assert!(CalendarDate::new(2026, 1, 1).is_ok());
+    assert!(CalendarDate::new(2026, 12, 31).is_ok());
     // Outside the range.
     assert_eq!(
-        CalendarDate::new(1, 0, 2026),
+        CalendarDate::new(2026, 0, 1),
         Err(CalendarError::InvalidDate)
     );
     assert_eq!(
-        CalendarDate::new(1, 13, 2026),
+        CalendarDate::new(2026, 13, 1),
         Err(CalendarError::InvalidDate)
     );
     assert_eq!(
-        CalendarDate::new(1, u8::MAX, 2026),
+        CalendarDate::new(2026, u8::MAX, 1),
         Err(CalendarError::InvalidDate)
     );
 }
@@ -131,33 +133,33 @@ fn months_run_from_1_to_12() {
 #[test]
 fn a_leap_day_exists_only_in_leap_years() {
     // Years divisible by 4.
-    assert!(CalendarDate::new(29, 2, 2028).is_ok());
-    assert!(CalendarDate::new(29, 2, 2024).is_ok());
-    assert!(CalendarDate::new(29, 2, 4).is_ok());
+    assert!(CalendarDate::new(2028, 2, 29).is_ok());
+    assert!(CalendarDate::new(2024, 2, 29).is_ok());
+    assert!(CalendarDate::new(4, 2, 29).is_ok());
     // Years not divisible by 4.
     assert_eq!(
-        CalendarDate::new(29, 2, 2026),
+        CalendarDate::new(2026, 2, 29),
         Err(CalendarError::InvalidDate)
     );
     assert_eq!(
-        CalendarDate::new(29, 2, 2027),
+        CalendarDate::new(2027, 2, 29),
         Err(CalendarError::InvalidDate)
     );
-    assert_eq!(CalendarDate::new(29, 2, 1), Err(CalendarError::InvalidDate));
+    assert_eq!(CalendarDate::new(1, 2, 29), Err(CalendarError::InvalidDate));
     // Centuries are common years unless divisible by 400.
     assert_eq!(
-        CalendarDate::new(29, 2, 1900),
+        CalendarDate::new(1900, 2, 29),
         Err(CalendarError::InvalidDate)
     );
     assert_eq!(
-        CalendarDate::new(29, 2, 2100),
+        CalendarDate::new(2100, 2, 29),
         Err(CalendarError::InvalidDate)
     );
-    assert!(CalendarDate::new(29, 2, 2000).is_ok());
-    assert!(CalendarDate::new(29, 2, 2400).is_ok());
+    assert!(CalendarDate::new(2000, 2, 29).is_ok());
+    assert!(CalendarDate::new(2400, 2, 29).is_ok());
     // No leap year has a 30 February.
     assert_eq!(
-        CalendarDate::new(30, 2, 2028),
+        CalendarDate::new(2028, 2, 30),
         Err(CalendarError::InvalidDate)
     );
 }
@@ -167,15 +169,15 @@ fn a_leap_day_exists_only_in_leap_years() {
 fn years_run_from_1_to_9999() {
     // Inside the range.
     assert!(CalendarDate::new(1, 1, 1).is_ok());
-    assert!(CalendarDate::new(31, 12, 9999).is_ok());
+    assert!(CalendarDate::new(9999, 12, 31).is_ok());
     // Outside the range.
-    assert_eq!(CalendarDate::new(1, 1, 0), Err(CalendarError::InvalidDate));
+    assert_eq!(CalendarDate::new(0, 1, 1), Err(CalendarError::InvalidDate));
     assert_eq!(
-        CalendarDate::new(1, 1, 10_000),
+        CalendarDate::new(10_000, 1, 1),
         Err(CalendarError::InvalidDate)
     );
     assert_eq!(
-        CalendarDate::new(1, 1, u16::MAX),
+        CalendarDate::new(u16::MAX, 1, 1),
         Err(CalendarError::InvalidDate)
     );
 }

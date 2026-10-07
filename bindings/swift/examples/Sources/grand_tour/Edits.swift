@@ -9,22 +9,22 @@ func anotherCurrency(_ group: Group, _ people: People, _ categories: Categories)
     let rate = try ExchangeRate(parsing: "0.2")
     let parking = try group.add(
         Expense(
-            cost: .converted(try ron("250.00"), rate: rate),
-            date: try october(6),
             name: "Airport parking",
+            cost: .converted(try ron("250.00"), rate: rate),
             payers: .equal([people.ana]),
             split: .whole(.equal([people.ana, people.bob])),
+            date: try october(6),
             category: categories.transport
         )
     )
     let cash = try group.add(
         Transfer(
-            cost: .converted(try ron("100.00"), rate: rate),
-            date: try october(6),
             from: people.bob,
             to: people.ana,
-            note: "Cash for the parking",
-            time: try TimeOfDay(hour: 7, minute: 40)
+            cost: .converted(try ron("100.00"), rate: rate),
+            date: try october(6),
+            time: try TimeOfDay(hour: 7, minute: 40),
+            note: "Cash for the parking"
         )
     )
     print("""
@@ -37,7 +37,7 @@ func anotherCurrency(_ group: Group, _ people: People, _ categories: Categories)
         preconditionFailure("the cash was recorded")
     }
     let converted = try ExchangeRate(parsing: "0.2011").convert(try ron("250.00"), into: euro)
-    let counted = try group.amount(of: cash) ?? Money(currency: euro, minorUnits: 0)
+    let counted = try group.amount(of: cash) ?? Money(minorUnits: 0, currency: euro)
     print("""
         Bob's transfer, at \(transfer.time?.description ?? "") ("\(transfer.note ?? "")"), counts as \(counted).
         A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,
@@ -63,18 +63,18 @@ func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories
     let previous = try group.replace(corrected)
     // Bob entered the coffee twice.
     let coffee = Expense(
-        cost: .local(try eur("6.00")),
-        date: try october(5),
         name: "Coffee",
+        cost: .local(try eur("6.00")),
         payers: .equal([people.bob]),
         split: .whole(.equal([people.ana, people.bob, people.carol])),
+        date: try october(5),
         category: categories.food
     )
     _ = try group.add(coffee)
     let copy = try group.add(coffee)
     let removed = try group.remove(copy)
     // Dan's part of the apartment was 120.00, not 100.00.
-    let first = try group.add(Transfer(cost: .local(try eur("100.00")), date: try october(5), from: people.dan, to: people.ana))
+    let first = try group.add(Transfer(from: people.dan, to: people.ana, cost: .local(try eur("100.00")), date: try october(5)))
     guard var fixed = try group.transfer(withID: first) else {
         preconditionFailure("the transfer was added")
     }
@@ -82,7 +82,7 @@ func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories
     fixed.note = "Apartment"
     let replaced = try group.replace(fixed)
     // Carol sent 10.00 to the wrong member.
-    let mistake = try group.add(Transfer(cost: .local(try eur("10.00")), date: try october(5), from: people.carol, to: people.bob))
+    let mistake = try group.add(Transfer(from: people.carol, to: people.bob, cost: .local(try eur("10.00")), date: try october(5)))
     let undone = try group.remove(mistake)
 
     expect(try eur("90.00"), previous.cost.amount, "the dinner's first amount")
@@ -91,17 +91,17 @@ func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories
     expect(try eur("120.00"), try group.amount(of: first), "Dan's corrected transfer")
     let mistaken = try group.transfer(withID: mistake)
     precondition(nil == mistaken, "the mistake is removed")
-    let zero = Money(currency: try Currency(code: "EUR"), minorUnits: 0)
+    let zero = Money(minorUnits: 0, currency: try Currency(code: "EUR"))
     let dinner = try group.expense(withID: seafood)
     let apartment = try group.transfer(withID: first)
     return [
-        EditRow(edit: "\(previous.cost.amount) became \(dinner?.cost.amount ?? zero), at \(dinner?.description ?? "")", entry: previous.name),
-        EditRow(edit: "entered twice; the copy of \(removed.cost.amount) was removed", entry: removed.name),
+        EditRow(entry: previous.name, edit: "\(previous.cost.amount) became \(dinner?.cost.amount ?? zero), at \(dinner?.description ?? "")"),
+        EditRow(entry: removed.name, edit: "entered twice; the copy of \(removed.cost.amount) was removed"),
         EditRow(
-            edit: "\(replaced.cost.amount) became \(apartment?.cost.amount ?? zero), noted \(apartment?.note ?? "")",
-            entry: "\(try name(group, people.dan)) to \(try name(group, people.ana))"
+            entry: "\(try name(group, people.dan)) to \(try name(group, people.ana))",
+            edit: "\(replaced.cost.amount) became \(apartment?.cost.amount ?? zero), noted \(apartment?.note ?? "")"
         ),
-        EditRow(edit: "\(undone.cost.amount) sent to the wrong member; removed", entry: "\(try name(group, people.carol)) to \(try name(group, people.bob))")
+        EditRow(entry: "\(try name(group, people.carol)) to \(try name(group, people.bob))", edit: "\(undone.cost.amount) sent to the wrong member; removed")
     ]
 }
 
@@ -118,22 +118,22 @@ func edits(_ group: Group, _ people: People, _ categories: Categories, _ seafood
 
     let before = try group.summary()
     let taxi = Expense(
-        cost: .local(try eur("30.00")),
-        date: try october(6),
         name: "Taxi",
+        cost: .local(try eur("30.00")),
         payers: .equal([people.ana]),
         split: .whole(
             .percentages([
                 MemberPercentage(member: people.ana, percentage: try Percentage(parsing: "50")),
                 MemberPercentage(member: people.bob, percentage: try Percentage(parsing: "49.99"))
             ])
-        )
+        ),
+        date: try october(6)
     )
     let unbalanced = Result { () throws(EranosError) in try group.add(taxi) }
     let toHerself = Result { () throws(EranosError) in
-        try group.add(Transfer(cost: .local(try eur("5.00")), date: try october(6), from: people.ana, to: people.ana))
+        try group.add(Transfer(from: people.ana, to: people.ana, cost: .local(try eur("5.00")), date: try october(6)))
     }
-    let souvenirs = Expense(cost: .local(try ron("40.00")), date: try october(6), name: "Souvenirs", payers: .equal([people.ana]), split: .whole(.equal([people.ana])))
+    let souvenirs = Expense(name: "Souvenirs", cost: .local(try ron("40.00")), payers: .equal([people.ana]), split: .whole(.equal([people.ana])), date: try october(6))
     let unrated = Result { () throws(EranosError) in try group.add(souvenirs) }
     print("A change that does not fit is refused, and the group stays as it was:")
     printTable(
@@ -165,11 +165,11 @@ func comingsAndGoings(_ group: Group, _ people: People) throws(EranosError) {
     let removed = try group.remove(people.filip)
     try group.archive(people.dan)
     let dinner = Expense(
-        cost: .local(try eur("40.00")),
-        date: try october(6),
         name: "Farewell dinner",
+        cost: .local(try eur("40.00")),
         payers: .equal([people.ana]),
-        split: .whole(.equal([people.ana, people.bob, people.carol, people.dan]))
+        split: .whole(.equal([people.ana, people.bob, people.carol, people.dan])),
+        date: try october(6)
     )
     let farewell = Result { () throws(EranosError) in try group.add(dinner) }
     let inUse = Result { () throws(EranosError) in try group.remove(people.dan) }
@@ -184,7 +184,7 @@ func comingsAndGoings(_ group: Group, _ people: People) throws(EranosError) {
         guard let id = member.id, let totals = totals(of: id, in: summary) else {
             continue
         }
-        rows.append(StatusRow(balance: totals.balance, name: member.firstName, status: try group.isArchived(id) ? "archived" : "active"))
+        rows.append(StatusRow(name: member.firstName, status: try group.isArchived(id) ? "archived" : "active", balance: totals.balance))
     }
     printTable(rows, numbersFrom: 2)
     printTable(

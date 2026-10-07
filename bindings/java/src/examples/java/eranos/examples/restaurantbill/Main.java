@@ -43,7 +43,7 @@ public final class Main {
 
     /** A line of the receipt, a row of the receipt's table. */
     private record LineRow(
-            Money lineTotal, String name, String participants, int quantity, Money unitPrice)
+            String name, String participants, int quantity, Money unitPrice, Money lineTotal)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Item", "Shared by", "Quantity", "Unit price", "Line total");
@@ -61,12 +61,12 @@ public final class Main {
 
     /** What a member ordered and pays with each way of sharing the tip, a row of the tips. */
     private record TipRow(
-            Money equalTip,
-            Money equalTotal,
             String name,
+            Money subtotal,
             Money proportionalTip,
             Money proportionalTotal,
-            Money subtotal)
+            Money equalTip,
+            Money equalTotal)
             implements Row {
         static final List<String> HEADERS =
                 List.of(
@@ -98,16 +98,16 @@ public final class Main {
     private static List<Item> receipt(MemberId ana, MemberId bob, MemberId carol)
             throws EranosException {
         return List.of(
-                new Item("Ciorbă", new Split.Equal(List.of(ana)), eur("8.00")),
-                new Item("Sarmale", new Split.Equal(List.of(bob, carol)), eur("14.00"), 2),
+                new Item("Ciorbă", eur("8.00"), new Split.Equal(List.of(ana))),
+                new Item("Sarmale", eur("14.00"), new Split.Equal(List.of(bob, carol)), 2),
                 new Item(
                         "Papanași",
+                        eur("9.00"),
                         new Split.Parts(
                                 List.of(
                                         new MemberParts(ana, Parts.ofHundredths(100)),
-                                        new MemberParts(carol, Parts.ofHundredths(200)))),
-                        eur("9.00")),
-                new Item("Lemonade", new Split.Equal(List.of(ana, bob, carol)), eur("3.00"), 3));
+                                        new MemberParts(carol, Parts.ofHundredths(200))))),
+                new Item("Lemonade", eur("3.00"), new Split.Equal(List.of(ana, bob, carol)), 3));
     }
 
     /** The dinner, its tip of 10 % shared by {@code distribution}. */
@@ -119,11 +119,11 @@ public final class Main {
             TipDistribution distribution)
             throws EranosException {
         return Expense.builder(
-                        new Cost.Local(eur("54.00")),
-                        day,
                         "Dinner",
+                        new Cost.Local(eur("54.00")),
                         new Split.Equal(List.of(ana)),
-                        new ExpenseSplit.Itemised(receipt(ana, bob, carol)))
+                        new ExpenseSplit.Itemised(receipt(ana, bob, carol)),
+                        day)
                 .tip(new Tip(new TipValue.Percentage(Percentage.parse("10")), distribution))
                 .build();
     }
@@ -156,11 +156,11 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder(Currency.of("EUR"), "Dinner at Caru' cu Bere").build()) {
+        try (Group group = Group.builder("Dinner at Caru' cu Bere", Currency.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             MemberId carol = group.addMember(Member.builder("Carol").build());
-            CalendarDate day = CalendarDate.of(23, 9, 2026);
+            CalendarDate day = CalendarDate.of(2026, 9, 23);
 
             title(group.name() + ": an itemised bill");
             System.out.print(
@@ -174,15 +174,15 @@ public final class Main {
             for (Item item : receipt(ana, bob, carol)) {
                 Money total =
                         new Money(
-                                item.unitPrice().currency(),
-                                item.unitPrice().minorUnits() * item.quantity());
+                                item.unitPrice().minorUnits() * item.quantity(),
+                                item.unitPrice().currency());
                 lines.add(
                         new LineRow(
-                                total,
                                 item.name(),
                                 names(group, item.split().members()),
                                 item.quantity(),
-                                item.unitPrice()));
+                                item.unitPrice(),
+                                total));
             }
             printTable(LineRow.HEADERS, lines, 2);
             System.out.print(
@@ -194,11 +194,11 @@ public final class Main {
             section("2. Who ordered what, and the tip");
             Expense untipped =
                     Expense.builder(
-                                    new Cost.Local(eur("54.00")),
-                                    day,
                                     "Dinner",
+                                    new Cost.Local(eur("54.00")),
                                     new Split.Equal(List.of(ana)),
-                                    new ExpenseSplit.Itemised(receipt(ana, bob, carol)))
+                                    new ExpenseSplit.Itemised(receipt(ana, bob, carol)),
+                                    day)
                             .build();
             Optional<ExpenseShares> ordered = preview(group, untipped);
             ExpenseId proportional =
@@ -223,12 +223,12 @@ public final class Main {
                 Money equalTotal = consumed(even, member).orElseThrow();
                 rows.add(
                         new TipRow(
-                                equalTotal.minus(subtotal),
-                                equalTotal,
                                 names(group, List.of(member)),
+                                subtotal,
                                 proportionalTotal.minus(subtotal),
                                 proportionalTotal,
-                                subtotal));
+                                equalTotal.minus(subtotal),
+                                equalTotal));
             }
             printTable(TipRow.HEADERS, rows, 1);
             System.out.print(
@@ -241,11 +241,11 @@ public final class Main {
             try {
                 group.addExpense(
                         Expense.builder(
-                                        new Cost.Local(eur("55.00")),
-                                        day,
                                         "Dinner",
+                                        new Cost.Local(eur("55.00")),
                                         new Split.Equal(List.of(ana)),
-                                        new ExpenseSplit.Itemised(receipt(ana, bob, carol)))
+                                        new ExpenseSplit.Itemised(receipt(ana, bob, carol)),
+                                        day)
                                 .build());
                 throw new IllegalStateException("the mismatch must be refused");
             } catch (EranosException refusal) {

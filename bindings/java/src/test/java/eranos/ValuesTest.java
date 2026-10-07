@@ -36,19 +36,19 @@ class ValuesTest {
         assertEquals("unknown currency code", unknown.getMessage());
 
         Money price = Money.parse("12.5", euro);
-        assertEquals(new Money(euro, 1_250), price);
+        assertEquals(new Money(1_250, euro), price);
         assertEquals("12.50 EUR", price.toString());
-        assertEquals(new Money(euro, 1_300), price.plus(new Money(euro, 50)));
-        assertEquals(new Money(euro, 1_200), price.minus(new Money(euro, 50)));
+        assertEquals(new Money(1_300, euro), price.plus(new Money(50, euro)));
+        assertEquals(new Money(1_200, euro), price.minus(new Money(50, euro)));
         EranosException.Money mismatch =
-                assertThrows(EranosException.Money.class, () -> price.plus(new Money(lei, 1)));
+                assertThrows(EranosException.Money.class, () -> price.plus(new Money(1, lei)));
         assertEquals(new MoneyFailure.CurrencyMismatch(euro, lei), mismatch.failure());
         assertThrows(
                 EranosException.Money.class,
-                () -> new Money(euro, Long.MAX_VALUE).plus(new Money(euro, 1)));
+                () -> new Money(Long.MAX_VALUE, euro).plus(new Money(1, euro)));
         assertThrows(
                 EranosException.Money.class,
-                () -> new Money(euro, Long.MIN_VALUE).minus(new Money(euro, 1)));
+                () -> new Money(Long.MIN_VALUE, euro).minus(new Money(1, euro)));
         assertThrows(EranosException.Money.class, () -> Money.parse("twelve", euro));
     }
 
@@ -64,11 +64,11 @@ class ValuesTest {
         Currency lei = Currency.of("RON");
         Currency euro = Currency.of("EUR");
         assertEquals(
-                new Money(euro, 1), ExchangeRate.parse("0.25").convert(new Money(lei, 2), euro));
+                new Money(1, euro), ExchangeRate.parse("0.25").convert(new Money(2, lei), euro));
         assertThrows(EranosException.Money.class, () -> ExchangeRate.parse("0"));
         assertThrows(
                 EranosException.Money.class,
-                () -> ExchangeRate.parse("2").convert(new Money(lei, Long.MAX_VALUE), euro));
+                () -> ExchangeRate.parse("2").convert(new Money(Long.MAX_VALUE, lei), euro));
 
         Percentage percentage = Percentage.parse("12.5 %");
         assertEquals(1_250, percentage.basisPoints());
@@ -91,14 +91,14 @@ class ValuesTest {
      */
     @Test
     void datesAndTimesReadAndWriteAsTheLibraryDoes() throws EranosException {
-        CalendarDate date = CalendarDate.of(23, 9, 2026);
+        CalendarDate date = CalendarDate.of(2026, 9, 23);
         assertEquals("2026-09-23", date.toString());
-        assertEquals(23, date.day());
-        assertEquals(9, date.month());
         assertEquals(2026, date.year());
-        assertValue(date, CalendarDate.parse("2026-09-23"), CalendarDate.of(24, 9, 2026));
+        assertEquals(9, date.month());
+        assertEquals(23, date.day());
+        assertValue(date, CalendarDate.parse("2026-09-23"), CalendarDate.of(2026, 9, 24));
         EranosException.Calendar invalid =
-                assertThrows(EranosException.Calendar.class, () -> CalendarDate.of(30, 2, 2026));
+                assertThrows(EranosException.Calendar.class, () -> CalendarDate.of(2026, 2, 30));
         assertEquals(new CalendarFailure.InvalidDate(), invalid.failure());
         assertEquals(
                 "invalid date: expected an existing ISO 8601 date between years 1 and 9999",
@@ -186,17 +186,17 @@ class ValuesTest {
         Currency unlisted = Currency.known("XYZ");
         assertEquals("XYZ", unlisted.code());
         assertEquals("XYZ", unlisted.name());
-        assertEquals(0, unlisted.decimalPlaces());
         assertEquals(0, unlisted.numericCode());
-        assertEquals("5 XYZ", new Money(unlisted, 5).toString());
+        assertEquals(0, unlisted.decimalPlaces());
+        assertEquals("5 XYZ", new Money(5, unlisted).toString());
         assertEquals("-1 bp", Percentage.known(-1).toString());
         assertEquals("0/100", Parts.known(0).toString());
         assertEquals(
                 "2026/2/30",
-                CalendarDate.converted(new eranos.internal.CalendarDate(30, 2, 2026)).toString());
+                CalendarDate.converted(new eranos.internal.CalendarDate(2026, 2, 30)).toString());
         assertEquals("25h0", TimeOfDay.converted(new eranos.internal.TimeOfDay(25, 0)).toString());
         assertEquals("0712", PhoneNumber.known("0712").toString());
         assertEquals("XY", Iban.known("XY").countryCode());
-        assertTrue(new Balance.Owes(new Money(unlisted, 1)).toString().contains("XYZ"));
+        assertTrue(new Balance.Owes(new Money(1, unlisted)).toString().contains("XYZ"));
     }
 }

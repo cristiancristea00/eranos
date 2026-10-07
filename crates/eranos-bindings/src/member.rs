@@ -59,18 +59,18 @@ impl FromAccountDetails for AccountDetails {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Account {
-    /// The IBAN or the username.
-    pub details: AccountDetails,
     /// The label: "Main account".
     pub name: String,
+    /// The IBAN or the username.
+    pub details: AccountDetails,
 }
 
 impl Account {
     /// The record of `account`.
     fn from_library(account: &library::Account) -> Self {
         Self {
-            details: AccountDetails::from_account_details(account.details()),
             name: account.name().to_owned(),
+            details: AccountDetails::from_account_details(account.details()),
         }
     }
 
@@ -83,8 +83,8 @@ impl Account {
     /// blank label.
     fn to_library(&self) -> Result<library::Account, EranosError> {
         Ok(library::Account::new(
-            self.details.to_library()?,
             self.name.clone(),
+            self.details.to_library()?,
         )?)
     }
 }
@@ -98,15 +98,15 @@ pub struct Member {
     pub id: Option<String>,
     /// The first name.
     pub first_name: String,
-    /// Where the member can be paid, in the order they were given.
-    pub accounts: Vec<Account>,
-    /// The email address, without surrounding whitespace.
-    pub email: Option<String>,
     /// The last name.
     pub last_name: Option<String>,
+    /// The email address, without surrounding whitespace.
+    pub email: Option<String>,
     /// The phone number, starting with `+` and the country code; a member
     /// the group holds has it in E.164 form: "+40712345678".
     pub phone: Option<String>,
+    /// Where the member can be paid, in the order they were given.
+    pub accounts: Vec<Account>,
 }
 
 impl Member {
@@ -115,14 +115,14 @@ impl Member {
         Self {
             id: Some(member.id().to_string()),
             first_name: member.first_name().to_owned(),
+            last_name: member.last_name().map(str::to_owned),
+            email: member.email().map(|email| email.as_str().to_owned()),
+            phone: member.phone().map(|phone| phone.as_str().to_owned()),
             accounts: member
                 .accounts()
                 .iter()
                 .map(Account::from_library)
                 .collect(),
-            email: member.email().map(|email| email.as_str().to_owned()),
-            last_name: member.last_name().map(str::to_owned),
-            phone: member.phone().map(|phone| phone.as_str().to_owned()),
         }
     }
 
@@ -153,14 +153,9 @@ impl Member {
         self.filled(existing.to_builder().first_name(self.first_name.clone()))
     }
 
-    /// The member `builder` builds with the record's accounts, email, last
-    /// name, and phone, each cleared when the record has none.
+    /// The member `builder` builds with the record's last name, email,
+    /// phone, and accounts, each cleared when the record has none.
     fn filled(&self, builder: library::MemberBuilder) -> Result<library::Member, EranosError> {
-        let accounts = self
-            .accounts
-            .iter()
-            .map(Account::to_library)
-            .collect::<Result<Vec<_>, EranosError>>()?;
         let email = self
             .email
             .as_deref()
@@ -171,11 +166,16 @@ impl Member {
             .as_deref()
             .map(library::PhoneNumber::parse)
             .transpose()?;
+        let accounts = self
+            .accounts
+            .iter()
+            .map(Account::to_library)
+            .collect::<Result<Vec<_>, EranosError>>()?;
         Ok(builder
-            .accounts(accounts)
-            .email(email)
             .last_name(self.last_name.clone().unwrap_or_default())
+            .email(email)
             .phone(phone)
+            .accounts(accounts)
             .build()?)
     }
 }

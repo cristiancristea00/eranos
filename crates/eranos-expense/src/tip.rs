@@ -5,8 +5,8 @@ use eranos_money::{Money, Percentage};
 
 use crate::error::ExpenseError;
 
-/// A tip added on top of an expense's amount: a fixed amount or a percentage
-/// of the amount, shared among the participants proportionally (the default)
+/// A tip added on top of an expense's amount: a percentage of the amount or a
+/// fixed amount, shared among the participants proportionally (the default)
 /// or equally.
 ///
 /// The payers cover the amount plus the tip. An expense without a tip has
@@ -35,21 +35,21 @@ pub struct Tip {
 }
 
 impl Tip {
-    /// A fixed tip in the expense's currency, shared proportionally.
-    #[must_use]
-    pub const fn fixed(amount: Money) -> Self {
-        Self {
-            value: TipValue::Fixed(amount),
-            distribution: TipDistribution::Proportional,
-        }
-    }
-
     /// A tip of `rate` of the expense's amount, rounded half up to the minor
     /// unit and shared proportionally.
     #[must_use]
     pub const fn percentage(rate: Percentage) -> Self {
         Self {
             value: TipValue::Percentage(rate),
+            distribution: TipDistribution::Proportional,
+        }
+    }
+
+    /// A fixed tip in the expense's currency, shared proportionally.
+    #[must_use]
+    pub const fn fixed(amount: Money) -> Self {
+        Self {
+            value: TipValue::Fixed(amount),
             distribution: TipDistribution::Proportional,
         }
     }
@@ -75,9 +75,9 @@ impl Tip {
         }
     }
 
-    /// The tip on `amount`, in the amount's currency: the fixed amount, or the
-    /// percentage of `amount` rounded to the nearest minor unit, halves away
-    /// from zero.
+    /// The tip on `amount`, in the amount's currency: the percentage of
+    /// `amount` rounded to the nearest minor unit, halves away from zero, or
+    /// the fixed amount.
     ///
     /// # Errors
     ///
@@ -99,6 +99,11 @@ impl Tip {
     /// ```
     pub fn amount_on(self, amount: Money) -> Result<Money, ExpenseError> {
         match self.value {
+            TipValue::Percentage(rate) => {
+                apply_basis_points(amount.minor_units(), rate.basis_points())
+                    .map(|tip| Money::from_minor_units(tip, amount.currency()))
+                    .ok_or(ExpenseError::Overflow)
+            }
             TipValue::Fixed(tip) => {
                 if tip.currency() != amount.currency() {
                     return Err(ExpenseError::CurrencyMismatch {
@@ -110,11 +115,6 @@ impl Tip {
                     return Err(ExpenseError::NegativeTip);
                 }
                 Ok(tip)
-            }
-            TipValue::Percentage(rate) => {
-                apply_basis_points(amount.minor_units(), rate.basis_points())
-                    .map(|tip| Money::from_minor_units(amount.currency(), tip))
-                    .ok_or(ExpenseError::Overflow)
             }
         }
     }
@@ -136,10 +136,10 @@ impl Default for Tip {
 )]
 #[non_exhaustive]
 pub enum TipValue {
-    /// A fixed amount in the expense's currency.
-    Fixed(Money),
     /// A percentage of the expense's amount.
     Percentage(Percentage),
+    /// A fixed amount in the expense's currency.
+    Fixed(Money),
 }
 
 /// How a [`Tip`] is shared among an expense's participants.
@@ -151,29 +151,29 @@ pub enum TipValue {
 )]
 #[non_exhaustive]
 pub enum TipDistribution {
-    /// The same for every participant.
-    Equal,
     /// In proportion to each participant's share of the amount: whoever
     /// ordered more tips more.
     #[default]
     Proportional,
+    /// The same for every participant.
+    Equal,
 }
 
 /// Builds a value from a [`TipValue`], one method per way of expressing a
 /// tip.
 pub trait FromTipValue: Sized {
-    /// The value for a fixed `amount`.
-    fn fixed(amount: Money) -> Self;
-
     /// The value for a `percentage` of the expense's amount.
     fn percentage(percentage: Percentage) -> Self;
+
+    /// The value for a fixed `amount`.
+    fn fixed(amount: Money) -> Self;
 
     /// The value for `value`, from the method of its variant.
     #[must_use]
     fn from_tip_value(value: TipValue) -> Self {
         match value {
-            TipValue::Fixed(amount) => Self::fixed(amount),
             TipValue::Percentage(percentage) => Self::percentage(percentage),
+            TipValue::Fixed(amount) => Self::fixed(amount),
         }
     }
 }
@@ -181,18 +181,18 @@ pub trait FromTipValue: Sized {
 /// Builds a value from a [`TipDistribution`], one method per way of sharing
 /// a tip.
 pub trait FromTipDistribution: Sized {
-    /// The value for a tip shared equally.
-    fn equal() -> Self;
-
     /// The value for a tip shared in proportion to each participant's share.
     fn proportional() -> Self;
+
+    /// The value for a tip shared equally.
+    fn equal() -> Self;
 
     /// The value for `distribution`, from the method of its variant.
     #[must_use]
     fn from_tip_distribution(distribution: TipDistribution) -> Self {
         match distribution {
-            TipDistribution::Equal => Self::equal(),
             TipDistribution::Proportional => Self::proportional(),
+            TipDistribution::Equal => Self::equal(),
         }
     }
 }

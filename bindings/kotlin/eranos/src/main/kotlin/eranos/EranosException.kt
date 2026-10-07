@@ -25,6 +25,13 @@ public sealed class EranosException(
     /** What went wrong, as the library words it. */
     override val message: String,
 ) : Exception(message) {
+    /** The library's `IdError`, with the message it words. */
+    public class Id(
+        /** What the module reports. */
+        public val failure: IdFailure,
+        message: String,
+    ) : EranosException(message)
+
     /** The library's `AccountError`, with the message it words. */
     public class Account(
         /** What the module reports. */
@@ -53,43 +60,10 @@ public sealed class EranosException(
         message: String,
     ) : EranosException(message)
 
-    /** The library's `ExpenseError`, with the message it words. */
-    public class Expense(
+    /** The library's `MoneyError`, with the message it words. */
+    public class Money(
         /** What the module reports. */
-        public val failure: ExpenseFailure,
-        message: String,
-    ) : EranosException(message)
-
-    /** The library's `GroupError`, with the message it words. */
-    public class Group(
-        /** What the module reports. */
-        public val failure: GroupFailure,
-        message: String,
-    ) : EranosException(message)
-
-    /** The library's `IdError`, with the message it words. */
-    public class Id(
-        /** What the module reports. */
-        public val failure: IdFailure,
-        message: String,
-    ) : EranosException(message)
-
-    /**
-     * A saved group that is not JSON of the saved form, at [line] and [column]; the message names the fault but never the
-     * text there, which can hold an account number.
-     */
-    public class InvalidJson(
-        /** The column of the fault, from 1. */
-        public val column: Long,
-        /** The line of the fault, from 1. */
-        public val line: Long,
-        message: String,
-    ) : EranosException(message)
-
-    /** The library's `LanguageError`, with the message it words. */
-    public class Language(
-        /** What the module reports. */
-        public val failure: LanguageFailure,
+        public val failure: MoneyFailure,
         message: String,
     ) : EranosException(message)
 
@@ -100,10 +74,10 @@ public sealed class EranosException(
         message: String,
     ) : EranosException(message)
 
-    /** The library's `MoneyError`, with the message it words. */
-    public class Money(
+    /** The library's `ExpenseError`, with the message it words. */
+    public class Expense(
         /** What the module reports. */
-        public val failure: MoneyFailure,
+        public val failure: ExpenseFailure,
         message: String,
     ) : EranosException(message)
 
@@ -120,6 +94,32 @@ public sealed class EranosException(
         public val failure: TransferFailure,
         message: String,
     ) : EranosException(message)
+
+    /** The library's `GroupError`, with the message it words. */
+    public class Group(
+        /** What the module reports. */
+        public val failure: GroupFailure,
+        message: String,
+    ) : EranosException(message)
+
+    /** The library's `LanguageError`, with the message it words. */
+    public class Language(
+        /** What the module reports. */
+        public val failure: LanguageFailure,
+        message: String,
+    ) : EranosException(message)
+
+    /**
+     * A saved group that is not JSON of the saved form, at [line] and [column]; the message names the fault but never the
+     * text there, which can hold an account number.
+     */
+    public class InvalidJson(
+        /** The line of the fault, from 1. */
+        public val line: Long,
+        /** The column of the fault, from 1. */
+        public val column: Long,
+        message: String,
+    ) : EranosException(message)
 }
 
 /**
@@ -128,21 +128,21 @@ public sealed class EranosException(
  */
 internal fun eranos.internal.EranosException.converted(): Exception =
     when (this) {
+        is eranos.internal.EranosException.Id -> EranosException.Id(failure.converted(), detail)
         is eranos.internal.EranosException.Account -> EranosException.Account(failure.converted(), detail)
         is eranos.internal.EranosException.Calendar -> EranosException.Calendar(failure.converted(), detail)
-        is eranos.internal.EranosException.Cancelled -> CancellationException(detail)
         is eranos.internal.EranosException.Category -> EranosException.Category(failure.converted(), detail)
         is eranos.internal.EranosException.Contact -> EranosException.Contact(failure.converted(), detail)
-        is eranos.internal.EranosException.Expense -> EranosException.Expense(failure.converted(), detail)
-        is eranos.internal.EranosException.Group -> EranosException.Group(failure.converted(), detail)
-        is eranos.internal.EranosException.Id -> EranosException.Id(failure.converted(), detail)
-        is eranos.internal.EranosException.IdentifierGiven -> IllegalArgumentException(detail)
-        is eranos.internal.EranosException.IdentifierMissing -> IllegalArgumentException(detail)
-        is eranos.internal.EranosException.InvalidJson -> EranosException.InvalidJson(column, line, detail)
-        is eranos.internal.EranosException.Language -> EranosException.Language(failure.converted(), detail)
-        is eranos.internal.EranosException.Member -> EranosException.Member(failure.converted(), detail)
         is eranos.internal.EranosException.Money -> EranosException.Money(failure.converted(), detail)
-        is eranos.internal.EranosException.Released -> IllegalStateException(detail)
+        is eranos.internal.EranosException.Member -> EranosException.Member(failure.converted(), detail)
+        is eranos.internal.EranosException.Expense -> EranosException.Expense(failure.converted(), detail)
         is eranos.internal.EranosException.Settlement -> EranosException.Settlement(failure.converted(), detail)
         is eranos.internal.EranosException.Transfer -> EranosException.Transfer(failure.converted(), detail)
+        is eranos.internal.EranosException.Group -> EranosException.Group(failure.converted(), detail)
+        is eranos.internal.EranosException.Language -> EranosException.Language(failure.converted(), detail)
+        is eranos.internal.EranosException.IdentifierGiven -> IllegalArgumentException(detail)
+        is eranos.internal.EranosException.IdentifierMissing -> IllegalArgumentException(detail)
+        is eranos.internal.EranosException.InvalidJson -> EranosException.InvalidJson(line, column, detail)
+        is eranos.internal.EranosException.Cancelled -> CancellationException(detail)
+        is eranos.internal.EranosException.Released -> IllegalStateException(detail)
     }

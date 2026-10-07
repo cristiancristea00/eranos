@@ -36,11 +36,11 @@ class EditRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Entry', 'Edit')
 
-    edit: str
-    """What changed."""
-
     entry: str
     """The entry edited or removed."""
+
+    edit: str
+    """What changed."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -54,14 +54,14 @@ class StatusRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Status', 'Balance')
 
-    balance: Balance
-    """Where the member stands."""
-
     name: str
     """The member's first name."""
 
     status: str
     """Whether the member is active or archived."""
+
+    balance: Balance
+    """Where the member stands."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -83,22 +83,22 @@ def another_currency(group: Group, people: People, categories: Categories) -> No
     rate = ExchangeRate('0.2')
     parking = group.add_expense(
         Expense(
-            cost=ConvertedCost(ron('250.00'), rate),
-            date=october(6),
             name='Airport parking',
+            cost=ConvertedCost(ron('250.00'), rate),
             payers=EqualSplit((people.ana,)),
             split=WholeExpenseSplit(EqualSplit((people.ana, people.bob))),
+            date=october(6),
             category=categories.transport,
         )
     )
     cash = group.add_transfer(
         Transfer(
+            sender=people.bob,
+            receiver=people.ana,
             cost=ConvertedCost(ron('100.00'), rate),
             date=october(6),
-            receiver=people.ana,
-            sender=people.bob,
-            note='Cash for the parking',
             time=TimeOfDay(7, 40),
+            note='Cash for the parking',
         )
     )
     print_lines(
@@ -109,7 +109,7 @@ def another_currency(group: Group, people: People, categories: Categories) -> No
     print_entries(group, lambda currency: currency != euro)
     transfer = group.transfer(cash)
     assert transfer is not None, 'the cash was recorded'
-    counted = group.transfer_amount(cash) or Money(euro, 0)
+    counted = group.transfer_amount(cash) or Money(0, euro)
     converted = ExchangeRate('0.2011').convert(ron('250.00'), euro)
     print_lines(
         f'Bob\'s transfer, at {transfer.time or ""} ("{transfer.note or ""}"), counts as {counted}.',
@@ -145,23 +145,23 @@ def _replace_and_remove(group: Group, people: People, categories: Categories, se
     previous = group.replace_expense(copy.replace(dinner, cost=LocalCost(eur('99.00')), description='Cervejaria Ramiro'))
     # Bob entered the coffee twice.
     coffee = Expense(
-        cost=LocalCost(eur('6.00')),
-        date=october(5),
         name='Coffee',
+        cost=LocalCost(eur('6.00')),
         payers=EqualSplit((people.bob,)),
         split=WholeExpenseSplit(EqualSplit((people.ana, people.bob, people.carol))),
+        date=october(5),
         category=categories.food,
     )
     group.add_expense(coffee)
     duplicate = group.add_expense(coffee)
     removed = group.remove_expense(duplicate)
     # Dan's part of the apartment was 120.00, not 100.00.
-    first = group.add_transfer(Transfer(cost=LocalCost(eur('100.00')), date=october(5), receiver=people.ana, sender=people.dan))
+    first = group.add_transfer(Transfer(sender=people.dan, receiver=people.ana, cost=LocalCost(eur('100.00')), date=october(5)))
     stored = group.transfer(first)
     assert stored is not None, 'the transfer was added'
     replaced = group.replace_transfer(copy.replace(stored, cost=LocalCost(eur('120.00')), note='Apartment'))
     # Carol sent 10.00 to the wrong member.
-    mistake = group.add_transfer(Transfer(cost=LocalCost(eur('10.00')), date=october(5), receiver=people.bob, sender=people.carol))
+    mistake = group.add_transfer(Transfer(sender=people.carol, receiver=people.bob, cost=LocalCost(eur('10.00')), date=october(5)))
     undone = group.remove_transfer(mistake)
 
     assert previous.cost.amount == eur('90.00')
@@ -173,13 +173,13 @@ def _replace_and_remove(group: Group, people: People, categories: Categories, se
     apartment = group.transfer(first)
     assert apartment is not None
     return [
-        EditRow(edit=f'{previous.cost.amount} became {corrected.cost.amount}, at {corrected.description or ""}', entry=previous.name),
-        EditRow(edit=f'entered twice; the copy of {removed.cost.amount} was removed', entry=removed.name),
+        EditRow(entry=previous.name, edit=f'{previous.cost.amount} became {corrected.cost.amount}, at {corrected.description or ""}'),
+        EditRow(entry=removed.name, edit=f'entered twice; the copy of {removed.cost.amount} was removed'),
         EditRow(
-            edit=f'{replaced.cost.amount} became {apartment.cost.amount}, noted {apartment.note or ""}',
             entry=f'{name(group, people.dan)} to {name(group, people.ana)}',
+            edit=f'{replaced.cost.amount} became {apartment.cost.amount}, noted {apartment.note or ""}',
         ),
-        EditRow(edit=f'{undone.cost.amount} sent to the wrong member; removed', entry=f'{name(group, people.carol)} to {name(group, people.bob)}'),
+        EditRow(entry=f'{name(group, people.carol)} to {name(group, people.bob)}', edit=f'{undone.cost.amount} sent to the wrong member; removed'),
     ]
 
 
@@ -206,22 +206,22 @@ def edits(group: Group, people: People, categories: Categories, seafood: Expense
 
     before = group.summary()
     taxi = Expense(
-        cost=LocalCost(eur('30.00')),
-        date=october(6),
         name='Taxi',
+        cost=LocalCost(eur('30.00')),
         payers=EqualSplit((people.ana,)),
         split=WholeExpenseSplit(
             PercentagesSplit((MemberPercentage(people.ana, Percentage.parse('50')), MemberPercentage(people.bob, Percentage.parse('49.99'))))
         ),
+        date=october(6),
     )
     unbalanced = refusal(lambda: group.add_expense(taxi))
-    to_herself = refusal(lambda: group.add_transfer(Transfer(cost=LocalCost(eur('5.00')), date=october(6), receiver=people.ana, sender=people.ana)))
+    to_herself = refusal(lambda: group.add_transfer(Transfer(sender=people.ana, receiver=people.ana, cost=LocalCost(eur('5.00')), date=october(6))))
     souvenirs = Expense(
-        cost=LocalCost(ron('40.00')),
-        date=october(6),
         name='Souvenirs',
+        cost=LocalCost(ron('40.00')),
         payers=EqualSplit((people.ana,)),
         split=WholeExpenseSplit(EqualSplit((people.ana,))),
+        date=october(6),
     )
     unrated = refusal(lambda: group.add_expense(souvenirs))
     print_lines('A change that does not fit is refused, and the group stays as it was:')
@@ -259,11 +259,11 @@ def comings_and_goings(group: Group, people: People) -> None:
     removed = group.remove_member(people.filip)
     group.archive_member(people.dan)
     dinner = Expense(
-        cost=LocalCost(eur('40.00')),
-        date=october(6),
         name='Farewell dinner',
+        cost=LocalCost(eur('40.00')),
         payers=EqualSplit((people.ana,)),
         split=WholeExpenseSplit(EqualSplit((people.ana, people.bob, people.carol, people.dan))),
+        date=october(6),
     )
     farewell = refusal(lambda: group.add_expense(dinner))
     in_use = refusal(lambda: group.remove_member(people.dan))
@@ -276,7 +276,7 @@ def comings_and_goings(group: Group, people: People) -> None:
     print_table(
         StatusRow,
         [
-            StatusRow(balance=found.balance, name=member.first_name, status='archived' if group.is_archived(found.member) else 'active')
+            StatusRow(name=member.first_name, status='archived' if group.is_archived(found.member) else 'active', balance=found.balance)
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],

@@ -13,11 +13,11 @@ export async function sharing(group: Group, people: People): Promise<void> {
     const other = group;
     const everyone = [people.ana, people.bob, people.carol, people.dan, people.eva];
     await other.addExpense({
-        cost: { kind: 'local', amount: ron('75.00') },
-        date: october(8),
         name: 'Airport coffee',
+        cost: { kind: 'local', amount: ron('75.00') },
         payers: { kind: 'equal', members: [people.bob] },
         split: { kind: 'whole', split: { kind: 'equal', members: everyone } },
+        date: october(8),
     });
     const plan = await group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
     printLines(
@@ -31,9 +31,9 @@ export async function sharing(group: Group, people: People): Promise<void> {
         printTable(
             paymentColumns,
             plan.payments.map((payment) => ({
-                amount: payment.amount,
                 from: reader.member(payment.from)?.firstName ?? '?',
                 to: reader.member(payment.to)?.firstName ?? '?',
+                amount: payment.amount,
             })),
             2,
         );

@@ -33,7 +33,7 @@ impl Draws {
 /// everyone: `size` open balances with, almost surely, no zero-sum subset
 /// smaller than the whole group, which is the exact solver's worst case.
 fn group(size: usize) -> Group {
-    let mut group = Group::builder(Currency::EUR, "Benchmark")
+    let mut group = Group::builder("Benchmark", Currency::EUR)
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     // A member of their own for each slot, since a group holds each member
@@ -49,15 +49,15 @@ fn group(size: usize) -> Group {
     .take(size)
     .collect();
     let mut draws = Draws(0x9e37_79b9_7f4a_7c15);
-    let day = CalendarDate::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
+    let day = CalendarDate::new(2026, 9, 23).unwrap_or_else(|error| panic!("{error}"));
     for &payer in &members {
         let minor_units = 1 + i64::try_from(draws.next(1_000_000)).unwrap_or(0);
         let expense = Expense::builder(
-            Money::from_minor_units(Currency::EUR, minor_units),
-            day,
             "Expense",
+            Money::from_minor_units(minor_units, Currency::EUR),
             payer,
             Split::equal(members.iter().copied()),
+            day,
         )
         .build()
         .unwrap_or_else(|error| panic!("{error}"));

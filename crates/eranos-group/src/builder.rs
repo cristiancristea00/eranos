@@ -10,17 +10,17 @@ use crate::{Group, Language};
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct GroupBuilder {
-    currency: Currency,
     name: String,
+    currency: Currency,
     description: Option<String>,
     language: Option<Language>,
 }
 
 impl GroupBuilder {
-    pub(super) const fn new(currency: Currency, name: String) -> Self {
+    pub(super) const fn new(name: String, currency: Currency) -> Self {
         Self {
-            currency,
             name,
+            currency,
             description: None,
             language: None,
         }
@@ -50,8 +50,8 @@ impl GroupBuilder {
         let name = text::required(self.name, GroupError::EmptyName)?;
         Ok(Group::new(
             GroupId::generate(),
-            self.currency,
             name,
+            self.currency,
             self.description.and_then(text::optional),
             self.language,
         ))

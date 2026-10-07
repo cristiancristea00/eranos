@@ -1831,35 +1831,14 @@ typedef struct EranosNewGroup EranosNewGroup;
 
 /// A new new group of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param currency The ISO 4217 code of the group currency, which every total is in, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param name The group's name, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param currency The ISO 4217 code of the group currency, which every total is in, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param newGroup Receives the new group on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosNewGroupCreate(char const *const currency, char const *const name, EranosNewGroup **const newGroup) {
-    EranosNewGroup_create_result const result = EranosNewGroup_create(eranosDetailView(currency), eranosDetailView(name));
+[[nodiscard]] static inline EranosError *eranosNewGroupCreate(char const *const name, char const *const currency, EranosNewGroup **const newGroup) {
+    EranosNewGroup_create_result const result = EranosNewGroup_create(eranosDetailView(name), eranosDetailView(currency));
     *newGroup = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
-}
-
-/// The ISO 4217 code of the group currency, which every total is in.
-///
-/// @param newGroup The new group
-/// @param currency Receives the ISO 4217 code of the group currency, which every total is in, replacing what it held
-static inline void eranosNewGroupCurrency(EranosNewGroup const *const newGroup, EranosText *const currency) {
-    eranosDetailClear(currency);
-    EranosNewGroup_currency(newGroup, currency);
-    eranosDetailFinish(currency);
-}
-
-/// Sets the ISO 4217 code of the group currency, which every total is in.
-///
-/// @param newGroup The new group
-/// @param currency The ISO 4217 code of the group currency, which every total is in, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
-///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosNewGroupSetCurrency(EranosNewGroup *const newGroup, char const *const currency) {
-    EranosNewGroup_set_currency_result const result = EranosNewGroup_set_currency(newGroup, eranosDetailView(currency));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -1881,6 +1860,27 @@ static inline void eranosNewGroupName(EranosNewGroup const *const newGroup, Eran
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosNewGroupSetName(EranosNewGroup *const newGroup, char const *const name) {
     EranosNewGroup_set_name_result const result = EranosNewGroup_set_name(newGroup, eranosDetailView(name));
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The ISO 4217 code of the group currency, which every total is in.
+///
+/// @param newGroup The new group
+/// @param currency Receives the ISO 4217 code of the group currency, which every total is in, replacing what it held
+static inline void eranosNewGroupCurrency(EranosNewGroup const *const newGroup, EranosText *const currency) {
+    eranosDetailClear(currency);
+    EranosNewGroup_currency(newGroup, currency);
+    eranosDetailFinish(currency);
+}
+
+/// Sets the ISO 4217 code of the group currency, which every total is in.
+///
+/// @param newGroup The new group
+/// @param currency The ISO 4217 code of the group currency, which every total is in, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosNewGroupSetCurrency(EranosNewGroup *const newGroup, char const *const currency) {
+    EranosNewGroup_set_currency_result const result = EranosNewGroup_set_currency(newGroup, eranosDetailView(currency));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

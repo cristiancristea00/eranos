@@ -31,26 +31,26 @@ from eranos import (
 class Flat:
     """A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them."""
 
+    group: Group
+    """The group."""
+
+    euro: Currency
+    """The group currency."""
+
+    day: CalendarDate
+    """The day of every entry."""
+
     ana: MemberId
     """Ana, who paid the dinner and received the repayment."""
 
     bob: MemberId
     """Bob, who shared the dinner and sent the repayment."""
 
-    day: CalendarDate
-    """The day of every entry."""
-
-    dinner: ExpenseId
-    """The dinner of 30.00 EUR that Ana paid for the two of them."""
-
-    euro: Currency
-    """The group currency."""
-
     food: CategoryId
     """The food category, which the dinner is in."""
 
-    group: Group
-    """The group."""
+    dinner: ExpenseId
+    """The dinner of 30.00 EUR that Ana paid for the two of them."""
 
     repayment: TransferId
     """The 10.00 EUR that Bob sent Ana."""
@@ -66,7 +66,7 @@ class Flat:
             The amount.
 
         """
-        return Money(self.euro, minor_units)
+        return Money(minor_units, self.euro)
 
     def expense(self, name: str, payer: MemberId, members: tuple[MemberId, ...]) -> Expense:
         """
@@ -82,7 +82,7 @@ class Flat:
 
         """
         return Expense(
-            cost=LocalCost(self.euros(3000)), date=self.day, name=name, payers=EqualSplit((payer,)), split=WholeExpenseSplit(EqualSplit(members))
+            name=name, cost=LocalCost(self.euros(3000)), payers=EqualSplit((payer,)), split=WholeExpenseSplit(EqualSplit(members)), date=self.day
         )
 
 
@@ -96,20 +96,20 @@ def flat() -> Iterator[Flat]:
 
     """
     euro = Currency('EUR')
-    day = CalendarDate(23, 9, 2026)
-    with Group.create(euro, 'Flat', description='Rent', language=Language('pt-pt')) as group:
+    day = CalendarDate(2026, 9, 23)
+    with Group.create('Flat', euro, description='Rent', language=Language('pt-pt')) as group:
         ana = group.add_member(Member(first_name='Ana'))
         bob = group.add_member(Member(first_name='Bob'))
         food = group.add_category(Category(name='Food'))
         dinner = group.add_expense(
             Expense(
-                cost=LocalCost(Money(euro, 3000)),
-                date=day,
                 name='Dinner',
+                cost=LocalCost(Money(3000, euro)),
                 payers=EqualSplit((ana,)),
                 split=WholeExpenseSplit(EqualSplit((ana, bob))),
+                date=day,
                 category=food,
             )
         )
-        repayment = group.add_transfer(Transfer(cost=LocalCost(Money(euro, 1000)), date=day, receiver=ana, sender=bob))
-        yield Flat(ana=ana, bob=bob, day=day, dinner=dinner, euro=euro, food=food, group=group, repayment=repayment)
+        repayment = group.add_transfer(Transfer(sender=bob, receiver=ana, cost=LocalCost(Money(1000, euro)), date=day))
+        yield Flat(group=group, euro=euro, day=day, ana=ana, bob=bob, food=food, dinner=dinner, repayment=repayment)

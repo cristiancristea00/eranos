@@ -12,14 +12,14 @@ import eranos.internal.moneySubtract
  * currency, and the result within range.
  */
 public class Money(
-    /** The currency. */
-    public val currency: Currency,
     /** The amount in minor units: cents for the euro, none for the yen. */
     public val minorUnits: Long,
+    /** The currency. */
+    public val currency: Currency,
 ) {
     /** The amount as the generated code holds it. */
     internal val generated: eranos.internal.Money
-        get() = eranos.internal.Money(currency.code, minorUnits)
+        get() = eranos.internal.Money(minorUnits, currency.code)
 
     /**
      * This amount plus [other].
@@ -39,11 +39,11 @@ public class Money(
     @Throws(EranosException::class)
     public operator fun minus(other: Money): Money = converting { moneySubtract(generated, other.generated).converted() }
 
-    /** Whether [other] is of the same class, with the same [currency] and [minorUnits]. */
-    override fun equals(other: Any?): Boolean = other is Money && currency == other.currency && minorUnits == other.minorUnits
+    /** Whether [other] is of the same class, with the same [minorUnits] and [currency]. */
+    override fun equals(other: Any?): Boolean = other is Money && minorUnits == other.minorUnits && currency == other.currency
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(currency, minorUnits)
+    override fun hashCode(): Int = hashOf(minorUnits, currency)
 
     /** The amount as the library writes it: "12.50 EUR". */
     override fun toString(): String =
@@ -70,4 +70,4 @@ public class Money(
 }
 
 /** The amount the generated code holds as [this]. */
-internal fun eranos.internal.Money.converted(): Money = Money(Currency.known(currency), minorUnits)
+internal fun eranos.internal.Money.converted(): Money = Money(minorUnits, Currency.known(currency))

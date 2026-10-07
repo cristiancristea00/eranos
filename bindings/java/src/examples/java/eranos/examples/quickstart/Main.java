@@ -39,7 +39,7 @@ public final class Main {
     private Main() {}
 
     /** An expense with who paid it and who shares it, a row of the expenses' table. */
-    private record ExpenseRow(Money amount, String name, String participants, String payers)
+    private record ExpenseRow(String name, String payers, String participants, Money amount)
             implements Row {
         static final List<String> HEADERS = List.of("Expense", "Paid by", "Shared by", "Amount");
 
@@ -50,7 +50,7 @@ public final class Main {
     }
 
     /** A member's totals, a row of the members' table. */
-    private record MemberRow(Balance balance, Money consumed, String name, Money paid)
+    private record MemberRow(String name, Money paid, Money consumed, Balance balance)
             implements Row {
         static final List<String> HEADERS = List.of("Member", "Paid", "Consumed", "Balance");
 
@@ -61,7 +61,7 @@ public final class Main {
     }
 
     /** A payment of the plan, a row of the payments' table. */
-    private record PaymentRow(Money amount, String from, String to) implements Row {
+    private record PaymentRow(String from, String to, Money amount) implements Row {
         static final List<String> HEADERS = List.of("From", "To", "Amount");
 
         @Override
@@ -78,7 +78,7 @@ public final class Main {
      */
     public static void main(String[] arguments) throws EranosException {
         Currency euro = Currency.of("EUR");
-        try (Group group = Group.builder(euro, "Weekend in Sinaia").build()) {
+        try (Group group = Group.builder("Weekend in Sinaia", euro).build()) {
             title(group.name());
             System.out.print(
                     """
@@ -101,32 +101,32 @@ public final class Main {
                     Each expense records who paid and who shares it. Here everyone shares everything
                     equally.
                     """);
-            CalendarDate friday = CalendarDate.of(25, 9, 2026);
+            CalendarDate friday = CalendarDate.of(2026, 9, 25);
             Split everyone = new Split.Equal(List.of(ana, bob, carol));
             group.addExpense(
                     Expense.builder(
-                                    new Cost.Local(Money.parse("240.00", euro)),
-                                    friday,
                                     "Cabin",
+                                    new Cost.Local(Money.parse("240.00", euro)),
                                     new Split.Equal(List.of(ana)),
-                                    new ExpenseSplit.Whole(everyone))
+                                    new ExpenseSplit.Whole(everyone),
+                                    friday)
                             .build());
             group.addExpense(
                     Expense.builder(
-                                    new Cost.Local(Money.parse("60.00", euro)),
-                                    friday,
                                     "Groceries",
+                                    new Cost.Local(Money.parse("60.00", euro)),
                                     new Split.Equal(List.of(bob)),
-                                    new ExpenseSplit.Whole(everyone))
+                                    new ExpenseSplit.Whole(everyone),
+                                    friday)
                             .build());
             List<ExpenseRow> expenses = new ArrayList<>();
             for (Expense expense : group.expenses()) {
                 expenses.add(
                         new ExpenseRow(
-                                expense.total(),
                                 expense.name(),
+                                names(group, expense.payers().members()),
                                 names(group, participants(expense.split())),
-                                names(group, expense.payers().members())));
+                                expense.total()));
             }
             printTable(ExpenseRow.HEADERS, expenses, 3);
 
@@ -145,10 +145,10 @@ public final class Main {
                         found ->
                                 balances.add(
                                         new MemberRow(
-                                                found.balance(),
-                                                found.share(),
                                                 member.firstName(),
-                                                found.paid())));
+                                                found.paid(),
+                                                found.share(),
+                                                found.balance())));
             }
             printTable(MemberRow.HEADERS, balances, 1);
             Optional<MemberSummary> anaTotals = totals(ana, summary);
@@ -166,9 +166,9 @@ public final class Main {
             for (Payment payment : settlement.payments()) {
                 payments.add(
                         new PaymentRow(
-                                payment.amount(),
                                 names(group, List.of(payment.from())),
-                                names(group, List.of(payment.to()))));
+                                names(group, List.of(payment.to())),
+                                payment.amount()));
             }
             printTable(PaymentRow.HEADERS, payments, 2);
             System.out.println("Once these payments are made, nobody owes anything.");

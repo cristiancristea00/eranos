@@ -24,10 +24,10 @@ import eranos.examples.section
 import eranos.examples.totals
 
 private data class ExpenseRow(
-    val amount: Money,
     val name: String,
-    val participants: String,
     val payer: String,
+    val participants: String,
+    val amount: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, payer, participants, "$amount")
@@ -38,10 +38,10 @@ private data class ExpenseRow(
 }
 
 private data class BalanceRow(
-    val balance: Balance,
-    val consumed: Money,
     val name: String,
     val paid: Money,
+    val consumed: Money,
+    val balance: Balance,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, "$paid", "$consumed", "$balance")
@@ -52,9 +52,9 @@ private data class BalanceRow(
 }
 
 private data class PaymentRow(
-    val amount: Money,
     val from: String,
     val to: String,
+    val amount: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(from, to, "$amount")
@@ -65,10 +65,10 @@ private data class PaymentRow(
 }
 
 private data class StrategyRow(
-    val cost: String,
-    val guarantee: String,
-    val payments: Int,
     val strategy: String,
+    val guarantee: String,
+    val cost: String,
+    val payments: Int,
 ) : Row {
     override val cells: List<String>
         get() = listOf(strategy, guarantee, cost, "$payments")
@@ -81,18 +81,18 @@ private data class StrategyRow(
 /** The number of payments of each strategy's plan. */
 private data class Counts(
     val adaptive: Int,
-    val direct: Int,
-    val greedy: Int,
     val minimum: Int,
+    val greedy: Int,
+    val direct: Int,
 )
 
 /** The name of [strategy] as the apps show it. */
 private fun strategyName(strategy: SettlementStrategy): String =
     when (strategy) {
         SettlementStrategy.ADAPTIVE -> "Adaptive"
-        SettlementStrategy.DIRECT -> "Direct"
-        SettlementStrategy.GREEDY -> "Greedy"
         SettlementStrategy.MINIMUM_TRANSFERS -> "MinimumTransfers"
+        SettlementStrategy.GREEDY -> "Greedy"
+        SettlementStrategy.DIRECT -> "Direct"
     }
 
 /** Records an expense of [amount] EUR paid by [payer] and split equally. */
@@ -105,11 +105,11 @@ private fun spend(
 ) {
     group.addBlocking(
         Expense(
-            Cost.Local(Money.parse(amount, Currency.of("EUR"))),
-            CalendarDate.of(day = 20, month = 9, year = 2026),
             name,
+            Cost.Local(Money.parse(amount, Currency.of("EUR"))),
             Split.Equal(listOf(payer)),
             ExpenseSplit.Whole(Split.Equal(participants)),
+            CalendarDate.of(year = 2026, month = 9, day = 20),
         ),
     )
 }
@@ -120,7 +120,7 @@ private fun printBalances(group: Group) {
         BalanceRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id -> totals(id, summary) }?.let { totals ->
-                BalanceRow(balance = totals.balance, consumed = totals.share, name = member.firstName, paid = totals.paid)
+                BalanceRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = totals.balance)
             }
         },
         numbersFrom = 1,
@@ -134,7 +134,7 @@ private fun printPayments(
     printTable(
         PaymentRow.HEADERS,
         settlement.payments.map { payment ->
-            PaymentRow(amount = payment.amount, from = names(group, listOf(payment.from)), to = names(group, listOf(payment.to)))
+            PaymentRow(from = names(group, listOf(payment.from)), to = names(group, listOf(payment.to)), amount = payment.amount)
         },
         numbersFrom = 2,
     )
@@ -192,27 +192,27 @@ private fun strategies(group: Group): Counts {
         StrategyRow.HEADERS,
         listOf(
             StrategyRow(
-                cost = "O(2ⁿ·n) for n open balances",
-                guarantee = "the fewest payments",
-                payments = minimum.payments.size,
                 strategy = "MinimumTransfers",
+                guarantee = "the fewest payments",
+                cost = "O(2ⁿ·n) for n open balances",
+                payments = minimum.payments.size,
             ),
-            StrategyRow(cost = "O(n log n)", guarantee = "at most n − 1 payments", payments = greedy.payments.size, strategy = "Greedy"),
-            StrategyRow(cost = "O(pairs)", guarantee = "one payment per pair in debt", payments = direct.payments.size, strategy = "Direct"),
+            StrategyRow(strategy = "Greedy", guarantee = "at most n − 1 payments", cost = "O(n log n)", payments = greedy.payments.size),
+            StrategyRow(strategy = "Direct", guarantee = "one payment per pair in debt", cost = "O(pairs)", payments = direct.payments.size),
             StrategyRow(
-                cost = "as MinimumTransfers, then Greedy",
-                guarantee = "the fewest up to 20 balances",
-                payments = adaptive.payments.size,
                 strategy = "Adaptive",
+                guarantee = "the fewest up to 20 balances",
+                cost = "as MinimumTransfers, then Greedy",
+                payments = adaptive.payments.size,
             ),
         ),
         numbersFrom = 3,
     )
     return Counts(
         adaptive = adaptive.payments.size,
-        direct = direct.payments.size,
-        greedy = greedy.payments.size,
         minimum = minimum.payments.size,
+        greedy = greedy.payments.size,
+        direct = direct.payments.size,
     )
 }
 
@@ -222,7 +222,7 @@ private fun strategies(group: Group): Counts {
  */
 private fun festival(): Int {
     section("8. A larger group")
-    return Group(Currency.of("EUR"), "Festival").use { group ->
+    return Group("Festival", Currency.of("EUR")).use { group ->
         val friends = (1..21).map { number -> group.addBlocking(Member("Friend $number")) }
         // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
         // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
@@ -230,11 +230,11 @@ private fun festival(): Int {
             val number = index + 1L
             group.addBlocking(
                 Expense(
-                    Cost.Local(Money(Currency.of("EUR"), 21 * number * number)),
-                    CalendarDate.of(day = 18, month = 9, year = 2026),
                     "Round",
+                    Cost.Local(Money(21 * number * number, Currency.of("EUR"))),
                     Split.Equal(listOf(payer)),
                     ExpenseSplit.Whole(Split.Equal(friends)),
+                    CalendarDate.of(year = 2026, month = 9, day = 18),
                 ),
             )
         }
@@ -258,7 +258,7 @@ private fun festival(): Int {
 
 /** Prints the report of the ski week. */
 fun main() {
-    Group(Currency.of("EUR"), "Ski week").use { group ->
+    Group("Ski week", Currency.of("EUR")).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val carol = group.addBlocking(Member("Carol"))
@@ -285,10 +285,10 @@ fun main() {
             ExpenseRow.HEADERS,
             group.expensesBlocking().map { expense ->
                 ExpenseRow(
-                    amount = expense.total(),
                     name = expense.name,
-                    participants = names(group, participants(expense.split)),
                     payer = names(group, expense.payers.members),
+                    participants = names(group, participants(expense.split)),
+                    amount = expense.total(),
                 )
             },
             numbersFrom = 3,
@@ -304,7 +304,7 @@ fun main() {
         section("9. Settling up for real")
         val plan = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
         for (payment in plan.payments) {
-            group.addBlocking(Transfer(Cost.Local(payment.amount), CalendarDate.of(day = 27, month = 9, year = 2026), payment.from, payment.to))
+            group.addBlocking(Transfer(payment.from, payment.to, Cost.Local(payment.amount), CalendarDate.of(year = 2026, month = 9, day = 27)))
         }
         println(
             """
@@ -317,7 +317,7 @@ fun main() {
 
         // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that
         // one; greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
-        check(Counts(adaptive = 4, direct = 7, greedy = 5, minimum = 4) == counts)
+        check(Counts(adaptive = 4, minimum = 4, greedy = 5, direct = 7) == counts)
         // Greedy settles the festival's 21 balances in 19 payments.
         check(19 == festivalPayments)
         val summary = group.summaryBlocking()

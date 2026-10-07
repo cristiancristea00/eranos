@@ -32,8 +32,8 @@ export interface Column<Row> {
 }
 
 /**
- * The columns of a table of `Row`s, in the order they are printed: the headers and the order that the Rust example's
- * `#[tabled(rename = …, order = …)]` gives the fields of its row.
+ * The columns of a table of `Row`s, in the order they are printed: the headers that the Rust example's
+ * `#[tabled(rename = …)]` gives the fields of its row, in the order it declares them.
  */
 export type Columns<Row> = ReadonlyArray<Column<Row>>;
 

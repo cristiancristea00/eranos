@@ -23,11 +23,11 @@ use eranos_money::ExchangeRate;
 use super::*;
 
 fn day() -> CalendarDate {
-    CalendarDate::new(23, 9, 2026).unwrap()
+    CalendarDate::new(2026, 9, 23).unwrap()
 }
 
 fn eur(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 fn person(name: &str) -> Member {
@@ -36,7 +36,7 @@ fn person(name: &str) -> Member {
 
 fn shared_by(amount: Money, payer: MemberId, participants: &[MemberId]) -> Expense {
     let split = Split::equal(participants.iter().copied());
-    Expense::builder(amount, day(), "Shared", payer, split)
+    Expense::builder("Shared", amount, payer, split, day())
         .build()
         .unwrap()
 }
@@ -45,7 +45,7 @@ fn shared_by(amount: Money, payer: MemberId, participants: &[MemberId]) -> Expen
 /// seventeenth: seventeen open balances, so the exact solver yields once,
 /// holding the shared lock.
 fn owed_by_a_hub() -> Group {
-    let mut group = Group::builder(Currency::EUR, "Club").build().unwrap();
+    let mut group = Group::builder("Club", Currency::EUR).build().unwrap();
     let hub = group.add_member(person("Hub")).unwrap();
     for minor_units in 1..=16 {
         let payer = group.add_member(person("Member")).unwrap();
@@ -59,7 +59,7 @@ fn owed_by_a_hub() -> Group {
 /// A group of 2 100 expenses, so a currency change yields twice, holding
 /// the exclusive lock.
 fn busy() -> Group {
-    let mut group = Group::builder(Currency::EUR, "Office").build().unwrap();
+    let mut group = Group::builder("Office", Currency::EUR).build().unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
     let bob = group.add_member(person("Bob")).unwrap();
     for _ in 0..2_100 {
@@ -81,43 +81,43 @@ fn lei() -> [CurrencyRate; 1] {
 /// Everything a caller can read of a group, owned.
 #[derive(Debug, PartialEq)]
 struct Contents {
-    categories: Vec<Category>,
-    currency: Currency,
-    expenses: Vec<Expense>,
-    members: Vec<Member>,
     name: String,
-    summary: Summary,
-    transfers: Vec<Transfer>,
+    currency: Currency,
     description: Option<String>,
     language: Option<Language>,
+    members: Vec<Member>,
+    categories: Vec<Category>,
+    expenses: Vec<Expense>,
+    transfers: Vec<Transfer>,
+    summary: Summary,
 }
 
 fn contents_of(group: &Group) -> Contents {
     Contents {
-        categories: group.categories().cloned().collect(),
-        currency: group.currency(),
-        expenses: group.expenses().cloned().collect(),
-        members: group.members().cloned().collect(),
         name: group.name().to_owned(),
-        summary: group.summary().clone(),
-        transfers: group.transfers().cloned().collect(),
+        currency: group.currency(),
         description: group.description().map(str::to_owned),
         language: group.language().cloned(),
+        members: group.members().cloned().collect(),
+        categories: group.categories().cloned().collect(),
+        expenses: group.expenses().cloned().collect(),
+        transfers: group.transfers().cloned().collect(),
+        summary: group.summary().clone(),
     }
 }
 
 fn shared_contents(shared: &SharedGroup) -> Contents {
     block_on(async {
         Contents {
-            categories: shared.categories().await,
-            currency: shared.currency().await,
-            expenses: shared.expenses().await,
-            members: shared.members().await,
             name: shared.name().await,
-            summary: shared.summary().await,
-            transfers: shared.transfers().await,
+            currency: shared.currency().await,
             description: shared.description().await,
             language: shared.language().await,
+            members: shared.members().await,
+            categories: shared.categories().await,
+            expenses: shared.expenses().await,
+            transfers: shared.transfers().await,
+            summary: shared.summary().await,
         }
     })
 }
@@ -150,16 +150,16 @@ fn size_of_call<F: Future + Send + 'static>(call: &F) -> usize {
 /// A group with an entry of every kind, and the identifiers the tests read
 /// them by.
 struct Trip {
+    group: Group,
     ana: MemberId,
     bob: MemberId,
-    dinner: ExpenseId,
     food: CategoryId,
-    group: Group,
+    dinner: ExpenseId,
     repayment: TransferId,
 }
 
 fn trip() -> Trip {
-    let mut group = Group::builder(Currency::EUR, "Trip")
+    let mut group = Group::builder("Trip", Currency::EUR)
         .description("Autumn")
         .build()
         .unwrap();
@@ -172,16 +172,16 @@ fn trip() -> Trip {
         .build()
         .unwrap();
     let dinner = group.add_expense(dinner).unwrap();
-    let repayment = Transfer::builder(eur(500), day(), bob, ana)
+    let repayment = Transfer::builder(bob, ana, eur(500), day())
         .build()
         .unwrap();
     let repayment = group.add_transfer(repayment).unwrap();
     Trip {
+        group,
         ana,
         bob,
-        dinner,
         food,
-        group,
+        dinner,
         repayment,
     }
 }
@@ -191,10 +191,10 @@ fn trip() -> Trip {
 #[test]
 fn every_read_returns_what_the_group_returns() {
     let Trip {
-        ana,
-        dinner,
-        food,
         group,
+        ana,
+        food,
+        dinner,
         repayment,
         ..
     } = trip();
@@ -238,9 +238,9 @@ fn every_read_returns_what_the_group_returns() {
 #[test]
 fn every_change_does_what_the_group_does() {
     let Trip {
+        mut group,
         ana,
         bob,
-        mut group,
         ..
     } = trip();
     let shared = SharedGroup::new(group.clone());
@@ -302,7 +302,7 @@ fn every_change_does_what_the_group_does() {
         group.remove_expense(lunch.id())
     );
 
-    let cash = Transfer::builder(eur(300), day(), ana, bob)
+    let cash = Transfer::builder(ana, bob, eur(300), day())
         .build()
         .unwrap();
     let more = cash.to_builder().cost(eur(400)).build().unwrap();
@@ -425,25 +425,19 @@ fn every_call_is_send_static_and_small() {
     let other = person("Bob");
     let category = Category::new("Food").unwrap();
     let expense = shared_by(eur(100), member.id(), &[member.id()]);
-    let transfer = Transfer::builder(eur(100), day(), member.id(), other.id())
+    let transfer = Transfer::builder(member.id(), other.id(), eur(100), day())
         .build()
         .unwrap();
     let sizes = [
         size_of_call(&shared.id()),
-        size_of_call(&shared.categories()),
-        size_of_call(&shared.category(category.id())),
-        size_of_call(&shared.add_category(category.clone())),
-        size_of_call(&shared.replace_category(category.clone())),
-        size_of_call(&shared.remove_category(category.id())),
+        size_of_call(&shared.name()),
+        size_of_call(&shared.set_name("Club")),
         size_of_call(&shared.currency()),
         size_of_call(&shared.change_currency(Currency::RON, lei())),
-        size_of_call(&shared.expenses()),
-        size_of_call(&shared.expense(expense.id())),
-        size_of_call(&shared.expense_shares(expense.id())),
-        size_of_call(&shared.add_expense(expense.clone())),
-        size_of_call(&shared.replace_expense(expense.clone())),
-        size_of_call(&shared.remove_expense(expense.id())),
-        size_of_call(&shared.summary()),
+        size_of_call(&shared.description()),
+        size_of_call(&shared.set_description("Weekly")),
+        size_of_call(&shared.language()),
+        size_of_call(&shared.set_language(None)),
         size_of_call(&shared.members()),
         size_of_call(&shared.member(member.id())),
         size_of_call(&shared.is_archived(member.id())),
@@ -452,19 +446,25 @@ fn every_call_is_send_static_and_small() {
         size_of_call(&shared.archive_member(member.id())),
         size_of_call(&shared.unarchive_member(member.id())),
         size_of_call(&shared.remove_member(member.id())),
-        size_of_call(&shared.name()),
-        size_of_call(&shared.set_name("Club")),
-        size_of_call(&shared.settlement(SettlementStrategy::MinimumTransfers)),
+        size_of_call(&shared.categories()),
+        size_of_call(&shared.category(category.id())),
+        size_of_call(&shared.add_category(category.clone())),
+        size_of_call(&shared.replace_category(category.clone())),
+        size_of_call(&shared.remove_category(category.id())),
+        size_of_call(&shared.expenses()),
+        size_of_call(&shared.expense(expense.id())),
+        size_of_call(&shared.expense_shares(expense.id())),
+        size_of_call(&shared.add_expense(expense.clone())),
+        size_of_call(&shared.replace_expense(expense.clone())),
+        size_of_call(&shared.remove_expense(expense.id())),
         size_of_call(&shared.transfers()),
         size_of_call(&shared.transfer(transfer.id())),
         size_of_call(&shared.transfer_amount(transfer.id())),
         size_of_call(&shared.add_transfer(transfer.clone())),
         size_of_call(&shared.replace_transfer(transfer.clone())),
         size_of_call(&shared.remove_transfer(transfer.id())),
-        size_of_call(&shared.description()),
-        size_of_call(&shared.set_description("Weekly")),
-        size_of_call(&shared.language()),
-        size_of_call(&shared.set_language(None)),
+        size_of_call(&shared.summary()),
+        size_of_call(&shared.settlement(SettlementStrategy::MinimumTransfers)),
         size_of_call(&shared.read()),
         size_of_call(&shared.write()),
     ];

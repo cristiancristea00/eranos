@@ -21,14 +21,14 @@ struct ShareRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Member", "Rule", "Paid", "Consumed"};
 
-    /// What they consumed.
-    std::string consumed;
     /// Their first name.
     std::string name;
-    /// What they paid.
-    std::string paid;
     /// The rule by which they share the expense.
     std::string rule;
+    /// What they paid.
+    std::string paid;
+    /// What they consumed.
+    std::string consumed;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -41,14 +41,14 @@ struct TotalRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
 
-    /// What is left: what they paid minus what they consumed.
-    std::string balance;
-    /// What they consumed.
-    std::string consumed;
     /// Their first name.
     std::string name;
     /// What they paid.
     std::string paid;
+    /// What they consumed.
+    std::string consumed;
+    /// What is left: what they paid minus what they consumed.
+    std::string balance;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -65,19 +65,19 @@ struct Family final {
     ///
     /// @param ana The first parent
     /// @param bob The second parent
-    /// @param day The day of every expense
     /// @param mia Their daughter
-    Family(MemberId ana, MemberId bob, CalendarDate const day, MemberId mia) noexcept
-        : ana(std::move(ana)), bob(std::move(bob)), day(day), mia(std::move(mia)) {}
+    /// @param day The day of every expense
+    Family(MemberId ana, MemberId bob, MemberId mia, CalendarDate const day) noexcept
+        : ana(std::move(ana)), bob(std::move(bob)), mia(std::move(mia)), day(day) {}
 
     /// The first parent.
     MemberId ana;
     /// The second parent.
     MemberId bob;
-    /// The day of every expense.
-    CalendarDate day;
     /// Their daughter.
     MemberId mia;
+    /// The day of every expense.
+    CalendarDate day;
 };
 
 /// The rule by which each member shares an expense, as the report names it.
@@ -104,10 +104,10 @@ void report(Group const &group, ExpenseId const &id, Rules const &rules) {
     for (auto const &share : shares->members) {
         auto const rule = rules.find(share.member);
         rows.push_back({
-            .consumed = share.share.toString(),
             .name = firstName(group, share.member),
-            .paid = share.paid.toString(),
             .rule = rules.end() == rule ? "(payer only)" : rule->second,
+            .paid = share.paid.toString(),
+            .consumed = share.share.toString(),
         });
     }
     printTable(rows, 2);
@@ -120,7 +120,7 @@ void equally(Group &group, Family const &family) {
               "leftover cent; which member it is rotates from expense to expense, so over a trip\n"
               "nobody always pays it.");
     auto const taxi =
-        must(group.addExpense(Expense(LocalCost{euros("10.00")}, family.day, "Taxi", EqualSplit{{family.ana}}, WholeExpenseSplit{everyone(family)})));
+        must(group.addExpense(Expense("Taxi", LocalCost{euros("10.00")}, EqualSplit{{family.ana}}, WholeExpenseSplit{everyone(family)}, family.day)));
     report(group, taxi, thirds(family));
 }
 
@@ -135,7 +135,7 @@ void byPercentage(Group &group, Family const &family) {
         MemberPercentage(family.mia, must(Percentage::parse("20"))),
     };
     auto const rent = must(group.addExpense(
-        Expense(LocalCost{euros("500.00")}, family.day, "Flat", EqualSplit{{family.bob}}, WholeExpenseSplit{PercentagesSplit{rooms}})));
+        Expense("Flat", LocalCost{euros("500.00")}, EqualSplit{{family.bob}}, WholeExpenseSplit{PercentagesSplit{rooms}}, family.day)));
     report(group, rent, {{family.ana, "40%"}, {family.bob, "40%"}, {family.mia, "20%"}});
 }
 
@@ -150,7 +150,7 @@ void byPercentage(Group &group, Family const &family) {
         MemberParts(family.mia, must(Parts::parse("0.5"))),
     };
     auto const food = must(
-        group.addExpense(Expense(LocalCost{euros("125.00")}, family.day, "Food", EqualSplit{{family.ana}}, WholeExpenseSplit{PartsSplit{portions}})));
+        group.addExpense(Expense("Food", LocalCost{euros("125.00")}, EqualSplit{{family.ana}}, WholeExpenseSplit{PartsSplit{portions}}, family.day)));
     report(group, food, {{family.ana, "1 part"}, {family.bob, "1 part"}, {family.mia, "0.5 parts"}});
     return food;
 }
@@ -161,12 +161,12 @@ void byAmounts(Group &group, Family const &family) {
     printLine("Everyone pays a fixed amount, such as a ticket price; the amounts must add up to\n"
               "exactly the expense amount.");
     std::vector<MemberAmount> const prices{
-        MemberAmount(euros("15.00"), family.ana),
-        MemberAmount(euros("15.00"), family.bob),
-        MemberAmount(euros("5.00"), family.mia),
+        MemberAmount(family.ana, euros("15.00")),
+        MemberAmount(family.bob, euros("15.00")),
+        MemberAmount(family.mia, euros("5.00")),
     };
     auto const tickets = must(group.addExpense(
-        Expense(LocalCost{euros("35.00")}, family.day, "Museum", EqualSplit{{family.bob}}, WholeExpenseSplit{AmountsSplit{prices}})));
+        Expense("Museum", LocalCost{euros("35.00")}, EqualSplit{{family.bob}}, WholeExpenseSplit{AmountsSplit{prices}}, family.day)));
     report(group, tickets, {{family.ana, "15.00 EUR"}, {family.bob, "15.00 EUR"}, {family.mia, "5.00 EUR"}});
 }
 
@@ -175,8 +175,8 @@ void severalPayers(Group &group, Family const &family) {
     section("5. Several payers");
     printLine("The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n"
               "divided with the same methods as the participants.");
-    AmountsSplit const cards{{MemberAmount(euros("50.00"), family.ana), MemberAmount(euros("40.00"), family.bob)}};
-    auto const dinner = must(group.addExpense(Expense(LocalCost{euros("90.00")}, family.day, "Dinner", cards, WholeExpenseSplit{everyone(family)})));
+    AmountsSplit const cards{{MemberAmount(family.ana, euros("50.00")), MemberAmount(family.bob, euros("40.00"))}};
+    auto const dinner = must(group.addExpense(Expense("Dinner", LocalCost{euros("90.00")}, cards, WholeExpenseSplit{everyone(family)}, family.day)));
     report(group, dinner, thirds(family));
 }
 
@@ -189,7 +189,7 @@ void mistakes(Group &group, Family const &family) {
         MemberPercentage(family.bob, must(Percentage::parse("30"))),
     };
     auto const refused = refusal(group.addExpense(
-        Expense(LocalCost{euros("10.00")}, family.day, "Invalid", EqualSplit{{family.ana}}, WholeExpenseSplit{PercentagesSplit{ninety}})));
+        Expense("Invalid", LocalCost{euros("10.00")}, EqualSplit{{family.ana}}, WholeExpenseSplit{PercentagesSplit{ninety}}, family.day)));
     check(refused.has_value(), "the split is refused");
     std::println("  error: {}", message(refused));
 }
@@ -203,10 +203,10 @@ void totals(Group const &group) {
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
         rows.push_back({
-            .balance = toString(found.balance),
-            .consumed = found.share.toString(),
             .name = member.firstName,
             .paid = found.paid.toString(),
+            .consumed = found.share.toString(),
+            .balance = toString(found.balance),
         });
     }
     printTable(rows, 1);
@@ -214,11 +214,11 @@ void totals(Group const &group) {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create(must(Currency::of("EUR")), "Family holiday"));
+    auto group = must(Group::create("Family holiday", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const mia = must(group.addMember(Member("Mia")));
-    Family const family(ana, bob, must(CalendarDate::of(14, 7, 2026)), mia);
+    Family const family(ana, bob, mia, must(CalendarDate::of(2026, 7, 14)));
 
     printLine("Family holiday: every way to split an expense\n"
               "═════════════════════════════════════════════");

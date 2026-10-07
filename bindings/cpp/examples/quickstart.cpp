@@ -20,14 +20,14 @@ struct ExpenseRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Expense", "Paid by", "Shared by", "Amount"};
 
-    /// What it cost.
-    std::string amount;
     /// What was bought.
     std::string name;
-    /// Who shares it.
-    std::string participants;
     /// Who paid it.
     std::string payers;
+    /// Who shares it.
+    std::string participants;
+    /// What it cost.
+    std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -40,14 +40,14 @@ struct MemberRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
 
-    /// What is left: what they paid minus what they consumed.
-    std::string balance;
-    /// What they consumed.
-    std::string consumed;
     /// Their first name.
     std::string name;
     /// What they paid.
     std::string paid;
+    /// What they consumed.
+    std::string consumed;
+    /// What is left: what they paid minus what they consumed.
+    std::string balance;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -60,12 +60,12 @@ struct PaymentRow final {
     /// The headers of the table's columns, in the order it prints them.
     static constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
-    /// How much is paid.
-    std::string amount;
     /// Who pays.
     std::string from;
     /// Who is paid.
     std::string to;
+    /// How much is paid.
+    std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
@@ -78,7 +78,7 @@ struct PaymentRow final {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create(must(Currency::of("EUR")), "Weekend in Sinaia"));
+    auto group = must(Group::create("Weekend in Sinaia", must(Currency::of("EUR"))));
     title(group.name());
     std::println("Three friends rent a cabin and buy groceries. The group keeps its books in {}, so\n"
                  "every total, balance, and payment below is in {}.",
@@ -93,18 +93,18 @@ void run() {
     section("2. Expenses");
     printLine("Each expense records who paid and who shares it. Here everyone shares everything\n"
               "equally.");
-    auto const friday = must(CalendarDate::of(25, 9, 2026));
+    auto const friday = must(CalendarDate::of(2026, 9, 25));
     EqualSplit const everyone{{ana, bob, carol}};
-    static_cast<void>(must(group.addExpense(Expense(LocalCost{euros("240.00")}, friday, "Cabin", EqualSplit{{ana}}, WholeExpenseSplit{everyone}))));
+    static_cast<void>(must(group.addExpense(Expense("Cabin", LocalCost{euros("240.00")}, EqualSplit{{ana}}, WholeExpenseSplit{everyone}, friday))));
     static_cast<void>(
-        must(group.addExpense(Expense(LocalCost{euros("60.00")}, friday, "Groceries", EqualSplit{{bob}}, WholeExpenseSplit{everyone}))));
+        must(group.addExpense(Expense("Groceries", LocalCost{euros("60.00")}, EqualSplit{{bob}}, WholeExpenseSplit{everyone}, friday))));
     std::vector<ExpenseRow> expenses;
     for (auto const &expense : group.expenses()) {
         expenses.push_back({
-            .amount = must(total(expense)).toString(),
             .name = expense.name,
-            .participants = names(group, sharedBy(expense.split)),
             .payers = names(group, must(participants(expense.payers))),
+            .participants = names(group, sharedBy(expense.split)),
+            .amount = must(total(expense)).toString(),
         });
     }
     printTable(expenses, 3);
@@ -119,10 +119,10 @@ void run() {
         auto const found = member.id.has_value() ? totalsOf(summary, *member.id) : std::nullopt;
         if (found.has_value()) {
             members.push_back({
-                .balance = toString(found->balance),
-                .consumed = found->share.toString(),
                 .name = member.firstName,
                 .paid = found->paid.toString(),
+                .consumed = found->share.toString(),
+                .balance = toString(found->balance),
             });
         }
     }
@@ -136,7 +136,7 @@ void run() {
     std::vector<PaymentRow> payments;
     payments.reserve(settlement.payments.size());
     for (auto const &payment : settlement.payments) {
-        payments.push_back({.amount = payment.amount.toString(), .from = firstName(group, payment.from), .to = firstName(group, payment.to)});
+        payments.push_back({.from = firstName(group, payment.from), .to = firstName(group, payment.to), .amount = payment.amount.toString()});
     }
     printTable(payments, 2);
     printLine("Once these payments are made, nobody owes anything.");

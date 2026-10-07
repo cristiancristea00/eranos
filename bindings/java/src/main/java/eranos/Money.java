@@ -10,15 +10,15 @@ import java.util.Objects;
  * <p>An amount prints as the library writes it, "12.50 EUR", and adds and subtracts with its
  * checks: both amounts in one currency, and the result within range.
  *
- * @param currency the currency
  * @param minorUnits the amount in minor units: cents for the euro, none for the yen
+ * @param currency the currency
  */
-public record Money(Currency currency, long minorUnits) {
+public record Money(long minorUnits, Currency currency) {
     /**
      * The amount of {@code minorUnits} minor units of {@code currency}.
      *
-     * @param currency the currency
      * @param minorUnits the amount in minor units
+     * @param currency the currency
      */
     public Money {
         Objects.requireNonNull(currency, "currency");
@@ -45,7 +45,7 @@ public record Money(Currency currency, long minorUnits) {
      * @return the amount
      */
     static Money converted(eranos.internal.Money money) {
-        return new Money(Currency.known(money.currency()), money.minorUnits());
+        return new Money(money.minorUnits(), Currency.known(money.currency()));
     }
 
     /**
@@ -54,7 +54,7 @@ public record Money(Currency currency, long minorUnits) {
      * @return the generated amount
      */
     eranos.internal.Money generated() {
-        return new eranos.internal.Money(currency.code(), minorUnits);
+        return new eranos.internal.Money(minorUnits, currency.code());
     }
 
     /**

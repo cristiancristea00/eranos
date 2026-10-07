@@ -45,11 +45,11 @@ final class Sharing {
                 List.of(people.ana(), people.bob(), people.carol(), people.dan(), people.eva());
         Expense coffee =
                 Expense.builder(
-                                new Cost.Local(ron("75.00")),
-                                october(8),
                                 "Airport coffee",
+                                new Cost.Local(ron("75.00")),
                                 new Split.Equal(List.of(people.bob())),
-                                new ExpenseSplit.Whole(new Split.Equal(everyone)))
+                                new ExpenseSplit.Whole(new Split.Equal(everyone)),
+                                october(8))
                         .build();
         other.addExpenseAsync(coffee).join();
         Settlement plan = group.settlementAsync(SettlementStrategy.MINIMUM_TRANSFERS).join();
@@ -65,9 +65,9 @@ final class Sharing {
             for (Payment payment : plan.payments()) {
                 rows.add(
                         new PaymentRow(
-                                payment.amount(),
                                 reader.member(payment.from()).map(Member::firstName).orElse("?"),
-                                reader.member(payment.to()).map(Member::firstName).orElse("?")));
+                                reader.member(payment.to()).map(Member::firstName).orElse("?"),
+                                payment.amount()));
             }
         }
         printTable(PaymentRow.HEADERS, rows, 2);

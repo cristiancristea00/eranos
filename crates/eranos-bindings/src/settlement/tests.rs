@@ -26,16 +26,16 @@ fn every_strategy_converts_both_ways() {
 /// changed, or under another strategy.
 #[test]
 fn a_settlement_keeps_every_payment() {
-    let mut group = Group::builder(Currency::EUR, "Flat").build().unwrap();
+    let mut group = Group::builder("Flat", Currency::EUR).build().unwrap();
     let ana = group
         .add_member(Member::builder("Ana").build().unwrap())
         .unwrap();
     let bob = group
         .add_member(Member::builder("Bob").build().unwrap())
         .unwrap();
-    let day = CalendarDate::new(1, 10, 2026).unwrap();
+    let day = CalendarDate::new(2026, 10, 1).unwrap();
     // Bob paid Ana 20.00 too much, so Ana owes it back.
-    let transfer = Transfer::builder(Money::from_minor_units(Currency::EUR, 2_000), day, bob, ana)
+    let transfer = Transfer::builder(bob, ana, Money::from_minor_units(2_000, Currency::EUR), day)
         .build()
         .unwrap();
     group.add_transfer(transfer).unwrap();
@@ -46,12 +46,12 @@ fn a_settlement_keeps_every_payment() {
         Settlement::from_library(settlement),
         Settlement {
             payments: vec![Payment {
-                amount: crate::Money {
-                    currency: "EUR".to_owned(),
-                    minor_units: 2_000,
-                },
                 from: ana.to_string(),
                 to: bob.to_string(),
+                amount: crate::Money {
+                    minor_units: 2_000,
+                    currency: "EUR".to_owned(),
+                },
             }],
             strategy: SettlementStrategy::Greedy,
         }

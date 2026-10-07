@@ -26,25 +26,12 @@ enum class SettlementStrategy : std::uint8_t {
     /// The fewest payments while at most 20 balances are left after exact opposites pay each other, the greedy plan beyond; the settlement names the
     /// strategy whose plan it is.
     ADAPTIVE,
-    /// Every debt between two members, unsimplified.
-    DIRECT,
-    /// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
-    GREEDY,
     /// The fewest payments possible.
     MINIMUM_TRANSFERS,
-};
-
-/// The others owe the member `amount`.
-struct GetsBackBalance final {
-    /// What the others owe the member.
-    Money amount;
-
-    /// Whether every field of two alternatives is equal.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(GetsBackBalance const &left, GetsBackBalance const &right) noexcept = default;
+    /// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
+    GREEDY,
+    /// Every debt between two members, unsimplified.
+    DIRECT,
 };
 
 /// The member owes the others `amount`.
@@ -68,44 +55,57 @@ struct SettledBalance final {
     [[nodiscard]] friend bool operator==(SettledBalance const & /* left */, SettledBalance const & /* right */) noexcept = default;
 };
 
-/// Where a member stands. One of its alternatives: GetsBackBalance, OwesBalance, SettledBalance.
-using Balance = std::variant<GetsBackBalance, OwesBalance, SettledBalance>;
+/// The others owe the member `amount`.
+struct GetsBackBalance final {
+    /// What the others owe the member.
+    Money amount;
+
+    /// Whether every field of two alternatives is equal.
+    ///
+    /// @param left An alternative
+    /// @param right Another alternative
+    /// @return Whether they are equal
+    [[nodiscard]] friend bool operator==(GetsBackBalance const &left, GetsBackBalance const &right) noexcept = default;
+};
+
+/// Where a member stands. One of its alternatives: OwesBalance, SettledBalance, GetsBackBalance.
+using Balance = std::variant<OwesBalance, SettledBalance, GetsBackBalance>;
 
 /// Where a member stands: what they paid, consumed, sent, and received.
 struct MemberSummary final {
     /// The record of its fields.
     ///
-    /// @param balance Where the member stands.
     /// @param member The member's identifier.
-    /// @param net What the member is owed, less what they owe: positive when they get money back.
     /// @param paid What the member paid for expenses.
-    /// @param received What the member received in transfers.
-    /// @param sent What the member sent in transfers.
     /// @param share The member's share of the expenses: what they consumed.
-    MemberSummary(Balance balance, MemberId member, Money net, Money paid, Money received, Money sent, Money share) noexcept
-        : balance(std::move(balance)), member(std::move(member)), net(std::move(net)), paid(std::move(paid)), received(std::move(received)),
-          sent(std::move(sent)), share(std::move(share)) {}
-
-    /// Where the member stands.
-    Balance balance;
+    /// @param sent What the member sent in transfers.
+    /// @param received What the member received in transfers.
+    /// @param net What the member is owed, less what they owe: positive when they get money back.
+    /// @param balance Where the member stands.
+    MemberSummary(MemberId member, Money paid, Money share, Money sent, Money received, Money net, Balance balance) noexcept
+        : member(std::move(member)), paid(std::move(paid)), share(std::move(share)), sent(std::move(sent)), received(std::move(received)),
+          net(std::move(net)), balance(std::move(balance)) {}
 
     /// The member's identifier.
     MemberId member;
 
-    /// What the member is owed, less what they owe: positive when they get money back.
-    Money net;
-
     /// What the member paid for expenses.
     Money paid;
 
-    /// What the member received in transfers.
-    Money received;
+    /// The member's share of the expenses: what they consumed.
+    Money share;
 
     /// What the member sent in transfers.
     Money sent;
 
-    /// The member's share of the expenses: what they consumed.
-    Money share;
+    /// What the member received in transfers.
+    Money received;
+
+    /// What the member is owed, less what they owe: positive when they get money back.
+    Money net;
+
+    /// Where the member stands.
+    Balance balance;
 
     /// Whether every field of two records is equal.
     ///
@@ -163,26 +163,26 @@ struct MemberCategoryTotals final {
 struct Summary final {
     /// The record of its fields.
     ///
+    /// @param totalSpent What the expenses add up to.
+    /// @param members Where every member stands.
     /// @param categoryTotals The total of every category.
     /// @param memberCategoryTotals The totals per category of every member.
-    /// @param members Where every member stands.
-    /// @param totalSpent What the expenses add up to.
-    Summary(std::vector<CategoryTotal> categoryTotals, std::vector<MemberCategoryTotals> memberCategoryTotals, std::vector<MemberSummary> members,
-            Money totalSpent) noexcept
-        : categoryTotals(std::move(categoryTotals)), memberCategoryTotals(std::move(memberCategoryTotals)), members(std::move(members)),
-          totalSpent(std::move(totalSpent)) {}
+    Summary(Money totalSpent, std::vector<MemberSummary> members, std::vector<CategoryTotal> categoryTotals,
+            std::vector<MemberCategoryTotals> memberCategoryTotals) noexcept
+        : totalSpent(std::move(totalSpent)), members(std::move(members)), categoryTotals(std::move(categoryTotals)),
+          memberCategoryTotals(std::move(memberCategoryTotals)) {}
+
+    /// What the expenses add up to.
+    Money totalSpent;
+
+    /// Where every member stands.
+    std::vector<MemberSummary> members;
 
     /// The total of every category.
     std::vector<CategoryTotal> categoryTotals;
 
     /// The totals per category of every member.
     std::vector<MemberCategoryTotals> memberCategoryTotals;
-
-    /// Where every member stands.
-    std::vector<MemberSummary> members;
-
-    /// What the expenses add up to.
-    Money totalSpent;
 
     /// Whether every field of two records is equal.
     ///
@@ -223,19 +223,19 @@ struct ExpenseShares final {
     /// The record of its fields.
     ///
     /// @param members Every member's part.
-    /// @param tip The tip.
     /// @param total The amount with the tip.
-    ExpenseShares(std::vector<MemberShare> members, Money tip, Money total) noexcept
-        : members(std::move(members)), tip(std::move(tip)), total(std::move(total)) {}
+    /// @param tip The tip.
+    ExpenseShares(std::vector<MemberShare> members, Money total, Money tip) noexcept
+        : members(std::move(members)), total(std::move(total)), tip(std::move(tip)) {}
 
     /// Every member's part.
     std::vector<MemberShare> members;
 
-    /// The tip.
-    Money tip;
-
     /// The amount with the tip.
     Money total;
+
+    /// The tip.
+    Money tip;
 
     /// Whether every field of two records is equal.
     ///
@@ -249,19 +249,19 @@ struct ExpenseShares final {
 struct Payment final {
     /// The record of its fields.
     ///
-    /// @param amount What is paid.
     /// @param from The identifier of the member who pays.
     /// @param to The identifier of the member who is paid.
-    Payment(Money amount, MemberId from, MemberId to) noexcept : amount(std::move(amount)), from(std::move(from)), to(std::move(to)) {}
-
-    /// What is paid.
-    Money amount;
+    /// @param amount What is paid.
+    Payment(MemberId from, MemberId to, Money amount) noexcept : from(std::move(from)), to(std::move(to)), amount(std::move(amount)) {}
 
     /// The identifier of the member who pays.
     MemberId from;
 
     /// The identifier of the member who is paid.
     MemberId to;
+
+    /// What is paid.
+    Money amount;
 
     /// Whether every field of two records is equal.
     ///
@@ -293,7 +293,7 @@ struct Settlement final {
     [[nodiscard]] friend bool operator==(Settlement const &left, Settlement const &right) noexcept = default;
 };
 
-/// The balance as the library writes it: "gets back 12.00 EUR", "owes 12.00 EUR", or "settled".
+/// The balance as the library writes it: "owes 12.00 EUR", "settled", or "gets back 12.00 EUR".
 ///
 /// @param balance The balance
 /// @return The text
@@ -302,9 +302,9 @@ struct Settlement final {
 namespace detail {
 
 [[nodiscard]] inline Balance fromDetail(EranosBalance const &value);
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value);
 [[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(OwesBalance const &value);
 [[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(SettledBalance const & /* value */);
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value);
 [[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(Balance const &value);
 [[nodiscard]] inline MemberSummary fromDetail(EranosMemberSummary const &value);
 [[nodiscard]] inline CategoryTotal fromDetail(EranosCategoryTotal const &value);

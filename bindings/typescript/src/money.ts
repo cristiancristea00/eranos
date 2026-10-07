@@ -18,14 +18,14 @@ export class Money {
     /**
      * The amount of `minorUnits` minor units of `currency`.
      *
-     * @param currency - The currency
      * @param minorUnits - The amount in minor units: cents for the euro, none for the yen
+     * @param currency - The currency
      */
     constructor(
-        /** The currency. */
-        readonly currency: Currency,
         /** The amount in minor units: cents for the euro, none for the yen. */
         readonly minorUnits: bigint,
+        /** The currency. */
+        readonly currency: Currency,
     ) {}
 
     /**
@@ -47,7 +47,7 @@ export class Money {
      * @internal
      */
     static converted(money: internal.Money): Money {
-        return new Money(Currency.known(money.currency), money.minorUnits);
+        return new Money(money.minorUnits, Currency.known(money.currency));
     }
 
     /**
@@ -56,7 +56,7 @@ export class Money {
      * @internal
      */
     generated(): internal.Money {
-        return internal.Money.create({ currency: this.currency.code, minorUnits: this.minorUnits });
+        return internal.Money.create({ minorUnits: this.minorUnits, currency: this.currency.code });
     }
 
     /**
@@ -90,7 +90,7 @@ export class Money {
      * @returns Whether the two are equal
      */
     equals(other: Money): boolean {
-        return this.currency.code === other.currency.code && this.minorUnits === other.minorUnits;
+        return this.minorUnits === other.minorUnits && this.currency.code === other.currency.code;
     }
 
     /**

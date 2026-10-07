@@ -6,46 +6,46 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, what the conversion
-/// finds it holding, and the method it converts through.
+/// One variant in a table of conversions: the error, the method it converts
+/// through, and what the conversion finds it holding.
 #[derive(Debug)]
 struct Case<Failure> {
     error: Failure,
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 /// An [`AccountError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedAccountError {
+    method: &'static str,
     held: String,
     message: String,
-    method: &'static str,
 }
 
 impl FromAccountError for ConvertedAccountError {
     fn empty_name(message: String) -> Self {
         Self {
+            method: "empty_name",
             held: String::new(),
             message,
-            method: "empty_name",
+        }
+    }
+
+    fn invalid_iban(reason: IbanError, message: String) -> Self {
+        Self {
+            method: "invalid_iban",
+            held: format!("{reason:?}"),
+            message,
         }
     }
 
     fn empty_username(message: String) -> Self {
         Self {
+            method: "empty_username",
             held: String::new(),
             message,
-            method: "empty_username",
-        }
-    }
-
-    fn invalid_iban(message: String, reason: IbanError) -> Self {
-        Self {
-            held: format!("{reason:?}"),
-            message,
-            method: "invalid_iban",
         }
     }
 }
@@ -59,27 +59,27 @@ fn every_failure_of_account_error_converts_through_the_method_of_its_variant() {
     let cases = [
         Case {
             error: AccountError::EmptyName,
-            held: String::new(),
             method: "empty_name",
-        },
-        Case {
-            error: AccountError::EmptyUsername,
             held: String::new(),
-            method: "empty_username",
         },
         Case {
             error: AccountError::InvalidIban(reason),
-            held: format!("{reason:?}"),
             method: "invalid_iban",
+            held: format!("{reason:?}"),
+        },
+        Case {
+            error: AccountError::EmptyUsername,
+            method: "empty_username",
+            held: String::new(),
         },
     ];
     for case in cases {
         assert_eq!(
             ConvertedAccountError::from_account_error(&case.error),
             ConvertedAccountError {
+                method: case.method,
                 held: case.held,
                 message: case.error.to_string(),
-                method: case.method,
             }
         );
     }
@@ -89,50 +89,50 @@ fn every_failure_of_account_error_converts_through_the_method_of_its_variant() {
 /// that built the value, what the variant held.
 #[derive(Debug, PartialEq, Eq)]
 struct ConvertedIbanError {
-    held: String,
     method: &'static str,
+    held: String,
 }
 
 impl FromIbanError for ConvertedIbanError {
     fn invalid_character() -> Self {
         Self {
-            held: String::new(),
             method: "invalid_character",
-        }
-    }
-
-    fn invalid_checksum() -> Self {
-        Self {
             held: String::new(),
-            method: "invalid_checksum",
         }
     }
 
     fn invalid_format() -> Self {
         Self {
-            held: String::new(),
             method: "invalid_format",
-        }
-    }
-
-    fn invalid_structure() -> Self {
-        Self {
             held: String::new(),
-            method: "invalid_structure",
         }
     }
 
     fn unknown_country() -> Self {
         Self {
-            held: String::new(),
             method: "unknown_country",
+            held: String::new(),
         }
     }
 
     fn wrong_length(expected: usize, found: usize) -> Self {
         Self {
-            held: format!("{expected} {found}"),
             method: "wrong_length",
+            held: format!("{expected} {found}"),
+        }
+    }
+
+    fn invalid_structure() -> Self {
+        Self {
+            method: "invalid_structure",
+            held: String::new(),
+        }
+    }
+
+    fn invalid_checksum() -> Self {
+        Self {
+            method: "invalid_checksum",
+            held: String::new(),
         }
     }
 }
@@ -147,41 +147,41 @@ fn every_reason_of_iban_error_converts_through_the_method_of_its_variant() {
     let cases = [
         Case {
             error: IbanError::InvalidCharacter,
-            held: String::new(),
             method: "invalid_character",
-        },
-        Case {
-            error: IbanError::InvalidChecksum,
             held: String::new(),
-            method: "invalid_checksum",
         },
         Case {
             error: IbanError::InvalidFormat,
-            held: String::new(),
             method: "invalid_format",
-        },
-        Case {
-            error: IbanError::InvalidStructure,
             held: String::new(),
-            method: "invalid_structure",
         },
         Case {
             error: IbanError::UnknownCountry,
-            held: String::new(),
             method: "unknown_country",
+            held: String::new(),
         },
         Case {
             error: IbanError::WrongLength { expected, found },
-            held: format!("{expected} {found}"),
             method: "wrong_length",
+            held: format!("{expected} {found}"),
+        },
+        Case {
+            error: IbanError::InvalidStructure,
+            method: "invalid_structure",
+            held: String::new(),
+        },
+        Case {
+            error: IbanError::InvalidChecksum,
+            method: "invalid_checksum",
+            held: String::new(),
         },
     ];
     for case in cases {
         assert_eq!(
             ConvertedIbanError::from_iban_error(&case.error),
             ConvertedIbanError {
+                method: case.method,
                 held: case.held,
-                method: case.method
             }
         );
     }

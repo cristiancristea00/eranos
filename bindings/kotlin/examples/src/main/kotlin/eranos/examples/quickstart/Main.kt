@@ -22,10 +22,10 @@ import eranos.examples.title
 import eranos.examples.totals
 
 private data class ExpenseRow(
-    val amount: Money,
     val name: String,
-    val participants: String,
     val payers: String,
+    val participants: String,
+    val amount: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, payers, participants, "$amount")
@@ -36,10 +36,10 @@ private data class ExpenseRow(
 }
 
 private data class MemberRow(
-    val balance: Balance,
-    val consumed: Money,
     val name: String,
     val paid: Money,
+    val consumed: Money,
+    val balance: Balance,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, "$paid", "$consumed", "$balance")
@@ -50,9 +50,9 @@ private data class MemberRow(
 }
 
 private data class PaymentRow(
-    val amount: Money,
     val from: String,
     val to: String,
+    val amount: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(from, to, "$amount")
@@ -65,7 +65,7 @@ private data class PaymentRow(
 /** Prints the report of the weekend trip. */
 fun main() {
     val euro = Currency.of("EUR")
-    Group(euro, "Weekend in Sinaia").use { group ->
+    Group("Weekend in Sinaia", euro).use { group ->
         title(group.nameBlocking())
         println(
             """
@@ -87,22 +87,22 @@ fun main() {
             equally.
             """.trimIndent(),
         )
-        val friday = CalendarDate.of(day = 25, month = 9, year = 2026)
+        val friday = CalendarDate.of(year = 2026, month = 9, day = 25)
         val everyone = Split.Equal(listOf(ana, bob, carol))
         group.addBlocking(
-            Expense(Cost.Local(Money.parse("240.00", euro)), friday, "Cabin", Split.Equal(listOf(ana)), ExpenseSplit.Whole(everyone)),
+            Expense("Cabin", Cost.Local(Money.parse("240.00", euro)), Split.Equal(listOf(ana)), ExpenseSplit.Whole(everyone), friday),
         )
         group.addBlocking(
-            Expense(Cost.Local(Money.parse("60.00", euro)), friday, "Groceries", Split.Equal(listOf(bob)), ExpenseSplit.Whole(everyone)),
+            Expense("Groceries", Cost.Local(Money.parse("60.00", euro)), Split.Equal(listOf(bob)), ExpenseSplit.Whole(everyone), friday),
         )
         printTable(
             ExpenseRow.HEADERS,
             group.expensesBlocking().map { expense ->
                 ExpenseRow(
-                    amount = expense.total(),
                     name = expense.name,
-                    participants = names(group, participants(expense.split)),
                     payers = names(group, expense.payers.members),
+                    participants = names(group, participants(expense.split)),
+                    amount = expense.total(),
                 )
             },
             numbersFrom = 3,
@@ -120,7 +120,7 @@ fun main() {
             MemberRow.HEADERS,
             group.membersBlocking().mapNotNull { member ->
                 member.id?.let { id -> totals(id, summary) }?.let { totals ->
-                    MemberRow(balance = totals.balance, consumed = totals.share, name = member.firstName, paid = totals.paid)
+                    MemberRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = totals.balance)
                 }
             },
             numbersFrom = 1,
@@ -134,7 +134,7 @@ fun main() {
         printTable(
             PaymentRow.HEADERS,
             settlement.payments.map { payment ->
-                PaymentRow(amount = payment.amount, from = names(group, listOf(payment.from)), to = names(group, listOf(payment.to)))
+                PaymentRow(from = names(group, listOf(payment.from)), to = names(group, listOf(payment.to)), amount = payment.amount)
             },
             numbersFrom = 2,
         )

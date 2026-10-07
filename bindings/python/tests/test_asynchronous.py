@@ -62,7 +62,7 @@ def test_every_asynchronous_change_of_an_entry_does_what_its_synchronous_form_do
         brunch = copy.replace(added, name='Brunch')
         assert await group.replace_expense_async(brunch) == added
         assert await group.remove_expense_async(lunch) == brunch
-        cash = await group.add_transfer_async(Transfer(cost=LocalCost(flat.euros(100)), date=flat.day, receiver=flat.bob, sender=flat.ana))
+        cash = await group.add_transfer_async(Transfer(sender=flat.ana, receiver=flat.bob, cost=LocalCost(flat.euros(100)), date=flat.day))
         sent = group.transfer(cash)
         assert sent is not None
         coins = copy.replace(sent, note='Coins')

@@ -31,7 +31,7 @@ pub use error::{FromMemberError, MemberError};
 /// let ana = Member::builder("Ana")
 ///     .last_name("Popescu")
 ///     .email(Email::parse("ana@example.com")?)
-///     .account(Account::new(Iban::parse("RO49AAAA1B31007593840000")?, "ING")?)
+///     .account(Account::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?)
 ///     .build()?;
 /// assert_eq!(ana.first_name(), "Ana");
 /// assert_eq!(ana.accounts().len(), 1);
@@ -45,14 +45,14 @@ pub use error::{FromMemberError, MemberError};
 pub struct Member {
     id: MemberId,
     first_name: String,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
-    accounts: Vec<Account>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    email: Option<Email>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     last_name: Option<String>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    email: Option<Email>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     phone: Option<PhoneNumber>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    accounts: Vec<Account>,
 }
 
 impl Member {
@@ -61,10 +61,10 @@ impl Member {
         MemberBuilder {
             id: None,
             first_name: first_name.into(),
-            accounts: Vec::new(),
-            email: None,
             last_name: None,
+            email: None,
             phone: None,
+            accounts: Vec::new(),
         }
     }
 
@@ -74,10 +74,10 @@ impl Member {
         MemberBuilder {
             id: Some(self.id),
             first_name: self.first_name.clone(),
-            accounts: self.accounts.clone(),
-            email: self.email.clone(),
             last_name: self.last_name.clone(),
+            email: self.email.clone(),
             phone: self.phone.clone(),
+            accounts: self.accounts.clone(),
         }
     }
 
@@ -93,10 +93,10 @@ impl Member {
         &self.first_name
     }
 
-    /// The accounts the member can be paid to, in the order they were added.
+    /// The last name, if any.
     #[must_use]
-    pub fn accounts(&self) -> &[Account] {
-        &self.accounts
+    pub fn last_name(&self) -> Option<&str> {
+        self.last_name.as_deref()
     }
 
     /// The email address, if any.
@@ -105,16 +105,16 @@ impl Member {
         self.email.as_ref()
     }
 
-    /// The last name, if any.
-    #[must_use]
-    pub fn last_name(&self) -> Option<&str> {
-        self.last_name.as_deref()
-    }
-
     /// The phone number, if any.
     #[must_use]
     pub const fn phone(&self) -> Option<&PhoneNumber> {
         self.phone.as_ref()
+    }
+
+    /// The accounts the member can be paid to, in the order they were added.
+    #[must_use]
+    pub fn accounts(&self) -> &[Account] {
+        &self.accounts
     }
 }
 
@@ -125,10 +125,10 @@ impl Member {
 pub struct MemberBuilder {
     id: Option<MemberId>,
     first_name: String,
-    accounts: Vec<Account>,
-    email: Option<Email>,
     last_name: Option<String>,
+    email: Option<Email>,
     phone: Option<PhoneNumber>,
+    accounts: Vec<Account>,
 }
 
 impl MemberBuilder {
@@ -138,15 +138,9 @@ impl MemberBuilder {
         self
     }
 
-    /// Appends an account.
-    pub fn account(mut self, account: Account) -> Self {
-        self.accounts.push(account);
-        self
-    }
-
-    /// Replaces every account.
-    pub fn accounts(mut self, accounts: impl IntoIterator<Item = Account>) -> Self {
-        self.accounts = accounts.into_iter().collect();
+    /// Sets the last name; blank text clears it.
+    pub fn last_name(mut self, last_name: impl Into<String>) -> Self {
+        self.last_name = Some(last_name.into());
         self
     }
 
@@ -156,15 +150,21 @@ impl MemberBuilder {
         self
     }
 
-    /// Sets the last name; blank text clears it.
-    pub fn last_name(mut self, last_name: impl Into<String>) -> Self {
-        self.last_name = Some(last_name.into());
-        self
-    }
-
     /// Sets the phone number, or clears it with `None`.
     pub fn phone(mut self, phone: impl Into<Option<PhoneNumber>>) -> Self {
         self.phone = phone.into();
+        self
+    }
+
+    /// Replaces every account.
+    pub fn accounts(mut self, accounts: impl IntoIterator<Item = Account>) -> Self {
+        self.accounts = accounts.into_iter().collect();
+        self
+    }
+
+    /// Appends an account.
+    pub fn account(mut self, account: Account) -> Self {
+        self.accounts.push(account);
         self
     }
 
@@ -180,10 +180,10 @@ impl MemberBuilder {
         Ok(Member {
             id: self.id.unwrap_or_else(MemberId::generate),
             first_name,
-            accounts: self.accounts,
-            email: self.email,
             last_name: self.last_name.and_then(text::optional),
+            email: self.email,
             phone: self.phone,
+            accounts: self.accounts,
         })
     }
 }
@@ -195,13 +195,13 @@ struct MemberRecord {
     id: MemberId,
     first_name: String,
     #[serde(default)]
-    accounts: Vec<Account>,
+    last_name: Option<String>,
     #[serde(default)]
     email: Option<Email>,
     #[serde(default)]
-    last_name: Option<String>,
-    #[serde(default)]
     phone: Option<PhoneNumber>,
+    #[serde(default)]
+    accounts: Vec<Account>,
 }
 
 /// Builds the member `record` describes, through the checks of the builder.

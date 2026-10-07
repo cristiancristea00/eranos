@@ -43,6 +43,8 @@ use crate::{ExchangeRate, Money};
 )]
 #[non_exhaustive]
 pub enum Cost {
+    /// An amount in the group currency.
+    Local(Money),
     /// An amount in another currency, with the rate into the group
     /// currency; made by [`Money::at`].
     #[non_exhaustive]
@@ -53,8 +55,6 @@ pub enum Cost {
         /// currency is worth.
         rate: ExchangeRate,
     },
-    /// An amount in the group currency.
-    Local(Money),
 }
 
 impl Cost {
@@ -84,7 +84,7 @@ impl Cost {
     #[must_use]
     pub const fn amount(self) -> Money {
         match self {
-            Self::Converted { amount, .. } | Self::Local(amount) => amount,
+            Self::Local(amount) | Self::Converted { amount, .. } => amount,
         }
     }
 
@@ -93,8 +93,8 @@ impl Cost {
     #[must_use]
     pub const fn with_amount(self, amount: Money) -> Self {
         match self {
-            Self::Converted { rate, .. } => Self::Converted { amount, rate },
             Self::Local(_) => Self::Local(amount),
+            Self::Converted { rate, .. } => Self::Converted { amount, rate },
         }
     }
 
@@ -103,8 +103,8 @@ impl Cost {
     #[must_use]
     pub const fn exchange_rate(self) -> ExchangeRate {
         match self {
-            Self::Converted { rate, .. } => rate,
             Self::Local(_) => ExchangeRate::ONE,
+            Self::Converted { rate, .. } => rate,
         }
     }
 
@@ -125,8 +125,8 @@ impl Cost {
     #[must_use]
     pub const fn conversion(self) -> Option<ExchangeRate> {
         match self {
-            Self::Converted { rate, .. } => Some(rate),
             Self::Local(_) => None,
+            Self::Converted { rate, .. } => Some(rate),
         }
     }
 }
@@ -139,18 +139,18 @@ impl From<Money> for Cost {
 
 /// Builds a value from a [`Cost`], one method per kind of cost.
 pub trait FromCost: Sized {
-    /// The value for an `amount` in another currency, converted at `rate`.
-    fn converted(amount: Money, rate: ExchangeRate) -> Self;
-
     /// The value for an `amount` in the group currency.
     fn local(amount: Money) -> Self;
+
+    /// The value for an `amount` in another currency, converted at `rate`.
+    fn converted(amount: Money, rate: ExchangeRate) -> Self;
 
     /// The value for `cost`, from the method of its variant.
     #[must_use]
     fn from_cost(cost: Cost) -> Self {
         match cost {
-            Cost::Converted { amount, rate } => Self::converted(amount, rate),
             Cost::Local(amount) => Self::local(amount),
+            Cost::Converted { amount, rate } => Self::converted(amount, rate),
         }
     }
 }

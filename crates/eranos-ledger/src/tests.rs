@@ -5,6 +5,8 @@
 //! numbers permanently wrong. A balance converted through `FromBalance`
 //! keeps its standing.
 
+use std::cmp::Ordering;
+
 use super::*;
 
 fn member(number: u8) -> MemberId {
@@ -16,7 +18,7 @@ fn category(number: u8) -> CategoryId {
 }
 
 const fn eur(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 /// The pair of `from` owing or paying `to`.
@@ -27,18 +29,18 @@ const fn pair(from: MemberId, to: MemberId) -> MemberPair {
 /// What one participant of an expense consumed, in minor units.
 #[derive(Debug, Clone, Copy)]
 struct Share {
-    amount: i64,
     member: MemberId,
+    amount: i64,
 }
 
 /// The share of `member`: `amount` minor units.
-const fn share(amount: i64, member: MemberId) -> Share {
-    Share { amount, member }
+const fn share(member: MemberId, amount: i64) -> Share {
+    Share { member, amount }
 }
 
 /// The key of `member`'s spending in `category`.
-const fn member_category(category: CategoryId, member: MemberId) -> MemberCategory {
-    MemberCategory { category, member }
+const fn member_category(member: MemberId, category: CategoryId) -> MemberCategory {
+    MemberCategory { member, category }
 }
 
 /// The spending of `total` minor units in `category`.
@@ -64,11 +66,11 @@ fn expense(total: i64, payer: MemberId, participants: &[Share]) -> ResolvedExpen
         .iter()
         .filter(|participant| participant.member != payer)
         .map(|debtor| Debt {
-            amount: debtor.amount,
             members: pair(debtor.member, payer),
+            amount: debtor.amount,
         })
         .collect();
-    ResolvedExpense::new(debts, members.into_values().collect(), eur(0), eur(total))
+    ResolvedExpense::new(members.into_values().collect(), eur(total), eur(0), debts)
 }
 
 fn applied(ledger: &mut Ledger, change: impl FnOnce(&mut Delta)) -> Result<(), MoneyError> {
@@ -84,7 +86,7 @@ fn an_expense_moves_every_total_by_its_shares() {
     let (ana, bob) = (member(1), member(2));
     let food = category(1);
     let mut ledger = Ledger::new(Currency::EUR);
-    let dinner = expense(3000, ana, &[share(1000, ana), share(2000, bob)]);
+    let dinner = expense(3000, ana, &[share(ana, 1000), share(bob, 2000)]);
     applied(&mut ledger, |delta| delta.add_expense(&dinner, food, 1)).unwrap();
 
     let summary = ledger.summary();
@@ -108,14 +110,14 @@ fn an_expense_moves_every_total_by_its_shares() {
 fn removing_an_entry_restores_the_ledger_exactly() {
     let (ana, bob) = (member(1), member(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let first = expense(3000, ana, &[share(1500, ana), share(1500, bob)]);
+    let first = expense(3000, ana, &[share(ana, 1500), share(bob, 1500)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&first, CategoryId::UNCATEGORISED, 1);
     })
     .unwrap();
     let before = ledger.clone();
 
-    let second = expense(900, bob, &[share(450, ana), share(450, bob)]);
+    let second = expense(900, bob, &[share(ana, 450), share(bob, 450)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&second, category(2), 1);
     })
@@ -147,7 +149,7 @@ fn removing_an_entry_restores_the_ledger_exactly() {
 fn a_transfer_moves_balances_but_not_spending() {
     let (ana, bob) = (member(1), member(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let lunch = expense(2000, ana, &[share(1000, ana), share(1000, bob)]);
+    let lunch = expense(2000, ana, &[share(ana, 1000), share(bob, 1000)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&lunch, CategoryId::UNCATEGORISED, 1);
     })
@@ -173,8 +175,8 @@ fn a_transfer_moves_balances_but_not_spending() {
 fn moving_a_category_equals_filing_its_expenses_there_from_the_start() {
     let (ana, bob) = (member(1), member(2));
     let (food, fuel) = (category(1), category(2));
-    let lunch = expense(1000, ana, &[share(500, ana), share(500, bob)]);
-    let taxi = expense(600, bob, &[share(600, ana)]);
+    let lunch = expense(1000, ana, &[share(ana, 500), share(bob, 500)]);
+    let taxi = expense(600, bob, &[share(ana, 600)]);
     let mut moved = Ledger::new(Currency::EUR);
     applied(&mut moved, |delta| {
         delta.add_expense(&lunch, food, 1);
@@ -211,10 +213,10 @@ fn member_pairs_order_by_the_first_member_then_the_second() {
 fn member_category_keys_order_by_member_then_category() {
     let (ana, bob) = (member(1), member(2));
     let (food, fuel) = (category(1), category(2));
-    assert!(member_category(fuel, ana) < member_category(CategoryId::UNCATEGORISED, bob));
-    assert!(member_category(food, ana) < member_category(fuel, ana));
+    assert!(member_category(ana, fuel) < member_category(bob, CategoryId::UNCATEGORISED));
+    assert!(member_category(ana, food) < member_category(ana, fuel));
     assert_eq!(
-        member_category(food, ana).cmp(&member_category(food, ana)),
+        member_category(ana, food).cmp(&member_category(ana, food)),
         Ordering::Equal
     );
 }
@@ -241,7 +243,7 @@ fn pair_debts_net_in_both_directions() {
 fn an_overflowing_change_is_refused_whole() {
     let (ana, bob) = (member(1), member(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let big = expense(i64::MAX, ana, &[share(i64::MAX, bob)]);
+    let big = expense(i64::MAX, ana, &[share(bob, i64::MAX)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&big, CategoryId::UNCATEGORISED, 1);
     })
@@ -249,7 +251,7 @@ fn an_overflowing_change_is_refused_whole() {
     let before = ledger.clone();
 
     // A second one would overflow the spending total.
-    let small = expense(1, bob, &[share(1, ana)]);
+    let small = expense(1, bob, &[share(ana, 1)]);
     assert_eq!(
         applied(&mut ledger, |delta| delta.add_expense(
             &small,
@@ -286,18 +288,14 @@ fn an_overflowing_change_is_refused_whole() {
 fn every_value_is_range_checked() {
     let (ana, bob) = (member(1), member(2));
     let beyond = i128::from(i64::MAX) + 1;
-    // Net, paid, received, sent, and share in turn.
+    // Paid, share, sent, received, and net in turn.
     let changes = [
-        TotalsChange {
-            net: beyond,
-            ..TotalsChange::default()
-        },
         TotalsChange {
             paid: beyond,
             ..TotalsChange::default()
         },
         TotalsChange {
-            received: beyond,
+            share: beyond,
             ..TotalsChange::default()
         },
         TotalsChange {
@@ -305,29 +303,30 @@ fn every_value_is_range_checked() {
             ..TotalsChange::default()
         },
         TotalsChange {
-            share: beyond,
+            received: beyond,
+            ..TotalsChange::default()
+        },
+        TotalsChange {
+            net: beyond,
             ..TotalsChange::default()
         },
     ];
-    let mut deltas: Vec<Delta> = changes
-        .into_iter()
-        .map(|change| Delta {
-            members: BTreeMap::from([(ana, change)]),
-            ..Delta::default()
-        })
-        .collect();
+    let mut deltas = vec![Delta {
+        total_spent: beyond,
+        ..Delta::default()
+    }];
+    deltas.extend(changes.into_iter().map(|change| Delta {
+        members: BTreeMap::from([(ana, change)]),
+        ..Delta::default()
+    }));
     deltas.extend([
-        Delta {
-            total_spent: beyond,
-            ..Delta::default()
-        },
         Delta {
             categories: BTreeMap::from([(category(1), beyond)]),
             ..Delta::default()
         },
         Delta {
             member_categories: BTreeMap::from([(
-                member_category(CategoryId::UNCATEGORISED, ana),
+                member_category(ana, CategoryId::UNCATEGORISED),
                 beyond,
             )]),
             ..Delta::default()
@@ -344,13 +343,13 @@ fn every_value_is_range_checked() {
     }
 }
 
-/// The balance reads the sign of the net: owed money is `GetsBack`, debt is
-/// `Owes` with a positive amount, and zero is `Settled`.
+/// The balance reads the sign of the net: debt is `Owes` with a positive
+/// amount, zero is `Settled`, and owed money is `GetsBack`.
 #[test]
 fn a_balance_reads_the_sign_of_the_net() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let mut ledger = Ledger::new(Currency::EUR);
-    let taxi = expense(1200, ana, &[share(1200, bob)]);
+    let taxi = expense(1200, ana, &[share(bob, 1200)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&taxi, CategoryId::UNCATEGORISED, 1);
     })
@@ -378,11 +377,11 @@ fn member_category_totals_list_only_that_member() {
     let (ana, bob) = (member(1), member(2));
     let (food, fuel) = (category(1), category(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let lunch = expense(1000, ana, &[share(500, ana), share(500, bob)]);
+    let lunch = expense(1000, ana, &[share(ana, 500), share(bob, 500)]);
     applied(&mut ledger, |delta| delta.add_expense(&lunch, food, 1)).unwrap();
-    let taxi = expense(600, bob, &[share(600, ana)]);
+    let taxi = expense(600, bob, &[share(ana, 600)]);
     applied(&mut ledger, |delta| delta.add_expense(&taxi, fuel, 1)).unwrap();
-    let snack = expense(300, ana, &[share(300, ana)]);
+    let snack = expense(300, ana, &[share(ana, 300)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&snack, CategoryId::UNCATEGORISED, 1);
     })
@@ -418,10 +417,10 @@ fn member_category_totals_list_a_member_between_others_whole() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let (food, fuel) = (category(1), category(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let everyone = [share(200, ana), share(200, bob), share(200, carol)];
+    let everyone = [share(ana, 200), share(bob, 200), share(carol, 200)];
     applied(&mut ledger, |delta| {
         delta.add_expense(&expense(600, ana, &everyone), CategoryId::UNCATEGORISED, 1);
-        delta.add_expense(&expense(400, bob, &[share(400, bob)]), food, 1);
+        delta.add_expense(&expense(400, bob, &[share(bob, 400)]), food, 1);
         delta.add_expense(&expense(600, carol, &everyone), fuel, 1);
     })
     .unwrap();
@@ -454,7 +453,7 @@ fn member_category_totals_list_a_member_between_others_whole() {
 #[test]
 fn expense_shares_look_up_members() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
-    let shares = expense(1000, ana, &[share(400, ana), share(600, bob)]).shares;
+    let shares = expense(1000, ana, &[share(ana, 400), share(bob, 600)]).shares;
     assert_eq!(shares.member(bob).map(MemberShare::share), Some(eur(600)));
     assert_eq!(shares.member(ana).map(MemberShare::paid), Some(eur(1000)));
     assert_eq!(shares.member(ana).map(MemberShare::member), Some(ana));
@@ -477,7 +476,7 @@ struct MemberNet {
 fn a_member_summary_names_its_member() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let mut ledger = Ledger::new(Currency::EUR);
-    let shares = expense(1000, ana, &[share(500, ana), share(500, bob)]);
+    let shares = expense(1000, ana, &[share(ana, 500), share(bob, 500)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&shares, CategoryId::UNCATEGORISED, 1);
     })
@@ -511,22 +510,22 @@ fn a_member_summary_names_its_member() {
 /// A balance as a crate outside this one converts it.
 #[derive(Debug, PartialEq, Eq)]
 enum ConvertedBalance {
-    GetsBack(Money),
     Owes(Money),
     Settled,
+    GetsBack(Money),
 }
 
 impl FromBalance for ConvertedBalance {
-    fn gets_back(amount: Money) -> Self {
-        Self::GetsBack(amount)
-    }
-
     fn owes(amount: Money) -> Self {
         Self::Owes(amount)
     }
 
     fn settled() -> Self {
         Self::Settled
+    }
+
+    fn gets_back(amount: Money) -> Self {
+        Self::GetsBack(amount)
     }
 }
 
@@ -535,15 +534,15 @@ impl FromBalance for ConvertedBalance {
 #[test]
 fn a_balance_converts_through_the_method_of_its_variant() {
     assert_eq!(
-        ConvertedBalance::from_balance(Balance::GetsBack(eur(1_200))),
-        ConvertedBalance::GetsBack(eur(1_200))
-    );
-    assert_eq!(
         ConvertedBalance::from_balance(Balance::Owes(eur(300))),
         ConvertedBalance::Owes(eur(300))
     );
     assert_eq!(
         ConvertedBalance::from_balance(Balance::Settled),
         ConvertedBalance::Settled
+    );
+    assert_eq!(
+        ConvertedBalance::from_balance(Balance::GetsBack(eur(1_200))),
+        ConvertedBalance::GetsBack(eur(1_200))
     );
 }

@@ -40,8 +40,8 @@ public final class Report {
 
     /**
      * A row of a report's table, as the Rust examples' row structs are: a record whose components
-     * are in alphabetical order, with a constant {@code HEADERS} that lists its columns' headers in
-     * the order the report prints them.
+     * are in the order of its columns, with a constant {@code HEADERS} that lists its columns'
+     * headers in the order the report prints them.
      */
     public interface Row {
         /**
@@ -153,11 +153,11 @@ public final class Report {
     public static List<MemberId> participants(ExpenseSplit split) {
         List<MemberId> members =
                 switch (split) {
+                    case ExpenseSplit.Whole whole -> whole.split().members();
                     case ExpenseSplit.Itemised itemised ->
                             itemised.items().stream()
                                     .flatMap(item -> item.split().members().stream())
                                     .toList();
-                    case ExpenseSplit.Whole whole -> whole.split().members();
                 };
         return members.stream().distinct().sorted(Comparator.comparing(MemberId::value)).toList();
     }

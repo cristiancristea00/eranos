@@ -13,7 +13,7 @@ fn rate(text: &str) -> ExchangeRate {
 }
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(Currency::EUR, minor_units)
+    Money::from_minor_units(minor_units, Currency::EUR)
 }
 
 /// Rates typed from a bank statement would be refused or misread.
@@ -246,33 +246,33 @@ fn exact_halves_round_away_from_zero() {
 fn convert_scales_between_decimal_places() {
     // No decimals into two: 1000 JPY at 0.0061 is 6.10 EUR.
     assert_eq!(
-        rate("0.0061").convert(Money::from_minor_units(Currency::JPY, 1_000), Currency::EUR),
+        rate("0.0061").convert(Money::from_minor_units(1_000, Currency::JPY), Currency::EUR),
         Ok(euros(610))
     );
     // Two decimals into none: 10.00 EUR at 162.5 is 1625 JPY, and 0.01 EUR
     // is 1.625 JPY, rounded to 2.
     assert_eq!(
         rate("162.5").convert(euros(1_000), Currency::JPY),
-        Ok(Money::from_minor_units(Currency::JPY, 1_625))
+        Ok(Money::from_minor_units(1_625, Currency::JPY))
     );
     assert_eq!(
         rate("162.5").convert(euros(1), Currency::JPY),
-        Ok(Money::from_minor_units(Currency::JPY, 2))
+        Ok(Money::from_minor_units(2, Currency::JPY))
     );
     // Two decimals into three: 10.00 EUR at 0.41 is 4.100 BHD.
     assert_eq!(
         rate("0.41").convert(euros(1_000), Currency::BHD),
-        Ok(Money::from_minor_units(Currency::BHD, 4_100))
+        Ok(Money::from_minor_units(4_100, Currency::BHD))
     );
     // Three decimals into two: 1.234 BHD at 2.4 is 2.9616 EUR, rounded down.
     assert_eq!(
-        rate("2.4").convert(Money::from_minor_units(Currency::BHD, 1_234), Currency::EUR),
+        rate("2.4").convert(Money::from_minor_units(1_234, Currency::BHD), Currency::EUR),
         Ok(euros(296))
     );
     // No decimals into four: 1 JPY at 1 is 1.0000 CLF.
     assert_eq!(
-        rate("1").convert(Money::from_minor_units(Currency::JPY, 1), Currency::CLF),
-        Ok(Money::from_minor_units(Currency::CLF, 10_000))
+        rate("1").convert(Money::from_minor_units(1, Currency::JPY), Currency::CLF),
+        Ok(Money::from_minor_units(10_000, Currency::CLF))
     );
 }
 
@@ -298,7 +298,7 @@ fn conversions_out_of_range_overflow() {
     // The largest amount at rate 1 fits.
     assert_eq!(
         rate("1").convert(euros(i64::MAX), Currency::USD),
-        Ok(Money::from_minor_units(Currency::USD, i64::MAX))
+        Ok(Money::from_minor_units(i64::MAX, Currency::USD))
     );
 }
 
@@ -345,8 +345,8 @@ proptest! {
             .collect();
         let target = targets[target_choice.index(targets.len())];
         prop_assert_eq!(
-            rate("1").convert(Money::from_minor_units(source, minor_units), target),
-            Ok(Money::from_minor_units(target, minor_units))
+            rate("1").convert(Money::from_minor_units(minor_units, source), target),
+            Ok(Money::from_minor_units(minor_units, target))
         );
     }
 }

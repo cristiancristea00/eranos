@@ -19,9 +19,9 @@ import eranos.examples.section
 import eranos.examples.totals
 
 private data class MemberCategoryRow(
+    val name: String,
     val food: Money,
     val lodging: Money,
-    val name: String,
     val transport: Money,
     val uncategorised: Money,
 ) : Row {
@@ -34,9 +34,9 @@ private data class MemberCategoryRow(
 }
 
 private data class StrategyRow(
+    val strategy: String,
     val computedBy: String,
     val payments: Int,
-    val strategy: String,
 ) : Row {
     override val cells: List<String>
         get() = listOf(strategy, computedBy, "$payments")
@@ -64,7 +64,7 @@ internal fun summary(
     printCategories(group)
     println("And each member's consumption per category:")
     val builtIn = builtInCategory(group)
-    val zero = Money(group.currencyBlocking(), 0)
+    val zero = Money(0, group.currencyBlocking())
     printTable(
         MemberCategoryRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
@@ -76,9 +76,9 @@ internal fun summary(
                         .orEmpty()
                 val total = { category: CategoryId? -> totals.firstOrNull { total -> total.category == category }?.total ?: zero }
                 MemberCategoryRow(
+                    name = member.firstName,
                     food = total(categories.food),
                     lodging = total(categories.lodging),
-                    name = member.firstName,
                     transport = total(categories.transport),
                     uncategorised = total(builtIn),
                 )
@@ -179,9 +179,9 @@ internal fun newCurrency(
 internal fun strategyName(strategy: SettlementStrategy): String =
     when (strategy) {
         SettlementStrategy.ADAPTIVE -> "Adaptive"
-        SettlementStrategy.DIRECT -> "Direct"
-        SettlementStrategy.GREEDY -> "Greedy"
         SettlementStrategy.MINIMUM_TRANSFERS -> "MinimumTransfers"
+        SettlementStrategy.GREEDY -> "Greedy"
+        SettlementStrategy.DIRECT -> "Direct"
     }
 
 internal fun settlingUp(group: Group) {
@@ -192,7 +192,7 @@ internal fun settlingUp(group: Group) {
             // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
             val computedBy = if (SettlementStrategy.ADAPTIVE == strategy) SettlementStrategy.MINIMUM_TRANSFERS else strategy
             check(computedBy == settlement.strategy)
-            StrategyRow(computedBy = strategyName(settlement.strategy), payments = settlement.payments.size, strategy = strategyName(strategy))
+            StrategyRow(strategy = strategyName(strategy), computedBy = strategyName(settlement.strategy), payments = settlement.payments.size)
         }
     println(
         """
@@ -207,11 +207,11 @@ internal fun settlingUp(group: Group) {
     println("The group follows the minimum plan:")
     printTable(
         PaymentRow.HEADERS,
-        plan.payments.map { payment -> PaymentRow(amount = payment.amount, from = name(group, payment.from), to = name(group, payment.to)) },
+        plan.payments.map { payment -> PaymentRow(from = name(group, payment.from), to = name(group, payment.to), amount = payment.amount) },
         numbersFrom = 2,
     )
     for (payment in plan.payments) {
-        group.addBlocking(Transfer(Cost.Local(payment.amount), october(7), payment.from, payment.to))
+        group.addBlocking(Transfer(payment.from, payment.to, Cost.Local(payment.amount), october(7)))
     }
     println("Each payment, once made, is recorded as a transfer, and every balance is settled:")
     printBalances(group)

@@ -8,11 +8,11 @@ import Report
 struct LineRow: TableRow {
     static let headers = ["Item", "Shared by", "Quantity", "Unit price", "Line total"]
 
-    let lineTotal: Money
     let name: String
     let participants: String
     let quantity: Int32
     let unitPrice: Money
+    let lineTotal: Money
 
     var cells: [String] {
         [name, participants, "\(quantity)", "\(unitPrice)", "\(lineTotal)"]
@@ -22,12 +22,12 @@ struct LineRow: TableRow {
 struct TipRow: TableRow {
     static let headers = ["Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"]
 
-    let equalTip: Money
-    let equalTotal: Money
     let name: String
+    let subtotal: Money
     let proportionalTip: Money
     let proportionalTotal: Money
-    let subtotal: Money
+    let equalTip: Money
+    let equalTotal: Money
 
     var cells: [String] {
         [name, "\(subtotal)", "\(proportionalTip)", "\(proportionalTotal)", "\(equalTip)", "\(equalTotal)"]
@@ -50,14 +50,14 @@ func expect(_ expected: String, _ found: Money?) throws(EranosError) {
 /// The receipt: every line with the members who had it.
 func receipt(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(EranosError) -> [Item] {
     [
-        Item(name: "Ciorbă", split: .equal([ana]), unitPrice: try eur("8.00")),
-        Item(name: "Sarmale", split: .equal([bob, carol]), unitPrice: try eur("14.00"), quantity: 2),
+        Item(name: "Ciorbă", unitPrice: try eur("8.00"), split: .equal([ana])),
+        Item(name: "Sarmale", unitPrice: try eur("14.00"), split: .equal([bob, carol]), quantity: 2),
         Item(
             name: "Papanași",
-            split: .parts([MemberParts(member: ana, parts: try Parts(hundredths: 100)), MemberParts(member: carol, parts: try Parts(hundredths: 200))]),
-            unitPrice: try eur("9.00")
+            unitPrice: try eur("9.00"),
+            split: .parts([MemberParts(member: ana, parts: try Parts(hundredths: 100)), MemberParts(member: carol, parts: try Parts(hundredths: 200))])
         ),
-        Item(name: "Lemonade", split: .equal([ana, bob, carol]), unitPrice: try eur("3.00"), quantity: 3)
+        Item(name: "Lemonade", unitPrice: try eur("3.00"), split: .equal([ana, bob, carol]), quantity: 3)
     ]
 }
 
@@ -74,11 +74,11 @@ func consumed(_ shares: ExpenseShares?, _ member: Member.ID) -> Money? {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(currency: euro, name: "Dinner at Caru' cu Bere")
+    let group = try Group(name: "Dinner at Caru' cu Bere", currency: euro)
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
     let carol = try group.add(Member(firstName: "Carol"))
-    let day = try CalendarDate(day: 23, month: 9, year: 2026)
+    let day = try CalendarDate(year: 2026, month: 9, day: 23)
 
     title("\(try group.name()): an itemised bill")
     print("""
@@ -90,11 +90,11 @@ func main() throws(EranosError) {
     printTable(
         try receipt(ana, bob, carol).map { item throws(EranosError) in
             LineRow(
-                lineTotal: Money(currency: item.unitPrice.currency, minorUnits: item.unitPrice.minorUnits * Int64(item.quantity)),
                 name: item.name,
                 participants: try names(group, item.split.members),
                 quantity: item.quantity,
-                unitPrice: item.unitPrice
+                unitPrice: item.unitPrice,
+                lineTotal: Money(minorUnits: item.unitPrice.minorUnits * Int64(item.quantity), currency: item.unitPrice.currency)
             )
         },
         numbersFrom: 2
@@ -108,15 +108,15 @@ func main() throws(EranosError) {
     // The dinner, its tip of 10 % shared by `distribution`.
     let bill = { (distribution: TipDistribution) throws(EranosError) -> Expense in
         Expense(
-            cost: .local(try eur("54.00")),
-            date: day,
             name: "Dinner",
+            cost: .local(try eur("54.00")),
             payers: .equal([ana]),
             split: .itemised(try receipt(ana, bob, carol)),
+            date: day,
             tip: Tip(value: .percentage(try Percentage(parsing: "10")), distribution: distribution)
         )
     }
-    let untipped = Expense(cost: .local(try eur("54.00")), date: day, name: "Dinner", payers: .equal([ana]), split: .itemised(try receipt(ana, bob, carol)))
+    let untipped = Expense(name: "Dinner", cost: .local(try eur("54.00")), payers: .equal([ana]), split: .itemised(try receipt(ana, bob, carol)), date: day)
     let ordered = try preview(group, untipped)
     let proportional = try group.add(try bill(.proportional))
     let byConsumption = try group.shares(of: proportional)
@@ -134,12 +134,12 @@ func main() throws(EranosError) {
         }
         rows.append(
             TipRow(
-                equalTip: try equalTotal.subtracting(subtotal),
-                equalTotal: equalTotal,
                 name: try names(group, [member]),
+                subtotal: subtotal,
                 proportionalTip: try proportionalTotal.subtracting(subtotal),
                 proportionalTotal: proportionalTotal,
-                subtotal: subtotal
+                equalTip: try equalTotal.subtracting(subtotal),
+                equalTotal: equalTotal
             )
         )
     }
@@ -151,7 +151,7 @@ func main() throws(EranosError) {
 
     section("3. A total that does not match is refused")
     do {
-        _ = try group.add(Expense(cost: .local(try eur("55.00")), date: day, name: "Dinner", payers: .equal([ana]), split: .itemised(try receipt(ana, bob, carol))))
+        _ = try group.add(Expense(name: "Dinner", cost: .local(try eur("55.00")), payers: .equal([ana]), split: .itemised(try receipt(ana, bob, carol)), date: day))
         preconditionFailure("the mismatch must be refused")
     } catch {
         print("""

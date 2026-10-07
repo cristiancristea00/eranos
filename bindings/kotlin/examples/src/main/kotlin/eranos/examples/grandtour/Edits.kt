@@ -25,8 +25,8 @@ import eranos.examples.section
 import eranos.examples.totals
 
 private data class EditRow(
-    val edit: String,
     val entry: String,
+    val edit: String,
 ) : Row {
     override val cells: List<String>
         get() = listOf(entry, edit)
@@ -37,9 +37,9 @@ private data class EditRow(
 }
 
 private data class StatusRow(
-    val balance: Balance,
     val name: String,
     val status: String,
+    val balance: Balance,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, status, "$balance")
@@ -60,23 +60,23 @@ internal fun anotherCurrency(
     val parking =
         group.addBlocking(
             Expense(
-                Cost.Converted(ron("250.00"), rate),
-                october(6),
                 "Airport parking",
+                Cost.Converted(ron("250.00"), rate),
                 Split.Equal(listOf(people.ana)),
                 ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob))),
+                october(6),
                 category = categories.transport,
             ),
         )
     val cash =
         group.addBlocking(
             Transfer(
-                Cost.Converted(ron("100.00"), rate),
-                october(6),
                 people.bob,
                 people.ana,
-                note = "Cash for the parking",
+                Cost.Converted(ron("100.00"), rate),
+                october(6),
                 time = TimeOfDay.of(hour = 7, minute = 40),
+                note = "Cash for the parking",
             ),
         )
     println(
@@ -89,7 +89,7 @@ internal fun anotherCurrency(
     printEntries(group) { currency -> euro != currency }
     val transfer = checkNotNull(group.transferBlocking(cash)) { "the cash was recorded" }
     val converted = ExchangeRate.parse("0.2011").convert(ron("250.00"), euro)
-    val counted = group.transferAmountBlocking(cash) ?: Money(euro, 0)
+    val counted = group.transferAmountBlocking(cash) ?: Money(0, euro)
     println(
         """
         Bob's transfer, at ${transfer.time?.toString().orEmpty()} ("${transfer.note.orEmpty()}"), counts as $counted.
@@ -119,41 +119,41 @@ private fun replaceAndRemove(
     // Bob entered the coffee twice.
     val coffee =
         Expense(
-            Cost.Local(eur("6.00")),
-            october(5),
             "Coffee",
+            Cost.Local(eur("6.00")),
             Split.Equal(listOf(people.bob)),
             ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol))),
+            october(5),
             category = categories.food,
         )
     group.addBlocking(coffee)
     val copy = group.addBlocking(coffee)
     val removed = group.removeBlocking(copy)
     // Dan's part of the apartment was 120.00, not 100.00.
-    val first = group.addBlocking(Transfer(Cost.Local(eur("100.00")), october(5), people.dan, people.ana))
+    val first = group.addBlocking(Transfer(people.dan, people.ana, Cost.Local(eur("100.00")), october(5)))
     val fixed = checkNotNull(group.transferBlocking(first)) { "the transfer was added" }.copy(cost = Cost.Local(eur("120.00")), note = "Apartment")
     val replaced = group.replaceBlocking(fixed)
     // Carol sent 10.00 to the wrong member.
-    val mistake = group.addBlocking(Transfer(Cost.Local(eur("10.00")), october(5), people.carol, people.bob))
+    val mistake = group.addBlocking(Transfer(people.carol, people.bob, Cost.Local(eur("10.00")), october(5)))
     val undone = group.removeBlocking(mistake)
 
     check(eur("90.00") == previous.cost.amount)
     check(null == group.expenseBlocking(copy))
     check(eur("120.00") == group.transferAmountBlocking(first))
     check(null == group.transferBlocking(mistake))
-    val zero = Money(Currency.of("EUR"), 0)
+    val zero = Money(0, Currency.of("EUR"))
     val dinner = group.expenseBlocking(seafood)
     val apartment = group.transferBlocking(first)
     return listOf(
-        EditRow(edit = "${previous.cost.amount} became ${dinner?.cost?.amount ?: zero}, at ${dinner?.description.orEmpty()}", entry = previous.name),
-        EditRow(edit = "entered twice; the copy of ${removed.cost.amount} was removed", entry = removed.name),
+        EditRow(entry = previous.name, edit = "${previous.cost.amount} became ${dinner?.cost?.amount ?: zero}, at ${dinner?.description.orEmpty()}"),
+        EditRow(entry = removed.name, edit = "entered twice; the copy of ${removed.cost.amount} was removed"),
         EditRow(
-            edit = "${replaced.cost.amount} became ${apartment?.cost?.amount ?: zero}, noted ${apartment?.note.orEmpty()}",
             entry = "${name(group, people.dan)} to ${name(group, people.ana)}",
+            edit = "${replaced.cost.amount} became ${apartment?.cost?.amount ?: zero}, noted ${apartment?.note.orEmpty()}",
         ),
         EditRow(
-            edit = "${undone.cost.amount} sent to the wrong member; removed",
             entry = "${name(group, people.carol)} to ${name(group, people.bob)}",
+            edit = "${undone.cost.amount} sent to the wrong member; removed",
         ),
     )
 }
@@ -179,25 +179,25 @@ internal fun edits(
     val before = group.summaryBlocking()
     val taxi =
         Expense(
-            Cost.Local(eur("30.00")),
-            october(6),
             "Taxi",
+            Cost.Local(eur("30.00")),
             Split.Equal(listOf(people.ana)),
             ExpenseSplit.Whole(
                 Split.Percentages(
                     listOf(MemberPercentage(people.ana, Percentage.parse("50")), MemberPercentage(people.bob, Percentage.parse("49.99"))),
                 ),
             ),
+            october(6),
         )
     val unbalanced = refusal { group.addBlocking(taxi) }
-    val toHerself = refusal { group.addBlocking(Transfer(Cost.Local(eur("5.00")), october(6), people.ana, people.ana)) }
+    val toHerself = refusal { group.addBlocking(Transfer(people.ana, people.ana, Cost.Local(eur("5.00")), october(6))) }
     val souvenirs =
         Expense(
-            Cost.Local(ron("40.00")),
-            october(6),
             "Souvenirs",
+            Cost.Local(ron("40.00")),
             Split.Equal(listOf(people.ana)),
             ExpenseSplit.Whole(Split.Equal(listOf(people.ana))),
+            october(6),
         )
     val unrated = refusal { group.addBlocking(souvenirs) }
     println("A change that does not fit is refused, and the group stays as it was:")
@@ -228,11 +228,11 @@ internal fun comingsAndGoings(
     group.archiveBlocking(people.dan)
     val dinner =
         Expense(
-            Cost.Local(eur("40.00")),
-            october(6),
             "Farewell dinner",
+            Cost.Local(eur("40.00")),
             Split.Equal(listOf(people.ana)),
             ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol, people.dan))),
+            october(6),
         )
     val farewell = refusal { group.addBlocking(dinner) }
     val inUse = refusal { group.removeBlocking(people.dan) }
@@ -248,7 +248,7 @@ internal fun comingsAndGoings(
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id ->
                 totals(id, summary)?.let { totals ->
-                    StatusRow(balance = totals.balance, name = member.firstName, status = if (group.isArchivedBlocking(id)) "archived" else "active")
+                    StatusRow(name = member.firstName, status = if (group.isArchivedBlocking(id)) "archived" else "active", balance = totals.balance)
                 }
             }
         }

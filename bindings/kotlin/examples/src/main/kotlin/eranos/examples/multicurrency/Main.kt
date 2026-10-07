@@ -23,11 +23,11 @@ import eranos.examples.section
 import eranos.examples.totals
 
 private data class EntryRow(
-    val converted: Money,
     val name: String,
-    val original: Money,
     val payer: String,
+    val original: Money,
     val rate: ExchangeRate,
+    val converted: Money,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, payer, "$original", "$rate", "$converted")
@@ -38,12 +38,12 @@ private data class EntryRow(
 }
 
 private data class BalanceRow(
-    val balance: Balance,
-    val consumed: Money,
     val name: String,
     val paid: Money,
-    val received: Money,
+    val consumed: Money,
     val sent: Money,
+    val received: Money,
+    val balance: Balance,
 ) : Row {
     override val cells: List<String>
         get() = listOf(name, "$paid", "$consumed", "$sent", "$received", "$balance")
@@ -61,25 +61,25 @@ private fun name(
 
 /** Every expense and transfer, as entered and in the group currency. */
 private fun printEntries(group: Group) {
-    val zero = Money(group.currencyBlocking(), 0)
+    val zero = Money(0, group.currencyBlocking())
     val expenses =
         group.expensesBlocking().map { expense ->
             EntryRow(
-                converted = expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero,
                 name = expense.name,
-                original = expense.total(),
                 payer = names(group, expense.payers.members),
+                original = expense.total(),
                 rate = rate(expense.cost),
+                converted = expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero,
             )
         }
     val transfers =
         group.transfersBlocking().map { transfer ->
             EntryRow(
-                converted = transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero,
                 name = "Transfer to ${name(group, transfer.to)}",
-                original = transfer.cost.amount,
                 payer = name(group, transfer.from),
+                original = transfer.cost.amount,
                 rate = rate(transfer.cost),
+                converted = transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero,
             )
         }
     printTable(EntryRow.HEADERS, expenses + transfers, numbersFrom = 2)
@@ -88,8 +88,8 @@ private fun printEntries(group: Group) {
 /** The rate [cost] was entered at: 1 for a cost in the group currency. */
 private fun rate(cost: Cost): ExchangeRate =
     when (cost) {
-        is Cost.Converted -> cost.rate
         is Cost.Local -> ExchangeRate.parse("1")
+        is Cost.Converted -> cost.rate
     }
 
 private fun printBalances(group: Group) {
@@ -99,12 +99,12 @@ private fun printBalances(group: Group) {
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id -> totals(id, summary) }?.let { totals ->
                 BalanceRow(
-                    balance = totals.balance,
-                    consumed = totals.share,
                     name = member.firstName,
                     paid = totals.paid,
-                    received = totals.received,
+                    consumed = totals.share,
                     sent = totals.sent,
+                    received = totals.received,
+                    balance = totals.balance,
                 )
             }
         },
@@ -121,29 +121,29 @@ private fun expenses(
     val both = ExpenseSplit.Whole(Split.Equal(listOf(ana, bob)))
     group.addBlocking(
         Expense(
-            Cost.Converted(Money.parse("400.00", Currency.of("RON")), ExchangeRate.parse("0.2")),
-            CalendarDate.of(day = 1, month = 8, year = 2026),
             "Fuel",
+            Cost.Converted(Money.parse("400.00", Currency.of("RON")), ExchangeRate.parse("0.2")),
             Split.Equal(listOf(ana)),
             both,
+            CalendarDate.of(year = 2026, month = 8, day = 1),
         ),
     )
     group.addBlocking(
         Expense(
-            Cost.Converted(Money.parse("24000.00", Currency.of("HUF")), ExchangeRate.parse("0.0025")),
-            CalendarDate.of(day = 2, month = 8, year = 2026),
             "Dinner",
+            Cost.Converted(Money.parse("24000.00", Currency.of("HUF")), ExchangeRate.parse("0.0025")),
             Split.Equal(listOf(bob)),
             both,
+            CalendarDate.of(year = 2026, month = 8, day = 2),
         ),
     )
     group.addBlocking(
         Expense(
-            Cost.Local(Money.parse("60.00", Currency.of("EUR"))),
-            CalendarDate.of(day = 3, month = 8, year = 2026),
             "Ferry",
+            Cost.Local(Money.parse("60.00", Currency.of("EUR"))),
             Split.Equal(listOf(bob)),
             both,
+            CalendarDate.of(year = 2026, month = 8, day = 3),
         ),
     )
     printEntries(group)
@@ -163,10 +163,10 @@ private fun repayment(
     section("3. A repayment in cash, in another currency")
     group.addBlocking(
         Transfer(
-            Cost.Converted(Money.parse("100.00", Currency.of("RON")), ExchangeRate.parse("0.2")),
-            CalendarDate.of(day = 4, month = 8, year = 2026),
             ana,
             bob,
+            Cost.Converted(Money.parse("100.00", Currency.of("RON")), ExchangeRate.parse("0.2")),
+            CalendarDate.of(year = 2026, month = 8, day = 4),
             note = "Cash at the border",
         ),
     )
@@ -201,7 +201,7 @@ private fun newCurrency(group: Group) {
 fun main() {
     val euro = Currency.of("EUR")
     val leu = Currency.of("RON")
-    Group(euro, "Danube road trip").use { group ->
+    Group("Danube road trip", euro).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
 

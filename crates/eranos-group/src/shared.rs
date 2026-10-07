@@ -50,7 +50,7 @@ use crate::{Group, GroupError, Language};
 /// use eranos::cooperative::block_on;
 /// use eranos::{Currency, Group, Member, SharedGroup};
 ///
-/// let shared = SharedGroup::new(Group::builder(Currency::EUR, "Flat").build()?);
+/// let shared = SharedGroup::new(Group::builder("Flat", Currency::EUR).build()?);
 /// let other = shared.clone();
 ///
 /// // A change through one clone is read through the other.
@@ -80,55 +80,24 @@ impl SharedGroup {
         self.read_with(Group::id)
     }
 
-    // --- Categories ----------------------------------------------------------
+    // --- Name ----------------------------------------------------------------
 
-    /// Every category, as [`Group::categories`] lists them.
-    pub fn categories(&self) -> impl Future<Output = Vec<Category>> + Send + 'static {
-        self.read_with(|group| group.categories().cloned().collect())
+    /// The name, as [`Group::name`] returns it.
+    pub fn name(&self) -> impl Future<Output = String> + Send + 'static {
+        self.read_with(|group| group.name().to_owned())
     }
 
-    /// The category with this identifier, as [`Group::category`] finds it.
-    pub fn category(
-        &self,
-        id: CategoryId,
-    ) -> impl Future<Output = Option<Category>> + Send + 'static {
-        self.read_with(move |group| group.category(id).cloned())
-    }
-
-    /// Adds a category, as [`Group::add_category`] does.
+    /// Renames the group, as [`Group::set_name`] does.
     ///
     /// # Errors
     ///
-    /// As for [`Group::add_category`].
-    pub fn add_category(
+    /// As for [`Group::set_name`].
+    pub fn set_name(
         &self,
-        category: Category,
-    ) -> impl Future<Output = Result<CategoryId, GroupError>> + Send + 'static {
-        self.write_with(move |group| group.add_category(category))
-    }
-
-    /// Replaces a category, as [`Group::replace_category`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`Group::replace_category`].
-    pub fn replace_category(
-        &self,
-        category: Category,
-    ) -> impl Future<Output = Result<Category, GroupError>> + Send + 'static {
-        self.write_with(move |group| group.replace_category(category))
-    }
-
-    /// Removes a category, as [`Group::remove_category`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`Group::remove_category`].
-    pub fn remove_category(
-        &self,
-        id: CategoryId,
-    ) -> impl Future<Output = Result<Category, GroupError>> + Send + 'static {
-        self.write_with(move |group| group.remove_category(id))
+        name: impl Into<String>,
+    ) -> impl Future<Output = Result<(), GroupError>> + Send + 'static {
+        let name = name.into();
+        self.write_with(move |group| group.set_name(name))
     }
 
     // --- Currency ------------------------------------------------------------
@@ -162,68 +131,36 @@ impl SharedGroup {
         }
     }
 
-    // --- Expenses ------------------------------------------------------------
+    // --- Description ---------------------------------------------------------
 
-    /// Every expense, as [`Group::expenses`] lists them.
-    pub fn expenses(&self) -> impl Future<Output = Vec<Expense>> + Send + 'static {
-        self.read_with(|group| group.expenses().cloned().collect())
+    /// The description, if any, as [`Group::description`] returns it.
+    pub fn description(&self) -> impl Future<Output = Option<String>> + Send + 'static {
+        self.read_with(|group| group.description().map(str::to_owned))
     }
 
-    /// The expense with this identifier, as [`Group::expense`] finds it.
-    pub fn expense(&self, id: ExpenseId) -> impl Future<Output = Option<Expense>> + Send + 'static {
-        self.read_with(move |group| group.expense(id).cloned())
-    }
-
-    /// How an expense divides in the group currency, as
-    /// [`Group::expense_shares`] returns it.
-    pub fn expense_shares(
+    /// Sets the description, as [`Group::set_description`] does.
+    pub fn set_description(
         &self,
-        id: ExpenseId,
-    ) -> impl Future<Output = Option<ExpenseShares>> + Send + 'static {
-        self.read_with(move |group| group.expense_shares(id).cloned())
+        description: impl Into<String>,
+    ) -> impl Future<Output = ()> + Send + 'static {
+        let description = description.into();
+        self.write_with(move |group| group.set_description(description))
     }
 
-    /// Adds an expense, as [`Group::add_expense`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`Group::add_expense`].
-    pub fn add_expense(
+    // --- Language ------------------------------------------------------------
+
+    /// The language, if set, as [`Group::language`] returns it.
+    pub fn language(&self) -> impl Future<Output = Option<Language>> + Send + 'static {
+        self.read_with(|group| group.language().cloned())
+    }
+
+    /// Sets or clears the language, as [`Group::set_language`] does.
+    pub fn set_language(
         &self,
-        expense: Expense,
-    ) -> impl Future<Output = Result<ExpenseId, GroupError>> + Send + 'static {
-        self.write_with(move |group| group.add_expense(expense))
-    }
-
-    /// Replaces an expense, as [`Group::replace_expense`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`Group::replace_expense`].
-    pub fn replace_expense(
-        &self,
-        expense: Expense,
-    ) -> impl Future<Output = Result<Expense, GroupError>> + Send + 'static {
-        self.write_with(move |group| group.replace_expense(expense))
-    }
-
-    /// Removes an expense, as [`Group::remove_expense`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`Group::remove_expense`].
-    pub fn remove_expense(
-        &self,
-        id: ExpenseId,
-    ) -> impl Future<Output = Result<Expense, GroupError>> + Send + 'static {
-        self.write_with(move |group| group.remove_expense(id))
-    }
-
-    // --- Ledger --------------------------------------------------------------
-
-    /// The group's totals, as [`Group::summary`] returns them.
-    pub fn summary(&self) -> impl Future<Output = Summary> + Send + 'static {
-        self.read_with(|group| group.summary().clone())
+        language: impl Into<Option<Language>>,
+    ) -> impl Future<Output = ()> + Send + 'static {
+        let language = language.into();
+        self.write_with(move |group| group.set_language(language))
     }
 
     // --- Members -------------------------------------------------------------
@@ -303,47 +240,112 @@ impl SharedGroup {
         self.write_with(move |group| group.remove_member(id))
     }
 
-    // --- Name ----------------------------------------------------------------
+    // --- Categories ----------------------------------------------------------
 
-    /// The name, as [`Group::name`] returns it.
-    pub fn name(&self) -> impl Future<Output = String> + Send + 'static {
-        self.read_with(|group| group.name().to_owned())
+    /// Every category, as [`Group::categories`] lists them.
+    pub fn categories(&self) -> impl Future<Output = Vec<Category>> + Send + 'static {
+        self.read_with(|group| group.categories().cloned().collect())
     }
 
-    /// Renames the group, as [`Group::set_name`] does.
+    /// The category with this identifier, as [`Group::category`] finds it.
+    pub fn category(
+        &self,
+        id: CategoryId,
+    ) -> impl Future<Output = Option<Category>> + Send + 'static {
+        self.read_with(move |group| group.category(id).cloned())
+    }
+
+    /// Adds a category, as [`Group::add_category`] does.
     ///
     /// # Errors
     ///
-    /// As for [`Group::set_name`].
-    pub fn set_name(
+    /// As for [`Group::add_category`].
+    pub fn add_category(
         &self,
-        name: impl Into<String>,
-    ) -> impl Future<Output = Result<(), GroupError>> + Send + 'static {
-        let name = name.into();
-        self.write_with(move |group| group.set_name(name))
+        category: Category,
+    ) -> impl Future<Output = Result<CategoryId, GroupError>> + Send + 'static {
+        self.write_with(move |group| group.add_category(category))
     }
 
-    // --- Settlements ---------------------------------------------------------
-
-    /// The payments that settle every balance, as [`Group::settlement`]
-    /// computes and caches them.
-    ///
-    /// The call holds the shared lock while the exact solver fills its
-    /// table and yields as [`Group::settlement_async`] does; dropped at a
-    /// yield, it caches nothing.
+    /// Replaces a category, as [`Group::replace_category`] does.
     ///
     /// # Errors
     ///
-    /// As for [`Group::settlement`].
-    pub fn settlement(
+    /// As for [`Group::replace_category`].
+    pub fn replace_category(
         &self,
-        strategy: SettlementStrategy,
-    ) -> impl Future<Output = Result<Settlement, SettlementError>> + Send + 'static {
-        let group = Arc::clone(&self.group);
-        async move {
-            let group = group.read().await;
-            group.settlement_async(strategy).await.cloned()
-        }
+        category: Category,
+    ) -> impl Future<Output = Result<Category, GroupError>> + Send + 'static {
+        self.write_with(move |group| group.replace_category(category))
+    }
+
+    /// Removes a category, as [`Group::remove_category`] does.
+    ///
+    /// # Errors
+    ///
+    /// As for [`Group::remove_category`].
+    pub fn remove_category(
+        &self,
+        id: CategoryId,
+    ) -> impl Future<Output = Result<Category, GroupError>> + Send + 'static {
+        self.write_with(move |group| group.remove_category(id))
+    }
+
+    // --- Expenses ------------------------------------------------------------
+
+    /// Every expense, as [`Group::expenses`] lists them.
+    pub fn expenses(&self) -> impl Future<Output = Vec<Expense>> + Send + 'static {
+        self.read_with(|group| group.expenses().cloned().collect())
+    }
+
+    /// The expense with this identifier, as [`Group::expense`] finds it.
+    pub fn expense(&self, id: ExpenseId) -> impl Future<Output = Option<Expense>> + Send + 'static {
+        self.read_with(move |group| group.expense(id).cloned())
+    }
+
+    /// How an expense divides in the group currency, as
+    /// [`Group::expense_shares`] returns it.
+    pub fn expense_shares(
+        &self,
+        id: ExpenseId,
+    ) -> impl Future<Output = Option<ExpenseShares>> + Send + 'static {
+        self.read_with(move |group| group.expense_shares(id).cloned())
+    }
+
+    /// Adds an expense, as [`Group::add_expense`] does.
+    ///
+    /// # Errors
+    ///
+    /// As for [`Group::add_expense`].
+    pub fn add_expense(
+        &self,
+        expense: Expense,
+    ) -> impl Future<Output = Result<ExpenseId, GroupError>> + Send + 'static {
+        self.write_with(move |group| group.add_expense(expense))
+    }
+
+    /// Replaces an expense, as [`Group::replace_expense`] does.
+    ///
+    /// # Errors
+    ///
+    /// As for [`Group::replace_expense`].
+    pub fn replace_expense(
+        &self,
+        expense: Expense,
+    ) -> impl Future<Output = Result<Expense, GroupError>> + Send + 'static {
+        self.write_with(move |group| group.replace_expense(expense))
+    }
+
+    /// Removes an expense, as [`Group::remove_expense`] does.
+    ///
+    /// # Errors
+    ///
+    /// As for [`Group::remove_expense`].
+    pub fn remove_expense(
+        &self,
+        id: ExpenseId,
+    ) -> impl Future<Output = Result<Expense, GroupError>> + Send + 'static {
+        self.write_with(move |group| group.remove_expense(id))
     }
 
     // --- Transfers -----------------------------------------------------------
@@ -406,36 +408,34 @@ impl SharedGroup {
         self.write_with(move |group| group.remove_transfer(id))
     }
 
-    // --- Description ---------------------------------------------------------
+    // --- Ledger --------------------------------------------------------------
 
-    /// The description, if any, as [`Group::description`] returns it.
-    pub fn description(&self) -> impl Future<Output = Option<String>> + Send + 'static {
-        self.read_with(|group| group.description().map(str::to_owned))
+    /// The group's totals, as [`Group::summary`] returns them.
+    pub fn summary(&self) -> impl Future<Output = Summary> + Send + 'static {
+        self.read_with(|group| group.summary().clone())
     }
 
-    /// Sets the description, as [`Group::set_description`] does.
-    pub fn set_description(
+    // --- Settlements ---------------------------------------------------------
+
+    /// The payments that settle every balance, as [`Group::settlement`]
+    /// computes and caches them.
+    ///
+    /// The call holds the shared lock while the exact solver fills its
+    /// table and yields as [`Group::settlement_async`] does; dropped at a
+    /// yield, it caches nothing.
+    ///
+    /// # Errors
+    ///
+    /// As for [`Group::settlement`].
+    pub fn settlement(
         &self,
-        description: impl Into<String>,
-    ) -> impl Future<Output = ()> + Send + 'static {
-        let description = description.into();
-        self.write_with(move |group| group.set_description(description))
-    }
-
-    // --- Language ------------------------------------------------------------
-
-    /// The language, if set, as [`Group::language`] returns it.
-    pub fn language(&self) -> impl Future<Output = Option<Language>> + Send + 'static {
-        self.read_with(|group| group.language().cloned())
-    }
-
-    /// Sets or clears the language, as [`Group::set_language`] does.
-    pub fn set_language(
-        &self,
-        language: impl Into<Option<Language>>,
-    ) -> impl Future<Output = ()> + Send + 'static {
-        let language = language.into();
-        self.write_with(move |group| group.set_language(language))
+        strategy: SettlementStrategy,
+    ) -> impl Future<Output = Result<Settlement, SettlementError>> + Send + 'static {
+        let group = Arc::clone(&self.group);
+        async move {
+            let group = group.read().await;
+            group.settlement_async(strategy).await.cloned()
+        }
     }
 
     // --- Locking -------------------------------------------------------------

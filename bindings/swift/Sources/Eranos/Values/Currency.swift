@@ -14,14 +14,14 @@ public struct Currency: Hashable, Sendable, CustomStringConvertible {
     /// The three-letter code: "EUR".
     public let code: String
 
-    /// How many decimal places its minor unit has: 2 for the euro, 0 for the yen.
-    public let decimalPlaces: Int
-
     /// The English name: "Euro".
     public let name: String
 
     /// The three-digit numeric code: 978 for the euro.
     public let numericCode: Int
+
+    /// How many decimal places its minor unit has: 2 for the euro, 0 for the yen.
+    public let decimalPlaces: Int
 
     /// The code: "EUR".
     public var description: String {
@@ -39,9 +39,9 @@ public struct Currency: Hashable, Sendable, CustomStringConvertible {
 
     init(_ details: CurrencyDetails) {
         code = details.code
-        decimalPlaces = Int(details.decimalPlaces)
         name = details.name
         numericCode = Int(details.numericCode)
+        decimalPlaces = Int(details.decimalPlaces)
     }
 
     /// The currency of `code`, a code the library gave, so always one of ``all``; any other code
@@ -53,8 +53,8 @@ public struct Currency: Hashable, Sendable, CustomStringConvertible {
     /// A currency that is not one of ``all``, named by its code alone.
     init(unlisted code: String) {
         self.code = code
-        decimalPlaces = 0
         name = code
         numericCode = 0
+        decimalPlaces = 0
     }
 }

@@ -31,8 +31,8 @@ struct Flat {
 
 fn euros(minor_units: i64) -> Money {
     Money {
-        currency: "EUR".to_owned(),
         minor_units,
+        currency: "EUR".to_owned(),
     }
 }
 
@@ -40,10 +40,10 @@ fn new_member(first_name: &str) -> Member {
     Member {
         id: None,
         first_name: first_name.to_owned(),
-        accounts: Vec::new(),
-        email: None,
         last_name: None,
+        email: None,
         phone: None,
+        accounts: Vec::new(),
     }
 }
 
@@ -58,15 +58,10 @@ fn new_category(name: &str) -> Category {
 fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
     Expense {
         id: None,
+        name: name.to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
         },
-        date: CalendarDate {
-            day: 23,
-            month: 9,
-            year: 2026,
-        },
-        name: name.to_owned(),
         payers: Split::Equal {
             members: vec![payer.to_owned()],
         },
@@ -75,33 +70,38 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
                 members: members.iter().map(|&member| member.to_owned()).collect(),
             },
         },
+        date: CalendarDate {
+            year: 2026,
+            month: 9,
+            day: 23,
+        },
+        tip: None,
+        time: None,
         category: None,
         description: None,
-        time: None,
-        tip: None,
     }
 }
 
 fn new_transfer(from: &str, to: &str, minor_units: i64) -> Transfer {
     Transfer {
         id: None,
+        from: from.to_owned(),
+        to: to.to_owned(),
         cost: Cost::Local {
             amount: euros(minor_units),
         },
         date: CalendarDate {
-            day: 24,
-            month: 9,
             year: 2026,
+            month: 9,
+            day: 24,
         },
-        from: from.to_owned(),
-        to: to.to_owned(),
-        note: None,
         time: None,
+        note: None,
     }
 }
 
 fn flat() -> Flat {
-    let mut group = Group::builder(Currency::EUR, "Flat").build().unwrap();
+    let mut group = Group::builder("Flat", Currency::EUR).build().unwrap();
     let ana = operations::add_member(&mut group, &new_member("Ana")).unwrap();
     let bob = operations::add_member(&mut group, &new_member("Bob")).unwrap();
     let food = operations::add_category(&mut group, &new_category("Food")).unwrap();
@@ -690,8 +690,8 @@ fn the_currency_changes_at_the_given_rates() {
     let taxi = Expense {
         cost: Cost::Converted {
             amount: Money {
-                currency: "RON".to_owned(),
                 minor_units: 5_000,
+                currency: "RON".to_owned(),
             },
             rate: "0.2".to_owned(),
         },
@@ -744,8 +744,8 @@ fn the_currency_changes_at_the_given_rates() {
     assert_eq!(
         operations::summary(group).total_spent,
         Money {
-            currency: "RON".to_owned(),
             minor_units: 20_000,
+            currency: "RON".to_owned(),
         }
     );
 }

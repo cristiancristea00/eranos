@@ -15,16 +15,22 @@ typedef struct EranosMoney EranosMoney;
 
 /// A new money of its required fields; every other field starts absent, empty, or at its default.
 ///
-/// @param currency The currency, as an ISO 4217 code, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param minorUnits The amount in minor units: cents for the euro, none for the yen
+/// @param currency The currency, as an ISO 4217 code, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param money Receives the money on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosMoneyCreate(char const *const currency, int64_t const minorUnits, EranosMoney **const money) {
-    EranosMoney_create_result const result = EranosMoney_create(eranosDetailView(currency), minorUnits);
+[[nodiscard]] static inline EranosError *eranosMoneyCreate(int64_t const minorUnits, char const *const currency, EranosMoney **const money) {
+    EranosMoney_create_result const result = EranosMoney_create(minorUnits, eranosDetailView(currency));
     *money = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
+
+/// The amount in minor units: cents for the euro, none for the yen.
+///
+/// @param money The money
+/// @return The amount in minor units: cents for the euro, none for the yen
+[[nodiscard]] static inline int64_t eranosMoneyMinorUnits(EranosMoney const *const money) { return EranosMoney_minor_units(money); }
 
 /// The currency, as an ISO 4217 code.
 ///
@@ -35,12 +41,6 @@ static inline void eranosMoneyCurrency(EranosMoney const *const money, EranosTex
     EranosMoney_currency(money, currency);
     eranosDetailFinish(currency);
 }
-
-/// The amount in minor units: cents for the euro, none for the yen.
-///
-/// @param money The money
-/// @return The amount in minor units: cents for the euro, none for the yen
-[[nodiscard]] static inline int64_t eranosMoneyMinorUnits(EranosMoney const *const money) { return EranosMoney_minor_units(money); }
 
 /// The amount written `text` in the currency `currency`: "12.50", "12.5", or "-3".
 ///

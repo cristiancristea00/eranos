@@ -87,16 +87,16 @@ final class Totals {
         printCategories(group);
         System.out.println("And each member's consumption per category:");
         Optional<CategoryId> builtIn = builtInCategory(group);
-        Money zero = new Money(group.currency(), 0);
+        Money zero = new Money(0, group.currency());
         List<MemberCategoryRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             if (member.id().isPresent()) {
                 List<CategoryTotal> totals = byCategory(summary, member.id().orElseThrow());
                 rows.add(
                         new MemberCategoryRow(
+                                member.firstName(),
                                 total(totals, Optional.of(categories.food())).orElse(zero),
                                 total(totals, Optional.of(categories.lodging())).orElse(zero),
-                                member.firstName(),
                                 total(totals, Optional.of(categories.transport())).orElse(zero),
                                 total(totals, builtIn).orElse(zero)));
             }
@@ -213,9 +213,9 @@ final class Totals {
     static String strategyName(SettlementStrategy strategy) {
         return switch (strategy) {
             case ADAPTIVE -> "Adaptive";
-            case DIRECT -> "Direct";
-            case GREEDY -> "Greedy";
             case MINIMUM_TRANSFERS -> "MinimumTransfers";
+            case GREEDY -> "Greedy";
+            case DIRECT -> "Direct";
         };
     }
 
@@ -233,9 +233,9 @@ final class Totals {
             check(computedBy == settlement.strategy());
             counts.add(
                     new StrategyRow(
+                            strategyName(strategy),
                             strategyName(settlement.strategy()),
-                            settlement.payments().size(),
-                            strategyName(strategy)));
+                            settlement.payments().size()));
         }
         System.out.print(
                 """
@@ -251,18 +251,18 @@ final class Totals {
         for (Payment payment : plan.payments()) {
             rows.add(
                     new PaymentRow(
-                            payment.amount(),
                             name(group, payment.from()),
-                            name(group, payment.to())));
+                            name(group, payment.to()),
+                            payment.amount()));
         }
         printTable(PaymentRow.HEADERS, rows, 2);
         for (Payment payment : plan.payments()) {
             group.addTransfer(
                     Transfer.builder(
-                                    new Cost.Local(payment.amount()),
-                                    october(7),
                                     payment.from(),
-                                    payment.to())
+                                    payment.to(),
+                                    new Cost.Local(payment.amount()),
+                                    october(7))
                             .build());
         }
         System.out.print(

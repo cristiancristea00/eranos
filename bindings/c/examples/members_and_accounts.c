@@ -18,14 +18,14 @@ typedef struct Flatmates {
 
 /// A row of the table of members: a member's name, contact details, and accounts.
 typedef struct MemberRow {
-    /// Their accounts, one per line.
-    Line accounts;
-    /// Their email, or nothing.
-    Line email;
     /// Their first and last name.
     Line name;
+    /// Their email, or nothing.
+    Line email;
     /// Their phone number, or nothing.
     Line phone;
+    /// Their accounts, one per line.
+    Line accounts;
 } MemberRow;
 
 /// A table of members, its columns from @p numbersFrom on aligned to the right.
@@ -56,14 +56,14 @@ static void addCheckRow(Table *const table, CheckRow const *const row) { tableAd
 
 /// A row of the table of balances: whether a member is active, what they consumed, and their balance.
 typedef struct BalanceRow {
-    /// What is left: what they paid minus what they consumed.
-    Line balance;
-    /// What they consumed.
-    Line consumed;
     /// Their first name.
     Line name;
     /// Whether they are active or archived.
     Line status;
+    /// What they consumed.
+    Line consumed;
+    /// What is left: what they paid minus what they consumed.
+    Line balance;
 } BalanceRow;
 
 /// A table of balances, its columns from @p numbersFrom on aligned to the right.
@@ -80,9 +80,9 @@ static void addBalanceRow(Table *const table, BalanceRow const *const row) {
 typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
 /// The account @p name, paid to @p details; destroys @p details.
-static EranosAccount *accountOf(EranosAccountDetails *const details, char const *const name) {
+static EranosAccount *accountOf(char const *const name, EranosAccountDetails *const details) {
     EranosAccount *account = nullptr;
-    must(eranosAccountCreate(details, name, &account));
+    must(eranosAccountCreate(name, details, &account));
     eranosAccountDetailsDestroy(details);
     return account;
 }
@@ -152,10 +152,10 @@ static void printMembers(EranosGroup const *const group) {
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
         addMemberRow(table, &(MemberRow){
-                                .accounts = accountsOf(member),
-                                .email = emailOf(member),
                                 .name = fullName(member),
+                                .email = emailOf(member),
                                 .phone = phoneOf(member),
+                                .accounts = accountsOf(member),
                             });
         eranosMemberDestroy(member);
     }
@@ -180,10 +180,10 @@ static void printBalances(EranosGroup const *const group) {
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         addBalanceRow(table, &(BalanceRow){
-                                 .balance = balanceLine(eranosMemberSummaryBalance(found)),
-                                 .consumed = moneyLine(eranosMemberSummaryShare(found)),
                                  .name = textLine(text),
                                  .status = lineOf("%s", archived ? "archived" : "active"),
+                                 .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                                 .balance = balanceLine(eranosMemberSummaryBalance(found)),
                              });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
@@ -203,8 +203,8 @@ static Flatmates members(EranosGroup *const group) {
     must(eranosAccountDetailsCreateIban("ro49 aaaa 1b31 0075 9384 0000", &iban));
     EranosAccountDetails *username = nullptr;
     must(eranosAccountDetailsCreateUsername("@ana", &username));
-    EranosAccount *const bank = accountOf(iban, "ING");
-    EranosAccount *const card = accountOf(username, "Revolut");
+    EranosAccount *const bank = accountOf("ING", iban);
+    EranosAccount *const card = accountOf("Revolut", username);
     EranosAccountList *const accounts = eranosAccountListCreate();
     eranosAccountListPush(accounts, bank);
     eranosAccountListPush(accounts, card);
@@ -274,16 +274,15 @@ static bool errorNames(EranosError const *const error, Id const member) {
 static void movingOut(EranosGroup *const group, Id const ana, Id const bob) {
     section("3. A flatmate moves out");
     Members const both = {.count = 2, .ids = {ana, bob}};
-    Id const rent = addExpense(group, expenseOf(localCost(amountOf("900.00", "EUR")), (EranosCalendarDate){.day = 1, .month = 9, .year = 2026},
-                                                "Rent", soleSplit(ana), equalSplit(&both)));
+    Id const rent = addExpense(group, expenseOf("Rent", localCost(amountOf("900.00", "EUR")), soleSplit(ana), equalSplit(&both),
+                                                (EranosCalendarDate){.year = 2026, .month = 9, .day = 1}));
     must(eranosGroupArchiveMember(group, bob.text));
     printLine("Bob shared September's rent, then moved out. He is archived, not removed: his\n"
               "history and his balance stay, and he can still pay Ana back.");
     printBalances(group);
 
-    EranosError *const refused =
-        expenseRefusal(group, expenseOf(localCost(amountOf("60.00", "EUR")), (EranosCalendarDate){.day = 1, .month = 10, .year = 2026}, "Utilities",
-                                        soleSplit(ana), equalSplit(&both)));
+    EranosError *const refused = expenseRefusal(group, expenseOf("Utilities", localCost(amountOf("60.00", "EUR")), soleSplit(ana), equalSplit(&both),
+                                                                 (EranosCalendarDate){.year = 2026, .month = 10, .day = 1}));
     check(isFailure(refused, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_ARCHIVED_MEMBER) && errorNames(refused, bob),
           "the archived member is refused");
     Line const refusedMessage = messageLine(refused);
@@ -317,7 +316,7 @@ static void movingOut(EranosGroup *const group, Id const ana, Id const bob) {
 
 int main(void) {
     EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("EUR", "Flat 4B", &details));
+    must(eranosNewGroupCreate("Flat 4B", "EUR", &details));
     EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
