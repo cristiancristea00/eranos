@@ -6,7 +6,7 @@ import {
     type Expense,
     type ExpenseId,
     type ExpenseGroup,
-    type ExpenseItem,
+    type ExpenseItemInput,
     type MemberId,
     type Split,
     Money,
@@ -127,22 +127,19 @@ function printItems(group: ExpenseGroup, id: ExpenseId): void {
     }
     printTable(
         itemColumns,
-        split.items.map((item) => {
-            const quantity = item.quantity ?? 1;
-            return {
-                name: item.name,
-                sharedBy: names(group, splitMembers(item.split)),
-                quantity,
-                unitPrice: item.unitPrice,
-                lineTotal: new Money(item.unitPrice.minorUnits * BigInt(quantity), item.unitPrice.currency),
-            };
-        }),
+        split.items.map((item) => ({
+            name: item.name,
+            sharedBy: names(group, splitMembers(item.split)),
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            lineTotal: new Money(item.unitPrice.minorUnits * BigInt(item.quantity), item.unitPrice.currency),
+        })),
         2,
     );
 }
 
 /** The receipt of the fado night: every line with its own split. */
-function fadoItems(people: People): ExpenseItem[] {
+function fadoItems(people: People): ExpenseItemInput[] {
     return [
         { name: 'Vinho verde', unitPrice: eur('12.00'), split: { kind: 'equal', members: [people.ana, people.bob, people.dan] }, quantity: 2 },
         { name: 'Bacalhau', unitPrice: eur('18.00'), split: { kind: 'equal', members: [people.carol] } },

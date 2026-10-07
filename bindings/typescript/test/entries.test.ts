@@ -18,7 +18,15 @@ import {
 } from '../src/entries.js';
 import {
     type Expense,
+    type ExpenseInput,
+    type ExpenseItem,
+    type ExpenseItemInput,
+    type ExpenseSplitInput,
+    type Member,
+    type MemberInput,
     type Split,
+    type TipRule,
+    type TipRuleInput,
     CalendarDate,
     CurrencyCode,
     Email,
@@ -113,14 +121,8 @@ void describe('the expenses, members, categories, and transfers', () => {
     void it('converts and stores every kind of expense whole', () => {
         const flat = new Flat();
         const { dinner, taxi } = expenses(flat);
-        assert.ok('itemised' === taxi.split.kind);
-        const [fare, toll] = taxi.split.items;
-        assert.ok(undefined !== fare && undefined !== toll);
-        assert.deepEqual(convertedExpense(generatedExpense(taxi)), { ...taxi, split: { kind: 'itemised', items: [fare, { ...toll, quantity: 1 }] } });
-        assert.deepEqual(convertedExpense(generatedExpense(dinner)), {
-            ...dinner,
-            tip: { ...dinner.tip, distribution: TipDistribution.PROPORTIONAL },
-        });
+        assert.deepEqual(convertedExpense(generatedExpense(taxi)), taxi);
+        assert.deepEqual(convertedExpense(generatedExpense(dinner)), dinner);
         for (const expense of [taxi, dinner]) {
             const id = flat.group.addExpenseSync(expense);
             assert.equal(id, expense.id);
@@ -134,7 +136,102 @@ void describe('the expenses, members, categories, and transfers', () => {
             assert.deepEqual(stored.time, expense.time);
             assert.equal(stored.category, expense.category);
             assert.equal(stored.description, expense.description);
+            assert.deepEqual(stored, expense);
         }
+    });
+
+    /**
+     * A record that reached the library without a field it left out, or with another value than the default its type
+     * documents, would store a line of another quantity, a tip shared another way, an expense in another category, or a
+     * member with accounts the app never gave; a replace that kept the value the group holds instead would leave an expense
+     * in a category the app moved it out of.
+     */
+    void it('fills every field a record leaves out with its default on the way in', async () => {
+        const flat = new Flat();
+        const group = flat.group;
+        const { dinner, taxi } = expenses(flat);
+        assert.ok('itemised' === taxi.split.kind);
+        assert.equal(taxi.split.items[1]?.quantity, 1);
+        assert.equal(dinner.tip.distribution, TipDistribution.PROPORTIONAL);
+        assert.equal(dinner.category, UNCATEGORISED);
+
+        const zoe = parseMemberId('zoe');
+        const account = { name: 'Main account', details: { kind: 'username', username: Username.parse('zoe.pays') } } as const;
+        assert.equal(await group.addMember({ id: zoe, firstName: 'Zoe', accounts: [account] }), zoe);
+        assert.deepEqual(group.replaceMemberSync({ id: zoe, firstName: 'Zoë' }), { id: zoe, firstName: 'Zoe', accounts: [account] });
+        assert.deepEqual(group.memberSync(zoe), { id: zoe, firstName: 'Zoë', accounts: [] });
+
+        const toll = { name: 'Toll', unitPrice: flat.euros(1_000n), split: { kind: 'equal', members: [flat.bob] } } as const;
+        const bare: ExpenseInput = {
+            id: parseExpenseId('toll'),
+            name: 'Toll',
+            cost: { kind: 'local', amount: flat.euros(1_000n) },
+            payers: { kind: 'equal', members: [flat.ana] },
+            split: { kind: 'itemised', items: [toll] },
+            date: flat.day,
+        };
+        const tip = { value: { kind: 'percentage', percentage: Percentage.ofBasisPoints(1_000) } } as const;
+        assert.equal(await group.addExpense({ ...bare, tip }), bare.id);
+        const filled = { ...bare, split: { kind: 'itemised', items: [{ ...toll, quantity: 1 }] }, tip: NO_TIP, category: UNCATEGORISED };
+        const tipped = { ...filled, tip: { ...tip, distribution: TipDistribution.PROPORTIONAL } };
+        assert.deepEqual(group.expenseSync(bare.id), tipped);
+        assert.deepEqual(await group.replaceExpense({ ...bare, category: flat.food }), tipped);
+        assert.equal(group.expenseSync(bare.id)?.category, flat.food);
+        assert.deepEqual(group.replaceExpenseSync(bare), { ...filled, category: flat.food });
+        assert.deepEqual(group.expenseSync(bare.id), filled);
+    });
+
+    /**
+     * An output type that an add or a replace refused would make an app copy a record it read back field by field to pass
+     * it again; an input type that compiled without the identifier or another field the library has no default for would let
+     * a record reach the library without it, and an output type that compiled without a field the library always holds
+     * would make an app check for a value that is always there.
+     */
+    void it('takes every record it returns, and types every field without a default as required', async () => {
+        const flat = new Flat();
+        const group = flat.group;
+        const { taxi } = expenses(flat);
+        group.addExpenseSync(taxi);
+        const member = group.memberSync(flat.ana);
+        const expense = group.expenseSync(taxi.id);
+        assert.ok(undefined !== member && 'itemised' === expense?.split.kind);
+        // Every output type is assignable to its input type.
+        const memberInput: MemberInput = member;
+        const items: readonly ExpenseItemInput[] = expense.split.items;
+        const split: ExpenseSplitInput = { kind: 'itemised', items };
+        const tip: TipRuleInput = expense.tip;
+        const expenseInput: ExpenseInput = { ...expense, split, tip };
+        assert.deepEqual(await group.replaceMember(memberInput), member);
+        assert.deepEqual(group.replaceExpenseSync(expenseInput), expense);
+        assert.deepEqual(group.expenseSync(taxi.id), expense);
+
+        const cost = { kind: 'local', amount: flat.euros(1_000n) } as const;
+        const payers = { kind: 'equal', members: [flat.ana] } as const;
+        const whole = { kind: 'whole', split: payers } as const;
+        const fields = { name: 'Toll', cost, payers, split: whole, date: flat.day } as const;
+        const value = { kind: 'percentage', percentage: Percentage.ofBasisPoints(0) } as const;
+        // Records that leave out a field their type requires, and so must not compile; the test never makes these calls.
+        const uncompiled = [
+            // @ts-expect-error: a member to add names their identifier.
+            () => group.addMemberSync({ firstName: 'Zoe' }),
+            // @ts-expect-error: an expense to add names its identifier.
+            () => group.addExpenseSync(fields),
+            // @ts-expect-error: an expense names its date.
+            () => createExpense({ name: 'Toll', cost, payers, split: whole }),
+            // @ts-expect-error: a line of a bill names its unit price.
+            () => createExpense({ ...fields, split: { kind: 'itemised', items: [{ name: 'Toll', split: payers }] } }),
+            // @ts-expect-error: a tip names its value.
+            () => createExpense({ ...fields, tip: { distribution: TipDistribution.EQUAL } }),
+            // @ts-expect-error: a member read back has their accounts.
+            (): Member => ({ id: flat.ana, firstName: 'Ana' }),
+            // @ts-expect-error: an expense read back has its tip and its category.
+            (): Expense => ({ ...fields, id: taxi.id }),
+            // @ts-expect-error: a line read back has its quantity.
+            (): ExpenseItem => ({ name: 'Toll', unitPrice: flat.euros(1_000n), split: payers }),
+            // @ts-expect-error: a tip read back has its distribution.
+            (): TipRule => ({ value }),
+        ];
+        assert.equal(uncompiled.length, 9);
     });
 
     /**
@@ -221,7 +318,8 @@ void describe('the expenses, members, categories, and transfers', () => {
         });
         assert.deepEqual(convertedMember(generatedMember(carol)), carol);
         const dan = createMember({ firstName: 'Dan' });
-        assert.deepEqual(convertedMember(generatedMember(dan)), { ...dan, accounts: [] });
+        assert.deepEqual(dan, { id: dan.id, firstName: 'Dan', accounts: [] });
+        assert.deepEqual(convertedMember(generatedMember(dan)), dan);
         assert.equal(flat.group.addMemberSync(carol), carol.id);
         assert.deepEqual(flat.group.memberSync(carol.id), carol);
 
@@ -248,7 +346,8 @@ void describe('the expenses, members, categories, and transfers', () => {
 
     /**
      * A create function that returned an identifier an earlier call had returned, or kept one its fields carry, would make a
-     * copy of an entry that the group refuses as a duplicate of the original.
+     * copy of an entry that the group refuses as a duplicate of the original; one that listed the fields in another order
+     * than a record read back, its identifier elsewhere than first, would make the two print and serialise differently.
      */
     void it('creates every kind of entry under an identifier generated at each call', () => {
         const flat = new Flat();
@@ -274,6 +373,11 @@ void describe('the expenses, members, categories, and transfers', () => {
         assert.notEqual(transferCopy.id, transfer.id);
         assert.deepEqual(transferCopy, { ...transfer, id: transferCopy.id });
         assert.equal(group.addTransferSync(transferCopy), transferCopy.id);
+        assert.deepEqual(Object.keys(memberCopy), Object.keys(member));
+        assert.deepEqual(Object.keys(categoryCopy), Object.keys(category));
+        assert.deepEqual(Object.keys(expenseCopy), Object.keys(expense));
+        assert.deepEqual(Object.keys(transferCopy), Object.keys(transfer));
+        assert.ok([memberCopy, categoryCopy, expenseCopy, transferCopy].every((created) => 'id' === Object.keys(created)[0]));
         assert.equal(parseMemberId(memberCopy.id), memberCopy.id);
         assert.equal(parseCategoryId(categoryCopy.id), categoryCopy.id);
         assert.equal(parseExpenseId(expenseCopy.id), expenseCopy.id);

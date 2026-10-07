@@ -94,7 +94,7 @@ function printMembers(group: ExpenseGroup): void {
             name: [member.firstName, member.lastName].filter((name) => undefined !== name).join(' '),
             email: member.email?.toString() ?? '',
             phone: member.phone?.toString() ?? '',
-            accounts: (member.accounts ?? []).map(describe).join('\n'),
+            accounts: member.accounts.map(describe).join('\n'),
         })),
         4,
     );

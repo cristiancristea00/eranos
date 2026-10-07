@@ -471,8 +471,10 @@ breaking.
    `bindings/java/src/main/java/eranos/` gets the field, its accessor, its
    builder's setter, and its place in its conversions, equality, hash, and
    text. The TypeScript entry interface in
-   `bindings/typescript/src/entries.ts` gets the field, optional where the
-   library's is, and both of its conversions carry it. So does the Python
+   `bindings/typescript/src/entries.ts` gets the field, optional only where
+   the library's is, and so does its input interface (`MemberInput` and the
+   like), where a field with a default is optional too and its `completed`
+   function fills the default; both conversions carry it. So does the Python
    entry dataclass in `bindings/python/src/eranos/_entries.py`, whose
    field has a default where the library's is optional, and its
    conversions from the generated record and to it.

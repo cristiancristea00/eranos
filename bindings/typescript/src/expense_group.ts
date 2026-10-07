@@ -10,8 +10,12 @@ import { CurrencyCode } from './currency_code.js';
 import {
     type Category,
     type Expense,
+    type ExpenseInput,
     type Member,
+    type MemberInput,
     type Transfer,
+    completedExpense,
+    completedMember,
     convertedCategory,
     convertedExpense,
     convertedMember,
@@ -609,7 +613,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `member` under their identifier and returns the identifier.
+     * Adds `member` under their identifier, with no accounts unless `member` gives some, and returns the identifier.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.addMemberSync} does not wait.
@@ -622,12 +626,12 @@ export class ExpenseGroup implements Disposable {
      * @param options - The call's signal
      * @returns A promise of the member's identifier
      */
-    async addMember(member: Member, options?: CallOptions): Promise<MemberId> {
-        return memberId(await awaiting((signal) => this.handle.addMemberAsync(generatedMember(member), undefined, signal), options));
+    async addMember(member: MemberInput, options?: CallOptions): Promise<MemberId> {
+        return memberId(await awaiting((signal) => this.handle.addMemberAsync(generatedMember(completedMember(member)), undefined, signal), options));
     }
 
     /**
-     * Adds `member` under their identifier and returns the identifier.
+     * Adds `member` under their identifier, with no accounts unless `member` gives some, and returns the identifier.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addMember} waits for it.
@@ -639,13 +643,13 @@ export class ExpenseGroup implements Disposable {
      * @throws {@link ExpenseGroupError} with the failure `duplicateMember` for an identifier another member has
      * @throws {@link IdError} for an identifier that is not one
      */
-    addMemberSync(member: Member): MemberId {
-        return memberId(calling(() => this.handle.addMember(generatedMember(member))));
+    addMemberSync(member: MemberInput): MemberId {
+        return memberId(calling(() => this.handle.addMember(generatedMember(completedMember(member)))));
     }
 
     /**
      * Replaces the details of the member that `member` names by their identifier, and returns them as they were; an
-     * archived member stays archived.
+     * archived member stays archived. Accounts that `member` leaves out are none, not those the group holds.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.replaceMemberSync} does not wait.
@@ -657,13 +661,15 @@ export class ExpenseGroup implements Disposable {
      * @param options - The call's signal
      * @returns A promise of the member as they were
      */
-    async replaceMember(member: Member, options?: CallOptions): Promise<Member> {
-        return convertedMember(await awaiting((signal) => this.handle.replaceMemberAsync(generatedMember(member), undefined, signal), options));
+    async replaceMember(member: MemberInput, options?: CallOptions): Promise<Member> {
+        return convertedMember(
+            await awaiting((signal) => this.handle.replaceMemberAsync(generatedMember(completedMember(member)), undefined, signal), options),
+        );
     }
 
     /**
      * Replaces the details of the member that `member` names by their identifier, and returns them as they were; an
-     * archived member stays archived.
+     * archived member stays archived. Accounts that `member` leaves out are none, not those the group holds.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.replaceMember} waits for it.
@@ -675,8 +681,8 @@ export class ExpenseGroup implements Disposable {
      * @throws {@link ExpenseGroupError} with the failure `unknownMember`
      * @throws {@link IdError} for an identifier that is not one
      */
-    replaceMemberSync(member: Member): Member {
-        return convertedMember(calling(() => this.handle.replaceMember(generatedMember(member))));
+    replaceMemberSync(member: MemberInput): Member {
+        return convertedMember(calling(() => this.handle.replaceMember(generatedMember(completedMember(member)))));
     }
 
     /**
@@ -1035,7 +1041,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `expense` under its identifier and returns the identifier.
+     * Adds `expense` under its identifier, every field it leaves out at its default, and returns the identifier.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.addExpenseSync} does not wait.
@@ -1049,12 +1055,14 @@ export class ExpenseGroup implements Disposable {
      * @param options - The call's signal
      * @returns A promise of the expense's identifier
      */
-    async addExpense(expense: Expense, options?: CallOptions): Promise<ExpenseId> {
-        return expenseId(await awaiting((signal) => this.handle.addExpenseAsync(generatedExpense(expense), undefined, signal), options));
+    async addExpense(expense: ExpenseInput, options?: CallOptions): Promise<ExpenseId> {
+        return expenseId(
+            await awaiting((signal) => this.handle.addExpenseAsync(generatedExpense(completedExpense(expense)), undefined, signal), options),
+        );
     }
 
     /**
-     * Adds `expense` under its identifier and returns the identifier.
+     * Adds `expense` under its identifier, every field it leaves out at its default, and returns the identifier.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addExpense} waits for it.
@@ -1066,12 +1074,13 @@ export class ExpenseGroup implements Disposable {
      *   identifier another expense has, `unknownMember`, and `archivedMember`
      * @throws {@link IdError} for an identifier that is not one
      */
-    addExpenseSync(expense: Expense): ExpenseId {
-        return expenseId(calling(() => this.handle.addExpense(generatedExpense(expense))));
+    addExpenseSync(expense: ExpenseInput): ExpenseId {
+        return expenseId(calling(() => this.handle.addExpense(generatedExpense(completedExpense(expense)))));
     }
 
     /**
-     * Replaces the expense that `expense` names by its identifier, and returns it as it was.
+     * Replaces the expense that `expense` names by its identifier, and returns it as it was. A field `expense` leaves out
+     * takes its default, as in a new expense, not the value the group holds.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.replaceExpenseSync} does not wait.
@@ -1083,12 +1092,15 @@ export class ExpenseGroup implements Disposable {
      * @param options - The call's signal
      * @returns A promise of the expense as it was
      */
-    async replaceExpense(expense: Expense, options?: CallOptions): Promise<Expense> {
-        return convertedExpense(await awaiting((signal) => this.handle.replaceExpenseAsync(generatedExpense(expense), undefined, signal), options));
+    async replaceExpense(expense: ExpenseInput, options?: CallOptions): Promise<Expense> {
+        return convertedExpense(
+            await awaiting((signal) => this.handle.replaceExpenseAsync(generatedExpense(completedExpense(expense)), undefined, signal), options),
+        );
     }
 
     /**
-     * Replaces the expense that `expense` names by its identifier, and returns it as it was.
+     * Replaces the expense that `expense` names by its identifier, and returns it as it was. A field `expense` leaves out
+     * takes its default, as in a new expense, not the value the group holds.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.replaceExpense} waits for it.
@@ -1099,8 +1111,8 @@ export class ExpenseGroup implements Disposable {
      * @throws {@link ExpenseGroupError} with the failure `unknownExpense`, and as adding one does
      * @throws {@link IdError} for an identifier that is not one
      */
-    replaceExpenseSync(expense: Expense): Expense {
-        return convertedExpense(calling(() => this.handle.replaceExpense(generatedExpense(expense))));
+    replaceExpenseSync(expense: ExpenseInput): Expense {
+        return convertedExpense(calling(() => this.handle.replaceExpense(generatedExpense(completedExpense(expense)))));
     }
 
     /**

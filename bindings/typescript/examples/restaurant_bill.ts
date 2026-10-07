@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {
     type Expense,
     type ExpenseShares,
-    type ExpenseItem,
+    type ExpenseItemInput,
     type MemberId,
     CalendarDate,
     CurrencyCode,
@@ -64,7 +64,7 @@ function eur(text: string): Money {
 }
 
 /** The receipt: every line with the members who had it. */
-function receipt(ana: MemberId, bob: MemberId, carol: MemberId): ExpenseItem[] {
+function receipt(ana: MemberId, bob: MemberId, carol: MemberId): ExpenseItemInput[] {
     return [
         { name: 'Ciorbă', unitPrice: eur('8.00'), split: { kind: 'equal', members: [ana] } },
         { name: 'Sarmale', unitPrice: eur('14.00'), split: { kind: 'equal', members: [bob, carol] }, quantity: 2 },

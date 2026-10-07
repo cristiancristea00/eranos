@@ -211,15 +211,15 @@ flowchart TD
 Each layer turns the core's records into its language's own kinds of type,
 under the core's names, and every value prints the library's text.
 
-| What            | Swift                             | Kotlin                                | Java                                             | TypeScript                         | C                               | C++                                        | Python                                               |
-| --------------- | --------------------------------- | ------------------------------------- | ------------------------------------------------ | ---------------------------------- | ------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
-| the group       | `final class ExpenseGroup`        | `class ExpenseGroup`, `AutoCloseable` | `final class ExpenseGroup`, `AutoCloseable`      | `class ExpenseGroup`, `Disposable` | `EranosExpenseGroup *`          | `ExpenseGroup`, which only moves           | `class ExpenseGroup`, a context manager              |
-| a read handle   | `ExpenseGroupReader`, `withRead`  | `ExpenseGroupReader`, `withRead`      | `ExpenseGroupReader`                             | `ExpenseGroupReader`, `Disposable` | `EranosExpenseGroupReader *`    | `ExpenseGroupReader`                       | `ExpenseGroupReader`, a context manager              |
-| an identifier   | `Member.ID`                       | the value class `MemberId`            | the record `MemberId`                            | the branded string `MemberId`      | text                            | the class `MemberId`                       | the `NewType` `MemberId`                             |
-| a checked value | a struct: `CurrencyCode`, `Money` | a class: `CurrencyCode`, `Money`      | `CurrencyCode`, a final class; `Money`, a record | a class: `CurrencyCode`, `Money`   | an opaque object: `EranosMoney` | `CurrencyCode`, a class; `Money`, a struct | `CurrencyCode`, a class; `Money`, a frozen dataclass |
-| an entry        | a struct: `Expense`               | a class: `Expense`                    | a final class with a builder                     | an interface: `Expense`            | an opaque object with setters   | a struct: `Expense`                        | a frozen dataclass: `Expense`                        |
-| a variant       | an enum: `Split`                  | a sealed interface: `Split`           | a sealed interface of records                    | a union by `kind`: `Split`         | an opaque object with `kind`    | a `std::variant`                           | a union of frozen dataclasses: `Split`               |
-| a failure       | `EranosError`, thrown typed       | `EranosException`, thrown             | `EranosException`, checked                       | `EranosError`, thrown              | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`      | `EranosError`, raised                                |
+| What            | Swift                             | Kotlin                                | Java                                             | TypeScript                            | C                               | C++                                        | Python                                               |
+| --------------- | --------------------------------- | ------------------------------------- | ------------------------------------------------ | ------------------------------------- | ------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
+| the group       | `final class ExpenseGroup`        | `class ExpenseGroup`, `AutoCloseable` | `final class ExpenseGroup`, `AutoCloseable`      | `class ExpenseGroup`, `Disposable`    | `EranosExpenseGroup *`          | `ExpenseGroup`, which only moves           | `class ExpenseGroup`, a context manager              |
+| a read handle   | `ExpenseGroupReader`, `withRead`  | `ExpenseGroupReader`, `withRead`      | `ExpenseGroupReader`                             | `ExpenseGroupReader`, `Disposable`    | `EranosExpenseGroupReader *`    | `ExpenseGroupReader`                       | `ExpenseGroupReader`, a context manager              |
+| an identifier   | `Member.ID`                       | the value class `MemberId`            | the record `MemberId`                            | the branded string `MemberId`         | text                            | the class `MemberId`                       | the `NewType` `MemberId`                             |
+| a checked value | a struct: `CurrencyCode`, `Money` | a class: `CurrencyCode`, `Money`      | `CurrencyCode`, a final class; `Money`, a record | a class: `CurrencyCode`, `Money`      | an opaque object: `EranosMoney` | `CurrencyCode`, a class; `Money`, a struct | `CurrencyCode`, a class; `Money`, a frozen dataclass |
+| an entry        | a struct: `Expense`               | a class: `Expense`                    | a final class with a builder                     | interfaces: `Expense`, `ExpenseInput` | an opaque object with setters   | a struct: `Expense`                        | a frozen dataclass: `Expense`                        |
+| a variant       | an enum: `Split`                  | a sealed interface: `Split`           | a sealed interface of records                    | a union by `kind`: `Split`            | an opaque object with `kind`    | a `std::variant`                           | a union of frozen dataclasses: `Split`               |
+| a failure       | `EranosError`, thrown typed       | `EranosException`, thrown             | `EranosException`, checked                       | `EranosError`, thrown                 | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`      | `EranosError`, raised                                |
 
 ## 4. Calls, threads, and cancellation
 
@@ -538,21 +538,37 @@ build. The layer follows the Google TypeScript Style Guide:
   which `parseMemberId` and its siblings check and `generateMemberId` and
   its siblings make. Every entry's `id` is required: a `{ id, … }` literal
   takes it, and `createMember({ firstName, … })`, `createCategory`,
-  `createExpense`, and `createTransfer` return the record under a
-  generated one. An expense's `tip` and `category` are required as well:
-  a `{ id, … }` literal names both, `createExpense` fills in `NO_TIP` and
-  `UNCATEGORISED` when its fields leave them out, and an expense read back
-  carries them for an expense without another tip or category. The two
-  constants are literals, since a module constant is evaluated before
-  `init` loads the module, and a test holds them to the core's
-  `tip_rule_none` and `category_id_uncategorised`.
-  `ExpenseGroup.create(name, currency, options?)` generates
-  the group's, and `ExpenseGroup.createWithId(id, name, currency, options?)`
-  takes it. A value the library checks is a class with factories that
-  check it (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`),
-  printing the library's text; entries and totals are read-only interfaces,
-  and a variant is a union discriminated by `kind`
+  `createExpense`, and `createTransfer` take the other fields and return
+  the record under a generated one, its `id` first.
+  `ExpenseGroup.create(name, currency, options?)` generates the group's,
+  and `ExpenseGroup.createWithId(id, name, currency, options?)` takes it.
+  A value the library checks is a class with factories that check it
+  (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`), printing the
+  library's text; entries and totals are read-only interfaces, and a
+  variant is a union discriminated by `kind`
   (`{ kind: 'equal', members }`).
+- A record with a field the library gives a default has two types. The
+  one every read returns keeps the record's name, `Member`, `Expense`,
+  `ExpenseItem`, and `TipRule`, and requires every field the library
+  always holds: a member's `accounts`, an expense's `tip` and `category`,
+  an item's `quantity`, and a tip's `distribution`. The one an add or a
+  replace takes, in both forms, adds the suffix `Input`, as GraphQL's
+  input types and the TypeScript generated from them do: `MemberInput`,
+  `ExpenseInput`, `ExpenseItemInput`, `TipRuleInput`, and
+  `ExpenseSplitInput`, which holds the items. An input type lets those
+  fields be left out, and an entry's requires its identifier;
+  `createMember` and `createExpense` take it without the identifier, and
+  `expenseTotal` and its siblings take it whole. The layer fills each of
+  those fields in one place: no accounts, `NO_TIP`, `UNCATEGORISED`, a
+  quantity of 1, and the proportional distribution. A replace fills them
+  as an add does, rather than keeping the values the group holds. Every
+  output type is assignable to its input type, so a record read back is
+  passed again as it is. The output keeps the record's name since an app
+  reads records more often than it writes them. `Category` and
+  `Transfer`, which have no field with a default, have one type each.
+  `NO_TIP` and `UNCATEGORISED` are literals, since a module constant is
+  evaluated before `init` loads the module, and a test holds them to the
+  core's `tip_rule_none` and `category_id_uncategorised`.
 - A failure the library reports throws an `EranosError`, a subclass per
   module holding the module's failure, itself a union by `kind`. A call the
   program should not make throws `TypeError`: a read through a released

@@ -107,7 +107,7 @@ function printMembers(group: ExpenseGroup): void {
             name: [member.firstName, member.lastName].filter((part) => undefined !== part).join(' '),
             email: member.email?.toString() ?? '',
             phone: member.phone?.toString() ?? '',
-            accounts: cell((member.accounts ?? []).map(describe)),
+            accounts: cell(member.accounts.map(describe)),
         })),
         4,
     );
@@ -184,7 +184,7 @@ export function members(group: ExpenseGroup): People {
 
     assert.equal(before.lastName, undefined);
     assert.equal(group.memberSync(bob)?.lastName, 'Ionescu');
-    assert.equal(group.memberSync(ana)?.accounts?.length, 2);
+    assert.equal(group.memberSync(ana)?.accounts.length, 2);
     return { ana, bob, carol, dan, eva, filip };
 }
 
