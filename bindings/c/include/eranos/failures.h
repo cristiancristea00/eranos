@@ -149,35 +149,35 @@ static constexpr EranosFailure ERANOS_FAILURE_LANGUAGE_INVALID_LANGUAGE = Eranos
 /// The module of the library that refused a call, or the core's own case. The values of EranosErrorKind, by the names of the C layer.
 typedef enum EranosErrorKind EranosErrorKind;
 
-/// An `IdError`, about an identifier.
+/// A failure about an identifier.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_ID = EranosErrorKind_Id;
-/// A `PaymentAccountError`, about a payment account: its IBAN, username, or label.
+/// A failure about a payment account: its IBAN, username, or label.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT = EranosErrorKind_PaymentAccount;
-/// A `CalendarError`, about a date or a time of day.
+/// A failure about a date or a time of day.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_CALENDAR = EranosErrorKind_Calendar;
-/// A `CategoryError`, about a category.
+/// A failure about a category.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_CATEGORY = EranosErrorKind_Category;
-/// A `ContactError`, about an email address or a phone number.
+/// A failure about an email address or a phone number.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_CONTACT = EranosErrorKind_Contact;
-/// A `MoneyError`, about an amount, a currency, a rate, or a ratio.
+/// A failure about an amount, a currency, a rate, or a ratio.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_MONEY = EranosErrorKind_Money;
-/// A `MemberError`, about a member.
+/// A failure about a member.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_MEMBER = EranosErrorKind_Member;
-/// An `ExpenseError`, about an expense: its amount, split, items, or tip.
+/// A failure about an expense: its amount, split, items, or tip.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE = EranosErrorKind_Expense;
-/// A `SettlementError`, about a settlement.
+/// A failure about a settlement.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_SETTLEMENT = EranosErrorKind_Settlement;
-/// A `TransferError`, about a transfer.
+/// A failure about a transfer.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_TRANSFER = EranosErrorKind_Transfer;
-/// An `ExpenseGroupError`, about how an entry fits the group, or the group's lock.
+/// A failure about how an entry fits the group, or the group's lock.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE_GROUP = EranosErrorKind_ExpenseGroup;
-/// A `LanguageError`, about a language tag.
+/// A failure about a language tag.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_LANGUAGE = EranosErrorKind_Language;
-/// A saved group that is not JSON of the saved form, at `line` and `column`.
+/// A saved group that is not JSON of the saved form, at the line and the column that eranosErrorLine() and eranosErrorColumn() report.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_INVALID_JSON = EranosErrorKind_InvalidJson;
 /// Text that is not UTF-8, which the C and C++ APIs refuse before the library sees it.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_INVALID_TEXT = EranosErrorKind_InvalidText;
-/// The call was cancelled through its `Cancellation`, before it changed anything.
+/// The call was cancelled through its EranosCancellation, before it changed anything.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_CANCELLED = EranosErrorKind_Cancelled;
 /// The read handle was released, so it reads the group no more.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_RELEASED = EranosErrorKind_Released;

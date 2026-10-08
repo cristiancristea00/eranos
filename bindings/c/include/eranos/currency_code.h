@@ -56,8 +56,7 @@ static inline void eranosCurrencyDetailsName(EranosCurrencyDetails const *const 
 /// @param code The ISO 4217 code, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param details Receives the details on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a code
-/// the
-///   library does not list, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+///   the library does not list, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosCurrencyDetailsOf(char const *const code, EranosCurrencyDetails **const details) {
     EranosCurrencyDetails_of_result const result = EranosCurrencyDetails_of(eranosDetailView(code));
     *details = result.is_ok ? result.ok : nullptr;

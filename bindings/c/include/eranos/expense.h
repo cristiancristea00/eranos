@@ -89,10 +89,10 @@ typedef struct EranosCost EranosCost;
 /// The amount, in its own currency.
 ///
 /// @param cost The cost
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosMoney *eranosCostAmount(EranosCost const *const cost) { return EranosCost_amount(cost); }
 
-/// The rate into the group currency, as a decimal. Present in the kind ERANOS_ERROR_KIND_CONVERTED alone. Writes it, if present; absent otherwise.
+/// The rate into the group currency, as a decimal. Present in the kind ERANOS_COST_KIND_CONVERTED alone. Writes it, if present; absent otherwise.
 ///
 /// @param cost The cost
 /// @param rate Receives the rate into the group currency, as a decimal, replacing what it held
@@ -204,7 +204,7 @@ static inline void eranosExpenseName(EranosExpense const *const expense, EranosT
 /// What it cost.
 ///
 /// @param expense The expense
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosCost *eranosExpenseCost(EranosExpense const *const expense) { return EranosExpense_cost(expense); }
 
 /// Sets what it cost.
@@ -216,7 +216,7 @@ static inline void eranosExpenseSetCost(EranosExpense *const expense, EranosCost
 /// Who paid the total, amount and tip, and how much each.
 ///
 /// @param expense The expense
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosSplit *eranosExpensePayers(EranosExpense const *const expense) { return EranosExpense_payers(expense); }
 
 /// Sets who paid the total, amount and tip, and how much each.
@@ -230,7 +230,7 @@ static inline void eranosExpenseSetPayers(EranosExpense *const expense, EranosSp
 /// How the amount is shared.
 ///
 /// @param expense The expense
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosExpenseSplit *eranosExpenseSplit(EranosExpense const *const expense) { return EranosExpense_split(expense); }
 
 /// Sets how the amount is shared.
@@ -364,8 +364,7 @@ static inline void eranosExpenseClearDescription(EranosExpense *const expense) {
 /// @param expense The expense
 /// @param participants Receives the participants on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ID for an
-/// identifier
-///   that is not one
+///   identifier that is not one
 [[nodiscard]] static inline EranosError *eranosExpenseParticipants(EranosExpense const *const expense, EranosTextList **const participants) {
     EranosExpense_participants_result const result = EranosExpense_participants(expense);
     *participants = result.is_ok ? result.ok : nullptr;
@@ -441,18 +440,18 @@ typedef struct EranosExpenseSplit EranosExpenseSplit;
     return EranosExpenseSplit_kind(expenseSplit);
 }
 
-/// The lines of the bill. Present in the kind ERANOS_ERROR_KIND_ITEMISED alone.
+/// The lines of the bill. Present in the kind ERANOS_EXPENSE_SPLIT_KIND_ITEMISED alone.
 ///
 /// @param expenseSplit The expense split
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
 [[nodiscard]] static inline EranosExpenseItemList *eranosExpenseSplitItems(EranosExpenseSplit const *const expenseSplit) {
     return EranosExpenseSplit_items(expenseSplit);
 }
 
-/// How the amount divides. Present in the kind ERANOS_ERROR_KIND_WHOLE alone.
+/// How the amount divides. Present in the kind ERANOS_EXPENSE_SPLIT_KIND_WHOLE alone.
 ///
 /// @param expenseSplit The expense split
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
 [[nodiscard]] static inline EranosSplit *eranosExpenseSplitSplit(EranosExpenseSplit const *const expenseSplit) {
     return EranosExpenseSplit_split(expenseSplit);
 }
@@ -466,7 +465,7 @@ static inline void eranosExpenseSplitDestroy(EranosExpenseSplit *const expenseSp
     }
 }
 
-/// A line of an itemised bill: `quantity` units of `name` at `unit_price`, which `split` divides.
+/// A line of an itemised bill: `quantity` units of `name` at `unitPrice`, which `split` divides.
 typedef struct EranosExpenseItem EranosExpenseItem;
 
 /// A new item of its required fields; every other field starts absent, empty, or at its default.
@@ -508,7 +507,7 @@ static inline void eranosExpenseItemName(EranosExpenseItem const *const item, Er
 /// The price of one unit, in the expense's currency.
 ///
 /// @param item The item
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosMoney *eranosExpenseItemUnitPrice(EranosExpenseItem const *const item) {
     return EranosExpenseItem_unit_price(item);
 }
@@ -524,7 +523,7 @@ static inline void eranosExpenseItemSetUnitPrice(EranosExpenseItem *const item, 
 /// How the line's total divides.
 ///
 /// @param item The item
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosSplit *eranosExpenseItemSplit(EranosExpenseItem const *const item) { return EranosExpenseItem_split(item); }
 
 /// Sets how the line's total divides.
@@ -626,7 +625,7 @@ typedef struct EranosTipRule EranosTipRule;
 /// How the tip is expressed.
 ///
 /// @param tip The tip
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosTipValue *eranosTipRuleValue(EranosTipRule const *const tip) { return EranosTipRule_value(tip); }
 
 /// Sets how the tip is expressed.
@@ -683,13 +682,13 @@ typedef struct EranosTipValue EranosTipValue;
 /// @return The result
 [[nodiscard]] static inline EranosTipValueKind eranosTipValueKind(EranosTipValue const *const tipValue) { return EranosTipValue_kind(tipValue); }
 
-/// The tip. Present in the kind ERANOS_ERROR_KIND_FIXED alone.
+/// The tip. Present in the kind ERANOS_TIP_VALUE_KIND_FIXED alone.
 ///
 /// @param tipValue The tip value
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
 [[nodiscard]] static inline EranosMoney *eranosTipValueAmount(EranosTipValue const *const tipValue) { return EranosTipValue_amount(tipValue); }
 
-/// The tip's share of the amount, in basis points. Present in the kind ERANOS_ERROR_KIND_PERCENTAGE alone.
+/// The tip's share of the amount, in basis points. Present in the kind ERANOS_TIP_VALUE_KIND_PERCENTAGE alone.
 ///
 /// @param tipValue The tip value
 /// @param basisPoints Receives the basis points, when there is one

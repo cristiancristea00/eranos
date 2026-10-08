@@ -43,13 +43,13 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     eranosDetailFinish(message);
 }
 
-/// What the amounts add up to. Present for the failures `AmountsDoNotAddUp`, `ItemsDoNotAddUp`.
+/// What the amounts add up to. Present for the failures ERANOS_FAILURE_EXPENSE_AMOUNTS_DO_NOT_ADD_UP and ERANOS_FAILURE_EXPENSE_ITEMS_DO_NOT_ADD_UP.
 ///
 /// @param error The error
 /// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
 [[nodiscard]] static inline EranosMoney *eranosErrorActual(EranosError const *const error) { return EranosError_actual(error); }
 
-/// How many decimal places the currency has. Present for the failure `TooManyDecimals`.
+/// How many decimal places the currency has. Present for the failure ERANOS_FAILURE_MONEY_TOO_MANY_DECIMALS.
 ///
 /// @param error The error
 /// @param allowed Receives the allowed, when there is one
@@ -59,7 +59,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, allowed);
 }
 
-/// How many open balances the plan has. Present for the failure `OutOfMemory`.
+/// How many open balances the plan has. Present for the failure ERANOS_FAILURE_SETTLEMENT_OUT_OF_MEMORY.
 ///
 /// @param error The error
 /// @param balances Receives the balances, when there is one
@@ -69,7 +69,8 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, balances);
 }
 
-/// The identifier another category has. Present for the failures `DuplicateCategory`, `UnknownCategory`. Writes it, if present; absent otherwise.
+/// The identifier of the category. Present for the failures ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY and
+/// ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_CATEGORY. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param category Receives the category, replacing what it held
@@ -81,7 +82,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// The column of the saved group where the text stops being one, from 1. Present for the failure `InvalidJson`.
+/// The column of the saved group where the text stops being one, from 1. Present for the kind ERANOS_ERROR_KIND_INVALID_JSON.
 ///
 /// @param error The error
 /// @param column Receives the column, when there is one
@@ -91,8 +92,9 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, column);
 }
 
-/// The currency that appears twice. Present for the failures `DuplicateExchangeRate`, `MissingExchangeRate`, `TooManyDecimals`. Writes it, if
-/// present; absent otherwise.
+/// The ISO 4217 code of the currency. Present for the failures ERANOS_FAILURE_MONEY_TOO_MANY_DECIMALS,
+/// ERANOS_FAILURE_EXPENSE_GROUP_MISSING_EXCHANGE_RATE, and ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE. Writes it, if present; absent
+/// otherwise.
 ///
 /// @param error The error
 /// @param currency Receives the currency, replacing what it held
@@ -104,7 +106,8 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// The category that has the name. Present for the failure `DuplicateCategoryName`. Writes it, if present; absent otherwise.
+/// The category that has the name. Present for the failure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME. Writes it, if present; absent
+/// otherwise.
 ///
 /// @param error The error
 /// @param existing Receives the existing, replacing what it held
@@ -116,13 +119,13 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// The amount being split. Present for the failures `AmountsDoNotAddUp`, `ItemsDoNotAddUp`.
+/// The amount being split. Present for the failures ERANOS_FAILURE_EXPENSE_AMOUNTS_DO_NOT_ADD_UP and ERANOS_FAILURE_EXPENSE_ITEMS_DO_NOT_ADD_UP.
 ///
 /// @param error The error
 /// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
 [[nodiscard]] static inline EranosMoney *eranosErrorExpectedAmount(EranosError const *const error) { return EranosError_expected_amount(error); }
 
-/// The expense's currency. Present for the failure `CurrencyMismatch`. Writes it, if present; absent otherwise.
+/// The expense's currency. Present for the failure ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param expectedCurrency Receives the expected currency, replacing what it held
@@ -134,7 +137,8 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// How many characters the country's IBANs have. Present for the failure `WrongLength`.
+/// How many characters the country's IBANs have. Present for the failure ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN with the reason
+/// ERANOS_IBAN_REASON_WRONG_LENGTH.
 ///
 /// @param error The error
 /// @param expectedLength Receives the expected length, when there is one
@@ -144,7 +148,8 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, expectedLength);
 }
 
-/// The identifier another expense has. Present for the failures `DuplicateExpense`, `UnknownExpense`. Writes it, if present; absent otherwise.
+/// The identifier of the expense. Present for the failures ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_EXPENSE and
+/// ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_EXPENSE. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param expense Receives the expense, replacing what it held
@@ -156,13 +161,13 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// The expenses that name the member. Present for the failure `MemberInUse`.
+/// The expenses that name the member. Present for the failure ERANOS_FAILURE_EXPENSE_GROUP_MEMBER_IN_USE.
 ///
 /// @param error The error
 /// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
 [[nodiscard]] static inline EranosTextList *eranosErrorExpenses(EranosError const *const error) { return EranosError_expenses(error); }
 
-/// The format the saved group names. Present for the failure `UnsupportedFormat`.
+/// The format the saved group names. Present for the failure ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT.
 ///
 /// @param error The error
 /// @param format Receives the format, when there is one
@@ -172,7 +177,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, format);
 }
 
-/// The currency of the amount inside it. Present for the failure `CurrencyMismatch`. Writes it, if present; absent otherwise.
+/// The currency of the amount inside it. Present for the failure ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param foundCurrency Receives the found currency, replacing what it held
@@ -184,7 +189,8 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// How many characters the IBAN has. Present for the failure `WrongLength`.
+/// How many characters the IBAN has. Present for the failure ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN with the reason
+/// ERANOS_IBAN_REASON_WRONG_LENGTH.
 ///
 /// @param error The error
 /// @param foundLength Receives the found length, when there is one
@@ -194,7 +200,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, foundLength);
 }
 
-/// The currency of the first amount. Present for the failure `CurrencyMismatch`. Writes it, if present; absent otherwise.
+/// The currency of the first amount. Present for the failure ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param left Receives the left, replacing what it held
@@ -206,7 +212,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// The line of the saved group where the text stops being one, from 1. Present for the failure `InvalidJson`.
+/// The line of the saved group where the text stops being one, from 1. Present for the kind ERANOS_ERROR_KIND_INVALID_JSON.
 ///
 /// @param error The error
 /// @param line Receives the line, when there is one
@@ -216,8 +222,9 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, line);
 }
 
-/// The member who appears more than once. Present for the failures `DuplicateMember`, `NonPositiveShare`, `ArchivedMember`, `DuplicateMember`,
-/// `MemberInUse`, `UnknownMember`. Writes it, if present; absent otherwise.
+/// The identifier of the member. Present for the failures ERANOS_FAILURE_EXPENSE_DUPLICATE_MEMBER, ERANOS_FAILURE_EXPENSE_NON_POSITIVE_SHARE,
+/// ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_MEMBER, ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_MEMBER, ERANOS_FAILURE_EXPENSE_GROUP_ARCHIVED_MEMBER, and
+/// ERANOS_FAILURE_EXPENSE_GROUP_MEMBER_IN_USE. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param member Receives the member, replacing what it held
@@ -229,7 +236,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// The check the IBAN failed. Present for the failure `InvalidIban`.
+/// The check the IBAN failed. Present for the failure ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN.
 ///
 /// @param error The error
 /// @param reason Receives the reason, when there is one
@@ -239,7 +246,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentIbanReason(result.is_ok, &result.ok, reason);
 }
 
-/// The currency of the second amount. Present for the failure `CurrencyMismatch`. Writes it, if present; absent otherwise.
+/// The currency of the second amount. Present for the failure ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param right Receives the right, replacing what it held
@@ -251,7 +258,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// What the percentages add up to, in basis points. Present for the failure `PercentagesDoNotAddUp`.
+/// What the percentages add up to, in basis points. Present for the failure ERANOS_FAILURE_EXPENSE_PERCENTAGES_DO_NOT_ADD_UP.
 ///
 /// @param error The error
 /// @param totalBasisPoints Receives the total basis points, when there is one
@@ -261,7 +268,8 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, totalBasisPoints);
 }
 
-/// The identifier another transfer has. Present for the failures `DuplicateTransfer`, `UnknownTransfer`. Writes it, if present; absent otherwise.
+/// The identifier of the transfer. Present for the failures ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_TRANSFER and
+/// ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_TRANSFER. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param transfer Receives the transfer, replacing what it held
@@ -273,7 +281,7 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return present;
 }
 
-/// The transfers that name the member. Present for the failure `MemberInUse`.
+/// The transfers that name the member. Present for the failure ERANOS_FAILURE_EXPENSE_GROUP_MEMBER_IN_USE.
 ///
 /// @param error The error
 /// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none

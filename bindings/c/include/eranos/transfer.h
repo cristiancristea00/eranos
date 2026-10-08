@@ -122,7 +122,7 @@ static inline void eranosTransferTo(EranosTransfer const *const transfer, Eranos
 /// What was paid.
 ///
 /// @param transfer The transfer
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosCost *eranosTransferCost(EranosTransfer const *const transfer) { return EranosTransfer_cost(transfer); }
 
 /// Sets what was paid.

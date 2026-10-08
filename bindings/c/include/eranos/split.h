@@ -73,7 +73,7 @@ static inline void eranosMemberAmountMember(EranosMemberAmount const *const memb
 /// The amount.
 ///
 /// @param memberAmount The member amount
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosMoney *eranosMemberAmountAmount(EranosMemberAmount const *const memberAmount) {
     return EranosMemberAmount_amount(memberAmount);
 }
@@ -378,7 +378,7 @@ typedef struct EranosSplit EranosSplit;
 
 /// Every member pays in proportion to their parts.
 ///
-/// @param shares Each member's amount
+/// @param shares Each member's parts
 /// @return The split, which the caller destroys
 [[nodiscard]] static inline EranosSplit *eranosSplitCreateParts(EranosMemberPartsList const *const shares) {
     return EranosSplit_create_parts(shares);
@@ -386,7 +386,7 @@ typedef struct EranosSplit EranosSplit;
 
 /// Every member pays a percentage; the percentages add up to 100 %.
 ///
-/// @param shares Each member's amount
+/// @param shares Each member's percentage
 /// @return The split, which the caller destroys
 [[nodiscard]] static inline EranosSplit *eranosSplitCreatePercentages(EranosMemberPercentageList const *const shares) {
     return EranosSplit_create_percentages(shares);
@@ -406,30 +406,30 @@ typedef struct EranosSplit EranosSplit;
 /// @return The result
 [[nodiscard]] static inline EranosSplitKind eranosSplitKind(EranosSplit const *const split) { return EranosSplit_kind(split); }
 
-/// Each member's amount. Present in the kind ERANOS_ERROR_KIND_AMOUNTS alone.
+/// Each member's amount. Present in the kind ERANOS_SPLIT_KIND_AMOUNTS alone.
 ///
 /// @param split The split
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
 [[nodiscard]] static inline EranosMemberAmountList *eranosSplitAmountsShares(EranosSplit const *const split) {
     return EranosSplit_amounts_shares(split);
 }
 
-/// The identifiers of the members who share the amount. Present in the kind ERANOS_ERROR_KIND_EQUAL alone.
+/// The identifiers of the members who share the amount. Present in the kind ERANOS_SPLIT_KIND_EQUAL alone.
 ///
 /// @param split The split
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
 [[nodiscard]] static inline EranosTextList *eranosSplitMembers(EranosSplit const *const split) { return EranosSplit_members(split); }
 
-/// Each member's parts. Present in the kind ERANOS_ERROR_KIND_PARTS alone.
+/// Each member's parts. Present in the kind ERANOS_SPLIT_KIND_PARTS alone.
 ///
 /// @param split The split
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
 [[nodiscard]] static inline EranosMemberPartsList *eranosSplitPartsShares(EranosSplit const *const split) { return EranosSplit_parts_shares(split); }
 
-/// Each member's percentage. Present in the kind ERANOS_ERROR_KIND_PERCENTAGES alone.
+/// Each member's percentage. Present in the kind ERANOS_SPLIT_KIND_PERCENTAGES alone.
 ///
 /// @param split The split
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
 [[nodiscard]] static inline EranosMemberPercentageList *eranosSplitPercentagesShares(EranosSplit const *const split) {
     return EranosSplit_percentages_shares(split);
 }
@@ -439,8 +439,7 @@ typedef struct EranosSplit EranosSplit;
 /// @param split The split
 /// @param participants Receives the participants on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ID for an
-/// identifier
-///   that is not one
+///   identifier that is not one
 [[nodiscard]] static inline EranosError *eranosSplitParticipants(EranosSplit const *const split, EranosTextList **const participants) {
     EranosSplit_participants_result const result = EranosSplit_participants(split);
     *participants = result.is_ok ? result.ok : nullptr;

@@ -65,7 +65,7 @@ static inline void eranosPaymentAccountName(EranosPaymentAccount const *const ac
 /// The IBAN or the username.
 ///
 /// @param account The account
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosPaymentAccountDetails *eranosPaymentAccountDetails(EranosPaymentAccount const *const account) {
     return EranosPaymentAccount_details(account);
 }
@@ -124,7 +124,7 @@ typedef struct EranosPaymentAccountDetails EranosPaymentAccountDetails;
     return EranosPaymentAccountDetails_kind(accountDetails);
 }
 
-/// The account's IBAN. Present in the kind ERANOS_ERROR_KIND_IBAN alone. Writes it, if present; absent otherwise.
+/// The account's IBAN. Present in the kind ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_IBAN alone. Writes it, if present; absent otherwise.
 ///
 /// @param accountDetails The account details
 /// @param iban Receives the account's IBAN, replacing what it held
@@ -136,7 +136,7 @@ typedef struct EranosPaymentAccountDetails EranosPaymentAccountDetails;
     return present;
 }
 
-/// The username. Present in the kind ERANOS_ERROR_KIND_USERNAME alone. Writes it, if present; absent otherwise.
+/// The username. Present in the kind ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_USERNAME alone. Writes it, if present; absent otherwise.
 ///
 /// @param accountDetails The account details
 /// @param username Receives the username, replacing what it held
@@ -370,7 +370,7 @@ static inline void eranosMemberClearPhone(EranosMember *const member) { EranosMe
 /// Where the member can be paid, in the order they were given.
 ///
 /// @param member The member
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosPaymentAccountList *eranosMemberAccounts(EranosMember const *const member) { return EranosMember_accounts(member); }
 
 /// Sets where the member can be paid, in the order they were given.

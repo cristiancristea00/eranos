@@ -100,7 +100,7 @@ class Iban final {
     ///
     /// @param text The text
     /// @return The IBAN, or an error of the kind ErrorKind::PAYMENT_ACCOUNT for text that is not one, and ErrorKind::INVALID_TEXT for text that is
-    /// not UTF-8
+    ///   not UTF-8
     [[nodiscard]] static std::expected<Iban, Error> parse(std::string_view const text) noexcept;
 
     /// The IBAN as the library writes it: "RO49AAAA1B31007593840000".
@@ -135,8 +135,7 @@ class Username final {
     ///
     /// @param text The text
     /// @return The username, or an error of the kind ErrorKind::PAYMENT_ACCOUNT for text that is not one, and ErrorKind::INVALID_TEXT for text that
-    /// is not
-    ///   UTF-8
+    ///   is not UTF-8
     [[nodiscard]] static std::expected<Username, Error> parse(std::string_view const text) noexcept;
 
     /// The username as the library writes it: "ana.pays".

@@ -35,7 +35,7 @@ enum class TipDistribution : std::uint8_t {
     EQUAL,
 };
 
-/// A line of an itemised bill: `quantity` units of `name` at `unit_price`, which `split` divides.
+/// A line of an itemised bill: `quantity` units of `name` at `unitPrice`, which `split` divides.
 struct ExpenseItem final {
     /// The record of its required fields; the others start absent, empty, or at their default.
     ///

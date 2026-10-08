@@ -543,7 +543,7 @@ typedef struct EranosExpenseGroup EranosExpenseGroup;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The group saved as `json`, which `save` wrote.
+/// The group saved as `json`, which eranosExpenseGroupSave() or eranosExpenseGroupReaderSave() wrote.
 ///
 /// @param json The json, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param group Receives the group on success, which the caller destroys, and nullptr on failure
@@ -556,7 +556,7 @@ typedef struct EranosExpenseGroup EranosExpenseGroup;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `load`: it runs on a thread of its own and reports its outcome to `callback` there.
+/// The asynchronous form of eranosExpenseGroupLoad(): it runs on a thread of its own and reports its outcome to `callback` there.
 ///
 /// @param json The json, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -576,9 +576,7 @@ static inline void eranosExpenseGroupLoadAsync(char const *const json, EranosCan
 ///
 /// @param group The group
 /// @param id Receives the id, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupId(EranosExpenseGroup const *const group, EranosText *const id) {
     eranosDetailClear(id);
     EranosExpenseGroup_id_result const result = EranosExpenseGroup_id(group, id);
@@ -586,8 +584,8 @@ static inline void eranosExpenseGroupLoadAsync(char const *const json, EranosCan
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `id`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupId(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -608,17 +606,15 @@ static inline void eranosExpenseGroupIdAsync(EranosExpenseGroup const *const gro
 ///
 /// @param group The group
 /// @param categories Receives the categories on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupCategories(EranosExpenseGroup const *const group, EranosCategoryList **const categories) {
     EranosExpenseGroup_categories_result const result = EranosExpenseGroup_categories(group);
     *categories = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `categories`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupCategories(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -640,9 +636,8 @@ static inline void eranosExpenseGroupCategoriesAsync(EranosExpenseGroup const *c
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param category Receives the category on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupCategory(EranosExpenseGroup const *const group, char const *const id,
                                                                     EranosCategory **const category) {
     EranosExpenseGroup_category_result const result = EranosExpenseGroup_category(group, eranosDetailView(id));
@@ -650,8 +645,8 @@ static inline void eranosExpenseGroupCategoriesAsync(EranosExpenseGroup const *c
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `category`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupCategory(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -674,8 +669,8 @@ static inline void eranosExpenseGroupCategoryAsync(EranosExpenseGroup const *con
 /// @param group The group
 /// @param category The category
 /// @param id Receives the id, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupAddCategory(EranosExpenseGroup *const group, EranosCategory const *const category,
                                                                        EranosText *const id) {
     eranosDetailClear(id);
@@ -684,8 +679,8 @@ static inline void eranosExpenseGroupCategoryAsync(EranosExpenseGroup const *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `add_category`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupAddCategory(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -707,9 +702,9 @@ static inline void eranosExpenseGroupAddCategoryAsync(EranosExpenseGroup *const 
 ///
 /// @param group The group
 /// @param category The category
-/// @param previous Receives the previous on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @param previous Receives the category as it was before the call, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReplaceCategory(EranosExpenseGroup *const group, EranosCategory const *const category,
                                                                            EranosCategory **const previous) {
     EranosExpenseGroup_replace_category_result const result = EranosExpenseGroup_replace_category(group, category);
@@ -717,9 +712,9 @@ static inline void eranosExpenseGroupAddCategoryAsync(EranosExpenseGroup *const 
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `replace_category`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupReplaceCategory(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param category The category
@@ -741,10 +736,9 @@ static inline void eranosExpenseGroupReplaceCategoryAsync(EranosExpenseGroup *co
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param removed Receives the removed on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @param removed Receives the category the call removed, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupRemoveCategory(EranosExpenseGroup *const group, char const *const id,
                                                                           EranosCategory **const removed) {
     EranosExpenseGroup_remove_category_result const result = EranosExpenseGroup_remove_category(group, eranosDetailView(id));
@@ -752,9 +746,9 @@ static inline void eranosExpenseGroupReplaceCategoryAsync(EranosExpenseGroup *co
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `remove_category`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupRemoveCategory(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -775,9 +769,7 @@ static inline void eranosExpenseGroupRemoveCategoryAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param currency Receives the currency, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupCurrency(EranosExpenseGroup const *const group, EranosText *const currency) {
     eranosDetailClear(currency);
     EranosExpenseGroup_currency_result const result = EranosExpenseGroup_currency(group, currency);
@@ -785,8 +777,8 @@ static inline void eranosExpenseGroupRemoveCategoryAsync(EranosExpenseGroup *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `currency`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupCurrency(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -808,18 +800,17 @@ static inline void eranosExpenseGroupCurrencyAsync(EranosExpenseGroup const *con
 /// @param group The group
 /// @param currency The currency, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param rates The rates
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupChangeCurrency(EranosExpenseGroup *const group, char const *const currency,
                                                                           EranosCurrencyRateList const *const rates) {
     EranosExpenseGroup_change_currency_result const result = EranosExpenseGroup_change_currency(group, eranosDetailView(currency), rates);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `change_currency`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupChangeCurrency(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param currency The currency, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -842,17 +833,15 @@ static inline void eranosExpenseGroupChangeCurrencyAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param expenses Receives the expenses on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupExpenses(EranosExpenseGroup const *const group, EranosExpenseList **const expenses) {
     EranosExpenseGroup_expenses_result const result = EranosExpenseGroup_expenses(group);
     *expenses = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `expenses`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupExpenses(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -874,9 +863,8 @@ static inline void eranosExpenseGroupExpensesAsync(EranosExpenseGroup const *con
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param expense Receives the expense on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupExpense(EranosExpenseGroup const *const group, char const *const id,
                                                                    EranosExpense **const expense) {
     EranosExpenseGroup_expense_result const result = EranosExpenseGroup_expense(group, eranosDetailView(id));
@@ -884,8 +872,8 @@ static inline void eranosExpenseGroupExpensesAsync(EranosExpenseGroup const *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `expense`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupExpense(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -908,9 +896,8 @@ static inline void eranosExpenseGroupExpenseAsync(EranosExpenseGroup const *cons
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param expenseShares Receives the expense shares on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupExpenseShares(EranosExpenseGroup const *const group, char const *const id,
                                                                          EranosExpenseShares **const expenseShares) {
     EranosExpenseGroup_expense_shares_result const result = EranosExpenseGroup_expense_shares(group, eranosDetailView(id));
@@ -918,9 +905,9 @@ static inline void eranosExpenseGroupExpenseAsync(EranosExpenseGroup const *cons
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `expense_shares`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupExpenseShares(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -943,8 +930,8 @@ static inline void eranosExpenseGroupExpenseSharesAsync(EranosExpenseGroup const
 /// @param group The group
 /// @param expense The expense
 /// @param id Receives the id, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupAddExpense(EranosExpenseGroup *const group, EranosExpense const *const expense,
                                                                       EranosText *const id) {
     eranosDetailClear(id);
@@ -953,8 +940,8 @@ static inline void eranosExpenseGroupExpenseSharesAsync(EranosExpenseGroup const
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `add_expense`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupAddExpense(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -976,9 +963,9 @@ static inline void eranosExpenseGroupAddExpenseAsync(EranosExpenseGroup *const g
 ///
 /// @param group The group
 /// @param expense The expense
-/// @param previous Receives the previous on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @param previous Receives the expense as it was before the call, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReplaceExpense(EranosExpenseGroup *const group, EranosExpense const *const expense,
                                                                           EranosExpense **const previous) {
     EranosExpenseGroup_replace_expense_result const result = EranosExpenseGroup_replace_expense(group, expense);
@@ -986,9 +973,9 @@ static inline void eranosExpenseGroupAddExpenseAsync(EranosExpenseGroup *const g
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `replace_expense`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupReplaceExpense(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param expense The expense
@@ -1009,10 +996,9 @@ static inline void eranosExpenseGroupReplaceExpenseAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param removed Receives the removed on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @param removed Receives the expense the call removed, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupRemoveExpense(EranosExpenseGroup *const group, char const *const id,
                                                                          EranosExpense **const removed) {
     EranosExpenseGroup_remove_expense_result const result = EranosExpenseGroup_remove_expense(group, eranosDetailView(id));
@@ -1020,9 +1006,9 @@ static inline void eranosExpenseGroupReplaceExpenseAsync(EranosExpenseGroup *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `remove_expense`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupRemoveExpense(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1043,17 +1029,15 @@ static inline void eranosExpenseGroupRemoveExpenseAsync(EranosExpenseGroup *cons
 ///
 /// @param group The group
 /// @param summary Receives the summary on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupSummary(EranosExpenseGroup const *const group, EranosSummary **const summary) {
     EranosExpenseGroup_summary_result const result = EranosExpenseGroup_summary(group);
     *summary = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `summary`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupSummary(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1074,17 +1058,15 @@ static inline void eranosExpenseGroupSummaryAsync(EranosExpenseGroup const *cons
 ///
 /// @param group The group
 /// @param members Receives the members on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupMembers(EranosExpenseGroup const *const group, EranosMemberList **const members) {
     EranosExpenseGroup_members_result const result = EranosExpenseGroup_members(group);
     *members = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `members`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupMembers(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1106,9 +1088,8 @@ static inline void eranosExpenseGroupMembersAsync(EranosExpenseGroup const *cons
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param member Receives the member on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupMember(EranosExpenseGroup const *const group, char const *const id,
                                                                   EranosMember **const member) {
     EranosExpenseGroup_member_result const result = EranosExpenseGroup_member(group, eranosDetailView(id));
@@ -1116,8 +1097,8 @@ static inline void eranosExpenseGroupMembersAsync(EranosExpenseGroup const *cons
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `member`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupMember(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1140,9 +1121,8 @@ static inline void eranosExpenseGroupMemberAsync(EranosExpenseGroup const *const
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param archived Receives the archived on success
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupIsArchived(EranosExpenseGroup const *const group, char const *const id,
                                                                       bool *const archived) {
     EranosExpenseGroup_is_archived_result const result = EranosExpenseGroup_is_archived(group, eranosDetailView(id));
@@ -1153,8 +1133,8 @@ static inline void eranosExpenseGroupMemberAsync(EranosExpenseGroup const *const
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `is_archived`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupIsArchived(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1177,8 +1157,8 @@ static inline void eranosExpenseGroupIsArchivedAsync(EranosExpenseGroup const *c
 /// @param group The group
 /// @param member The member
 /// @param id Receives the id, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupAddMember(EranosExpenseGroup *const group, EranosMember const *const member,
                                                                      EranosText *const id) {
     eranosDetailClear(id);
@@ -1187,8 +1167,8 @@ static inline void eranosExpenseGroupIsArchivedAsync(EranosExpenseGroup const *c
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `add_member`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupAddMember(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1210,9 +1190,9 @@ static inline void eranosExpenseGroupAddMemberAsync(EranosExpenseGroup *const gr
 ///
 /// @param group The group
 /// @param member The member
-/// @param previous Receives the previous on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @param previous Receives the member as they were before the call, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReplaceMember(EranosExpenseGroup *const group, EranosMember const *const member,
                                                                          EranosMember **const previous) {
     EranosExpenseGroup_replace_member_result const result = EranosExpenseGroup_replace_member(group, member);
@@ -1220,9 +1200,9 @@ static inline void eranosExpenseGroupAddMemberAsync(EranosExpenseGroup *const gr
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `replace_member`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupReplaceMember(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param member The member
@@ -1243,17 +1223,16 @@ static inline void eranosExpenseGroupReplaceMemberAsync(EranosExpenseGroup *cons
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupArchiveMember(EranosExpenseGroup *const group, char const *const id) {
     EranosExpenseGroup_archive_member_result const result = EranosExpenseGroup_archive_member(group, eranosDetailView(id));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `archive_member`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupArchiveMember(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1274,17 +1253,16 @@ static inline void eranosExpenseGroupArchiveMemberAsync(EranosExpenseGroup *cons
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupUnarchiveMember(EranosExpenseGroup *const group, char const *const id) {
     EranosExpenseGroup_unarchive_member_result const result = EranosExpenseGroup_unarchive_member(group, eranosDetailView(id));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `unarchive_member`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupUnarchiveMember(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1305,10 +1283,9 @@ static inline void eranosExpenseGroupUnarchiveMemberAsync(EranosExpenseGroup *co
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param removed Receives the removed on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @param removed Receives the member the call removed, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupRemoveMember(EranosExpenseGroup *const group, char const *const id,
                                                                         EranosMember **const removed) {
     EranosExpenseGroup_remove_member_result const result = EranosExpenseGroup_remove_member(group, eranosDetailView(id));
@@ -1316,9 +1293,9 @@ static inline void eranosExpenseGroupUnarchiveMemberAsync(EranosExpenseGroup *co
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `remove_member`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupRemoveMember(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1339,9 +1316,7 @@ static inline void eranosExpenseGroupRemoveMemberAsync(EranosExpenseGroup *const
 ///
 /// @param group The group
 /// @param name Receives the name, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupName(EranosExpenseGroup const *const group, EranosText *const name) {
     eranosDetailClear(name);
     EranosExpenseGroup_name_result const result = EranosExpenseGroup_name(group, name);
@@ -1349,8 +1324,8 @@ static inline void eranosExpenseGroupRemoveMemberAsync(EranosExpenseGroup *const
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `name`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupName(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1371,16 +1346,15 @@ static inline void eranosExpenseGroupNameAsync(EranosExpenseGroup const *const g
 ///
 /// @param group The group
 /// @param name The name, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupSetName(EranosExpenseGroup *const group, char const *const name) {
     EranosExpenseGroup_set_name_result const result = EranosExpenseGroup_set_name(group, eranosDetailView(name));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `set_name`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupSetName(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1403,8 +1377,8 @@ static inline void eranosExpenseGroupSetNameAsync(EranosExpenseGroup *const grou
 /// @param group The group
 /// @param strategy The strategy
 /// @param settlement Receives the settlement on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupSettlement(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy,
                                                                       EranosSettlementPlan **const settlement) {
     EranosExpenseGroup_settlement_result const result = EranosExpenseGroup_settlement(group, strategy);
@@ -1412,8 +1386,8 @@ static inline void eranosExpenseGroupSetNameAsync(EranosExpenseGroup *const grou
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `settlement`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupSettlement(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1436,17 +1410,15 @@ static inline void eranosExpenseGroupSettlementAsync(EranosExpenseGroup const *c
 ///
 /// @param group The group
 /// @param transfers Receives the transfers on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupTransfers(EranosExpenseGroup const *const group, EranosTransferList **const transfers) {
     EranosExpenseGroup_transfers_result const result = EranosExpenseGroup_transfers(group);
     *transfers = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `transfers`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupTransfers(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1468,9 +1440,8 @@ static inline void eranosExpenseGroupTransfersAsync(EranosExpenseGroup const *co
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupTransfer(EranosExpenseGroup const *const group, char const *const id,
                                                                     EranosTransfer **const transfer) {
     EranosExpenseGroup_transfer_result const result = EranosExpenseGroup_transfer(group, eranosDetailView(id));
@@ -1478,8 +1449,8 @@ static inline void eranosExpenseGroupTransfersAsync(EranosExpenseGroup const *co
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `transfer`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1502,9 +1473,8 @@ static inline void eranosExpenseGroupTransferAsync(EranosExpenseGroup const *con
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param transferAmount Receives the transfer amount on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupTransferAmount(EranosExpenseGroup const *const group, char const *const id,
                                                                           EranosMoney **const transferAmount) {
     EranosExpenseGroup_transfer_amount_result const result = EranosExpenseGroup_transfer_amount(group, eranosDetailView(id));
@@ -1512,9 +1482,9 @@ static inline void eranosExpenseGroupTransferAsync(EranosExpenseGroup const *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `transfer_amount`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupTransferAmount(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1536,8 +1506,8 @@ static inline void eranosExpenseGroupTransferAmountAsync(EranosExpenseGroup cons
 /// @param group The group
 /// @param transfer The transfer
 /// @param id Receives the id, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupAddTransfer(EranosExpenseGroup *const group, EranosTransfer const *const transfer,
                                                                        EranosText *const id) {
     eranosDetailClear(id);
@@ -1546,8 +1516,8 @@ static inline void eranosExpenseGroupTransferAmountAsync(EranosExpenseGroup cons
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `add_transfer`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupAddTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1569,9 +1539,9 @@ static inline void eranosExpenseGroupAddTransferAsync(EranosExpenseGroup *const 
 ///
 /// @param group The group
 /// @param transfer The transfer
-/// @param previous Receives the previous on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @param previous Receives the transfer as it was before the call, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReplaceTransfer(EranosExpenseGroup *const group, EranosTransfer const *const transfer,
                                                                            EranosTransfer **const previous) {
     EranosExpenseGroup_replace_transfer_result const result = EranosExpenseGroup_replace_transfer(group, transfer);
@@ -1579,9 +1549,9 @@ static inline void eranosExpenseGroupAddTransferAsync(EranosExpenseGroup *const 
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `replace_transfer`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupReplaceTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param transfer The transfer
@@ -1603,10 +1573,9 @@ static inline void eranosExpenseGroupReplaceTransferAsync(EranosExpenseGroup *co
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param removed Receives the removed on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
-///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind
-///   ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+/// @param removed Receives the transfer the call removed, on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
+///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupRemoveTransfer(EranosExpenseGroup *const group, char const *const id,
                                                                           EranosTransfer **const removed) {
     EranosExpenseGroup_remove_transfer_result const result = EranosExpenseGroup_remove_transfer(group, eranosDetailView(id));
@@ -1614,9 +1583,9 @@ static inline void eranosExpenseGroupReplaceTransferAsync(EranosExpenseGroup *co
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `remove_transfer`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupRemoveTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1638,9 +1607,7 @@ static inline void eranosExpenseGroupRemoveTransferAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param description Receives the description, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupDescription(EranosExpenseGroup const *const group, EranosText *const description) {
     eranosDetailClear(description);
     EranosExpenseGroup_description_result const result = EranosExpenseGroup_description(group, description);
@@ -1648,8 +1615,8 @@ static inline void eranosExpenseGroupRemoveTransferAsync(EranosExpenseGroup *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `description`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupDescription(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1670,18 +1637,16 @@ static inline void eranosExpenseGroupDescriptionAsync(EranosExpenseGroup const *
 ///
 /// @param group The group
 /// @param description The description, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock; the error of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not
-///   UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupSetDescription(EranosExpenseGroup *const group, char const *const description) {
     EranosExpenseGroup_set_description_result const result = EranosExpenseGroup_set_description(group, eranosDetailView(description));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `set_description`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback`
-/// there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// The asynchronous form of eranosExpenseGroupSetDescription(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param description The description, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1703,9 +1668,7 @@ static inline void eranosExpenseGroupSetDescriptionAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param language Receives the language, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while another call holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupLanguage(EranosExpenseGroup const *const group, EranosText *const language) {
     eranosDetailClear(language);
     EranosExpenseGroup_language_result const result = EranosExpenseGroup_language(group, language);
@@ -1713,8 +1676,8 @@ static inline void eranosExpenseGroupSetDescriptionAsync(EranosExpenseGroup *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `language`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupLanguage(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1745,13 +1708,13 @@ static inline void eranosExpenseGroupLanguageAsync(EranosExpenseGroup const *con
 /// Clears the language the apps show the group in.
 ///
 /// @param group The group
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: None but the group's own, which the core reports
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupClearLanguage(EranosExpenseGroup *const group) {
     EranosExpenseGroup_clear_language_result const result = EranosExpenseGroup_clear_language(group);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `set_language`, reported to `callback` on the group's worker thread.
+/// The asynchronous form of eranosExpenseGroupSetLanguage(), reported to `callback` on the group's worker thread.
 ///
 /// @param group The group
 /// @param language The language, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1768,7 +1731,7 @@ static inline void eranosExpenseGroupSetLanguageAsync(EranosExpenseGroup *const 
     EranosExpenseGroup_set_language_async(group, eranosDetailView(language), cancellation, wrapped);
 }
 
-/// The asynchronous form of `clear_language`, reported to `callback` on the group's worker thread.
+/// The asynchronous form of eranosExpenseGroupClearLanguage(), reported to `callback` on the group's worker thread.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1788,9 +1751,7 @@ static inline void eranosExpenseGroupClearLanguageAsync(EranosExpenseGroup *cons
 ///
 /// @param group The group
 /// @param json Receives the json, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while a change holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupSave(EranosExpenseGroup const *const group, EranosText *const json) {
     eranosDetailClear(json);
     EranosExpenseGroup_save_result const result = EranosExpenseGroup_save(group, json);
@@ -1798,8 +1759,8 @@ static inline void eranosExpenseGroupClearLanguageAsync(EranosExpenseGroup *cons
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `save`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupSave(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1816,21 +1777,19 @@ static inline void eranosExpenseGroupSaveAsync(EranosExpenseGroup const *const g
     EranosExpenseGroup_save_async(group, cancellation, wrapped);
 }
 
-/// A read handle, which holds the shared lock until it is released or dropped, so that its reads see no change in between.
+/// A read handle, which holds the shared lock until it is released or destroyed, so that its reads see no change in between.
 ///
 /// @param group The group
 /// @param reader Receives the reader on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP with
-/// the
-///   failure `ExpenseGroupBusy` on wasm while a change holds the lock
+/// @return nullptr: the call waits for the group's lock, so it reports no error
 [[nodiscard]] static inline EranosError *eranosExpenseGroupRead(EranosExpenseGroup const *const group, EranosExpenseGroupReader **const reader) {
     EranosExpenseGroup_read_result const result = EranosExpenseGroup_read(group);
     *reader = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The asynchronous form of `read`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there.
-/// Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
+/// The asynchronous form of eranosExpenseGroupRead(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
 /// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
@@ -1859,8 +1818,8 @@ static inline void eranosExpenseGroupDestroy(EranosExpenseGroup *const group) {
 /// What a new group starts with.
 typedef struct EranosNewExpenseGroup EranosNewExpenseGroup;
 
-/// A new new group of its required fields under the identifier @p id, such as the key an app's own store gives the group; every other field starts
-/// absent, empty, or at its default. eranosNewExpenseGroupCreate() generates the identifier instead.
+/// The details of a new group, made of their required fields, under the identifier @p id, such as the key an app's own store gives the group; every
+/// other field starts absent, empty, or at its default. eranosNewExpenseGroupCreate() generates the identifier instead.
 ///
 /// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
 ///   text
@@ -1877,8 +1836,8 @@ typedef struct EranosNewExpenseGroup EranosNewExpenseGroup;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// A new new group of its required fields under an identifier generated when it is called, which eranosNewExpenseGroupCreateWithId() takes
-/// instead; every other field starts absent, empty, or at its default.
+/// The details of a new group, made of their required fields, under an identifier generated when it is called, which
+/// eranosNewExpenseGroupCreateWithId() takes instead; every other field starts absent, empty, or at its default.
 ///
 /// @param name The group's name, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param currency The ISO 4217 code of the group currency, which every total is in, as UTF-8 ended by a NUL; nullptr reads as empty text

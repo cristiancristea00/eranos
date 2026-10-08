@@ -60,8 +60,7 @@ static inline void eranosMoneyCurrency(EranosMoney const *const money, EranosTex
 /// @param money The money
 /// @param text Receives the text, replacing what it held
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a
-/// currency
-///   the library does not list
+///   currency the library does not list
 [[nodiscard]] static inline EranosError *eranosMoneyFormat(EranosMoney const *const money, EranosText *const text) {
     eranosDetailClear(text);
     EranosMoney_format_result const result = EranosMoney_format(money, text);
@@ -75,8 +74,7 @@ static inline void eranosMoneyCurrency(EranosMoney const *const money, EranosTex
 /// @param other The other
 /// @param sum Receives the sum on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for amounts
-/// in
-///   two currencies, or a sum out of range
+///   in two currencies, or a sum out of range
 [[nodiscard]] static inline EranosError *eranosMoneyAdd(EranosMoney const *const money, EranosMoney const *const other, EranosMoney **const sum) {
     EranosMoney_add_result const result = EranosMoney_add(money, other);
     *sum = result.is_ok ? result.ok : nullptr;
@@ -89,8 +87,7 @@ static inline void eranosMoneyCurrency(EranosMoney const *const money, EranosTex
 /// @param other The other
 /// @param difference Receives the difference on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for amounts
-/// in
-///   two currencies, or a difference out of range
+///   in two currencies, or a difference out of range
 [[nodiscard]] static inline EranosError *eranosMoneySubtract(EranosMoney const *const money, EranosMoney const *const other,
                                                              EranosMoney **const difference) {
     EranosMoney_subtract_result const result = EranosMoney_subtract(money, other);

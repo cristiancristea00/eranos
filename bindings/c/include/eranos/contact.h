@@ -30,8 +30,7 @@
 /// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param iban Receives the iban, replacing what it held
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT for
-/// text
-///   that is not an IBAN, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+///   text that is not an IBAN, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosIbanParse(char const *const text, EranosText *const iban) {
     eranosDetailClear(iban);
     EranosIban_parse_result const result = EranosIban_parse(eranosDetailView(text), iban);
@@ -44,8 +43,7 @@
 /// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param countryCode Receives the country code, replacing what it held
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT for
-/// text
-///   that is not an IBAN, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+///   text that is not an IBAN, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosIbanCountryCode(char const *const text, EranosText *const countryCode) {
     eranosDetailClear(countryCode);
     EranosIban_country_code_result const result = EranosIban_country_code(eranosDetailView(text), countryCode);
@@ -97,8 +95,7 @@
 /// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param username Receives the username, replacing what it held
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT for
-/// a blank
-///   username, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+///   a blank username, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosUsernameParse(char const *const text, EranosText *const username) {
     eranosDetailClear(username);
     EranosUsername_parse_result const result = EranosUsername_parse(eranosDetailView(text), username);

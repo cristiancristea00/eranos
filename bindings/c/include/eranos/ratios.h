@@ -78,7 +78,7 @@
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Writes the percentage of `basis_points` basis points as the library does: "12.5%".
+/// Writes the percentage of `basisPoints` basis points as the library does: "12.5%".
 ///
 /// @param basisPoints The basis points
 /// @param text Receives the text, replacing what it held
