@@ -232,9 +232,30 @@ fn words(name: &Ident) -> String {
     crate::snake_case(&name.to_string()).replace('_', " ")
 }
 
-/// `words` after its indefinite article: "an expense", "a member amount".
+/// The nouns, among those the core names its records for, that count
+/// nothing, and so take no indefinite article.
+const UNCOUNTABLE: [&str; 1] = ["money"];
+
+/// The noun of `words`, their last word: "shares" of "expense shares".
+fn noun(words: &str) -> &str {
+    words.rsplit_once(' ').map_or(words, |(_, noun)| noun)
+}
+
+/// Whether `words` name things in the plural: their noun ends in `s`, as
+/// "expense shares" and "member parts" do, but not in `ss` or `us`, as the
+/// singular "address" and "status" do.
+fn plural(words: &str) -> bool {
+    let noun = noun(words);
+    noun.ends_with('s') && !noun.ends_with("ss") && !noun.ends_with("us")
+}
+
+/// `words` after their indefinite article: "an expense", "a member amount";
+/// a plural noun, as in "expense shares", and an uncountable one, "money",
+/// take none.
 fn article(words: &str) -> String {
-    if words.starts_with(['a', 'e', 'i', 'o', 'u']) {
+    if plural(words) || UNCOUNTABLE.contains(&noun(words)) {
+        words.to_owned()
+    } else if words.starts_with(['a', 'e', 'i', 'o', 'u']) {
         format!("an {words}")
     } else {
         format!("a {words}")

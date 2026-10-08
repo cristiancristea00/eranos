@@ -392,7 +392,7 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
 /// The currency of @p group, as its code.
 [[nodiscard]] static Line currencyOf(EranosExpenseGroup const *const group) {
     EranosText *const text = eranosTextCreate();
-    must(eranosExpenseGroupCurrency(group, text));
+    eranosExpenseGroupCurrency(group, text);
     Line const line = textLine(text);
     eranosTextDestroy(text);
     return line;
@@ -408,8 +408,7 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
 
 /// What @p group spent, as the library writes it.
 [[nodiscard]] static Line totalSpent(EranosExpenseGroup const *const group) {
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     Line const line = moneyLine(eranosSummaryTotalSpent(summary));
     eranosSummaryDestroy(summary);
     return line;
@@ -534,8 +533,7 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
 
 /// The summary of @p group, which the caller destroys.
 [[nodiscard]] static EranosSummary *summaryOf(EranosExpenseGroup const *const group) {
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     return summary;
 }
 
@@ -554,8 +552,7 @@ static void printBalances(EranosExpenseGroup const *const group) {
     Line const zero = zeroOf(group);
     EranosBalance *const settled = eranosBalanceCreateSettled();
     Line const settledLine = balanceLine(settled);
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -594,8 +591,7 @@ static void printBalances(EranosExpenseGroup const *const group) {
 
 /// How many expenses of @p group are in @p category.
 [[nodiscard]] static size_t expensesIn(EranosExpenseGroup const *const group, char const *const category) {
-    EranosExpenseList *expenses = nullptr;
-    must(eranosExpenseGroupExpenses(group, &expenses));
+    EranosExpenseList *const expenses = eranosExpenseGroupExpenses(group);
     EranosText *const text = eranosTextCreate();
     size_t count = 0;
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
@@ -665,8 +661,7 @@ static void printCategories(EranosExpenseGroup const *const group) {
 /// Adds every expense of @p group but those in @p hidden to @p table, as entered and in the group currency.
 static void addExpenseEntries(EranosExpenseGroup const *const group, char const *const hidden, Table *const table) {
     Line const zero = zeroOf(group);
-    EranosExpenseList *expenses = nullptr;
-    must(eranosExpenseGroupExpenses(group, &expenses));
+    EranosExpenseList *const expenses = eranosExpenseGroupExpenses(group);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
         EranosExpense *const expense = eranosExpenseListGet(expenses, index);
@@ -701,8 +696,7 @@ static void addExpenseEntries(EranosExpenseGroup const *const group, char const 
 /// Adds every transfer of @p group but those in @p hidden to @p table, as entered and in the group currency.
 static void addTransferEntries(EranosExpenseGroup const *const group, char const *const hidden, Table *const table) {
     Line const zero = zeroOf(group);
-    EranosTransferList *transfers = nullptr;
-    must(eranosExpenseGroupTransfers(group, &transfers));
+    EranosTransferList *const transfers = eranosExpenseGroupTransfers(group);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosTransferListLength(transfers) > index; ++index) {
         EranosTransfer *const transfer = eranosTransferListGet(transfers, index);
@@ -755,12 +749,12 @@ static void printEntries(EranosExpenseGroup const *const group, char const *cons
     must(eranosExpenseGroupSetName(group, "Lisbon and Porto"));
     must(eranosExpenseGroupSetDescription(group, "A week by the Atlantic, with a day in Porto"));
     EranosText *const text = eranosTextCreate();
-    must(eranosExpenseGroupName(group, text));
+    eranosExpenseGroupName(group, text);
     Line const name = textLine(text);
     Line const currency = currencyOf(group);
-    must(eranosExpenseGroupLanguage(group, text));
+    check(eranosExpenseGroupLanguage(group, text), "the group has a language");
     Line const language = textLine(text);
-    must(eranosExpenseGroupDescription(group, text));
+    (void)eranosExpenseGroupDescription(group, text);
     Line const description = textLine(text);
     eranosTextDestroy(text);
     Table *const table = detailTable(2);
@@ -852,8 +846,7 @@ static void printEntries(EranosExpenseGroup const *const group, char const *cons
 
 /// Prints every member of @p group with their contact and account details.
 static void printMembers(EranosExpenseGroup const *const group) {
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = memberTable(4);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -1055,8 +1048,7 @@ static void validation(EranosExpenseGroup *const group) {
 
 /// The names of every category of @p group, in identifier order, joined by commas.
 [[nodiscard]] static Line categoryNames(EranosExpenseGroup const *const group) {
-    EranosCategoryList *categories = nullptr;
-    must(eranosExpenseGroupCategories(group, &categories));
+    EranosCategoryList *const categories = eranosExpenseGroupCategories(group);
     EranosText *const text = eranosTextCreate();
     Line line = {};
     size_t length = 0;
@@ -1076,8 +1068,7 @@ static void validation(EranosExpenseGroup *const group) {
 
 /// Whether the categories of @p group, in identifier order, are the @p count identifiers of @p expected.
 [[nodiscard]] static bool categoriesAre(EranosExpenseGroup const *const group, Id const *const expected, size_t const count) {
-    EranosCategoryList *categories = nullptr;
-    must(eranosExpenseGroupCategories(group, &categories));
+    EranosCategoryList *const categories = eranosExpenseGroupCategories(group);
     EranosText *const text = eranosTextCreate();
     bool same = count == eranosCategoryListLength(categories);
     for (size_t index = 0; same && count > index; ++index) {
@@ -1794,8 +1785,7 @@ static void comingsAndGoings(EranosExpenseGroup *const group, People const *cons
                    "cannot include him, and he cannot be removed while entries reference him.",
                    removedName.text);
     EranosSummary *const summary = summaryOf(group);
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = statusTable(2);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -1887,8 +1877,7 @@ static void printMemberCategories(EranosExpenseGroup const *const group, Categor
     Id const builtIn = builtInCategory();
     Line const zero = zeroOf(group);
     EranosSummary *const summary = summaryOf(group);
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = memberCategoryTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -1987,8 +1976,7 @@ static void summary(EranosExpenseGroup const *const group, People const *const p
 
 /// Whether an expense of @p group is in @p category.
 [[nodiscard]] static bool anyIn(EranosExpenseGroup const *const group, Id const category) {
-    EranosExpenseList *expenses = nullptr;
-    must(eranosExpenseGroupExpenses(group, &expenses));
+    EranosExpenseList *const expenses = eranosExpenseGroupExpenses(group);
     EranosText *const text = eranosTextCreate();
     bool found = false;
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
@@ -2237,7 +2225,7 @@ static void printAccounts(EranosExpenseGroup const *const group, Id const ana, c
 static void savingAndLoading(EranosExpenseGroup const *const group, People const *const people, Categories const *const categories) {
     section("12. Saving and loading");
     EranosText *const saved = eranosTextCreate();
-    must(eranosExpenseGroupSave(group, saved));
+    eranosExpenseGroupSave(group, saved);
     printFormatted("The group saves to %zu bytes of JSON: its details and entries, never the totals.\n"
                    "Ana's accounts are saved in clear text, as the library holds them:",
                    eranosTextLength(saved));
@@ -2263,7 +2251,7 @@ static void savingAndLoading(EranosExpenseGroup const *const group, People const
     tablePrint(table);
 
     EranosText *const resaved = eranosTextCreate();
-    must(eranosExpenseGroupSave(loaded, resaved));
+    eranosExpenseGroupSave(loaded, resaved);
     check(0 == strcmp(eranosTextData(resaved), eranosTextData(saved)), "the loaded group saves as the group did");
     EranosSummary *const before = summaryOf(group);
     EranosSummary *const after = summaryOf(loaded);

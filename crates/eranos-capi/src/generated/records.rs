@@ -1187,7 +1187,7 @@ pub mod ffi {
     pub struct EranosMemberParts(pub(crate) eranos_bindings::MemberParts);
 
     impl EranosMemberParts {
-        /// A member parts of its required fields; every other field starts absent, empty, or at its
+        /// Member parts of their required fields; every other field starts absent, empty, or at its
         /// default.
         ///
         /// # Errors

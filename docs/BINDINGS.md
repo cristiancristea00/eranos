@@ -333,15 +333,23 @@ calls reach, and `src/generated/expense_group.rs`, the group with both forms of
 every call, the read handle with every read's, the cancellation, and an
 outcome per kind of answer, from the core's `#[mirrored]` items and its
 trait of calls, through eranos-glue's generator, and lays them out with
-rustfmt. The generator's templates hold what the core cannot say: the
-group's constructors and read handle, the cancellation, and the methods of
-a record that are not a field's, such as an expense's total. A test of
-xtask fails while a committed file holds other code than the generator
-writes; it compares tokens, so rustfmt's commas, a `match` arm's braces, and
-the wrapping of a doc comment cannot fail it, and the files' line endings
-cannot either. The worker thread, the checks of text, the error, the dates
-and times, amounts, lists of text, and the value helpers stay hand-written
-beside them. Diplomat carries opaque
+rustfmt. An outcome holds the call's failure or its answer, and hands the
+answer over, a flag's included, only when the call succeeded; it holds an
+`Option` only where the answer may be absent: optional text, and the
+record of a lookup, which has an outcome of its own,
+`EranosFoundMemberOutcome` beside the `EranosMemberOutcome` of the calls
+that always return a member. The synchronous form of a call that the core
+marks as one that cannot fail returns its answer itself, and a `Result`
+only for the text it checks: the core refuses such a call only as busy, on
+wasm, for which the bridge is not built. The generator's templates hold
+what the core cannot say: the group's constructors and read handle, the
+cancellation, and the methods of a record that are not a field's, such as an
+expense's total. A test of xtask fails while a committed file holds other
+code than the generator writes; it compares tokens, so rustfmt's commas, a
+`match` arm's braces, and the wrapping of a doc comment cannot fail it, and
+the files' line endings cannot either. The worker thread, the checks of
+text, the error, the dates and times, amounts, lists of text, and the value
+helpers stay hand-written beside them. Diplomat carries opaque
 objects, plain structs, and C-like enums, so a record, a list, and an enum
 with data is an opaque object: a record has a constructor of its required
 fields, which starts every other field absent, empty, or at its default
@@ -632,7 +640,12 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
 
 - A call the library can refuse returns the error, or nullptr on success,
   and gives its value through its last parameter, an object the caller
-  destroys; an optional value returns whether there is one. Every destroy
+  destroys; an optional value returns whether there is one. A lookup by
+  identifier gives nullptr with no error when nothing has the identifier.
+  A group call that no argument can make fail, such as the group's name or
+  its summary, returns its value, or writes its text into its last
+  parameter, since it waits for the lock: only the WebAssembly build, for
+  which the C API is not built, fails such a call, as busy. Every destroy
   function takes nullptr, as `free` does.
 - An entry's or a new group's create function generates its identifier
   (`eranosMemberCreate(firstName, &member)`,
@@ -652,8 +665,12 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   own allocations do, so the NUL always has room.
 - An asynchronous call takes a callback struct, a context and a function
   that receives the error or the value, which it owns; the struct stays
-  valid until its function runs, once. A trampoline for each kind of
-  outcome reads the outcome, destroys it, and calls the function.
+  valid until its function runs, once. The value is nullptr when the call
+  failed, and a lookup's, whose struct is named for what it finds
+  (`EranosFoundMemberCallback`), also when it found nothing; a flag's
+  function receives a pointer to the answer, valid while it runs, or
+  nullptr. A trampoline for each kind of outcome reads the outcome,
+  destroys it, and calls the function.
 - Every parameter the function does not change is `const`, the pointer
   itself included (`EranosExpenseGroup const *const group`), and a call that
   changes what later calls see takes its object as not `const`, though

@@ -122,12 +122,20 @@ fn the_group_has_every_form_of_every_call_in_order() {
             "description_async",
             "is_archived",
             "is_archived_async",
+            "is_open",
+            "is_open_async",
+            "latest_expense",
+            "latest_expense_async",
             "summary",
             "summary_async",
             "add_expense",
             "add_expense_async",
+            "remove_expense",
+            "remove_expense_async",
             "set_members",
             "set_members_async",
+            "set_note",
+            "set_note_async",
             "set_language",
             "clear_language",
             "set_language_async",
@@ -143,6 +151,9 @@ fn the_group_has_every_form_of_every_call_in_order() {
 /// A synchronous form checks its text, lends a record or a list, converts a
 /// value, and passes an integer as it is; it writes text into a
 /// `DiplomatWrite`, and hands a record or a list over in an opaque object.
+/// The group's form of a call that cannot fail returns that answer itself,
+/// which `crate::waited` takes out of the core's `Result`, and a `Result`
+/// only when it takes text, which it checks.
 #[test]
 fn a_synchronous_form_lends_the_core_its_parameters() {
     let named = named();
@@ -158,25 +169,19 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
                 }
             },
             quote! {
-                pub fn expenses(&self) -> Result<Box<EranosExpenseList>, Box<EranosError>> {
-                    self.handle
-                        .expenses()
-                        .map(|list| Box::new(EranosExpenseList(list)))
-                        .map_err(crate::failed)
+                #[must_use]
+                pub fn expenses(&self) -> Box<EranosExpenseList> {
+                    Box::new(EranosExpenseList(crate::waited(self.handle.expenses())))
                 }
             },
             quote! {
-                pub fn name(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-                    let text = self.handle.name().map_err(crate::failed)?;
-                    crate::write_text(write, &text);
-                    Ok(())
+                pub fn name(&self, write: &mut DiplomatWrite) {
+                    crate::write_text(write, &crate::waited(self.handle.name()));
                 }
             },
             quote! {
-                pub fn description(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-                    let text = self.handle.description().map_err(crate::failed)?;
-                    crate::write_optional(write, text.as_deref());
-                    Ok(())
+                pub fn description(&self, write: &mut DiplomatWrite) -> Option<()> {
+                    crate::write_optional(write, crate::waited(self.handle.description()).as_deref())
                 }
             },
             quote! {
@@ -185,11 +190,21 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
                 }
             },
             quote! {
-                pub fn summary(&self) -> Result<Box<EranosSummary>, Box<EranosError>> {
-                    self.handle
-                        .summary()
-                        .map(|value| Box::new(EranosSummary(value)))
-                        .map_err(crate::failed)
+                #[must_use]
+                pub fn is_open(&self) -> bool {
+                    crate::waited(self.handle.is_open())
+                }
+            },
+            quote! {
+                #[must_use]
+                pub fn latest_expense(&self) -> Option<Box<EranosExpense>> {
+                    crate::waited(self.handle.latest_expense()).map(|value| Box::new(EranosExpense(value)))
+                }
+            },
+            quote! {
+                #[must_use]
+                pub fn summary(&self) -> Box<EranosSummary> {
+                    Box::new(EranosSummary(crate::waited(self.handle.summary())))
                 }
             },
             quote! {
@@ -202,6 +217,12 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
             quote! {
                 pub fn set_members(&self, members: &EranosTextList, items: &EranosExpenseItemList) -> Result<(), Box<EranosError>> {
                     self.handle.set_members(&members.0, &items.0).map_err(crate::failed)
+                }
+            },
+            quote! {
+                pub fn set_note(&self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
+                    crate::waited(self.handle.set_note(&crate::text(note)?));
+                    Ok(())
                 }
             },
             quote! {
@@ -226,7 +247,8 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
 }
 
 /// An asynchronous form checks its text before it returns and reports its
-/// outcome to its callback on the worker thread, a record in an `Option`.
+/// outcome to its callback on the worker thread: a lookup's to an outcome of
+/// its own, and a record the call always returns as the core returns it.
 #[test]
 fn an_asynchronous_read_checks_its_text_before_it_returns() {
     let named = named();
@@ -238,7 +260,7 @@ fn an_asynchronous_read_checks_its_text_before_it_returns() {
                     &self,
                     id: &DiplomatStr,
                     cancellation: Option<&EranosCancellation>,
-                    callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
+                    callback: impl Fn(Box<EranosFoundExpenseOutcome>) + 'static,
                 ) {
                     let handle = self.handle.clone();
                     let cancellation = cancellation.map(EranosCancellation::shared);
@@ -252,7 +274,7 @@ fn an_asynchronous_read_checks_its_text_before_it_returns() {
                                 .map_err(crate::Failure::Library)
                         },
                         callback,
-                        EranosExpenseOutcome,
+                        EranosFoundExpenseOutcome,
                     );
                 }
             },
@@ -271,7 +293,6 @@ fn an_asynchronous_read_checks_its_text_before_it_returns() {
                                 .summary_async(cancellation)
                                 .await
                                 .map_err(crate::Failure::Library)
-                                .map(Some)
                         },
                         callback,
                         EranosSummaryOutcome,
@@ -312,6 +333,29 @@ fn an_asynchronous_change_prepares_its_parameters_before_it_returns() {
                         },
                         callback,
                         EranosUnitOutcome,
+                    );
+                }
+            },
+            quote! {
+                pub fn remove_expense_async(
+                    &self,
+                    id: &DiplomatStr,
+                    cancellation: Option<&EranosCancellation>,
+                    callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
+                ) {
+                    let handle = self.handle.clone();
+                    let cancellation = cancellation.map(EranosCancellation::shared);
+                    let id = crate::decoded(id);
+                    crate::spawn(
+                        &self.jobs,
+                        async move {
+                            handle
+                                .remove_expense_async(id?, cancellation)
+                                .await
+                                .map_err(crate::Failure::Library)
+                        },
+                        callback,
+                        EranosExpenseOutcome,
                     );
                 }
             },
@@ -404,10 +448,11 @@ fn an_asynchronous_twin_passes_no_optional_text() {
     );
 }
 
-/// Every form carries the call's documentation and its own failures: the
-/// call's refusal unless it cannot fail, the lock on wasm by what the call
-/// takes, text that is not UTF-8 for a form that takes text, and the
-/// released handle for the read handle's; the twin says what it passes.
+/// Every form carries the call's documentation and its own failures, if it
+/// has any: the call's refusal and the lock on wasm by what the call takes,
+/// unless the call cannot fail, text that is not UTF-8 for a form that
+/// takes text, and the released handle for the read handle's; the twin says
+/// what it passes.
 #[test]
 fn every_form_says_how_it_fails() {
     let named = named();
@@ -415,20 +460,20 @@ fn every_form_says_how_it_fails() {
     assert_eq!(
         method(&group, "expense").docs,
         format!(
-            "The expense with the identifier `id`.\n\n# Errors\n\nThe library's refusal. {READ_BUSY} {INVALID_TEXT}"
+            "The expense with the identifier `id`. `None` when it finds none.\n\n# Errors\n\nThe library's refusal. {READ_BUSY} {INVALID_TEXT}"
         )
     );
     assert_eq!(
         method(&group, "name").docs,
-        format!(
-            "The group's name. Writes it into `write`.\n\nIt is never blank.\n\n# Errors\n\n{READ_BUSY}"
-        )
+        "The group's name. Writes it into `write`.\n\nIt is never blank."
     );
     assert_eq!(
         method(&group, "description").docs,
-        format!(
-            "The description. Writes it into `write` when there is one, and nothing otherwise.\n\n# Errors\n\n{READ_BUSY}"
-        )
+        "The description. Writes it into `write` when there is one, and nothing otherwise."
+    );
+    assert_eq!(
+        method(&group, "set_note").docs,
+        format!("Sets the note; blank text clears it.\n\n# Errors\n\n{INVALID_TEXT}")
     );
     assert_eq!(
         method(&group, "add_expense").docs,
@@ -471,6 +516,8 @@ fn the_read_handle_reads_through_itself() {
             "name",
             "description",
             "is_archived",
+            "is_open",
+            "latest_expense",
             "summary",
         ]
     );
@@ -485,14 +532,16 @@ fn the_read_handle_reads_through_itself() {
 }
 
 /// Each kind of answer has its outcome, which holds the call's failure or a
-/// copy of its answer, a record's in an `Option` whether the call may find
-/// none or not.
+/// copy of its answer, in an `Option` only where the answer may be absent:
+/// a lookup's record has an outcome apart from the record a call always
+/// returns, so that the latter holds it as the core returns it.
 #[test]
 fn each_kind_of_answer_has_its_outcome() {
     let named = named();
     for name in [
         "EranosExpenseListOutcome",
         "EranosExpenseOutcome",
+        "EranosFoundExpenseOutcome",
         "EranosFlagOutcome",
         "EranosExpenseGroupOutcome",
         "EranosExpenseGroupReaderOutcome",
@@ -521,7 +570,21 @@ fn each_kind_of_answer_has_its_outcome() {
     assert_eq!(
         held("EranosSummaryOutcome"),
         quote! {
-            pub struct EranosSummaryOutcome(pub(crate) Result<Option<eranos_bindings::Summary>, crate::Failure>);
+            pub struct EranosSummaryOutcome(pub(crate) Result<eranos_bindings::Summary, crate::Failure>);
+        }
+        .to_string()
+    );
+    assert_eq!(
+        held("EranosExpenseOutcome"),
+        quote! {
+            pub struct EranosExpenseOutcome(pub(crate) Result<eranos_bindings::Expense, crate::Failure>);
+        }
+        .to_string()
+    );
+    assert_eq!(
+        held("EranosFoundExpenseOutcome"),
+        quote! {
+            pub struct EranosFoundExpenseOutcome(pub(crate) Result<Option<eranos_bindings::Expense>, crate::Failure>);
         }
         .to_string()
     );
@@ -534,9 +597,10 @@ fn each_kind_of_answer_has_its_outcome() {
     );
 }
 
-/// An outcome hands its answer over as the synchronous form does: a flag,
-/// text written into a `DiplomatWrite`, or a copy in an opaque object, and
-/// an outcome of nothing has no value.
+/// An outcome hands its answer over as the synchronous form does, absent
+/// when the call failed: a flag, text written into a `DiplomatWrite`, or a
+/// copy in an opaque object, absent too when a lookup found none; an outcome
+/// of nothing has no value.
 #[test]
 fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
     let named = named();
@@ -545,8 +609,11 @@ fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
         value("EranosFlagOutcome"),
         printed(quote! {
             #[must_use]
-            pub const fn value(&self) -> bool {
-                matches!(self.0, Ok(true))
+            pub const fn value(&self) -> Option<bool> {
+                match &self.0 {
+                    Ok(answer) => Some(*answer),
+                    Err(_) => None,
+                }
             }
         })
     );
@@ -567,7 +634,7 @@ fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
         })
     );
     assert_eq!(
-        value("EranosExpenseOutcome"),
+        value("EranosFoundExpenseOutcome"),
         printed(quote! {
             #[must_use]
             pub fn value(&self) -> Option<Box<EranosExpense>> {
@@ -575,6 +642,18 @@ fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
                     .as_ref()
                     .ok()
                     .and_then(Option::as_ref)
+                    .map(|value| Box::new(EranosExpense(value.clone())))
+            }
+        })
+    );
+    assert_eq!(
+        value("EranosExpenseOutcome"),
+        printed(quote! {
+            #[must_use]
+            pub fn value(&self) -> Option<Box<EranosExpense>> {
+                self.0
+                    .as_ref()
+                    .ok()
                     .map(|value| Box::new(EranosExpense(value.clone())))
             }
         })
@@ -603,6 +682,11 @@ fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
         named["EranosFlagOutcome"]
             .to_string()
             .contains("an asynchronous call that returns an answer")
+    );
+    assert!(
+        named["EranosFoundExpenseOutcome"]
+            .to_string()
+            .contains("an asynchronous call that returns an expense it may not find")
     );
 }
 

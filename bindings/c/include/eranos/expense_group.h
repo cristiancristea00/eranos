@@ -15,11 +15,15 @@
 #include "EranosExpenseGroupReaderOutcome.h"
 #include "EranosExpenseListOutcome.h"
 #include "EranosExpenseOutcome.h"
-#include "EranosExpenseSharesOutcome.h"
 #include "EranosFlagOutcome.h"
+#include "EranosFoundCategoryOutcome.h"
+#include "EranosFoundExpenseOutcome.h"
+#include "EranosFoundExpenseSharesOutcome.h"
+#include "EranosFoundMemberOutcome.h"
+#include "EranosFoundMoneyOutcome.h"
+#include "EranosFoundTransferOutcome.h"
 #include "EranosMemberListOutcome.h"
 #include "EranosMemberOutcome.h"
-#include "EranosMoneyOutcome.h"
 #include "EranosNewExpenseGroup.h"
 #include "EranosOptionalTextOutcome.h"
 #include "EranosSettlementPlanOutcome.h"
@@ -77,6 +81,24 @@ static inline void eranosDetailRunCategoryCallback(void const *const data, Erano
     callback->run(callback->context, error, category);
 }
 
+/// What an asynchronous lookup reports to when it ends: the error, or nullptr when the call succeeded, and the category, or nullptr when the call
+/// failed or found none: nullptr with no error means that no category has the identifier. The callback destroys each object it receives.
+typedef struct EranosFoundCategoryCallback {
+    /// What the caller passes back to itself.
+    void *context;
+    /// Called once with @p context and the outcome.
+    void (*run)(void *context, EranosError *error, EranosCategory *category);
+} EranosFoundCategoryCallback;
+
+/// Reports @p outcome to the callback @p data points to, and destroys it.
+static inline void eranosDetailRunFoundCategoryCallback(void const *const data, EranosFoundCategoryOutcome *const outcome) {
+    EranosFoundCategoryCallback const *const callback = data;
+    EranosError *const error = EranosFoundCategoryOutcome_error(outcome);
+    EranosCategory *const category = EranosFoundCategoryOutcome_value(outcome);
+    EranosFoundCategoryOutcome_destroy(outcome);
+    callback->run(callback->context, error, category);
+}
+
 /// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the expenses, or nullptr when the call
 /// failed. The callback destroys each object it receives.
 typedef struct EranosExpenseListCallback {
@@ -113,40 +135,58 @@ static inline void eranosDetailRunExpenseCallback(void const *const data, Eranos
     callback->run(callback->context, error, expense);
 }
 
-/// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the expense shares, or nullptr when the call
-/// failed. The callback destroys each object it receives.
-typedef struct EranosExpenseSharesCallback {
+/// What an asynchronous lookup reports to when it ends: the error, or nullptr when the call succeeded, and the expense, or nullptr when the call
+/// failed or found none: nullptr with no error means that no expense has the identifier. The callback destroys each object it receives.
+typedef struct EranosFoundExpenseCallback {
+    /// What the caller passes back to itself.
+    void *context;
+    /// Called once with @p context and the outcome.
+    void (*run)(void *context, EranosError *error, EranosExpense *expense);
+} EranosFoundExpenseCallback;
+
+/// Reports @p outcome to the callback @p data points to, and destroys it.
+static inline void eranosDetailRunFoundExpenseCallback(void const *const data, EranosFoundExpenseOutcome *const outcome) {
+    EranosFoundExpenseCallback const *const callback = data;
+    EranosError *const error = EranosFoundExpenseOutcome_error(outcome);
+    EranosExpense *const expense = EranosFoundExpenseOutcome_value(outcome);
+    EranosFoundExpenseOutcome_destroy(outcome);
+    callback->run(callback->context, error, expense);
+}
+
+/// What an asynchronous lookup reports to when it ends: the error, or nullptr when the call succeeded, and the expense's shares, or nullptr when the
+/// call failed or found none: nullptr with no error means that no expense has the identifier. The callback destroys each object it receives.
+typedef struct EranosFoundExpenseSharesCallback {
     /// What the caller passes back to itself.
     void *context;
     /// Called once with @p context and the outcome.
     void (*run)(void *context, EranosError *error, EranosExpenseShares *expenseShares);
-} EranosExpenseSharesCallback;
+} EranosFoundExpenseSharesCallback;
 
 /// Reports @p outcome to the callback @p data points to, and destroys it.
-static inline void eranosDetailRunExpenseSharesCallback(void const *const data, EranosExpenseSharesOutcome *const outcome) {
-    EranosExpenseSharesCallback const *const callback = data;
-    EranosError *const error = EranosExpenseSharesOutcome_error(outcome);
-    EranosExpenseShares *const expenseShares = EranosExpenseSharesOutcome_value(outcome);
-    EranosExpenseSharesOutcome_destroy(outcome);
+static inline void eranosDetailRunFoundExpenseSharesCallback(void const *const data, EranosFoundExpenseSharesOutcome *const outcome) {
+    EranosFoundExpenseSharesCallback const *const callback = data;
+    EranosError *const error = EranosFoundExpenseSharesOutcome_error(outcome);
+    EranosExpenseShares *const expenseShares = EranosFoundExpenseSharesOutcome_value(outcome);
+    EranosFoundExpenseSharesOutcome_destroy(outcome);
     callback->run(callback->context, error, expenseShares);
 }
 
-/// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the value, false when the call failed. The
-/// callback destroys each object it receives.
+/// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the answer, or nullptr when the call failed,
+/// which points to a value that stays valid until the function returns. The callback destroys each object it receives.
 typedef struct EranosFlagCallback {
     /// What the caller passes back to itself.
     void *context;
     /// Called once with @p context and the outcome.
-    void (*run)(void *context, EranosError *error, bool value);
+    void (*run)(void *context, EranosError *error, bool const *answer);
 } EranosFlagCallback;
 
 /// Reports @p outcome to the callback @p data points to, and destroys it.
 static inline void eranosDetailRunFlagCallback(void const *const data, EranosFlagOutcome *const outcome) {
     EranosFlagCallback const *const callback = data;
     EranosError *const error = EranosFlagOutcome_error(outcome);
-    bool const value = EranosFlagOutcome_value(outcome);
+    EranosFlagOutcome_value_result const answer = EranosFlagOutcome_value(outcome);
     EranosFlagOutcome_destroy(outcome);
-    callback->run(callback->context, error, value);
+    callback->run(callback->context, error, answer.is_ok ? &answer.ok : nullptr);
 }
 
 /// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the group, or nullptr when the call failed.
@@ -221,21 +261,39 @@ static inline void eranosDetailRunMemberCallback(void const *const data, EranosM
     callback->run(callback->context, error, member);
 }
 
-/// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the money, or nullptr when the call failed.
-/// The callback destroys each object it receives.
-typedef struct EranosMoneyCallback {
+/// What an asynchronous lookup reports to when it ends: the error, or nullptr when the call succeeded, and the member, or nullptr when the call
+/// failed or found none: nullptr with no error means that no member has the identifier. The callback destroys each object it receives.
+typedef struct EranosFoundMemberCallback {
+    /// What the caller passes back to itself.
+    void *context;
+    /// Called once with @p context and the outcome.
+    void (*run)(void *context, EranosError *error, EranosMember *member);
+} EranosFoundMemberCallback;
+
+/// Reports @p outcome to the callback @p data points to, and destroys it.
+static inline void eranosDetailRunFoundMemberCallback(void const *const data, EranosFoundMemberOutcome *const outcome) {
+    EranosFoundMemberCallback const *const callback = data;
+    EranosError *const error = EranosFoundMemberOutcome_error(outcome);
+    EranosMember *const member = EranosFoundMemberOutcome_value(outcome);
+    EranosFoundMemberOutcome_destroy(outcome);
+    callback->run(callback->context, error, member);
+}
+
+/// What an asynchronous lookup reports to when it ends: the error, or nullptr when the call succeeded, and the amount, or nullptr when the call
+/// failed or found none: nullptr with no error means that no transfer has the identifier. The callback destroys each object it receives.
+typedef struct EranosFoundMoneyCallback {
     /// What the caller passes back to itself.
     void *context;
     /// Called once with @p context and the outcome.
     void (*run)(void *context, EranosError *error, EranosMoney *money);
-} EranosMoneyCallback;
+} EranosFoundMoneyCallback;
 
 /// Reports @p outcome to the callback @p data points to, and destroys it.
-static inline void eranosDetailRunMoneyCallback(void const *const data, EranosMoneyOutcome *const outcome) {
-    EranosMoneyCallback const *const callback = data;
-    EranosError *const error = EranosMoneyOutcome_error(outcome);
-    EranosMoney *const money = EranosMoneyOutcome_value(outcome);
-    EranosMoneyOutcome_destroy(outcome);
+static inline void eranosDetailRunFoundMoneyCallback(void const *const data, EranosFoundMoneyOutcome *const outcome) {
+    EranosFoundMoneyCallback const *const callback = data;
+    EranosError *const error = EranosFoundMoneyOutcome_error(outcome);
+    EranosMoney *const money = EranosFoundMoneyOutcome_value(outcome);
+    EranosFoundMoneyOutcome_destroy(outcome);
     callback->run(callback->context, error, money);
 }
 
@@ -358,6 +416,24 @@ static inline void eranosDetailRunTransferCallback(void const *const data, Erano
     EranosError *const error = EranosTransferOutcome_error(outcome);
     EranosTransfer *const transfer = EranosTransferOutcome_value(outcome);
     EranosTransferOutcome_destroy(outcome);
+    callback->run(callback->context, error, transfer);
+}
+
+/// What an asynchronous lookup reports to when it ends: the error, or nullptr when the call succeeded, and the transfer, or nullptr when the call
+/// failed or found none: nullptr with no error means that no transfer has the identifier. The callback destroys each object it receives.
+typedef struct EranosFoundTransferCallback {
+    /// What the caller passes back to itself.
+    void *context;
+    /// Called once with @p context and the outcome.
+    void (*run)(void *context, EranosError *error, EranosTransfer *transfer);
+} EranosFoundTransferCallback;
+
+/// Reports @p outcome to the callback @p data points to, and destroys it.
+static inline void eranosDetailRunFoundTransferCallback(void const *const data, EranosFoundTransferOutcome *const outcome) {
+    EranosFoundTransferCallback const *const callback = data;
+    EranosError *const error = EranosFoundTransferOutcome_error(outcome);
+    EranosTransfer *const transfer = EranosFoundTransferOutcome_value(outcome);
+    EranosFoundTransferOutcome_destroy(outcome);
     callback->run(callback->context, error, transfer);
 }
 
@@ -528,6 +604,9 @@ static inline void eranosCurrencyRateListDestroy(EranosCurrencyRateList *const l
 /// calling thread while another call holds the lock, and an asynchronous one, which runs on the group's worker thread, started by the first, in the
 /// order of the calls, and reports to its callback there, so a callback must be safe to call from another thread. Destroying the group lets the
 /// queued calls finish and their callbacks run.
+///
+/// A synchronous call that takes nothing the library could refuse, such as eranosExpenseGroupName() or eranosExpenseGroupSummary(), returns what
+/// it reads and reports no error: it waits for the lock, and only the WebAssembly build, for which the C API is not built, would fail instead.
 typedef struct EranosExpenseGroup EranosExpenseGroup;
 
 /// A new group, with the details `details` holds, under the identifier they give.
@@ -576,12 +655,10 @@ static inline void eranosExpenseGroupLoadAsync(char const *const json, EranosCan
 ///
 /// @param group The group
 /// @param id Receives the id, replacing what it held
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupId(EranosExpenseGroup const *const group, EranosText *const id) {
+static inline void eranosExpenseGroupId(EranosExpenseGroup const *const group, EranosText *const id) {
     eranosDetailClear(id);
-    EranosExpenseGroup_id_result const result = EranosExpenseGroup_id(group, id);
+    EranosExpenseGroup_id(group, id);
     eranosDetailFinish(id);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
 /// The asynchronous form of eranosExpenseGroupId(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -605,12 +682,9 @@ static inline void eranosExpenseGroupIdAsync(EranosExpenseGroup const *const gro
 /// Every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
-/// @param categories Receives the categories on success, which the caller destroys, and nullptr on failure
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupCategories(EranosExpenseGroup const *const group, EranosCategoryList **const categories) {
-    EranosExpenseGroup_categories_result const result = EranosExpenseGroup_categories(group);
-    *categories = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+/// @return The categories, which the caller destroys
+[[nodiscard]] static inline EranosCategoryList *eranosExpenseGroupCategories(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_categories(group);
 }
 
 /// The asynchronous form of eranosExpenseGroupCategories(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
@@ -635,7 +709,8 @@ static inline void eranosExpenseGroupCategoriesAsync(EranosExpenseGroup const *c
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param category Receives the category on success, which the caller destroys, and nullptr on failure
+/// @param category Receives the category, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no category has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
 ///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupCategory(EranosExpenseGroup const *const group, char const *const id,
@@ -655,10 +730,10 @@ static inline void eranosExpenseGroupCategoriesAsync(EranosExpenseGroup const *c
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupCategoryAsync(EranosExpenseGroup const *const group, char const *const id,
-                                                   EranosCancellation const *const cancellation, EranosCategoryCallback const *const callback) {
+                                                   EranosCancellation const *const cancellation, EranosFoundCategoryCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_category_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunCategoryCallback,
+        .run_callback = eranosDetailRunFoundCategoryCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_category_async(group, eranosDetailView(id), cancellation, wrapped);
@@ -769,12 +844,10 @@ static inline void eranosExpenseGroupRemoveCategoryAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param currency Receives the currency, replacing what it held
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupCurrency(EranosExpenseGroup const *const group, EranosText *const currency) {
+static inline void eranosExpenseGroupCurrency(EranosExpenseGroup const *const group, EranosText *const currency) {
     eranosDetailClear(currency);
-    EranosExpenseGroup_currency_result const result = EranosExpenseGroup_currency(group, currency);
+    EranosExpenseGroup_currency(group, currency);
     eranosDetailFinish(currency);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
 /// The asynchronous form of eranosExpenseGroupCurrency(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -832,12 +905,9 @@ static inline void eranosExpenseGroupChangeCurrencyAsync(EranosExpenseGroup *con
 /// Every expense, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
-/// @param expenses Receives the expenses on success, which the caller destroys, and nullptr on failure
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupExpenses(EranosExpenseGroup const *const group, EranosExpenseList **const expenses) {
-    EranosExpenseGroup_expenses_result const result = EranosExpenseGroup_expenses(group);
-    *expenses = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+/// @return The expenses, which the caller destroys
+[[nodiscard]] static inline EranosExpenseList *eranosExpenseGroupExpenses(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_expenses(group);
 }
 
 /// The asynchronous form of eranosExpenseGroupExpenses(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -862,7 +932,8 @@ static inline void eranosExpenseGroupExpensesAsync(EranosExpenseGroup const *con
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param expense Receives the expense on success, which the caller destroys, and nullptr on failure
+/// @param expense Receives the expense, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no expense has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
 ///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupExpense(EranosExpenseGroup const *const group, char const *const id,
@@ -882,10 +953,10 @@ static inline void eranosExpenseGroupExpensesAsync(EranosExpenseGroup const *con
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupExpenseAsync(EranosExpenseGroup const *const group, char const *const id,
-                                                  EranosCancellation const *const cancellation, EranosExpenseCallback const *const callback) {
+                                                  EranosCancellation const *const cancellation, EranosFoundExpenseCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_expense_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunExpenseCallback,
+        .run_callback = eranosDetailRunFoundExpenseCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_expense_async(group, eranosDetailView(id), cancellation, wrapped);
@@ -895,7 +966,8 @@ static inline void eranosExpenseGroupExpenseAsync(EranosExpenseGroup const *cons
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param expenseShares Receives the expense shares on success, which the caller destroys, and nullptr on failure
+/// @param expenseShares Receives the expense shares, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error
+///   means that no expense has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
 ///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupExpenseShares(EranosExpenseGroup const *const group, char const *const id,
@@ -916,10 +988,10 @@ static inline void eranosExpenseGroupExpenseAsync(EranosExpenseGroup const *cons
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupExpenseSharesAsync(EranosExpenseGroup const *const group, char const *const id,
                                                         EranosCancellation const *const cancellation,
-                                                        EranosExpenseSharesCallback const *const callback) {
+                                                        EranosFoundExpenseSharesCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_expense_shares_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunExpenseSharesCallback,
+        .run_callback = eranosDetailRunFoundExpenseSharesCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_expense_shares_async(group, eranosDetailView(id), cancellation, wrapped);
@@ -1028,12 +1100,9 @@ static inline void eranosExpenseGroupRemoveExpenseAsync(EranosExpenseGroup *cons
 /// The group's totals.
 ///
 /// @param group The group
-/// @param summary Receives the summary on success, which the caller destroys, and nullptr on failure
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupSummary(EranosExpenseGroup const *const group, EranosSummary **const summary) {
-    EranosExpenseGroup_summary_result const result = EranosExpenseGroup_summary(group);
-    *summary = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+/// @return The summary, which the caller destroys
+[[nodiscard]] static inline EranosSummary *eranosExpenseGroupSummary(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_summary(group);
 }
 
 /// The asynchronous form of eranosExpenseGroupSummary(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -1057,12 +1126,9 @@ static inline void eranosExpenseGroupSummaryAsync(EranosExpenseGroup const *cons
 /// Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
-/// @param members Receives the members on success, which the caller destroys, and nullptr on failure
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupMembers(EranosExpenseGroup const *const group, EranosMemberList **const members) {
-    EranosExpenseGroup_members_result const result = EranosExpenseGroup_members(group);
-    *members = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+/// @return The members, which the caller destroys
+[[nodiscard]] static inline EranosMemberList *eranosExpenseGroupMembers(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_members(group);
 }
 
 /// The asynchronous form of eranosExpenseGroupMembers(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -1087,7 +1153,8 @@ static inline void eranosExpenseGroupMembersAsync(EranosExpenseGroup const *cons
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param member Receives the member on success, which the caller destroys, and nullptr on failure
+/// @param member Receives the member, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no member has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
 ///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupMember(EranosExpenseGroup const *const group, char const *const id,
@@ -1107,10 +1174,10 @@ static inline void eranosExpenseGroupMembersAsync(EranosExpenseGroup const *cons
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupMemberAsync(EranosExpenseGroup const *const group, char const *const id,
-                                                 EranosCancellation const *const cancellation, EranosMemberCallback const *const callback) {
+                                                 EranosCancellation const *const cancellation, EranosFoundMemberCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_member_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunMemberCallback,
+        .run_callback = eranosDetailRunFoundMemberCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_member_async(group, eranosDetailView(id), cancellation, wrapped);
@@ -1316,12 +1383,10 @@ static inline void eranosExpenseGroupRemoveMemberAsync(EranosExpenseGroup *const
 ///
 /// @param group The group
 /// @param name Receives the name, replacing what it held
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupName(EranosExpenseGroup const *const group, EranosText *const name) {
+static inline void eranosExpenseGroupName(EranosExpenseGroup const *const group, EranosText *const name) {
     eranosDetailClear(name);
-    EranosExpenseGroup_name_result const result = EranosExpenseGroup_name(group, name);
+    EranosExpenseGroup_name(group, name);
     eranosDetailFinish(name);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
 /// The asynchronous form of eranosExpenseGroupName(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -1409,12 +1474,9 @@ static inline void eranosExpenseGroupSettlementAsync(EranosExpenseGroup const *c
 /// Every transfer, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
-/// @param transfers Receives the transfers on success, which the caller destroys, and nullptr on failure
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupTransfers(EranosExpenseGroup const *const group, EranosTransferList **const transfers) {
-    EranosExpenseGroup_transfers_result const result = EranosExpenseGroup_transfers(group);
-    *transfers = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+/// @return The transfers, which the caller destroys
+[[nodiscard]] static inline EranosTransferList *eranosExpenseGroupTransfers(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_transfers(group);
 }
 
 /// The asynchronous form of eranosExpenseGroupTransfers(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
@@ -1439,7 +1501,8 @@ static inline void eranosExpenseGroupTransfersAsync(EranosExpenseGroup const *co
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
+/// @param transfer Receives the transfer, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no transfer has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
 ///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupTransfer(EranosExpenseGroup const *const group, char const *const id,
@@ -1459,10 +1522,10 @@ static inline void eranosExpenseGroupTransfersAsync(EranosExpenseGroup const *co
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupTransferAsync(EranosExpenseGroup const *const group, char const *const id,
-                                                   EranosCancellation const *const cancellation, EranosTransferCallback const *const callback) {
+                                                   EranosCancellation const *const cancellation, EranosFoundTransferCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_transfer_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunTransferCallback,
+        .run_callback = eranosDetailRunFoundTransferCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_transfer_async(group, eranosDetailView(id), cancellation, wrapped);
@@ -1472,7 +1535,8 @@ static inline void eranosExpenseGroupTransferAsync(EranosExpenseGroup const *con
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param transferAmount Receives the transfer amount on success, which the caller destroys, and nullptr on failure
+/// @param transferAmount Receives the transfer amount, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error
+///   means that no transfer has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
 ///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupTransferAmount(EranosExpenseGroup const *const group, char const *const id,
@@ -1492,10 +1556,11 @@ static inline void eranosExpenseGroupTransferAsync(EranosExpenseGroup const *con
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupTransferAmountAsync(EranosExpenseGroup const *const group, char const *const id,
-                                                         EranosCancellation const *const cancellation, EranosMoneyCallback const *const callback) {
+                                                         EranosCancellation const *const cancellation,
+                                                         EranosFoundMoneyCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_transfer_amount_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunMoneyCallback,
+        .run_callback = eranosDetailRunFoundMoneyCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_transfer_amount_async(group, eranosDetailView(id), cancellation, wrapped);
@@ -1607,12 +1672,12 @@ static inline void eranosExpenseGroupRemoveTransferAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param description Receives the description, replacing what it held
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupDescription(EranosExpenseGroup const *const group, EranosText *const description) {
+/// @return Whether the group has one
+[[nodiscard]] static inline bool eranosExpenseGroupDescription(EranosExpenseGroup const *const group, EranosText *const description) {
     eranosDetailClear(description);
-    EranosExpenseGroup_description_result const result = EranosExpenseGroup_description(group, description);
+    bool const present = EranosExpenseGroup_description(group, description).is_ok;
     eranosDetailFinish(description);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+    return present;
 }
 
 /// The asynchronous form of eranosExpenseGroupDescription(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
@@ -1668,12 +1733,12 @@ static inline void eranosExpenseGroupSetDescriptionAsync(EranosExpenseGroup *con
 ///
 /// @param group The group
 /// @param language Receives the language, replacing what it held
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupLanguage(EranosExpenseGroup const *const group, EranosText *const language) {
+/// @return Whether the group has one
+[[nodiscard]] static inline bool eranosExpenseGroupLanguage(EranosExpenseGroup const *const group, EranosText *const language) {
     eranosDetailClear(language);
-    EranosExpenseGroup_language_result const result = EranosExpenseGroup_language(group, language);
+    bool const present = EranosExpenseGroup_language(group, language).is_ok;
     eranosDetailFinish(language);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+    return present;
 }
 
 /// The asynchronous form of eranosExpenseGroupLanguage(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -1708,11 +1773,7 @@ static inline void eranosExpenseGroupLanguageAsync(EranosExpenseGroup const *con
 /// Clears the language the apps show the group in.
 ///
 /// @param group The group
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupClearLanguage(EranosExpenseGroup *const group) {
-    EranosExpenseGroup_clear_language_result const result = EranosExpenseGroup_clear_language(group);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
-}
+static inline void eranosExpenseGroupClearLanguage(EranosExpenseGroup *const group) { (void)EranosExpenseGroup_clear_language(group); }
 
 /// The asynchronous form of eranosExpenseGroupSetLanguage(), reported to `callback` on the group's worker thread.
 ///
@@ -1751,12 +1812,10 @@ static inline void eranosExpenseGroupClearLanguageAsync(EranosExpenseGroup *cons
 ///
 /// @param group The group
 /// @param json Receives the json, replacing what it held
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupSave(EranosExpenseGroup const *const group, EranosText *const json) {
+static inline void eranosExpenseGroupSave(EranosExpenseGroup const *const group, EranosText *const json) {
     eranosDetailClear(json);
-    EranosExpenseGroup_save_result const result = EranosExpenseGroup_save(group, json);
+    EranosExpenseGroup_save(group, json);
     eranosDetailFinish(json);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
 /// The asynchronous form of eranosExpenseGroupSave(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -1780,12 +1839,9 @@ static inline void eranosExpenseGroupSaveAsync(EranosExpenseGroup const *const g
 /// A read handle, which holds the shared lock until it is released or destroyed, so that its reads see no change in between.
 ///
 /// @param group The group
-/// @param reader Receives the reader on success, which the caller destroys, and nullptr on failure
-/// @return nullptr: the call waits for the group's lock, so it reports no error
-[[nodiscard]] static inline EranosError *eranosExpenseGroupRead(EranosExpenseGroup const *const group, EranosExpenseGroupReader **const reader) {
-    EranosExpenseGroup_read_result const result = EranosExpenseGroup_read(group);
-    *reader = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+/// @return The reader, which the caller destroys
+[[nodiscard]] static inline EranosExpenseGroupReader *eranosExpenseGroupRead(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_read(group);
 }
 
 /// The asynchronous form of eranosExpenseGroupRead(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to

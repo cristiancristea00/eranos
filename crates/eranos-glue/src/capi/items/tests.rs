@@ -34,7 +34,7 @@ fn the_core_is_its_marked_items_and_its_one_trait_of_calls() {
             "Summary",
         ]
     );
-    assert_eq!(core.calls.calls.len(), 10);
+    assert_eq!(core.calls.calls.len(), 14);
     assert!(core.item("Expense").is_some());
     assert!(core.item("Handle").is_none());
 }

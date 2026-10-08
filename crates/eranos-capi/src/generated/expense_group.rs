@@ -86,9 +86,7 @@ pub mod ffi {
     /// destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosCategoryOutcome(
-        pub(crate) Result<Option<eranos_bindings::Category>, crate::Failure>,
-    );
+    pub struct EranosCategoryOutcome(pub(crate) Result<eranos_bindings::Category, crate::Failure>);
 
     impl EranosCategoryOutcome {
         /// Whether the call succeeded.
@@ -106,13 +104,12 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the category the call returned, if it succeeded and found one.
+        /// A copy of the category the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosCategory>> {
             self.0
                 .as_ref()
                 .ok()
-                .and_then(Option::as_ref)
                 .map(|value| Box::new(EranosCategory(value.clone())))
         }
     }
@@ -180,15 +177,8 @@ pub mod ffi {
         }
 
         /// The group's identifier. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.id().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn id(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &crate::waited(self.handle.id()));
         }
 
         /// The asynchronous form of `id`: it runs on the group's worker thread, in the order of the
@@ -217,16 +207,9 @@ pub mod ffi {
 
         /// Every category: the built-in one first, then the others in identifier order, which is
         /// creation order for generated identifiers.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn categories(&self) -> Result<Box<EranosCategoryList>, Box<EranosError>> {
-            self.handle
-                .categories()
-                .map(|list| Box::new(EranosCategoryList(list)))
-                .map_err(crate::failed)
+        #[must_use]
+        pub fn categories(&self) -> Box<EranosCategoryList> {
+            Box::new(EranosCategoryList(crate::waited(self.handle.categories())))
         }
 
         /// The asynchronous form of `categories`: it runs on the group's worker thread, in the
@@ -253,7 +236,7 @@ pub mod ffi {
             );
         }
 
-        /// The category with the identifier `id`.
+        /// The category with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -278,7 +261,7 @@ pub mod ffi {
             &self,
             id: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosCategoryOutcome>) + 'static,
+            callback: impl Fn(Box<EranosFoundCategoryOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -292,7 +275,7 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosCategoryOutcome,
+                EranosFoundCategoryOutcome,
             );
         }
 
@@ -378,7 +361,6 @@ pub mod ffi {
                         .replace_category_async(category?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosCategoryOutcome,
@@ -423,7 +405,6 @@ pub mod ffi {
                         .remove_category_async(id?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosCategoryOutcome,
@@ -431,15 +412,8 @@ pub mod ffi {
         }
 
         /// The ISO 4217 code of the group currency. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn currency(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.currency().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn currency(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &crate::waited(self.handle.currency()));
         }
 
         /// The asynchronous form of `currency`: it runs on the group's worker thread, in the order
@@ -513,16 +487,9 @@ pub mod ffi {
         }
 
         /// Every expense, in identifier order, which is creation order for generated identifiers.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn expenses(&self) -> Result<Box<EranosExpenseList>, Box<EranosError>> {
-            self.handle
-                .expenses()
-                .map(|list| Box::new(EranosExpenseList(list)))
-                .map_err(crate::failed)
+        #[must_use]
+        pub fn expenses(&self) -> Box<EranosExpenseList> {
+            Box::new(EranosExpenseList(crate::waited(self.handle.expenses())))
         }
 
         /// The asynchronous form of `expenses`: it runs on the group's worker thread, in the order
@@ -549,7 +516,7 @@ pub mod ffi {
             );
         }
 
-        /// The expense with the identifier `id`.
+        /// The expense with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -574,7 +541,7 @@ pub mod ffi {
             &self,
             id: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
+            callback: impl Fn(Box<EranosFoundExpenseOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -588,11 +555,12 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosExpenseOutcome,
+                EranosFoundExpenseOutcome,
             );
         }
 
-        /// How the expense with the identifier `id` divides, in the group currency.
+        /// How the expense with the identifier `id` divides, in the group currency. `None` when it
+        /// finds none.
         ///
         /// # Errors
         ///
@@ -617,7 +585,7 @@ pub mod ffi {
             &self,
             id: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosExpenseSharesOutcome>) + 'static,
+            callback: impl Fn(Box<EranosFoundExpenseSharesOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -631,7 +599,7 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosExpenseSharesOutcome,
+                EranosFoundExpenseSharesOutcome,
             );
         }
 
@@ -713,7 +681,6 @@ pub mod ffi {
                         .replace_expense_async(expense?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosExpenseOutcome,
@@ -757,7 +724,6 @@ pub mod ffi {
                         .remove_expense_async(id?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosExpenseOutcome,
@@ -765,16 +731,9 @@ pub mod ffi {
         }
 
         /// The group's totals.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn summary(&self) -> Result<Box<EranosSummary>, Box<EranosError>> {
-            self.handle
-                .summary()
-                .map(|value| Box::new(EranosSummary(value)))
-                .map_err(crate::failed)
+        #[must_use]
+        pub fn summary(&self) -> Box<EranosSummary> {
+            Box::new(EranosSummary(crate::waited(self.handle.summary())))
         }
 
         /// The asynchronous form of `summary`: it runs on the group's worker thread, in the order
@@ -795,7 +754,6 @@ pub mod ffi {
                         .summary_async(cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosSummaryOutcome,
@@ -804,16 +762,9 @@ pub mod ffi {
 
         /// Every member, archived ones included, in identifier order, which is creation order for
         /// generated identifiers.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn members(&self) -> Result<Box<EranosMemberList>, Box<EranosError>> {
-            self.handle
-                .members()
-                .map(|list| Box::new(EranosMemberList(list)))
-                .map_err(crate::failed)
+        #[must_use]
+        pub fn members(&self) -> Box<EranosMemberList> {
+            Box::new(EranosMemberList(crate::waited(self.handle.members())))
         }
 
         /// The asynchronous form of `members`: it runs on the group's worker thread, in the order
@@ -840,7 +791,7 @@ pub mod ffi {
             );
         }
 
-        /// The member with the identifier `id`.
+        /// The member with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -865,7 +816,7 @@ pub mod ffi {
             &self,
             id: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosMemberOutcome>) + 'static,
+            callback: impl Fn(Box<EranosFoundMemberOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -879,7 +830,7 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosMemberOutcome,
+                EranosFoundMemberOutcome,
             );
         }
 
@@ -1002,7 +953,6 @@ pub mod ffi {
                         .replace_member_async(member?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosMemberOutcome,
@@ -1124,7 +1074,6 @@ pub mod ffi {
                         .remove_member_async(id?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosMemberOutcome,
@@ -1132,15 +1081,8 @@ pub mod ffi {
         }
 
         /// The group's name. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn name(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.name().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn name(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &crate::waited(self.handle.name()));
         }
 
         /// The asynchronous form of `name`: it runs on the group's worker thread, in the order of
@@ -1242,7 +1184,6 @@ pub mod ffi {
                         .settlement_async(strategy?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosSettlementPlanOutcome,
@@ -1250,16 +1191,9 @@ pub mod ffi {
         }
 
         /// Every transfer, in identifier order, which is creation order for generated identifiers.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn transfers(&self) -> Result<Box<EranosTransferList>, Box<EranosError>> {
-            self.handle
-                .transfers()
-                .map(|list| Box::new(EranosTransferList(list)))
-                .map_err(crate::failed)
+        #[must_use]
+        pub fn transfers(&self) -> Box<EranosTransferList> {
+            Box::new(EranosTransferList(crate::waited(self.handle.transfers())))
         }
 
         /// The asynchronous form of `transfers`: it runs on the group's worker thread, in the order
@@ -1286,7 +1220,7 @@ pub mod ffi {
             );
         }
 
-        /// The transfer with the identifier `id`.
+        /// The transfer with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -1311,7 +1245,7 @@ pub mod ffi {
             &self,
             id: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTransferOutcome>) + 'static,
+            callback: impl Fn(Box<EranosFoundTransferOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -1325,11 +1259,12 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosTransferOutcome,
+                EranosFoundTransferOutcome,
             );
         }
 
-        /// The amount in the group currency of the transfer with the identifier `id`.
+        /// The amount in the group currency of the transfer with the identifier `id`. `None` when
+        /// it finds none.
         ///
         /// # Errors
         ///
@@ -1354,7 +1289,7 @@ pub mod ffi {
             &self,
             id: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosMoneyOutcome>) + 'static,
+            callback: impl Fn(Box<EranosFoundMoneyOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -1368,7 +1303,7 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosMoneyOutcome,
+                EranosFoundMoneyOutcome,
             );
         }
 
@@ -1454,7 +1389,6 @@ pub mod ffi {
                         .replace_transfer_async(transfer?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosTransferOutcome,
@@ -1498,7 +1432,6 @@ pub mod ffi {
                         .remove_transfer_async(id?, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        .map(Some)
                 },
                 callback,
                 EranosTransferOutcome,
@@ -1507,15 +1440,8 @@ pub mod ffi {
 
         /// The group's description. Writes it into `write` when there is one, and nothing
         /// otherwise.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.description().map_err(crate::failed)?;
-            crate::write_optional(write, text.as_deref());
-            Ok(())
+        pub fn description(&self, write: &mut DiplomatWrite) -> Option<()> {
+            crate::write_optional(write, crate::waited(self.handle.description()).as_deref())
         }
 
         /// The asynchronous form of `description`: it runs on the group's worker thread, in the
@@ -1546,13 +1472,10 @@ pub mod ffi {
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while another call holds the lock. [`EranosError`] of the kind `InvalidText` for text
-        /// that is not UTF-8.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_description(&self, description: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.handle
-                .set_description(&crate::text(description)?)
-                .map_err(crate::failed)
+            crate::waited(self.handle.set_description(&crate::text(description)?));
+            Ok(())
         }
 
         /// The asynchronous form of `set_description`: it runs on the group's worker thread, in the
@@ -1583,15 +1506,8 @@ pub mod ffi {
 
         /// The language the apps show the group in, as a BCP 47 tag. Writes it into `write` when
         /// there is one, and nothing otherwise.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn language(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.language().map_err(crate::failed)?;
-            crate::write_optional(write, text.as_deref());
-            Ok(())
+        pub fn language(&self, write: &mut DiplomatWrite) -> Option<()> {
+            crate::write_optional(write, crate::waited(self.handle.language()).as_deref())
         }
 
         /// The asynchronous form of `language`: it runs on the group's worker thread, in the order
@@ -1692,15 +1608,8 @@ pub mod ffi {
         }
 
         /// The JSON of the group's saved form. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn save(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.save().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn save(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &crate::waited(self.handle.save()));
         }
 
         /// The asynchronous form of `save`: it runs on the group's worker thread, in the order of
@@ -1729,16 +1638,9 @@ pub mod ffi {
 
         /// A read handle, which holds the shared lock until it is released or dropped, so that its
         /// reads see no change in between.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm
-        /// while a change holds the lock or waits for it.
-        pub fn read(&self) -> Result<Box<EranosExpenseGroupReader>, Box<EranosError>> {
-            self.handle
-                .read()
-                .map(|reader| Box::new(EranosExpenseGroupReader(reader)))
-                .map_err(crate::failed)
+        #[must_use]
+        pub fn read(&self) -> Box<EranosExpenseGroupReader> {
+            Box::new(EranosExpenseGroupReader(crate::waited(self.handle.read())))
         }
 
         /// The asynchronous form of `read`: it runs on the group's worker thread, in the order of
@@ -1832,7 +1734,7 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// The category with the identifier `id`.
+        /// The category with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -1871,7 +1773,7 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// The expense with the identifier `id`.
+        /// The expense with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -1887,7 +1789,8 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// How the expense with the identifier `id` divides, in the group currency.
+        /// How the expense with the identifier `id` divides, in the group currency. `None` when it
+        /// finds none.
         ///
         /// # Errors
         ///
@@ -1928,7 +1831,7 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// The member with the identifier `id`.
+        /// The member with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -1992,7 +1895,7 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// The transfer with the identifier `id`.
+        /// The transfer with the identifier `id`. `None` when it finds none.
         ///
         /// # Errors
         ///
@@ -2008,7 +1911,8 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// The amount in the group currency of the transfer with the identifier `id`.
+        /// The amount in the group currency of the transfer with the identifier `id`. `None` when
+        /// it finds none.
         ///
         /// # Errors
         ///
@@ -2132,9 +2036,7 @@ pub mod ffi {
     /// destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosExpenseOutcome(
-        pub(crate) Result<Option<eranos_bindings::Expense>, crate::Failure>,
-    );
+    pub struct EranosExpenseOutcome(pub(crate) Result<eranos_bindings::Expense, crate::Failure>);
 
     impl EranosExpenseOutcome {
         /// Whether the call succeeded.
@@ -2152,49 +2054,13 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the expense the call returned, if it succeeded and found one.
+        /// A copy of the expense the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosExpense>> {
             self.0
                 .as_ref()
                 .ok()
-                .and_then(Option::as_ref)
                 .map(|value| Box::new(EranosExpense(value.clone())))
-        }
-    }
-
-    /// The outcome of an asynchronous call that returns an expense shares, which its callback
-    /// receives and destroys.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosExpenseSharesOutcome(
-        pub(crate) Result<Option<eranos_bindings::ExpenseShares>, crate::Failure>,
-    );
-
-    impl EranosExpenseSharesOutcome {
-        /// Whether the call succeeded.
-        #[must_use]
-        pub const fn is_ok(&self) -> bool {
-            self.0.is_ok()
-        }
-
-        /// A copy of the call's failure, absent when it succeeded.
-        #[must_use]
-        pub fn error(&self) -> Option<Box<EranosError>> {
-            self.0
-                .as_ref()
-                .err()
-                .map(|failure| Box::new(EranosError::from(failure.clone())))
-        }
-
-        /// A copy of the expense shares the call returned, if it succeeded and found one.
-        #[must_use]
-        pub fn value(&self) -> Option<Box<EranosExpenseShares>> {
-            self.0
-                .as_ref()
-                .ok()
-                .and_then(Option::as_ref)
-                .map(|value| Box::new(EranosExpenseShares(value.clone())))
         }
     }
 
@@ -2220,10 +2086,223 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// The answer, false when the call failed.
+        /// The answer, if the call succeeded.
         #[must_use]
-        pub const fn value(&self) -> bool {
-            matches!(self.0, Ok(true))
+        pub const fn value(&self) -> Option<bool> {
+            match &self.0 {
+                Ok(answer) => Some(*answer),
+                Err(_) => None,
+            }
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns a category it may not find, which its
+    /// callback receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosFoundCategoryOutcome(
+        pub(crate) Result<Option<eranos_bindings::Category>, crate::Failure>,
+    );
+
+    impl EranosFoundCategoryOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// A copy of the category the call found, if it succeeded and found one.
+        #[must_use]
+        pub fn value(&self) -> Option<Box<EranosCategory>> {
+            self.0
+                .as_ref()
+                .ok()
+                .and_then(Option::as_ref)
+                .map(|value| Box::new(EranosCategory(value.clone())))
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns an expense it may not find, which its
+    /// callback receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosFoundExpenseOutcome(
+        pub(crate) Result<Option<eranos_bindings::Expense>, crate::Failure>,
+    );
+
+    impl EranosFoundExpenseOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// A copy of the expense the call found, if it succeeded and found one.
+        #[must_use]
+        pub fn value(&self) -> Option<Box<EranosExpense>> {
+            self.0
+                .as_ref()
+                .ok()
+                .and_then(Option::as_ref)
+                .map(|value| Box::new(EranosExpense(value.clone())))
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns expense shares it may not find, which its
+    /// callback receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosFoundExpenseSharesOutcome(
+        pub(crate) Result<Option<eranos_bindings::ExpenseShares>, crate::Failure>,
+    );
+
+    impl EranosFoundExpenseSharesOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// A copy of the expense shares the call found, if it succeeded and found one.
+        #[must_use]
+        pub fn value(&self) -> Option<Box<EranosExpenseShares>> {
+            self.0
+                .as_ref()
+                .ok()
+                .and_then(Option::as_ref)
+                .map(|value| Box::new(EranosExpenseShares(value.clone())))
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns a member it may not find, which its
+    /// callback receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosFoundMemberOutcome(
+        pub(crate) Result<Option<eranos_bindings::Member>, crate::Failure>,
+    );
+
+    impl EranosFoundMemberOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// A copy of the member the call found, if it succeeded and found one.
+        #[must_use]
+        pub fn value(&self) -> Option<Box<EranosMember>> {
+            self.0
+                .as_ref()
+                .ok()
+                .and_then(Option::as_ref)
+                .map(|value| Box::new(EranosMember(value.clone())))
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns money it may not find, which its callback
+    /// receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosFoundMoneyOutcome(
+        pub(crate) Result<Option<eranos_bindings::Money>, crate::Failure>,
+    );
+
+    impl EranosFoundMoneyOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// A copy of the money the call found, if it succeeded and found one.
+        #[must_use]
+        pub fn value(&self) -> Option<Box<EranosMoney>> {
+            self.0
+                .as_ref()
+                .ok()
+                .and_then(Option::as_ref)
+                .map(|value| Box::new(EranosMoney(value.clone())))
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns a transfer it may not find, which its
+    /// callback receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosFoundTransferOutcome(
+        pub(crate) Result<Option<eranos_bindings::Transfer>, crate::Failure>,
+    );
+
+    impl EranosFoundTransferOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// A copy of the transfer the call found, if it succeeded and found one.
+        #[must_use]
+        pub fn value(&self) -> Option<Box<EranosTransfer>> {
+            self.0
+                .as_ref()
+                .ok()
+                .and_then(Option::as_ref)
+                .map(|value| Box::new(EranosTransfer(value.clone())))
         }
     }
 
@@ -2265,9 +2344,7 @@ pub mod ffi {
     /// destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosMemberOutcome(
-        pub(crate) Result<Option<eranos_bindings::Member>, crate::Failure>,
-    );
+    pub struct EranosMemberOutcome(pub(crate) Result<eranos_bindings::Member, crate::Failure>);
 
     impl EranosMemberOutcome {
         /// Whether the call succeeded.
@@ -2285,49 +2362,13 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the member the call returned, if it succeeded and found one.
+        /// A copy of the member the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosMember>> {
             self.0
                 .as_ref()
                 .ok()
-                .and_then(Option::as_ref)
                 .map(|value| Box::new(EranosMember(value.clone())))
-        }
-    }
-
-    /// The outcome of an asynchronous call that returns a money, which its callback receives and
-    /// destroys.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosMoneyOutcome(
-        pub(crate) Result<Option<eranos_bindings::Money>, crate::Failure>,
-    );
-
-    impl EranosMoneyOutcome {
-        /// Whether the call succeeded.
-        #[must_use]
-        pub const fn is_ok(&self) -> bool {
-            self.0.is_ok()
-        }
-
-        /// A copy of the call's failure, absent when it succeeded.
-        #[must_use]
-        pub fn error(&self) -> Option<Box<EranosError>> {
-            self.0
-                .as_ref()
-                .err()
-                .map(|failure| Box::new(EranosError::from(failure.clone())))
-        }
-
-        /// A copy of the money the call returned, if it succeeded and found one.
-        #[must_use]
-        pub fn value(&self) -> Option<Box<EranosMoney>> {
-            self.0
-                .as_ref()
-                .ok()
-                .and_then(Option::as_ref)
-                .map(|value| Box::new(EranosMoney(value.clone())))
         }
     }
 
@@ -2364,7 +2405,7 @@ pub mod ffi {
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosSettlementPlanOutcome(
-        pub(crate) Result<Option<eranos_bindings::SettlementPlan>, crate::Failure>,
+        pub(crate) Result<eranos_bindings::SettlementPlan, crate::Failure>,
     );
 
     impl EranosSettlementPlanOutcome {
@@ -2383,13 +2424,12 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the settlement plan the call returned, if it succeeded and found one.
+        /// A copy of the settlement plan the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosSettlementPlan>> {
             self.0
                 .as_ref()
                 .ok()
-                .and_then(Option::as_ref)
                 .map(|value| Box::new(EranosSettlementPlan(value.clone())))
         }
     }
@@ -2398,9 +2438,7 @@ pub mod ffi {
     /// destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosSummaryOutcome(
-        pub(crate) Result<Option<eranos_bindings::Summary>, crate::Failure>,
-    );
+    pub struct EranosSummaryOutcome(pub(crate) Result<eranos_bindings::Summary, crate::Failure>);
 
     impl EranosSummaryOutcome {
         /// Whether the call succeeded.
@@ -2418,13 +2456,12 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the summary the call returned, if it succeeded and found one.
+        /// A copy of the summary the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosSummary>> {
             self.0
                 .as_ref()
                 .ok()
-                .and_then(Option::as_ref)
                 .map(|value| Box::new(EranosSummary(value.clone())))
         }
     }
@@ -2495,9 +2532,7 @@ pub mod ffi {
     /// destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosTransferOutcome(
-        pub(crate) Result<Option<eranos_bindings::Transfer>, crate::Failure>,
-    );
+    pub struct EranosTransferOutcome(pub(crate) Result<eranos_bindings::Transfer, crate::Failure>);
 
     impl EranosTransferOutcome {
         /// Whether the call succeeded.
@@ -2515,13 +2550,12 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the transfer the call returned, if it succeeded and found one.
+        /// A copy of the transfer the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosTransfer>> {
             self.0
                 .as_ref()
                 .ok()
-                .and_then(Option::as_ref)
                 .map(|value| Box::new(EranosTransfer(value.clone())))
         }
     }

@@ -139,7 +139,8 @@ static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_EXPENSE = Er
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_TRANSFER = EranosFailure_ExpenseGroupDuplicateTransfer;
 /// No transfer with this ID.
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_TRANSFER = EranosFailure_ExpenseGroupUnknownTransfer;
-/// A shared group's lock was asked for without waiting, while another call held it.
+/// A shared group's lock was asked for without waiting, while another call held it. Only the WebAssembly build of the library reports it, and the C
+/// API is not built for WebAssembly.
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_BUSY = EranosFailure_ExpenseGroupBusy;
 /// A total would leave the range of an amount.
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_OVERFLOW = EranosFailure_ExpenseGroupOverflow;
@@ -169,7 +170,8 @@ static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE = EranosErrorKind_Exp
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_SETTLEMENT = EranosErrorKind_Settlement;
 /// A failure about a transfer.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_TRANSFER = EranosErrorKind_Transfer;
-/// A failure about how an entry fits the group, or the group's lock.
+/// A failure about how an entry fits the group, or the group's lock, which only the WebAssembly build of the library reports: the C API is not
+/// built for WebAssembly.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE_GROUP = EranosErrorKind_ExpenseGroup;
 /// A failure about a language tag.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_LANGUAGE = EranosErrorKind_Language;

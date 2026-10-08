@@ -148,8 +148,7 @@ typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
 /// Prints every member of @p group with their contact and account details.
 static void printMembers(EranosExpenseGroup const *const group) {
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = memberTable(4);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -167,10 +166,8 @@ static void printMembers(EranosExpenseGroup const *const group) {
 
 /// Prints whether each member of @p group is active or archived, what they consumed, and their balance.
 static void printBalances(EranosExpenseGroup const *const group) {
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = balanceTable(2);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -300,8 +297,7 @@ static void movingOut(EranosExpenseGroup *const group, Id const ana, Id const bo
                    "  error: %s",
                    removalMessage.text);
 
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummary *const totals = totalsOf(summary, bob.text);
     check(nullptr != totals, "Bob has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);

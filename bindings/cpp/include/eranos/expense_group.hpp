@@ -814,14 +814,14 @@ inline std::future<std::expected<void, Error>> ExpenseGroup::clearLanguageAsync(
                                 detail::finished);
 }
 
-inline ExpenseGroupId ExpenseGroup::id() const noexcept { return ExpenseGroupId(detail::waited(handle->id())); }
+inline ExpenseGroupId ExpenseGroup::id() const noexcept { return ExpenseGroupId(handle->id()); }
 
 inline std::future<std::expected<ExpenseGroupId, Error>> ExpenseGroup::idAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<ExpenseGroupId>([&](auto callback) noexcept { handle->id_async(detail::handleOf(cancellation), std::move(callback)); },
                                           [](detail::EranosTextOutcome const &done) noexcept { return ExpenseGroupId(*done.value()); });
 }
 
-inline std::vector<Category> ExpenseGroup::categories() const noexcept { return detail::fromDetail(*detail::waited(handle->categories())); }
+inline std::vector<Category> ExpenseGroup::categories() const noexcept { return detail::fromDetail(*handle->categories()); }
 
 inline std::future<std::expected<std::vector<Category>, Error>> ExpenseGroup::categoriesAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::vector<Category>>(
@@ -839,7 +839,7 @@ inline std::future<std::expected<std::optional<Category>, Error>> ExpenseGroup::
                                                                                               Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::optional<Category>>(
         [&](auto callback) noexcept { handle->category_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosCategoryOutcome const &done) noexcept { return detail::optionalRecord<Category>(done.value()); });
+        [](detail::EranosFoundCategoryOutcome const &done) noexcept { return detail::optionalRecord<Category>(done.value()); });
 }
 
 inline std::expected<CategoryId, Error> ExpenseGroup::addCategory(Category const &category) noexcept {
@@ -883,7 +883,7 @@ inline std::future<std::expected<Category, Error>> ExpenseGroup::removeCategoryA
         [](detail::EranosCategoryOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline CurrencyCode ExpenseGroup::currency() const noexcept { return detail::listedCurrency(detail::waited(handle->currency())); }
+inline CurrencyCode ExpenseGroup::currency() const noexcept { return detail::listedCurrency(handle->currency()); }
 
 inline std::future<std::expected<CurrencyCode, Error>> ExpenseGroup::currencyAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<CurrencyCode>([&](auto callback) noexcept { handle->currency_async(detail::handleOf(cancellation), std::move(callback)); },
@@ -904,7 +904,7 @@ inline std::future<std::expected<void, Error>> ExpenseGroup::changeCurrencyAsync
         detail::finished);
 }
 
-inline std::vector<Expense> ExpenseGroup::expenses() const noexcept { return detail::fromDetail(*detail::waited(handle->expenses())); }
+inline std::vector<Expense> ExpenseGroup::expenses() const noexcept { return detail::fromDetail(*handle->expenses()); }
 
 inline std::future<std::expected<std::vector<Expense>, Error>> ExpenseGroup::expensesAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::vector<Expense>>(
@@ -922,7 +922,7 @@ inline std::future<std::expected<std::optional<Expense>, Error>> ExpenseGroup::e
                                                                                             Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::optional<Expense>>(
         [&](auto callback) noexcept { handle->expense_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosExpenseOutcome const &done) noexcept { return detail::optionalRecord<Expense>(done.value()); });
+        [](detail::EranosFoundExpenseOutcome const &done) noexcept { return detail::optionalRecord<Expense>(done.value()); });
 }
 
 inline std::expected<std::optional<ExpenseShares>, Error> ExpenseGroup::expenseShares(ExpenseId const &id) const noexcept {
@@ -935,7 +935,7 @@ inline std::future<std::expected<std::optional<ExpenseShares>, Error>>
 ExpenseGroup::expenseSharesAsync(ExpenseId const &id, Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::optional<ExpenseShares>>(
         [&](auto callback) noexcept { handle->expense_shares_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosExpenseSharesOutcome const &done) noexcept { return detail::optionalRecord<ExpenseShares>(done.value()); });
+        [](detail::EranosFoundExpenseSharesOutcome const &done) noexcept { return detail::optionalRecord<ExpenseShares>(done.value()); });
 }
 
 inline std::expected<ExpenseId, Error> ExpenseGroup::addExpense(Expense const &expense) noexcept {
@@ -979,14 +979,14 @@ inline std::future<std::expected<Expense, Error>> ExpenseGroup::removeExpenseAsy
         [](detail::EranosExpenseOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline Summary ExpenseGroup::summary() const noexcept { return detail::fromDetail(*detail::waited(handle->summary())); }
+inline Summary ExpenseGroup::summary() const noexcept { return detail::fromDetail(*handle->summary()); }
 
 inline std::future<std::expected<Summary, Error>> ExpenseGroup::summaryAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<Summary>([&](auto callback) noexcept { handle->summary_async(detail::handleOf(cancellation), std::move(callback)); },
                                    [](detail::EranosSummaryOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline std::vector<Member> ExpenseGroup::members() const noexcept { return detail::fromDetail(*detail::waited(handle->members())); }
+inline std::vector<Member> ExpenseGroup::members() const noexcept { return detail::fromDetail(*handle->members()); }
 
 inline std::future<std::expected<std::vector<Member>, Error>> ExpenseGroup::membersAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::vector<Member>>(
@@ -1002,7 +1002,7 @@ inline std::future<std::expected<std::optional<Member>, Error>> ExpenseGroup::me
                                                                                           Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::optional<Member>>(
         [&](auto callback) noexcept { handle->member_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosMemberOutcome const &done) noexcept { return detail::optionalRecord<Member>(done.value()); });
+        [](detail::EranosFoundMemberOutcome const &done) noexcept { return detail::optionalRecord<Member>(done.value()); });
 }
 
 inline std::expected<bool, Error> ExpenseGroup::isArchived(MemberId const &id) const noexcept {
@@ -1013,7 +1013,7 @@ inline std::future<std::expected<bool, Error>> ExpenseGroup::isArchivedAsync(Mem
                                                                              Cancellation const *const cancellation) const noexcept {
     return detail::launch<bool>(
         [&](auto callback) noexcept { handle->is_archived_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosFlagOutcome const &done) noexcept { return done.value(); });
+        [](detail::EranosFlagOutcome const &done) noexcept { return *done.value(); });
 }
 
 inline std::expected<MemberId, Error> ExpenseGroup::addMember(Member const &member) noexcept {
@@ -1076,7 +1076,7 @@ inline std::future<std::expected<Member, Error>> ExpenseGroup::removeMemberAsync
         [](detail::EranosMemberOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline std::string ExpenseGroup::name() const noexcept { return detail::waited(handle->name()); }
+inline std::string ExpenseGroup::name() const noexcept { return handle->name(); }
 
 inline std::future<std::expected<std::string, Error>> ExpenseGroup::nameAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::string>([&](auto callback) noexcept { handle->name_async(detail::handleOf(cancellation), std::move(callback)); },
@@ -1104,7 +1104,7 @@ inline std::future<std::expected<SettlementPlan, Error>> ExpenseGroup::settlemen
         [](detail::EranosSettlementPlanOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline std::vector<Transfer> ExpenseGroup::transfers() const noexcept { return detail::fromDetail(*detail::waited(handle->transfers())); }
+inline std::vector<Transfer> ExpenseGroup::transfers() const noexcept { return detail::fromDetail(*handle->transfers()); }
 
 inline std::future<std::expected<std::vector<Transfer>, Error>> ExpenseGroup::transfersAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::vector<Transfer>>(
@@ -1122,7 +1122,7 @@ inline std::future<std::expected<std::optional<Transfer>, Error>> ExpenseGroup::
                                                                                               Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::optional<Transfer>>(
         [&](auto callback) noexcept { handle->transfer_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosTransferOutcome const &done) noexcept { return detail::optionalRecord<Transfer>(done.value()); });
+        [](detail::EranosFoundTransferOutcome const &done) noexcept { return detail::optionalRecord<Transfer>(done.value()); });
 }
 
 inline std::expected<std::optional<Money>, Error> ExpenseGroup::transferAmount(TransferId const &id) const noexcept {
@@ -1135,7 +1135,7 @@ inline std::future<std::expected<std::optional<Money>, Error>>
 ExpenseGroup::transferAmountAsync(TransferId const &id, Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::optional<Money>>(
         [&](auto callback) noexcept { handle->transfer_amount_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosMoneyOutcome const &done) noexcept { return detail::optionalRecord<Money>(done.value()); });
+        [](detail::EranosFoundMoneyOutcome const &done) noexcept { return detail::optionalRecord<Money>(done.value()); });
 }
 
 inline std::expected<TransferId, Error> ExpenseGroup::addTransfer(Transfer const &transfer) noexcept {
@@ -1179,7 +1179,7 @@ inline std::future<std::expected<Transfer, Error>> ExpenseGroup::removeTransferA
         [](detail::EranosTransferOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline std::optional<std::string> ExpenseGroup::description() const noexcept { return detail::present(detail::waited(handle->description())); }
+inline std::optional<std::string> ExpenseGroup::description() const noexcept { return handle->description(); }
 
 inline std::future<std::expected<std::optional<std::string>, Error>>
 ExpenseGroup::descriptionAsync(Cancellation const *const cancellation) const noexcept {
@@ -1200,7 +1200,7 @@ inline std::future<std::expected<void, Error>> ExpenseGroup::setDescriptionAsync
 }
 
 inline std::optional<Language> ExpenseGroup::language() const noexcept {
-    return detail::optionalText<Language>(detail::present(detail::waited(handle->language())), detail::languageOf);
+    return detail::optionalText<Language>(handle->language(), detail::languageOf);
 }
 
 inline std::future<std::expected<std::optional<Language>, Error>> ExpenseGroup::languageAsync(Cancellation const *const cancellation) const noexcept {
@@ -1209,14 +1209,14 @@ inline std::future<std::expected<std::optional<Language>, Error>> ExpenseGroup::
         [](detail::EranosOptionalTextOutcome const &done) noexcept { return detail::optionalText<Language>(done.value(), detail::languageOf); });
 }
 
-inline std::string ExpenseGroup::save() const noexcept { return detail::waited(handle->save()); }
+inline std::string ExpenseGroup::save() const noexcept { return handle->save(); }
 
 inline std::future<std::expected<std::string, Error>> ExpenseGroup::saveAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::string>([&](auto callback) noexcept { handle->save_async(detail::handleOf(cancellation), std::move(callback)); },
                                        [](detail::EranosTextOutcome const &done) noexcept { return *done.value(); });
 }
 
-inline ExpenseGroupReader ExpenseGroup::read() const noexcept { return ExpenseGroupReader(detail::waited(handle->read())); }
+inline ExpenseGroupReader ExpenseGroup::read() const noexcept { return ExpenseGroupReader(handle->read()); }
 
 inline std::future<std::expected<ExpenseGroupReader, Error>> ExpenseGroup::readAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<ExpenseGroupReader>(

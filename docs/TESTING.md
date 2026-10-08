@@ -225,16 +225,17 @@ every line and function of eranos-capi's bridge, whose generated modules
 are files like any other: eranos-glue's tests measure the generator that
 writes them, and a test of xtask holds the committed files to what it
 writes. The objects' methods and the copies of the core's items that the
-glue's macros stamp are not in the report, as the core's forms are not. Two
-kinds of the bridge's regions stay unrun: the check that a text parameter
+glue's macros stamp are not in the report, as the core's forms are not. One
+kind of the bridge's regions stays unrun: the check that a text parameter
 is UTF-8, which only a call given other bytes takes and which would need a
-test for each function, and the failure branch of a synchronous call that
-fails only on wasm, for which the bridge is not built. Only the Swift layer
-passes the UniFFI glue a `Cancellation`, so a run off macOS, where the
-Swift tests do not run, reports its two methods unrun. eranos-web and
-eranos-kmp compile eranos-uniffi's sources again and are not measured:
-stable Rust does not measure WebAssembly, and gobley builds its own
-library.
+test for each function. The synchronous form of a call that the core marks
+as one that cannot fail has no failure branch to leave unrun: the core
+refuses such a call only on wasm, for which the bridge is not built. Only
+the Swift layer passes the UniFFI glue a `Cancellation`, so a run off
+macOS, where the Swift tests do not run, reports its two methods unrun.
+eranos-web and eranos-kmp compile eranos-uniffi's sources again and are
+not measured: stable Rust does not measure WebAssembly, and gobley builds
+its own library.
 
 The suites cover every line, region, and function. Keeping it that way
 follows three rules:
@@ -312,15 +313,14 @@ call's failure branches in three templates that every call shares:
 starts an asynchronous call or fails its future when an argument does not
 convert, and `complete`, which reads an asynchronous call's outcome;
 everything else chains through `std::expected`'s `and_then` and
-`transform`, whose own branches are the standard library's. The C
-layer's regions are not all run: each of its functions branches on its
-result, and the six calls that the library refuses only on wasm, where the
-C API does not run, never take their failure branch: the synchronous
-`categories`, `expenses`, `members`, `read`, `summary`, and `transfers`.
-Both suites follow the rules of [§ 4](#4-writing-a-test-here) in their
-language: a test is a function named for its claim, in camelCase, whose
-comment says what an app loses if it regresses, and the program prints
-every claim that fails.
+`transform`, whose own branches are the standard library's. The C layer is
+held to every region too: a synchronous call that the library refuses only
+on wasm, where the C API does not run, returns what it reads without a
+branch on its result, so each branch of the layer is one that a call can
+take, and its tests take every one. Both suites follow the rules of
+[§ 4](#4-writing-a-test-here) in their language: a test is a function named
+for its claim, in camelCase, whose comment says what an app loses if it
+regresses, and the program prints every claim that fails.
 
 ## 6. Mutation testing
 

@@ -138,7 +138,7 @@ static void addItem(EranosExpenseItemList *const items, char const *const name, 
 /// the group itself is unchanged; destroys @p expense.
 [[nodiscard]] static EranosExpenseShares *preview(EranosExpenseGroup const *const group, EranosExpense *const expense) {
     EranosText *const text = eranosTextCreate();
-    must(eranosExpenseGroupSave(group, text));
+    eranosExpenseGroupSave(group, text);
     EranosExpenseGroup *copy = nullptr;
     must(eranosExpenseGroupLoad(eranosTextData(text), &copy));
     must(eranosExpenseGroupAddExpense(copy, expense, text));
@@ -252,7 +252,7 @@ int main(void) {
     Friends const friends = {.ana = ana, .bob = bob, .carol = carol, .day = {.year = 2026, .month = 9, .day = 23}};
 
     EranosText *const name = eranosTextCreate();
-    must(eranosExpenseGroupName(group, name));
+    eranosExpenseGroupName(group, name);
     Line const heading = lineOf("%s: an itemised bill", eranosTextData(name));
     eranosTextDestroy(name);
     title(heading.text);

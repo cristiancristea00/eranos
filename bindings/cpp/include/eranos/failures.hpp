@@ -164,7 +164,8 @@ enum class Failure : std::uint8_t {
     EXPENSE_GROUP_DUPLICATE_TRANSFER,
     /// No transfer with this ID.
     EXPENSE_GROUP_UNKNOWN_TRANSFER,
-    /// A shared group's lock was asked for without waiting, while another call held it.
+    /// A shared group's lock was asked for without waiting, while another call held it. Only the WebAssembly build of the library reports it, and
+    /// the C API that the layer calls is not built for WebAssembly.
     EXPENSE_GROUP_BUSY,
     /// A total would leave the range of an amount.
     EXPENSE_GROUP_OVERFLOW,

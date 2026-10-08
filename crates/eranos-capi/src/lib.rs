@@ -67,6 +67,19 @@ pub(crate) fn failed(error: eranos_bindings::EranosError) -> Box<error::ffi::Era
     Box::new(Failure::Library(error).into())
 }
 
+/// The value of `result`, which the synchronous form of a group call that
+/// cannot fail returns: the binding core's synchronous call waits for the
+/// lock, and is refused, as busy, only on wasm, where a call cannot wait.
+/// This crate is never built for wasm, since its worker thread drives the
+/// asynchronous calls with `block_on`, which is not compiled for wasm.
+#[expect(
+    clippy::expect_used,
+    reason = "a call that cannot fail is refused only as busy, on wasm, for which this crate is never built"
+)]
+pub(crate) fn waited<Value>(result: Result<Value, eranos_bindings::EranosError>) -> Value {
+    result.expect("a synchronous call waits for the lock outside wasm")
+}
+
 /// Writes `text` into `write`. A write that cannot grow records that it
 /// could not, which the caller reads, so its failure needs no other report.
 pub(crate) fn write_text(write: &mut DiplomatWrite, text: &str) {

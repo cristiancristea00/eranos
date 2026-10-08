@@ -642,6 +642,10 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) noexcept {
     flat.group.clearDescription();
     flat.group.clearLanguage();
     check.that(!flat.group.description().has_value() && !flat.group.language().has_value(), "the details cleared");
+    {
+        auto const reader = flat.group.read();
+        check.that(!reader.description().value().has_value() && !reader.language().value().has_value(), "and cleared through a read handle");
+    }
     check.that(isFailure(refusal(flat.group.setName(" ")), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME), "a blank name");
     check.that(isFailure(refusal(flat.group.setDescription("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a description that is not text");
     auto const trip = ExpenseGroup::create("Trip", flat.euro).value();
@@ -762,6 +766,25 @@ void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check &check) noexcept {
     }
 }
 
+/// A lookup that reported an error for an identifier nothing has, or found an entry for it, would make an app treat a deleted entry as a
+/// failure, or show one that is gone; each lookup, on the group and on a read handle, finds none and reports no error.
+void aLookupOfAnIdentifierNothingHasFindsNone(Check &check) noexcept {
+    Flat const flat;
+    std::string const unknown = "0199a000-0000-7000-8000-00000000ffff";
+    CategoryId const category(unknown);
+    ExpenseId const expense(unknown);
+    MemberId const member(unknown);
+    TransferId const transfer(unknown);
+    auto const findsNone = [](auto const &result) noexcept { return result.has_value() && !result.value().has_value(); };
+    check.that(findsNone(flat.group.category(category)) && findsNone(flat.group.expense(expense)) && findsNone(flat.group.expenseShares(expense)) &&
+                   findsNone(flat.group.member(member)) && findsNone(flat.group.transfer(transfer)) && findsNone(flat.group.transferAmount(transfer)),
+               "the group's lookups");
+    auto const reader = flat.group.read();
+    check.that(findsNone(reader.category(category)) && findsNone(reader.expense(expense)) && findsNone(reader.expenseShares(expense)) &&
+                   findsNone(reader.member(member)) && findsNone(reader.transfer(transfer)) && findsNone(reader.transferAmount(transfer)),
+               "the read handle's lookups");
+}
+
 /// An error that lost what it holds would leave an app unable to say which entry, amount, or category the library refused.
 void everyErrorHoldsWhatItsFailureHolds(Check &check) noexcept {
     Flat flat;
@@ -867,6 +890,13 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) noe
     check.that(group.currency() == CurrencyCode::of("RON").value(), "the currency changed");
     auto const loaded = ExpenseGroup::loadAsync(group.save()).get().value();
     check.that(loaded.save() == group.save(), "a group loaded on a thread of its own");
+    std::string const unknown = "0199a000-0000-7000-8000-00000000ffff";
+    check.that(
+        !group.categoryAsync(CategoryId(unknown)).get().value().has_value() && !group.expenseAsync(ExpenseId(unknown)).get().value().has_value() &&
+            !group.expenseSharesAsync(ExpenseId(unknown)).get().value().has_value() &&
+            !group.memberAsync(MemberId(unknown)).get().value().has_value() && !group.transferAsync(TransferId(unknown)).get().value().has_value() &&
+            !group.transferAmountAsync(TransferId(unknown)).get().value().has_value(),
+        "a lookup of an identifier nothing has finds none, as the synchronous one does");
 }
 
 /// An asynchronous call that dropped the error its synchronous form returns would leave an app waiting for a change that never happened;
@@ -878,6 +908,8 @@ void anAsynchronousCallReportsTheErrorItsSynchronousFormReturns(Check &check) no
     check.that(isFailure(refusal(removing.get()), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_MEMBER), "a call that returns a value");
     auto archiving = flat.group.archiveMemberAsync(nobody);
     check.that(isFailure(refusal(archiving.get()), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_MEMBER), "a call that returns nothing");
+    auto asking = flat.group.isArchivedAsync(MemberId(" x"));
+    check.that(isFailure(refusal(asking.get()), ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "a call that returns an answer");
     auto loading = ExpenseGroup::loadAsync("{");
     check.that(isFailure(refusal(loading.get()), ErrorKind::INVALID_JSON, std::nullopt), "a load");
     auto adding = flat.group.addCategoryAsync(Category("\xff"));
@@ -993,6 +1025,7 @@ constexpr std::array TESTS = {
     Test{.name = "aChangeOfCurrencyConvertsEveryEntry", .body = aChangeOfCurrencyConvertsEveryEntry},
     Test{.name = "aSavedGroupLoadsAsItWasSaved", .body = aSavedGroupLoadsAsItWasSaved},
     Test{.name = "anIdentifierThatIsNotOneIsRefusedByEveryLookup", .body = anIdentifierThatIsNotOneIsRefusedByEveryLookup},
+    Test{.name = "aLookupOfAnIdentifierNothingHasFindsNone", .body = aLookupOfAnIdentifierNothingHasFindsNone},
     Test{.name = "everyErrorHoldsWhatItsFailureHolds", .body = everyErrorHoldsWhatItsFailureHolds},
     Test{.name = "everyAsynchronousCallReturnsWhatItsSynchronousFormReturns", .body = everyAsynchronousCallReturnsWhatItsSynchronousFormReturns},
     Test{.name = "anAsynchronousCallReportsTheErrorItsSynchronousFormReturns", .body = anAsynchronousCallReportsTheErrorItsSynchronousFormReturns},

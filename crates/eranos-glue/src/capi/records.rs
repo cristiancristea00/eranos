@@ -19,7 +19,8 @@ use quote::{ToTokens, format_ident, quote};
 use crate::capi::crossing::{Crossing, Plan, Value};
 use crate::capi::items::{Core, Field, Mirrored, Shape, Variant};
 use crate::capi::{
-    INVALID_TEXT, Named, article, capitalised, doc, doc_with_errors, eranos, inside, list, words,
+    INVALID_TEXT, Named, article, capitalised, doc, doc_with_errors, eranos, inside, list, plural,
+    words,
 };
 
 /// A field of a record that starts at a value of its own when the record is
@@ -180,9 +181,11 @@ fn create(item: &Mirrored, fields: &[Typed<'_>]) -> TokenStream {
     let fallible = required
         .iter()
         .any(|typed| Crossing::Text == typed.value.crossing);
+    let words = words(name);
+    let possessive = if plural(&words) { "their" } else { "its" };
     let summary = format!(
-        "{} of its required fields; every other field starts absent, empty, or at its default.",
-        capitalised(&article(&words(name)))
+        "{} of {possessive} required fields; every other field starts absent, empty, or at its default.",
+        capitalised(&article(&words))
     );
     constructor(
         &format_ident!("create"),

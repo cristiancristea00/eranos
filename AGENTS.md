@@ -488,7 +488,7 @@ tasks and threads behind a read-write lock. Diagrams, rules, and numbers:
   instrumented build, into one report
   ([docs/DEVELOPMENT.md § 5](docs/DEVELOPMENT.md#5-coverage-and-mutation-testing)).
   It does not count doctests on the stable toolchain. Every line, region,
-  and function is covered but for two kinds of region in the C bridge, which
+  and function is covered but for one kind of region in the C bridge, which
   [docs/TESTING.md](docs/TESTING.md#5-coverage) names; a new gap is either a
   missing test or a branch that cannot run, which is restructured away
   rather than kept. `cargo mutants --file <file>` is the occasional

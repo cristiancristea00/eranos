@@ -2,7 +2,12 @@
 //! another call holds the lock, and its asynchronous form, which runs on the
 //! group's worker thread and reports its outcome to a callback there; the
 //! read handle's form of every read; the cancellation of asynchronous calls;
-//! and the outcome of each kind of answer, which a callback receives.
+//! and the outcome of each kind of answer, which a callback receives. A
+//! lookup, which may find nothing, has an outcome of its own, apart from
+//! that of a call that always returns a record of its type, so that only
+//! the lookup's holds an `Option`. The group's synchronous form of a call
+//! that cannot fail returns its answer itself, which `crate::waited` takes
+//! out of the core's `Result`, and a `Result` only for text it checks.
 //!
 //! A call that takes optional text has a twin of each form that passes none,
 //! since C passes no absent text: `set_language` has `clear_language`. The
@@ -50,17 +55,18 @@ pub(crate) fn items(core: &Core) -> syn::Result<Vec<Named>> {
             Access::Read => READ_BUSY,
             Access::Write => WRITE_BUSY,
         };
+        let own = (!call.infallible).then_some(busy);
         group.extend(
             forms
                 .iter()
-                .map(|form| synchronous(call, &answer, form, &quote!(self.handle), busy)),
+                .map(|form| synchronous(call, &answer, form, &quote!(self.handle), own)),
         );
         group.extend(forms.iter().map(|form| asynchronous(call, &answer, form)));
         if Access::Read == call.access {
             reader.extend(
                 forms
                     .iter()
-                    .map(|form| synchronous(call, &answer, form, &quote!(self.0), RELEASED)),
+                    .map(|form| synchronous(call, &answer, form, &quote!(self.0), Some(RELEASED))),
             );
         }
         let outcome = outcome(&answer);
@@ -154,7 +160,7 @@ fn forms<'call>(call: &'call Call, core: &Core) -> syn::Result<Vec<Form<'call>>>
 struct Delivery {
     /// The form's body.
     body: TokenStream,
-    /// What its `Result` holds when it succeeds.
+    /// What it returns when it succeeds.
     output: TokenStream,
     /// The parameter it writes its text into, for an answer of text.
     write: Option<TokenStream>,
@@ -162,13 +168,17 @@ struct Delivery {
 
 /// The synchronous `form` of `call`, which answers `answer`: it calls the
 /// core's form on `receiver`, the group's handle or the read handle, which
-/// fails as `own` says besides the call's refusal.
+/// fails as `own` says besides the call's refusal, or, for the group's
+/// handle and a call that cannot fail, fails for nothing of its own and
+/// returns what the call answers, which `crate::waited` takes out of the
+/// core's `Result`. A form that takes text returns a `Result` all the same,
+/// for text that is not UTF-8.
 fn synchronous(
     call: &Call,
     answer: &Answer,
     form: &Form<'_>,
     receiver: &TokenStream,
-    own: &str,
+    own: Option<&str>,
 ) -> TokenStream {
     let (name, core_name) = (&form.name, &call.name);
     let parameters = form
@@ -181,12 +191,57 @@ fn synchronous(
         .iter()
         .map(|argument| argument.as_ref().map_or_else(|| quote!(None), lent));
     let invocation = quote!(#receiver.#core_name(#(#arguments),*));
-    let write = quote!(, write: &mut DiplomatWrite);
     let Delivery {
         body,
         output,
         write,
-    } = match answer {
+    } = if own.is_some() {
+        refusable(answer, &invocation)
+    } else {
+        waited(answer, &quote!(crate::waited(#invocation)))
+    };
+    let documentation = synchronous_doc(call, answer, form, own);
+    let write = write.map(|write| quote!(, #write));
+    let unit = output.to_string() == quote!(()).to_string();
+    let signature = quote!(pub fn #name(&self #(, #parameters)* #write));
+    if own.is_some() || takes_text(form) {
+        let body = if own.is_some() {
+            body
+        } else if unit {
+            quote!(#body; Ok(()))
+        } else {
+            quote!(Ok(#body))
+        };
+        quote! {
+            #documentation
+            #signature -> Result<#output, Box<EranosError>> {
+                #body
+            }
+        }
+    } else if unit {
+        quote! {
+            #documentation
+            #signature {
+                #body;
+            }
+        }
+    } else {
+        let must_use = write.is_none().then(|| quote!(#[must_use]));
+        quote! {
+            #documentation
+            #must_use
+            #signature -> #output {
+                #body
+            }
+        }
+    }
+}
+
+/// How the synchronous form of a call that may fail hands its answer over,
+/// from `invocation`, the core's `Result`: the failure as an `EranosError`,
+/// and the answer as `waited` hands it over.
+fn refusable(answer: &Answer, invocation: &TokenStream) -> Delivery {
+    match answer {
         Answer::Flag => Delivery {
             body: quote!(#invocation.map_err(crate::failed)),
             output: quote!(bool),
@@ -228,7 +283,7 @@ fn synchronous(
                 Ok(())
             },
             output: quote!(()),
-            write: Some(write),
+            write: Some(quote!(write: &mut DiplomatWrite)),
         },
         Answer::Record(record) => {
             let object = eranos(record);
@@ -249,16 +304,72 @@ fn synchronous(
                 Ok(())
             },
             output: quote!(()),
-            write: Some(write),
+            write: Some(quote!(write: &mut DiplomatWrite)),
         },
-    };
-    let documentation = synchronous_doc(call, answer, form, own);
-    quote! {
-        #documentation
-        pub fn #name(&self #(, #parameters)* #write) -> Result<#output, Box<EranosError>> {
-            #body
-        }
     }
+}
+
+/// How the synchronous form of a call that cannot fail hands over `value`,
+/// the core's answer: a flag as it is, a record or a list in an opaque
+/// object, and text written into a `DiplomatWrite`, optional text with
+/// whether there is some.
+fn waited(answer: &Answer, value: &TokenStream) -> Delivery {
+    let write = Some(quote!(write: &mut DiplomatWrite));
+    match answer {
+        Answer::Flag => Delivery {
+            body: value.clone(),
+            output: quote!(bool),
+            write: None,
+        },
+        Answer::Found(record) => {
+            let object = eranos(record);
+            Delivery {
+                body: quote!(#value.map(|value| Box::new(#object(value)))),
+                output: quote!(Option<Box<#object>>),
+                write: None,
+            }
+        }
+        Answer::List(element) => {
+            let list = list(element);
+            Delivery {
+                body: quote!(Box::new(#list(#value))),
+                output: quote!(Box<#list>),
+                write: None,
+            }
+        }
+        Answer::Nothing => Delivery {
+            body: value.clone(),
+            output: quote!(()),
+            write: None,
+        },
+        Answer::OptionalText => Delivery {
+            body: quote!(crate::write_optional(write, #value.as_deref())),
+            output: quote!(Option<()>),
+            write,
+        },
+        Answer::Record(record) => {
+            let object = eranos(record);
+            Delivery {
+                body: quote!(Box::new(#object(#value))),
+                output: quote!(Box<#object>),
+                write: None,
+            }
+        }
+        Answer::Text => Delivery {
+            body: quote!(crate::write_text(write, &#value)),
+            output: quote!(()),
+            write,
+        },
+    }
+}
+
+/// Whether `form` takes text, which it checks is UTF-8 before the core sees
+/// it.
+fn takes_text(form: &Form<'_>) -> bool {
+    form.arguments
+        .iter()
+        .flatten()
+        .any(|argument| Crossing::Text == argument.crossing)
 }
 
 /// The value the synchronous form lends the core's for `argument`: text
@@ -279,19 +390,24 @@ fn lent(argument: &Argument<'_>) -> TokenStream {
     }
 }
 
-/// The documentation of the synchronous `form` of `call`: the call's, then
-/// its failures, the call's refusal unless it cannot fail, `own`, and text
+/// The documentation of the synchronous `form` of `call`: the call's, with
+/// how it hands its answer over when that needs saying, then its failures,
+/// if it has any: the call's refusal unless it cannot fail, `own`, and text
 /// that is not UTF-8 for a form that takes text.
-fn synchronous_doc(call: &Call, answer: &Answer, form: &Form<'_>, own: &str) -> TokenStream {
-    let writes = match answer {
+fn synchronous_doc(
+    call: &Call,
+    answer: &Answer,
+    form: &Form<'_>,
+    own: Option<&str>,
+) -> TokenStream {
+    let handed = match answer {
+        Answer::Found(_) => " `None` when it finds none.",
         Answer::OptionalText => " Writes it into `write` when there is one, and nothing otherwise.",
         Answer::Text => " Writes it into `write`.",
-        Answer::Flag | Answer::Found(_) | Answer::List(_) | Answer::Nothing | Answer::Record(_) => {
-            ""
-        }
+        Answer::Flag | Answer::List(_) | Answer::Nothing | Answer::Record(_) => "",
     };
     let summary = if form.name == call.name {
-        format!("{}{writes}", foreign(call.docs.summary()))
+        format!("{}{handed}", foreign(call.docs.summary()))
     } else {
         let absent = form
             .arguments
@@ -307,13 +423,8 @@ fn synchronous_doc(call: &Call, answer: &Answer, form: &Form<'_>, own: &str) -> 
     if !call.infallible {
         errors.push("The library's refusal.");
     }
-    errors.push(own);
-    if form
-        .arguments
-        .iter()
-        .flatten()
-        .any(|argument| Crossing::Text == argument.crossing)
-    {
+    errors.extend(own);
+    if takes_text(form) {
         errors.push(INVALID_TEXT);
     }
     let errors = errors.join(" ");
@@ -325,7 +436,9 @@ fn synchronous_doc(call: &Call, answer: &Answer, form: &Form<'_>, own: &str) -> 
         .collect::<Vec<_>>();
     let mut paragraphs = vec![summary.as_str()];
     paragraphs.extend(details.iter().map(String::as_str));
-    paragraphs.extend(["# Errors", errors.as_str()]);
+    if !errors.is_empty() {
+        paragraphs.extend(["# Errors", errors.as_str()]);
+    }
     doc(&paragraphs)
 }
 
@@ -364,7 +477,6 @@ fn asynchronous(call: &Call, answer: &Answer, form: &Form<'_>) -> TokenStream {
             },
         )
     });
-    let some = matches!(answer, Answer::Record(_)).then(|| quote!(.map(Some)));
     let outcome = outcome_name(answer);
     let documentation = doc(&[&format!(
         "The asynchronous form of `{}`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind `Cancelled`, leaving the group as it was.",
@@ -388,7 +500,6 @@ fn asynchronous(call: &Call, answer: &Answer, form: &Form<'_>) -> TokenStream {
                         .#core_name(#(#arguments,)* cancellation)
                         .await
                         .map_err(crate::Failure::Library)
-                        #some
                 },
                 callback,
                 #outcome,
@@ -397,21 +508,24 @@ fn asynchronous(call: &Call, answer: &Answer, form: &Form<'_>) -> TokenStream {
     }
 }
 
-/// The name of the outcome of a call that answers `answer`.
+/// The name of the outcome of a call that answers `answer`: a lookup's names
+/// what it finds, apart from the outcome of a call that always returns a
+/// record of that type.
 fn outcome_name(answer: &Answer) -> Ident {
     match answer {
         Answer::Flag => format_ident!("EranosFlagOutcome"),
-        Answer::Found(record) | Answer::Record(record) => format_ident!("Eranos{record}Outcome"),
+        Answer::Found(record) => format_ident!("EranosFound{record}Outcome"),
         Answer::List(element) => format_ident!("Eranos{element}ListOutcome"),
         Answer::Nothing => format_ident!("EranosUnitOutcome"),
         Answer::OptionalText => format_ident!("EranosOptionalTextOutcome"),
+        Answer::Record(record) => format_ident!("Eranos{record}Outcome"),
         Answer::Text => format_ident!("EranosTextOutcome"),
     }
 }
 
 /// The outcome of a call that answers `answer`, which holds the call's
-/// failure or a copy of its answer: a record's in an `Option`, since a call
-/// that answers a record and one that may find none share it.
+/// failure or a copy of its answer, in an `Option` only for an answer that
+/// may be absent: a lookup's record and optional text.
 fn outcome(answer: &Answer) -> Named {
     let name = outcome_name(answer);
     let Holding {
@@ -463,43 +577,26 @@ struct Holding {
 }
 
 /// What the outcome of a call that answers `answer` holds, and its method
-/// that hands a copy over: none for nothing, the flag, the text written
-/// into a `DiplomatWrite`, and a record or a list in an opaque object.
+/// that hands a copy over, absent when the call failed: none for nothing,
+/// the flag, the text written into a `DiplomatWrite`, and a record or a list
+/// in an opaque object.
 fn holding(answer: &Answer) -> Holding {
     match answer {
         Answer::Flag => Holding {
             answer: quote!(bool),
             returns: "an answer".to_owned(),
             value: quote! {
-                #[doc = "The answer, false when the call failed."]
+                #[doc = "The answer, if the call succeeded."]
                 #[must_use]
-                pub const fn value(&self) -> bool {
-                    matches!(self.0, Ok(true))
+                pub const fn value(&self) -> Option<bool> {
+                    match &self.0 {
+                        Ok(answer) => Some(*answer),
+                        Err(_) => None,
+                    }
                 }
             },
         },
-        Answer::Found(record) | Answer::Record(record) => {
-            let object = eranos(record);
-            let copy = format!(
-                "A copy of the {} the call returned, if it succeeded and found one.",
-                words(record)
-            );
-            Holding {
-                answer: quote!(Option<eranos_bindings::#record>),
-                returns: article(&words(record)),
-                value: quote! {
-                    #[doc = #copy]
-                    #[must_use]
-                    pub fn value(&self) -> Option<Box<#object>> {
-                        self.0
-                            .as_ref()
-                            .ok()
-                            .and_then(Option::as_ref)
-                            .map(|value| Box::new(#object(value.clone())))
-                    }
-                },
-            }
-        }
+        Answer::Found(record) => copied(record, true),
         Answer::List(element) => {
             let list = list(element);
             Holding {
@@ -532,6 +629,7 @@ fn holding(answer: &Answer) -> Holding {
                 }
             },
         },
+        Answer::Record(record) => copied(record, false),
         Answer::Text => Holding {
             answer: quote!(String),
             returns: "text".to_owned(),
@@ -542,6 +640,45 @@ fn holding(answer: &Answer) -> Holding {
                 }
             },
         },
+    }
+}
+
+/// What the outcome of a call that answers a copy of `record` holds: for a
+/// lookup, which `lookup` says the call is, the record in an `Option`, since
+/// a lookup may find none, and the record itself otherwise.
+fn copied(record: &Ident, lookup: bool) -> Holding {
+    let object = eranos(record);
+    let words = words(record);
+    let found = lookup.then(|| quote!(.and_then(Option::as_ref)));
+    let value = |copy: String| {
+        quote! {
+            #[doc = #copy]
+            #[must_use]
+            pub fn value(&self) -> Option<Box<#object>> {
+                self.0
+                    .as_ref()
+                    .ok()
+                    #found
+                    .map(|value| Box::new(#object(value.clone())))
+            }
+        }
+    };
+    if lookup {
+        Holding {
+            answer: quote!(Option<eranos_bindings::#record>),
+            returns: format!("{} it may not find", article(&words)),
+            value: value(format!(
+                "A copy of the {words} the call found, if it succeeded and found one."
+            )),
+        }
+    } else {
+        Holding {
+            answer: quote!(eranos_bindings::#record),
+            returns: article(&words),
+            value: value(format!(
+                "A copy of the {words} the call returned, if it succeeded."
+            )),
+        }
     }
 }
 
@@ -653,16 +790,9 @@ fn group_item(methods: &[TokenStream]) -> Named {
 
                 /// A read handle, which holds the shared lock until it is released or dropped, so
                 /// that its reads see no change in between.
-                ///
-                /// # Errors
-                ///
-                /// [`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm while a
-                /// change holds the lock or waits for it.
-                pub fn read(&self) -> Result<Box<EranosExpenseGroupReader>, Box<EranosError>> {
-                    self.handle
-                        .read()
-                        .map(|reader| Box::new(EranosExpenseGroupReader(reader)))
-                        .map_err(crate::failed)
+                #[must_use]
+                pub fn read(&self) -> Box<EranosExpenseGroupReader> {
+                    Box::new(EranosExpenseGroupReader(crate::waited(self.handle.read())))
                 }
 
                 /// The asynchronous form of `read`: it runs on the group's worker thread, in the

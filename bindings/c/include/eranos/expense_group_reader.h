@@ -53,7 +53,8 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
 ///
 /// @param reader The group reader
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param category Receives the category on success, which the caller destroys, and nullptr on failure
+/// @param category Receives the category, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no category has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, such as one of the kind
 ///   ERANOS_ERROR_KIND_RELEASED after eranosExpenseGroupReaderRelease(), or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderCategory(EranosExpenseGroupReader const *const reader, char const *const id,
@@ -93,7 +94,8 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
 ///
 /// @param reader The group reader
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param expense Receives the expense on success, which the caller destroys, and nullptr on failure
+/// @param expense Receives the expense, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no expense has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, such as one of the kind
 ///   ERANOS_ERROR_KIND_RELEASED after eranosExpenseGroupReaderRelease(), or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderExpense(EranosExpenseGroupReader const *const reader, char const *const id,
@@ -107,7 +109,8 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
 ///
 /// @param reader The group reader
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param expenseShares Receives the expense shares on success, which the caller destroys, and nullptr on failure
+/// @param expenseShares Receives the expense shares, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error
+///   means that no expense has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, such as one of the kind
 ///   ERANOS_ERROR_KIND_RELEASED after eranosExpenseGroupReaderRelease(), or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderExpenseShares(EranosExpenseGroupReader const *const reader, char const *const id,
@@ -147,7 +150,8 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
 ///
 /// @param reader The group reader
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param member Receives the member on success, which the caller destroys, and nullptr on failure
+/// @param member Receives the member, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no member has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, such as one of the kind
 ///   ERANOS_ERROR_KIND_RELEASED after eranosExpenseGroupReaderRelease(), or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderMember(EranosExpenseGroupReader const *const reader, char const *const id,
@@ -219,7 +223,8 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
 ///
 /// @param reader The group reader
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
+/// @param transfer Receives the transfer, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error means that
+///   no transfer has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, such as one of the kind
 ///   ERANOS_ERROR_KIND_RELEASED after eranosExpenseGroupReaderRelease(), or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderTransfer(EranosExpenseGroupReader const *const reader, char const *const id,
@@ -233,7 +238,8 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
 ///
 /// @param reader The group reader
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param transferAmount Receives the transfer amount on success, which the caller destroys, and nullptr on failure
+/// @param transferAmount Receives the transfer amount, which the caller destroys, or nullptr when the call fails or finds none: nullptr with no error
+///   means that no transfer has the identifier
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, such as one of the kind
 ///   ERANOS_ERROR_KIND_RELEASED after eranosExpenseGroupReaderRelease(), or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderTransferAmount(EranosExpenseGroupReader const *const reader, char const *const id,

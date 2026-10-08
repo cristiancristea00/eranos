@@ -233,6 +233,16 @@ trait ExpenseGroupCalls {
     #[read]
     fn is_archived(&self, id: &str) -> Result<bool, EranosError>;
 
+    /// Whether the group takes expenses.
+    #[read]
+    #[infallible]
+    fn is_open(&self) -> Result<bool, EranosError>;
+
+    /// The latest expense, if there is one.
+    #[read]
+    #[infallible]
+    fn latest_expense(&self) -> Result<Option<Expense>, EranosError>;
+
     /// The totals.
     #[read]
     #[infallible]
@@ -242,9 +252,18 @@ trait ExpenseGroupCalls {
     #[write]
     fn add_expense(&self, expense: &Expense) -> Result<String, EranosError>;
 
+    /// Removes the expense with the identifier `id` and returns it.
+    #[write]
+    fn remove_expense(&self, id: &str) -> Result<Expense, EranosError>;
+
     /// Sets the members.
     #[write]
     fn set_members(&self, members: &[String], items: &[ExpenseItem]) -> Result<(), EranosError>;
+
+    /// Sets the note; blank text clears it.
+    #[write]
+    #[infallible]
+    fn set_note(&self, note: &str) -> Result<(), EranosError>;
 
     /// Sets the language, or clears it when there is none.
     #[write]
@@ -362,7 +381,8 @@ fn a_single_import_has_no_braces() {
 }
 
 /// Names follow the C API's rules: the core's type after `Eranos`, a list
-/// after its element, and prose in words with their article.
+/// after its element, and prose in words with their article, which a plural
+/// or an uncountable noun goes without.
 #[test]
 fn names_and_prose_follow_the_c_api() {
     let name = format_ident!("MemberAmount");
@@ -371,6 +391,11 @@ fn names_and_prose_follow_the_c_api() {
     assert_eq!(words(&name), "member amount");
     assert_eq!(article("member amount"), "a member amount");
     assert_eq!(article("expense"), "an expense");
+    assert_eq!(article("expense shares"), "expense shares");
+    assert_eq!(article("money"), "money");
+    assert_eq!(article("address"), "an address");
+    assert_eq!(article("status"), "a status");
+    assert!(plural("member parts") && !plural("member") && !plural("money"));
     assert_eq!(inside("The amount."), "the amount.");
     assert_eq!(inside("IBAN of the account."), "IBAN of the account.");
     assert_eq!(inside("A"), "A");

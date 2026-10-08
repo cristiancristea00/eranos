@@ -74,8 +74,7 @@ static void addPaymentRow(Table *const table, PaymentRow const *const row) { tab
 
 /// Prints the expenses of @p group: who paid each, who shares it, and its amount.
 static void printExpenses(EranosExpenseGroup const *const group) {
-    EranosExpenseList *expenses = nullptr;
-    must(eranosExpenseGroupExpenses(group, &expenses));
+    EranosExpenseList *const expenses = eranosExpenseGroupExpenses(group);
     Table *const table = expenseTable(3);
     EranosText *const name = eranosTextCreate();
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
@@ -102,8 +101,7 @@ static void printExpenses(EranosExpenseGroup const *const group) {
 
 /// Prints what each member of @p group paid and consumed in @p summary, and their balance.
 static void printMembers(EranosExpenseGroup const *const group, EranosSummary const *const summary) {
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = memberTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -154,9 +152,9 @@ int main(void) {
     must(eranosExpenseGroupCreate(details, &group));
     eranosNewExpenseGroupDestroy(details);
     EranosText *const text = eranosTextCreate();
-    must(eranosExpenseGroupName(group, text));
+    eranosExpenseGroupName(group, text);
     title(eranosTextData(text));
-    must(eranosExpenseGroupCurrency(group, text));
+    eranosExpenseGroupCurrency(group, text);
     printFormatted("Three friends rent a cabin and buy groceries. The group keeps its books in %s, so\n"
                    "every total, balance, and payment below is in %s.",
                    eranosTextData(text), eranosTextData(text));
@@ -166,8 +164,7 @@ int main(void) {
     Id const bob = addMember(group, "Bob");
     Id const carol = addMember(group, "Carol");
     Members const everyone = {.count = 3, .ids = {ana, bob, carol}};
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Line const joined = names(group, &everyone);
     printFormatted("%zu people joined the group: %s.", eranosMemberListLength(members), joined.text);
     eranosMemberListDestroy(members);
@@ -181,8 +178,7 @@ int main(void) {
     printExpenses(group);
 
     section("3. Who paid and who consumed");
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     Line const spent = moneyLine(eranosSummaryTotalSpent(summary));
     printFormatted("The group spent %s in total. A member's share of an expense is what they consumed,\n"
                    "and their balance is what they paid minus what they consumed.",

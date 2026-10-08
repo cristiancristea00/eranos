@@ -31,8 +31,7 @@ static void addComparisonRow(Table *const table, ComparisonRow const *const row)
 
 /// The balance of @p member in @p group, as the library writes it, or ? for a member without totals.
 [[nodiscard]] static Line balanceOf(EranosExpenseGroup const *const group, Id const member) {
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
     Line const line = nullptr == totals ? lineOf("%s", "?") : balanceLine(eranosMemberSummaryBalance(totals));
     eranosMemberSummaryDestroy(totals);
@@ -76,7 +75,7 @@ int main(void) {
     // Account details would be in clear text: store this in the platform's secure storage (Keychain, Keystore, or an
     // encrypted database).
     EranosText *const saved = eranosTextCreate();
-    must(eranosExpenseGroupSave(group, saved));
+    eranosExpenseGroupSave(group, saved);
     printLine(eranosTextData(saved));
     printLine("Amounts are minor units with their currency, dates are YYYY-MM-DD, and the\n"
               "`format` number lets a future release refuse a file it cannot read instead of\n"
@@ -116,7 +115,7 @@ int main(void) {
     printFormatted("  error: %s", message.text);
 
     EranosText *const resaved = eranosTextCreate();
-    must(eranosExpenseGroupSave(loaded, resaved));
+    eranosExpenseGroupSave(loaded, resaved);
     check(0 == strcmp(eranosTextData(resaved), eranosTextData(saved)), "the loaded group saves as the group did");
     check(1 == eranosPaymentListLength(payments), "one payment settles the loaded group");
     eranosTextDestroy(resaved);

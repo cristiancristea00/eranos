@@ -238,12 +238,10 @@ static void mistakes(EranosExpenseGroup *const group, Family const *const family
 /// Prints what each member paid and consumed over the holiday, and their balance.
 static void totals(EranosExpenseGroup const *const group) {
     section("7. The holiday in total");
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     Line const spent = moneyLine(eranosSummaryTotalSpent(summary));
     printFormatted("%s spent over five expenses:", spent.text);
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = totalTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {

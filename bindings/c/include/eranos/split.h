@@ -146,7 +146,7 @@ static inline void eranosMemberAmountListDestroy(EranosMemberAmountList *const l
 /// A member's parts in a split, in hundredths of a part.
 typedef struct EranosMemberParts EranosMemberParts;
 
-/// A new member parts of its required fields; every other field starts absent, empty, or at its default.
+/// New member parts of their required fields; every other field starts absent, empty, or at its default.
 ///
 /// @param member The member's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param hundredths The parts, in hundredths: 100 for one part

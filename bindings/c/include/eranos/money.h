@@ -13,7 +13,7 @@
 /// An amount: a whole number of minor units of a currency, cents for the euro.
 typedef struct EranosMoney EranosMoney;
 
-/// A new money of its required fields; every other field starts absent, empty, or at its default.
+/// A new amount of its required fields; every other field starts absent, empty, or at its default.
 ///
 /// @param minorUnits The amount in minor units: cents for the euro, none for the yen
 /// @param currency The currency, as an ISO 4217 code, as UTF-8 ended by a NUL; nullptr reads as empty text

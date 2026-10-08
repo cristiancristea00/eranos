@@ -142,8 +142,7 @@ static void spend(EranosExpenseGroup *const group, char const *const name, char 
 
 /// Prints the expenses of @p group: who paid each, who shares it, and its amount.
 static void printExpenses(EranosExpenseGroup const *const group) {
-    EranosExpenseList *expenses = nullptr;
-    must(eranosExpenseGroupExpenses(group, &expenses));
+    EranosExpenseList *const expenses = eranosExpenseGroupExpenses(group);
     Table *const table = expenseTable(3);
     EranosText *const name = eranosTextCreate();
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
@@ -170,10 +169,8 @@ static void printExpenses(EranosExpenseGroup const *const group) {
 
 /// Prints what each member of @p group paid and consumed, and their balance.
 static void printBalances(EranosExpenseGroup const *const group) {
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
-    EranosMemberList *members = nullptr;
-    must(eranosExpenseGroupMembers(group, &members));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
+    EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -339,8 +336,7 @@ static void printPayments(EranosExpenseGroup const *const group, EranosPaymentLi
 
 /// How many members of @p group have a balance that is not zero.
 [[nodiscard]] static size_t openBalances(EranosExpenseGroup const *const group) {
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummaryList *const members = eranosSummaryMembers(summary);
     size_t open = 0;
     for (size_t index = 0; eranosMemberSummaryListLength(members) > index; ++index) {
@@ -423,8 +419,7 @@ static void settle(EranosExpenseGroup *const group) {
 
 /// Whether @p member of @p group is settled.
 [[nodiscard]] static bool settled(EranosExpenseGroup const *const group, Id const member) {
-    EranosSummary *summary = nullptr;
-    must(eranosExpenseGroupSummary(group, &summary));
+    EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
     check(nullptr != totals, "the member has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);
