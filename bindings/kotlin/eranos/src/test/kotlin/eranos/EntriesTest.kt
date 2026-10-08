@@ -167,6 +167,119 @@ class EntriesTest {
     }
 
     /**
+     * A discount taken or rounded in Kotlin rather than by the library would show a receipt another amount than the group
+     * divides, and a discount off each unit taken as one off the line would bill another total.
+     */
+    @Test
+    fun anItemTellsTheDiscountTheLibraryTakes() {
+        val flat = Flat()
+        val ana = Split.Equal(listOf(flat.ana))
+        val three = Quantity.ofWhole(3)
+        // Three lemonades at 3.33, half off: 1.67 off each unit, 5.01 in all, or 5.00 off the line of 9.99.
+        val half = DiscountValue.Percentage(Percentage.ofBasisPoints(5_000))
+        val halfOffEachUnit = ExpenseItem("Lemonade", flat.euros(333), ana, three, Discount(half, DiscountScope.UNIT))
+        assertEquals(flat.euros(999), halfOffEachUnit.lineTotalBeforeDiscount())
+        assertEquals(flat.euros(501), halfOffEachUnit.discountAmount())
+        assertEquals(flat.euros(498), halfOffEachUnit.lineTotal())
+        val halfOffTheLine = ExpenseItem("Lemonade", flat.euros(333), ana, three, Discount(half))
+        assertEquals(DiscountScope.LINE, present(halfOffTheLine.discount).scope)
+        assertEquals(flat.euros(999), halfOffTheLine.lineTotalBeforeDiscount())
+        assertEquals(flat.euros(500), halfOffTheLine.discountAmount())
+        assertEquals(flat.euros(499), halfOffTheLine.lineTotal())
+        // 1.00 off each of three lemonades at 3.00, and 1.00 off their line.
+        val oneEuro = DiscountValue.Fixed(flat.euros(100))
+        val oneOffEachUnit = ExpenseItem("Lemonade", flat.euros(300), ana, three, Discount(oneEuro, DiscountScope.UNIT))
+        assertEquals(flat.euros(300), oneOffEachUnit.discountAmount())
+        assertEquals(flat.euros(600), oneOffEachUnit.lineTotal())
+        val oneOffTheLine = ExpenseItem("Lemonade", flat.euros(300), ana, three, Discount(oneEuro))
+        assertEquals(flat.euros(100), oneOffTheLine.discountAmount())
+        assertEquals(flat.euros(800), oneOffTheLine.lineTotal())
+        // A dish on the house: the whole price off leaves a free line.
+        val onTheHouse = ExpenseItem("Papanași", flat.euros(900), ana, discount = Discount(DiscountValue.Percentage(Percentage.parse("100"))))
+        assertEquals(flat.euros(900), onTheHouse.lineTotalBeforeDiscount())
+        assertEquals(flat.euros(900), onTheHouse.discountAmount())
+        assertEquals(flat.euros(0), onTheHouse.lineTotal())
+        // Without a discount nothing is taken off.
+        val bread = ExpenseItem("Bread", flat.euros(120), ana)
+        assertNull(bread.discount)
+        assertEquals(flat.euros(0), bread.discountAmount())
+        assertEquals(bread.lineTotal(), bread.lineTotalBeforeDiscount())
+    }
+
+    /**
+     * A discount the library refuses that reached a receipt, or one refused with another failure than the library's, would
+     * bill a line the group cannot divide, or tell the app another mistake than the one it made.
+     */
+    @Test
+    fun anItemRefusesADiscountItsLineCannotTake() {
+        val flat = Flat()
+        val refusals =
+            listOf(
+                DiscountRefusal(discount = Discount(DiscountValue.Fixed(flat.euros(-1))), failure = ExpenseFailure.NegativeDiscount),
+                DiscountRefusal(
+                    discount = Discount(DiscountValue.Percentage(Percentage.ofBasisPoints(10_001)), DiscountScope.UNIT),
+                    failure = ExpenseFailure.DiscountAboveHundredPercent,
+                ),
+                // 3.01 off a unit of 3.00, and 9.01 off a line of 9.00.
+                DiscountRefusal(
+                    discount = Discount(DiscountValue.Fixed(flat.euros(301)), DiscountScope.UNIT),
+                    failure = ExpenseFailure.DiscountAbovePrice,
+                ),
+                DiscountRefusal(discount = Discount(DiscountValue.Fixed(flat.euros(901))), failure = ExpenseFailure.DiscountAbovePrice),
+                DiscountRefusal(
+                    discount = Discount(DiscountValue.Fixed(Money(100, CurrencyCode.of("RON")))),
+                    failure = ExpenseFailure.CurrencyMismatch(flat.euro, CurrencyCode.of("RON")),
+                ),
+            )
+        for (refusal in refusals) {
+            val item = ExpenseItem("Lemonade", flat.euros(300), Split.Equal(listOf(flat.ana)), Quantity.ofWhole(3), refusal.discount)
+            for (total in listOf(item::lineTotalBeforeDiscount, item::discountAmount, item::lineTotal)) {
+                val refused = assertThrows<EranosException.Expense> { total() }
+                assertEquals(refusal.failure, refused.failure)
+            }
+        }
+    }
+
+    /**
+     * A discount that converted to the generated code and back with its value or scope changed, or that the group stored
+     * another way, would take another amount off the line than the app built; a discount that compared, hashed, or printed
+     * with a field left out would merge two an app holds apart.
+     */
+    @Test
+    fun aDiscountConvertsAndStoresWhole() {
+        val flat = Flat()
+        val ana = Split.Equal(listOf(flat.ana))
+        val half = DiscountValue.Percentage(Percentage.ofBasisPoints(5_000))
+        val oneEuro = DiscountValue.Fixed(flat.euros(100))
+        val discounts = listOf(Discount(half, DiscountScope.UNIT), Discount(oneEuro), Discount(DiscountValue.Percentage(Percentage.parse("100"))))
+        for (discount in discounts) {
+            assertEquals(discount, discount.generated.converted())
+        }
+        // Three lemonades at 3.33: 4.98 with half off each, 8.99 with 1.00 off the line, and free; beside bread at full price.
+        val lines =
+            discounts.map { discount -> ExpenseItem("Lemonade", flat.euros(333), ana, Quantity.ofWhole(3), discount) } +
+                ExpenseItem("Bread", flat.euros(120), ana)
+        val round = Expense("Lemonades", Cost.Local(flat.euros(1_517)), ana, ExpenseSplit.Itemised(lines), flat.day)
+        assertEquals(round, round.generated.converted())
+        assertEquals(round, present(flat.group.expenseBlocking(flat.group.addBlocking(round))))
+
+        assertValue(Discount(half), Discount(half, DiscountScope.LINE), Discount(half, DiscountScope.UNIT))
+        assertValue(Discount(half), Discount(DiscountValue.Percentage(Percentage.ofBasisPoints(5_000))), Discount(oneEuro))
+        assertValue(half, DiscountValue.Percentage(Percentage.ofBasisPoints(5_000)), DiscountValue.Percentage(Percentage.ofBasisPoints(5_001)))
+        assertValue(oneEuro, DiscountValue.Fixed(flat.euros(100)), DiscountValue.Fixed(flat.euros(101)))
+        val discounted = lines.first()
+        assertValue(
+            discounted,
+            ExpenseItem(discounted.name, discounted.unitPrice, discounted.split, discounted.quantity, Discount(half, DiscountScope.UNIT)),
+            ExpenseItem(discounted.name, discounted.unitPrice, discounted.split, discounted.quantity),
+        )
+        assertEquals(listOf(DiscountScope.LINE, DiscountScope.UNIT), DiscountScope.entries)
+        for (scope in DiscountScope.entries) {
+            assertEquals(scope, scope.generated.converted())
+        }
+    }
+
+    /**
      * A split, a cost, or a tip that compared, hashed, or printed with a field left out would merge two an app holds apart.
      */
     @Test
@@ -460,4 +573,10 @@ private data class Expenses(
 private class Refusal(
     val call: () -> Any,
     val failure: ExpenseGroupFailure,
+)
+
+/** A discount an item's line cannot take, and the failure every total of the item refuses it with. */
+private class DiscountRefusal(
+    val discount: Discount,
+    val failure: ExpenseFailure,
 )

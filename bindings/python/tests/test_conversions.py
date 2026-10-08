@@ -165,6 +165,7 @@ def test_every_table_converts_every_case_the_generator_wrote() -> None:
     for case_table in [
         CaseTable(kind=generated.Split, table=_entries._SPLITS),
         CaseTable(kind=generated.Cost, table=_entries._COSTS),
+        CaseTable(kind=generated.DiscountValue, table=_entries._DISCOUNT_VALUES),
         CaseTable(kind=generated.TipValue, table=_entries._TIP_VALUES),
         CaseTable(kind=generated.ExpenseSplit, table=_entries._EXPENSE_SPLITS),
         CaseTable(kind=generated.PaymentAccountDetails, table=_entries._PAYMENT_ACCOUNT_DETAILS),
@@ -176,6 +177,7 @@ def test_every_table_converts_every_case_the_generator_wrote() -> None:
         expected = set(conversion.kind) if issubclass(conversion.kind, enum.Enum) else set(cases(conversion.kind))
         assert set(conversion.table) == expected, conversion.kind
     assert set(_errors._ERRORS) == {value for value in vars(generated.EranosError).values() if isinstance(value, type)}
+    assert [member.name for member in _entries.DiscountScope] == [member.name for member in generated.DiscountScope]
     assert [member.name for member in _entries.TipDistribution] == [member.name for member in generated.TipDistribution]
     assert [member.name for member in _totals.SettlementStrategy] == [member.name for member in generated.SettlementStrategy]
 

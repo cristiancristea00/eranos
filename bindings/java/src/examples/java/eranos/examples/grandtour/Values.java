@@ -140,11 +140,9 @@ final class Values {
         Quantity weight = Quantity.parse("0.452");
         // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
         ExpenseItem olives =
-                new ExpenseItem(
-                        "Olives",
-                        eur("1.00"),
-                        new Split.Equal(List.of(people.ana())),
-                        Quantity.parse("0.335"));
+                ExpenseItem.builder("Olives", eur("1.00"), new Split.Equal(List.of(people.ana())))
+                        .quantity(Quantity.parse("0.335"))
+                        .build();
         Optional<EranosException> fiveDecimals = refusal(() -> Quantity.parse("0.00005"));
         Optional<EranosException> zero = refusal(() -> Quantity.parse("0"));
         System.out.println(

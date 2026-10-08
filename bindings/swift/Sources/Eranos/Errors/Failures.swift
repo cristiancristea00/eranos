@@ -120,6 +120,15 @@ public enum ExpenseFailure: Sendable, Hashable {
     /// The item line totals do not add up to the expense amount.
     case itemsDoNotAddUp(expected: Money, actual: Money)
 
+    /// A fixed discount below zero.
+    case negativeDiscount
+
+    /// A percentage discount above 100 %.
+    case discountAboveHundredPercent
+
+    /// A discount larger than the price it reduces: the line's total, or the price of each unit.
+    case discountAbovePrice
+
     /// A fixed tip below zero.
     case negativeTip
 
@@ -152,6 +161,12 @@ extension ExpenseFailure {
             self = .emptyItemName
         case let .itemsDoNotAddUp(expected, actual):
             self = .itemsDoNotAddUp(expected: Money(expected), actual: Money(actual))
+        case .negativeDiscount:
+            self = .negativeDiscount
+        case .discountAboveHundredPercent:
+            self = .discountAboveHundredPercent
+        case .discountAbovePrice:
+            self = .discountAbovePrice
         case .negativeTip:
             self = .negativeTip
         case .overflow:

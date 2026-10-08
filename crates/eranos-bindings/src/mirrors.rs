@@ -25,6 +25,9 @@ macro_rules! mirrors {
         $crate::mirror_cost!($($callback)+);
         $crate::mirror_currency_details!($($callback)+);
         $crate::mirror_currency_rate!($($callback)+);
+        $crate::mirror_discount!($($callback)+);
+        $crate::mirror_discount_scope!($($callback)+);
+        $crate::mirror_discount_value!($($callback)+);
         $crate::mirror_eranos_error!($($callback)+);
         $crate::mirror_expense!($($callback)+);
         $crate::mirror_expense_failure!($($callback)+);

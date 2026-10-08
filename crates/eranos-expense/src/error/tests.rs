@@ -112,6 +112,30 @@ impl FromExpenseError for ConvertedExpenseError {
         }
     }
 
+    fn negative_discount(message: String) -> Self {
+        Self {
+            method: "negative_discount",
+            held: String::new(),
+            message,
+        }
+    }
+
+    fn discount_above_hundred_percent(message: String) -> Self {
+        Self {
+            method: "discount_above_hundred_percent",
+            held: String::new(),
+            message,
+        }
+    }
+
+    fn discount_above_price(message: String) -> Self {
+        Self {
+            method: "discount_above_price",
+            held: String::new(),
+            message,
+        }
+    }
+
     fn negative_tip(message: String) -> Self {
         Self {
             method: "negative_tip",
@@ -133,6 +157,10 @@ impl FromExpenseError for ConvertedExpenseError {
 /// variant holds or its message, would show the apps another failure than the
 /// library's.
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one row for each of the sixteen variants, which read best as one table"
+)]
 fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
     let expected_currency = CurrencyCode::USD;
     let found = CurrencyCode::EUR;
@@ -204,6 +232,21 @@ fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
             },
             method: "items_do_not_add_up",
             held: format!("{expected_money} {actual}"),
+        },
+        Case {
+            error: ExpenseError::NegativeDiscount,
+            method: "negative_discount",
+            held: String::new(),
+        },
+        Case {
+            error: ExpenseError::DiscountAboveHundredPercent,
+            method: "discount_above_hundred_percent",
+            held: String::new(),
+        },
+        Case {
+            error: ExpenseError::DiscountAbovePrice,
+            method: "discount_above_price",
+            held: String::new(),
         },
         Case {
             error: ExpenseError::NegativeTip,

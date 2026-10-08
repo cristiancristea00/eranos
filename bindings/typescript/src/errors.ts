@@ -471,6 +471,21 @@ export type ExpenseFailure =
           readonly actual: Money;
       }
     | {
+          /** A fixed discount below zero. */
+          readonly kind: 'negativeDiscount';
+      }
+    | {
+          /** A percentage discount above 100 %. */
+          readonly kind: 'discountAboveHundredPercent';
+      }
+    | {
+          /**
+           * A fixed discount larger than what it reduces: the line total before the discount, or the unit price for a
+           * discount off each unit.
+           */
+          readonly kind: 'discountAbovePrice';
+      }
+    | {
           /** A fixed tip below zero. */
           readonly kind: 'negativeTip';
       }
@@ -825,6 +840,12 @@ function convertedExpenseFailure(failure: internal.ExpenseFailure): ExpenseFailu
             return { kind: 'emptyItemName' };
         case internal.ExpenseFailure_Tags.ItemsDoNotAddUp:
             return { kind: 'itemsDoNotAddUp', expected: Money.converted(failure.inner.expected), actual: Money.converted(failure.inner.actual) };
+        case internal.ExpenseFailure_Tags.NegativeDiscount:
+            return { kind: 'negativeDiscount' };
+        case internal.ExpenseFailure_Tags.DiscountAboveHundredPercent:
+            return { kind: 'discountAboveHundredPercent' };
+        case internal.ExpenseFailure_Tags.DiscountAbovePrice:
+            return { kind: 'discountAbovePrice' };
         case internal.ExpenseFailure_Tags.NegativeTip:
             return { kind: 'negativeTip' };
         case internal.ExpenseFailure_Tags.Overflow:

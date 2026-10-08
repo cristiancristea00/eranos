@@ -803,6 +803,312 @@ static void anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero(Check *c
     eranosMoneyDestroy(fortyTwo);
 }
 
+/// A discount of @p value, which it destroys, off @p scope.
+[[nodiscard]] static EranosDiscount *discountOf(EranosDiscountValue *const value, EranosDiscountScope const scope) {
+    EranosDiscount *const discount = eranosDiscountCreate(value);
+    eranosDiscountSetScope(discount, scope);
+    eranosDiscountValueDestroy(value);
+    return discount;
+}
+
+/// A discount of @p basisPoints basis points off @p scope.
+[[nodiscard]] static EranosDiscount *percentageOff(int32_t const basisPoints, EranosDiscountScope const scope) {
+    return discountOf(eranosDiscountValueCreatePercentage(basisPoints), scope);
+}
+
+/// A discount of @p minorUnits minor units of the currency of the ISO 4217 code @p code off @p scope.
+[[nodiscard]] static EranosDiscount *amountOff(int64_t const minorUnits, char const *const code, EranosDiscountScope const scope) {
+    EranosMoney *const amount = amountOf(minorUnits, code);
+    EranosDiscount *const discount = discountOf(eranosDiscountValueCreateFixed(amount), scope);
+    eranosMoneyDestroy(amount);
+    return discount;
+}
+
+/// A line of @p tenThousandths ten-thousandths of a unit at @p cents euro cents a unit, which Ana had, with @p discount, which it destroys, unless
+/// nullptr.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the unit price, then the quantity, in the order of the item's fields.
+[[nodiscard]] static EranosExpenseItem *lineOf(int64_t const cents, int64_t const tenThousandths, EranosDiscount *const discount) {
+    EranosMoney *const unitPrice = euros(cents);
+    EranosSplit *const ana = equally("ana", nullptr);
+    EranosExpenseItem *item = nullptr;
+    eranosErrorDestroy(eranosExpenseItemCreate("Cheese", unitPrice, ana, &item));
+    eranosExpenseItemSetQuantity(item, tenThousandths);
+    if (nullptr != discount) {
+        eranosExpenseItemSetDiscount(item, discount);
+    }
+    eranosDiscountDestroy(discount);
+    eranosSplitDestroy(ana);
+    eranosMoneyDestroy(unitPrice);
+    return item;
+}
+
+/// The totals of a line, in euro cents.
+typedef struct LineTotals {
+    /// The unit price times the quantity.
+    int64_t lineTotalBeforeDiscount;
+    /// What the discount takes off.
+    int64_t discountAmount;
+    /// What the line comes to.
+    int64_t lineTotal;
+} LineTotals;
+
+/// Whether the library computes @p expected for @p item, which it destroys.
+[[nodiscard]] static bool totalsAre(EranosExpenseItem *const item, LineTotals const expected) {
+    EranosMoney *lineTotalBeforeDiscount = nullptr;
+    EranosMoney *discountAmount = nullptr;
+    EranosMoney *lineTotal = nullptr;
+    EranosError *const beforeError = eranosExpenseItemLineTotalBeforeDiscount(item, &lineTotalBeforeDiscount);
+    EranosError *const discountError = eranosExpenseItemDiscountAmount(item, &discountAmount);
+    EranosError *const lineError = eranosExpenseItemLineTotal(item, &lineTotal);
+    bool const computed = nullptr == beforeError && nullptr == discountError && nullptr == lineError;
+    bool const sameBefore = isAmount(lineTotalBeforeDiscount, expected.lineTotalBeforeDiscount, "EUR");
+    bool const sameDiscount = isAmount(discountAmount, expected.discountAmount, "EUR");
+    bool const sameLineTotal = isAmount(lineTotal, expected.lineTotal, "EUR");
+    eranosErrorDestroy(lineError);
+    eranosErrorDestroy(discountError);
+    eranosErrorDestroy(beforeError);
+    eranosExpenseItemDestroy(item);
+    return computed && sameBefore && sameDiscount && sameLineTotal;
+}
+
+/// Whether every total of @p item, which it destroys, is refused with an error of @p kind with @p failure, and gives no amount.
+[[nodiscard]] static bool totalsRefused(EranosExpenseItem *const item, EranosErrorKind const kind, EranosFailure const failure) {
+    EranosMoney *lineTotalBeforeDiscount = nullptr;
+    EranosMoney *discountAmount = nullptr;
+    EranosMoney *lineTotal = nullptr;
+    bool const refused = isFailure(eranosExpenseItemLineTotalBeforeDiscount(item, &lineTotalBeforeDiscount), kind, failure) &&
+                         isFailure(eranosExpenseItemDiscountAmount(item, &discountAmount), kind, failure) &&
+                         isFailure(eranosExpenseItemLineTotal(item, &lineTotal), kind, failure);
+    bool const empty = nullptr == lineTotalBeforeDiscount && nullptr == discountAmount && nullptr == lineTotal;
+    eranosMoneyDestroy(lineTotal);
+    eranosMoneyDestroy(discountAmount);
+    eranosMoneyDestroy(lineTotalBeforeDiscount);
+    eranosExpenseItemDestroy(item);
+    return refused && empty;
+}
+
+/// A discount that read back otherwise than it was made would take another amount off a line than the receipt shows, and one that started off each
+/// unit would take a line's discount from every unit.
+static void aDiscountReadsBackAsItWasMadeAndStartsOffTheLine(Check *const check) {
+    EranosMoney *const one = euros(100);
+    EranosDiscountValue *const fixed = eranosDiscountValueCreateFixed(one);
+    EranosDiscountValue *const half = eranosDiscountValueCreatePercentage(5'000);
+    int32_t basisPoints = 0;
+    checkThat(check,
+              ERANOS_DISCOUNT_VALUE_KIND_FIXED == eranosDiscountValueKind(fixed) && isAmount(eranosDiscountValueAmount(fixed), 100, "EUR") &&
+                  !eranosDiscountValueBasisPoints(fixed, &basisPoints),
+              "a fixed discount holds its amount");
+    checkThat(check,
+              ERANOS_DISCOUNT_VALUE_KIND_PERCENTAGE == eranosDiscountValueKind(half) && eranosDiscountValueBasisPoints(half, &basisPoints) &&
+                  5'000 == basisPoints && nullptr == eranosDiscountValueAmount(half),
+              "a percentage discount holds its basis points");
+    EranosDiscount *const discount = eranosDiscountCreate(fixed);
+    EranosDiscountValue *const madeValue = eranosDiscountValue(discount);
+    checkThat(check,
+              ERANOS_DISCOUNT_SCOPE_LINE == eranosDiscountScope(discount) && ERANOS_DISCOUNT_VALUE_KIND_FIXED == eranosDiscountValueKind(madeValue),
+              "a discount starts off the line");
+    eranosDiscountSetValue(discount, half);
+    eranosDiscountSetScope(discount, ERANOS_DISCOUNT_SCOPE_UNIT);
+    EranosDiscountValue *const changedValue = eranosDiscountValue(discount);
+    checkThat(check,
+              ERANOS_DISCOUNT_SCOPE_UNIT == eranosDiscountScope(discount) && eranosDiscountValueBasisPoints(changedValue, &basisPoints) &&
+                  5'000 == basisPoints,
+              "a discount as set");
+    EranosSplit *const ana = equally("ana", nullptr);
+    EranosExpenseItem *item = nullptr;
+    checkSucceeded(check, eranosExpenseItemCreate("Cheese", one, ana, &item), "an item");
+    checkThat(check, nullptr == eranosExpenseItemDiscount(item), "an item starts without a discount");
+    eranosExpenseItemSetDiscount(item, discount);
+    EranosDiscount *const itemDiscount = eranosExpenseItemDiscount(item);
+    EranosDiscountValue *const itemValue = nullptr == itemDiscount ? nullptr : eranosDiscountValue(itemDiscount);
+    checkThat(check,
+              nullptr != itemDiscount && ERANOS_DISCOUNT_SCOPE_UNIT == eranosDiscountScope(itemDiscount) && nullptr != itemValue &&
+                  eranosDiscountValueBasisPoints(itemValue, &basisPoints) && 5'000 == basisPoints,
+              "an item holds the discount it is given");
+    eranosExpenseItemClearDiscount(item);
+    checkThat(check, nullptr == eranosExpenseItemDiscount(item), "and clears it");
+    eranosDiscountValueDestroy(itemValue);
+    eranosDiscountDestroy(itemDiscount);
+    eranosExpenseItemDestroy(item);
+    eranosSplitDestroy(ana);
+    eranosDiscountValueDestroy(changedValue);
+    eranosDiscountValueDestroy(madeValue);
+    eranosDiscountDestroy(discount);
+    eranosDiscountValueDestroy(half);
+    eranosDiscountValueDestroy(fixed);
+    eranosMoneyDestroy(one);
+}
+
+/// A discount the layer took itself would round a line otherwise than the library, which divides it, and so show an app a receipt that does not
+/// add up to the shares: off each unit, the library rounds each unit's discount, so 50 % off three units of 3.33 EUR leaves a cent less than 50 %
+/// off their line.
+static void aDiscountComesOffEachUnitOrOffTheLineAsTheLibraryTakesIt(Check *const check) {
+    checkThat(check,
+              totalsAre(lineOf(333, 30'000, percentageOff(5'000, ERANOS_DISCOUNT_SCOPE_UNIT)),
+                        (LineTotals){.lineTotalBeforeDiscount = 999, .discountAmount = 501, .lineTotal = 498}),
+              "50 % off each of 3 at 3.33 EUR leaves 1.66 EUR a unit, 4.98 EUR");
+    checkThat(check,
+              totalsAre(lineOf(333, 30'000, percentageOff(5'000, ERANOS_DISCOUNT_SCOPE_LINE)),
+                        (LineTotals){.lineTotalBeforeDiscount = 999, .discountAmount = 500, .lineTotal = 499}),
+              "50 % off their line of 9.99 EUR is 5.00 EUR, rounded half away from zero, which leaves 4.99 EUR");
+    checkThat(check,
+              totalsAre(lineOf(300, 30'000, amountOff(100, "EUR", ERANOS_DISCOUNT_SCOPE_UNIT)),
+                        (LineTotals){.lineTotalBeforeDiscount = 900, .discountAmount = 300, .lineTotal = 600}),
+              "1.00 EUR off each of 3 at 3.00 EUR is 3.00 EUR off their line");
+    checkThat(check,
+              totalsAre(lineOf(300, 30'000, amountOff(100, "EUR", ERANOS_DISCOUNT_SCOPE_LINE)),
+                        (LineTotals){.lineTotalBeforeDiscount = 900, .discountAmount = 100, .lineTotal = 800}),
+              "1.00 EUR off their line of 9.00 EUR leaves 8.00 EUR");
+    checkThat(check,
+              totalsAre(lineOf(900, ERANOS_QUANTITY_ONE, percentageOff(10'000, ERANOS_DISCOUNT_SCOPE_LINE)),
+                        (LineTotals){.lineTotalBeforeDiscount = 900, .discountAmount = 900, .lineTotal = 0}),
+              "100 % off makes a free line");
+    checkThat(check,
+              totalsAre(lineOf(900, ERANOS_QUANTITY_ONE, amountOff(900, "EUR", ERANOS_DISCOUNT_SCOPE_UNIT)),
+                        (LineTotals){.lineTotalBeforeDiscount = 900, .discountAmount = 900, .lineTotal = 0}),
+              "and so does the whole price off its unit");
+    checkThat(
+        check,
+        totalsAre(lineOf(900, ERANOS_QUANTITY_ONE, nullptr), (LineTotals){.lineTotalBeforeDiscount = 900, .discountAmount = 0, .lineTotal = 900}),
+        "a line without a discount loses nothing");
+}
+
+/// A discount the library refuses, taken, would bill a line below zero or above its price, or mix currencies on one receipt; every total of the
+/// item refuses it with the failure of the rule it breaks, and gives no amount.
+static void aDiscountTheLineCannotTakeIsRefusedByEveryTotal(Check *const check) {
+    checkThat(check,
+              totalsRefused(lineOf(900, ERANOS_QUANTITY_ONE, amountOff(-100, "EUR", ERANOS_DISCOUNT_SCOPE_LINE)), ERANOS_ERROR_KIND_EXPENSE,
+                            ERANOS_FAILURE_EXPENSE_NEGATIVE_DISCOUNT),
+              "a fixed discount below zero");
+    checkThat(check,
+              totalsRefused(lineOf(900, ERANOS_QUANTITY_ONE, percentageOff(10'001, ERANOS_DISCOUNT_SCOPE_LINE)), ERANOS_ERROR_KIND_EXPENSE,
+                            ERANOS_FAILURE_EXPENSE_DISCOUNT_ABOVE_HUNDRED_PERCENT),
+              "a percentage above 100 %");
+    checkThat(check,
+              totalsRefused(lineOf(900, ERANOS_QUANTITY_ONE, percentageOff(-1, ERANOS_DISCOUNT_SCOPE_LINE)), ERANOS_ERROR_KIND_MONEY,
+                            ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE),
+              "a percentage below zero, which no percentage is");
+    checkThat(check,
+              totalsRefused(lineOf(900, ERANOS_QUANTITY_ONE, amountOff(1'000, "EUR", ERANOS_DISCOUNT_SCOPE_LINE)), ERANOS_ERROR_KIND_EXPENSE,
+                            ERANOS_FAILURE_EXPENSE_DISCOUNT_ABOVE_PRICE),
+              "10.00 EUR off a line of 9.00 EUR");
+    checkThat(check,
+              totalsRefused(lineOf(300, 30'000, amountOff(301, "EUR", ERANOS_DISCOUNT_SCOPE_UNIT)), ERANOS_ERROR_KIND_EXPENSE,
+                            ERANOS_FAILURE_EXPENSE_DISCOUNT_ABOVE_PRICE),
+              "3.01 EUR off each unit of 3.00 EUR, though their line is 9.00 EUR");
+    checkThat(check,
+              totalsRefused(lineOf(900, ERANOS_QUANTITY_ONE, amountOff(100, "RON", ERANOS_DISCOUNT_SCOPE_LINE)), ERANOS_ERROR_KIND_EXPENSE,
+                            ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH),
+              "a fixed discount in another currency than the price");
+}
+
+/// The lines of the itemised expense @p id in @p group, which the caller destroys, or nullptr when the group holds none.
+[[nodiscard]] static EranosExpenseItemList *linesOf(EranosExpenseGroup const *const group, char const *const id) {
+    EranosExpense *expense = nullptr;
+    eranosErrorDestroy(eranosExpenseGroupExpense(group, id, &expense));
+    if (nullptr == expense) {
+        return nullptr;
+    }
+    EranosExpenseSplit *const split = eranosExpenseSplit(expense);
+    EranosExpenseItemList *const items = eranosExpenseSplitItems(split);
+    eranosExpenseSplitDestroy(split);
+    eranosExpenseDestroy(expense);
+    return items;
+}
+
+/// The discount of the line at @p index of @p items, which the caller destroys, or nullptr when the line has none or the list ends before it.
+[[nodiscard]] static EranosDiscount *discountAt(EranosExpenseItemList const *const items, size_t const index) {
+    EranosExpenseItem *const item = nullptr == items ? nullptr : eranosExpenseItemListGet(items, index);
+    if (nullptr == item) {
+        return nullptr;
+    }
+    EranosDiscount *const discount = eranosExpenseItemDiscount(item);
+    eranosExpenseItemDestroy(item);
+    return discount;
+}
+
+/// Whether @p discount, which it destroys, takes @p basisPoints basis points off @p scope.
+[[nodiscard]] static bool isPercentageOff(EranosDiscount *const discount, int32_t const basisPoints, EranosDiscountScope const scope) {
+    if (nullptr == discount) {
+        return false;
+    }
+    EranosDiscountValue *const value = eranosDiscountValue(discount);
+    int32_t held = -1;
+    bool const same = scope == eranosDiscountScope(discount) && eranosDiscountValueBasisPoints(value, &held) && basisPoints == held;
+    eranosDiscountValueDestroy(value);
+    eranosDiscountDestroy(discount);
+    return same;
+}
+
+/// Whether @p discount, which it destroys, takes @p cents euro cents off @p scope.
+[[nodiscard]] static bool isAmountOff(EranosDiscount *const discount, int64_t const cents, EranosDiscountScope const scope) {
+    if (nullptr == discount) {
+        return false;
+    }
+    EranosDiscountValue *const value = eranosDiscountValue(discount);
+    bool const same = scope == eranosDiscountScope(discount) && isAmount(eranosDiscountValueAmount(value), cents, "EUR");
+    eranosDiscountValueDestroy(value);
+    eranosDiscountDestroy(discount);
+    return same;
+}
+
+/// A discount lost or changed on its way through the group would bill a line at full price once an app reads the expense back, or take a unit's
+/// discount off the line.
+static void aDiscountedLineReadsBackFromTheGroupAsItWasAdded(Check *const check) {
+    Flat const flat = flatOf();
+    EranosSplit *const both = equally(eranosTextData(flat.ana), eranosTextData(flat.bob));
+    EranosExpenseItemList *const items = eranosExpenseItemListCreate();
+    EranosMoney *const cheesePrice = euros(333);
+    EranosExpenseItem *cheese = nullptr;
+    checkSucceeded(check, eranosExpenseItemCreate("Cheese", cheesePrice, both, &cheese), "a line of cheese");
+    eranosExpenseItemSetQuantity(cheese, 30'000);
+    EranosDiscount *const halfOffEach = percentageOff(5'000, ERANOS_DISCOUNT_SCOPE_UNIT);
+    eranosExpenseItemSetDiscount(cheese, halfOffEach);
+    eranosExpenseItemListPush(items, cheese);
+    EranosMoney *const winePrice = euros(900);
+    EranosExpenseItem *wine = nullptr;
+    checkSucceeded(check, eranosExpenseItemCreate("Wine", winePrice, both, &wine), "a line of wine");
+    EranosDiscount *const oneOffTheLine = amountOff(100, "EUR", ERANOS_DISCOUNT_SCOPE_LINE);
+    eranosExpenseItemSetDiscount(wine, oneOffTheLine);
+    eranosExpenseItemListPush(items, wine);
+    EranosMoney *const breadPrice = euros(200);
+    EranosExpenseItem *bread = nullptr;
+    checkSucceeded(check, eranosExpenseItemCreate("Bread", breadPrice, both, &bread), "a line of bread");
+    eranosExpenseItemListPush(items, bread);
+    EranosExpenseSplit *const split = eranosExpenseSplitCreateItemised(items);
+    // The lines come to 4.98, 8.00, and 2.00 EUR.
+    EranosMoney *const amount = euros(1'498);
+    EranosCost *const cost = eranosCostCreateLocal(amount);
+    EranosSplit *const payers = equally(eranosTextData(flat.ana), nullptr);
+    EranosExpense *expense = nullptr;
+    checkSucceeded(check, eranosExpenseCreate("Market", cost, payers, split, DAY, &expense), "an itemised expense");
+    EranosText *const id = eranosTextCreate();
+    checkSucceeded(check, eranosExpenseGroupAddExpense(flat.group, expense, id), "the group takes lines with discounts");
+    EranosExpenseItemList *const lines = linesOf(flat.group, eranosTextData(id));
+    checkThat(check, nullptr != lines && 3 == eranosExpenseItemListLength(lines), "and holds every line");
+    checkThat(check, isPercentageOff(discountAt(lines, 0), 5'000, ERANOS_DISCOUNT_SCOPE_UNIT), "50 % off each unit reads back as it went in");
+    checkThat(check, isAmountOff(discountAt(lines, 1), 100, ERANOS_DISCOUNT_SCOPE_LINE), "and so does 1.00 EUR off the line");
+    checkThat(check, nullptr == discountAt(lines, 2), "and a line at full price, without a discount");
+    eranosExpenseItemListDestroy(lines);
+    eranosTextDestroy(id);
+    eranosExpenseDestroy(expense);
+    eranosSplitDestroy(payers);
+    eranosCostDestroy(cost);
+    eranosMoneyDestroy(amount);
+    eranosExpenseSplitDestroy(split);
+    eranosExpenseItemDestroy(bread);
+    eranosMoneyDestroy(breadPrice);
+    eranosDiscountDestroy(oneOffTheLine);
+    eranosExpenseItemDestroy(wine);
+    eranosMoneyDestroy(winePrice);
+    eranosDiscountDestroy(halfOffEach);
+    eranosExpenseItemDestroy(cheese);
+    eranosMoneyDestroy(cheesePrice);
+    eranosExpenseItemListDestroy(items);
+    eranosSplitDestroy(both);
+    flatDestroy(flat);
+}
+
 /// A date or a time the calendar does not have, taken, would date an expense on a day that never was.
 static void datesAndTimesAreCheckedAndWritten(Check *const check) {
     EranosText *const text = eranosTextCreate();
@@ -1509,6 +1815,8 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosExpenseSplitDestroy(nullptr);
     eranosExpenseItemDestroy(nullptr);
     eranosExpenseItemListDestroy(nullptr);
+    eranosDiscountDestroy(nullptr);
+    eranosDiscountValueDestroy(nullptr);
     eranosTipRuleDestroy(nullptr);
     eranosTipValueDestroy(nullptr);
     eranosCancellationDestroy(nullptr);
@@ -3005,6 +3313,10 @@ int main(void) {
             .body = anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero,
             .name = "anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero",
         },
+        {.body = aDiscountReadsBackAsItWasMadeAndStartsOffTheLine, .name = "aDiscountReadsBackAsItWasMadeAndStartsOffTheLine"},
+        {.body = aDiscountComesOffEachUnitOrOffTheLineAsTheLibraryTakesIt, .name = "aDiscountComesOffEachUnitOrOffTheLineAsTheLibraryTakesIt"},
+        {.body = aDiscountTheLineCannotTakeIsRefusedByEveryTotal, .name = "aDiscountTheLineCannotTakeIsRefusedByEveryTotal"},
+        {.body = aDiscountedLineReadsBackFromTheGroupAsItWasAdded, .name = "aDiscountedLineReadsBackFromTheGroupAsItWasAdded"},
         {.body = datesAndTimesAreCheckedAndWritten, .name = "datesAndTimesAreCheckedAndWritten"},
         {.body = contactsAndAccountsAreCheckedAndMadeCanonical, .name = "contactsAndAccountsAreCheckedAndMadeCanonical"},
         {.body = anIdentifierIsCheckedAndKeptAsItIsWritten, .name = "anIdentifierIsCheckedAndKeptAsItIsWritten"},

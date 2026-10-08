@@ -1,7 +1,8 @@
 """
 Print an itemised restaurant bill: every line is split among the people who had it, and quantities multiply the unit price.
 
-The tip is shared either in proportion to what each person ordered or equally.
+The tip is shared either in proportion to what each person ordered or equally; then a line weighed on a scale, and discounts off
+the line and off each unit.
 
 The port of the Rust example ``restaurant_bill``, which prints the same report.
 
@@ -14,11 +15,14 @@ from typing import ClassVar, final, override
 from eranos import (
     CalendarDate,
     CurrencyCode,
+    Discount,
+    DiscountScope,
     EqualSplit,
     Expense,
     ExpenseShares,
     ExpenseGroup,
     ExpenseItem,
+    FixedDiscount,
     ItemisedExpenseSplit,
     LocalCost,
     Member,
@@ -28,6 +32,7 @@ from eranos import (
     Parts,
     PartsSplit,
     Percentage,
+    PercentageDiscount,
     PercentageTip,
     Quantity,
     TipRule,
@@ -62,6 +67,43 @@ class LineRow(Row):
     @override
     def cells(self) -> tuple[str, ...]:
         return self.name, self.participants, str(self.quantity), str(self.unit_price), str(self.line_total)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class DiscountRow(Row):
+    """A row of the table of the second round: a line, what it costs before its discount, the discount, and what is left."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Item', 'Quantity', 'Unit price', 'Before discount', 'Discount', 'Line total')
+
+    name: str
+    """What the line is."""
+
+    quantity: Quantity
+    """How many were ordered, or how much was weighed."""
+
+    unit_price: Money
+    """What one costs."""
+
+    line_total_before_discount: Money
+    """The unit price times the quantity, as the library works it out."""
+
+    discount_amount: Money
+    """What the discount takes off the line, as the library works it out."""
+
+    line_total: Money
+    """What is left to pay for the line, as the library works it out."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return (
+            self.name,
+            str(self.quantity),
+            str(self.unit_price),
+            str(self.line_total_before_discount),
+            str(self.discount_amount),
+            str(self.line_total),
+        )
 
 
 @final
@@ -135,6 +177,42 @@ def receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[ExpenseItem,
             name='Papanași', unit_price=euros('9.00'), split=PartsSplit((MemberParts(ana, Parts.parse('1')), MemberParts(carol, Parts.parse('2'))))
         ),
         ExpenseItem(name='Lemonade', unit_price=euros('3.00'), split=EqualSplit((ana, bob, carol)), quantity=Quantity.whole(3)),
+    )
+
+
+def second_round(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[ExpenseItem, ...]:
+    """
+    List a second round: telemea weighed on a scale with 10 % off the line, three lemonades with 1.00 off each, and papanași on the house.
+
+    Args:
+        ana: Ana.
+        bob: Bob.
+        carol: Carol.
+
+    Returns:
+        The lines.
+
+    """
+    # The scale reports the weight as a float.
+    weight = Quantity.from_float(0.35)
+    return (
+        ExpenseItem(
+            name='Telemea',
+            unit_price=euros('42.00'),
+            split=EqualSplit((ana, bob)),
+            quantity=weight,
+            discount=Discount(PercentageDiscount(Percentage.parse('10'))),
+        ),
+        ExpenseItem(
+            name='Lemonade',
+            unit_price=euros('3.00'),
+            split=EqualSplit((ana, bob, carol)),
+            quantity=Quantity.whole(3),
+            discount=Discount(FixedDiscount(euros('1.00')), DiscountScope.UNIT),
+        ),
+        ExpenseItem(
+            name='Papanași', unit_price=euros('9.00'), split=EqualSplit((carol,)), discount=Discount(PercentageDiscount(Percentage.parse('100')))
+        ),
     )
 
 
@@ -218,6 +296,54 @@ def tip_row(group: ExpenseGroup, member: MemberId, ordered: ExpenseShares, by_co
     )
 
 
+def weighed_lines_and_discounts(ana: MemberId, bob: MemberId, carol: MemberId) -> None:
+    """
+    Print section 4: the second round's lines, each with its totals before and after its discount, and a discount larger than its line, refused.
+
+    Args:
+        ana: Ana.
+        bob: Bob.
+        carol: Carol.
+
+    """
+    section('4. Weighed lines and discounts')
+    telemea, lemonade, papanasi = second_round(ana, bob, carol)
+    print_table(
+        DiscountRow,
+        [
+            DiscountRow(
+                name=item.name,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                line_total_before_discount=item.line_total_before_discount(),
+                discount_amount=item.discount_amount(),
+                line_total=item.line_total(),
+            )
+            for item in (telemea, lemonade, papanasi)
+        ],
+        1,
+    )
+    nine, ten = euros('9.00'), euros('10.00')
+    # The layer checks an item only when the library reads it, so working out its line total refuses it where Rust's build does.
+    refused = refusal(ExpenseItem(name='Papanași', unit_price=nine, split=EqualSplit((carol,)), discount=Discount(FixedDiscount(ten))).line_total)
+    assert refused is not None, 'the discount must be refused'
+    print_lines(
+        f'The scale reports {telemea.quantity} kg as a double just below it; the quantity reads its shortest',
+        f'form, {telemea.quantity}, so the telemea costs exactly {telemea.line_total_before_discount()} before its discount. Taking {ten}',
+        f'off a {nine} line is refused when the item is built:',
+        f'  error: {refused}',
+    )
+
+    # 10 % of 14.70 is 1.47; 1.00 off each of three lemonades is 3.00; the papanași on the house leave a free line.
+    assert telemea.line_total_before_discount() == euros('14.70')
+    assert telemea.discount_amount() == euros('1.47')
+    assert telemea.line_total() == euros('13.23')
+    assert lemonade.discount_amount() == euros('3.00')
+    assert lemonade.line_total() == euros('6.00')
+    assert papanasi.discount_amount() == euros('9.00')
+    assert papanasi.line_total() == euros('0.00')
+
+
 def main() -> None:
     """Print the report, checking its key numbers."""
     group = ExpenseGroup.create("Dinner at Caru' cu Bere", CurrencyCode('EUR'))
@@ -277,6 +403,8 @@ def main() -> None:
     refused = refusal(lambda: group.add_expense(mismatched))
     assert refused is not None, 'the mismatch must be refused'
     print_lines('An amount of 55.00 EUR with these lines is refused when the expense is built:', f'  error: {refused}')
+
+    weighed_lines_and_discounts(ana, bob, carol)
 
     # Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to each;
     # an equal one 1.80 to everyone.

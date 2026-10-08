@@ -209,7 +209,7 @@ flowchart TD
 | `eranos-bindings`        | the records and enums every binding exposes, `EranosError` and its `FlatError`, `IbanReason`, `NewExpenseGroup`, `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, the value helpers; the trait that lists the group calls     | `eranos` with `serde`, the twelve internal crates for their conversion traits, and eranos-glue-macros; serde_json      |
 | `eranos`                 | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                                              | the twelve crates below                                                                                                |
 | `eranos-expense-group`   | `ExpenseGroup`, `ExpenseGroupBuilder`, `Language`, `SavedExpenseGroup`, `SharedExpenseGroup`, `ExpenseGroupReadGuard`, `ExpenseGroupWriteGuard`, `ExpenseGroupError`, `LanguageError`                                                    | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core                      |
-| `eranos-expense`         | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `ExpenseItem`, `ExpenseItemBuilder`, `TipRule`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                    | calendar, core, ledger, money                                                                                          |
+| `eranos-expense`         | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `ExpenseItem`, `ExpenseItemBuilder`, `Discount`, `DiscountValue`, `DiscountScope`, `TipRule`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`      | calendar, core, ledger, money                                                                                          |
 | `eranos-transfer`        | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                                                                                       | calendar, core, money, settlement                                                                                      |
 | `eranos-member`          | `Member`, `MemberBuilder`, `MemberError`                                                                                                                                                                                                 | account, contact, core                                                                                                 |
 | `eranos-category`        | `Category`, `CategoryError`                                                                                                                                                                                                              | core; icu_casemap, icu_normalizer                                                                                      |
@@ -289,10 +289,13 @@ the cost is shared: an `ExpenseSplit::Whole(Split)` or
 `ExpenseSplit::Itemised(Vec<ExpenseItem>)`. A split is `Equal`, `Parts`
 (hundredths, so 0.5 for a child), `Percentages` (basis points summing to
 exactly 10 000), or `Amounts` (summing exactly to what is divided). An
-**item** has a unit price, a quantity (a `Quantity`, one unless set), and
-its own split; its line total is the unit price times the quantity,
-rounded half away from zero, and the line totals must add up to the
-amount. A **tip** is fixed or a percentage of the amount,
+**item** has a unit price, a quantity (a `Quantity`, one unless set), an
+optional discount, and its own split; its line total is the unit price
+times the quantity, rounded half away from zero, less the discount, and
+the line totals must add up to the amount. A **discount** is a percentage
+of at most 100 % or a fixed amount of at most what it reduces, taken off
+the line (the default) or off each unit ([§ 4](#4-money-and-rounding)). A
+**tip** is fixed or a percentage of the amount,
 added on top, and shared `Proportional`ly (by consumption) or `Equal`ly
 among the participants with a share above zero
 ([§ 5](#5-resolving-an-entry)). A **transfer** is money one member paid
@@ -351,6 +354,20 @@ cannot be removed.
   line beyond the range is refused as `Overflow`.
   `apply_basis_points`, which a percentage tip uses, is the same division
   of basis points.
+- A `Discount` reduces a line in one of two ways, and the line total and
+  the discount's amount always add up to the line total before the
+  discount. Off the line, the default, a percentage is
+  `apply_basis_points(line before the discount, rate)`, rounded once, and
+  a fixed amount is taken off as entered. Off each unit, the percentage
+  of the unit price is rounded first, and the reduced price is then
+  multiplied by the quantity, so three units at 3.33 EUR with 50 % off
+  cost 4.98 EUR with the discount off each unit and 4.99 EUR with it off
+  the line. A percentage
+  above 100 % is refused as `DiscountAboveHundredPercent`, a negative
+  fixed amount as `NegativeDiscount`, one larger than what it reduces as
+  `DiscountAbovePrice`, and one in another currency as
+  `CurrencyMismatch`; 100 %, or a fixed amount equal to what it reduces,
+  makes a free line.
 - **Doubles.** Apps hold amounts, percentages, parts, quantities, and rates
   as doubles, so `Money`, `Percentage`, `Parts`, `Quantity`, and
   `ExchangeRate` each have a `from_f64`, and every binding calls it, so the
@@ -431,6 +448,10 @@ flowchart TD
 ```
 
 </details>
+
+An itemised expense's base shares divide each line total after its
+discount, so a line on the house, discounted to zero, divides to zeros as
+any free line does.
 
 An **equal tip** is allocated with a weight of one for each participant
 whose base share is positive and zero for the others, so a member whose
@@ -561,7 +582,8 @@ the minimum, and the second seven.
 ## 8. Validation and errors
 
 Validation happens in two stages. A builder's `build()` checks the entry on
-its own (names, positive amounts, sums, currencies inside the entry, tips).
+its own (names, positive amounts, sums, currencies inside the entry,
+discounts, tips).
 The group's `add_*`/`replace_*` check the entry against the
 group (members exist and are not archived, the category exists, and the
 cost is converted exactly when the entry is foreign) and against the
@@ -625,12 +647,16 @@ never the derived totals:
   parser behind `CalendarDate::parse` and `TimeOfDay::parse`), percentages
   basis points, parts hundredths, an item's quantity its decimal text
   (`"quantity": "1.5"`), which a reader that parses JSON numbers as doubles
-  cannot round, and each share of a split the two-element array
-  `[member, value]`. Absent optional fields are omitted, and so are the
+  cannot round, an item's discount its value and its scope
+  (`"discount": {"value": {"percentage": 1000}, "scope": "unit"}`), whose
+  scope reads as `line` when it is left out, and each share of a split the
+  two-element array `[member, value]`. Absent optional fields are omitted,
+  an item's discount among them, and so are the
   built-in category, an expense's category when it is the built-in one
   (every group has it again when it loads), a tip equal to
   `TipRule::NONE`, no tip at all, and a quantity of one, which an item
-  without one reads as. An item's line total is derived, so not written. Keys follow the field order of
+  without one reads as. An item's line totals, before its discount and
+  after it, are derived, so not written. Keys follow the field order of
   [AGENTS.md](../AGENTS.md): `format` and `id` first, then the fields that
   describe the value in their natural order, the optional ones after the
   required, and a group's collections last.

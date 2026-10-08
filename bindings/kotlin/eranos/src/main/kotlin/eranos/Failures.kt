@@ -214,6 +214,18 @@ public sealed interface ExpenseFailure {
         override fun toString(): String = "ItemsDoNotAddUp(expected=$expected, actual=$actual)"
     }
 
+    /** A fixed discount below zero. */
+    public data object NegativeDiscount : ExpenseFailure
+
+    /** A percentage discount above 100 %. */
+    public data object DiscountAboveHundredPercent : ExpenseFailure
+
+    /**
+     * A fixed discount larger than what it reduces: the line total before the discount, or the unit price for a discount
+     * off each unit.
+     */
+    public data object DiscountAbovePrice : ExpenseFailure
+
     /** A fixed tip below zero. */
     public data object NegativeTip : ExpenseFailure
 
@@ -235,6 +247,9 @@ internal fun GeneratedExpenseFailure.converted(): ExpenseFailure =
         GeneratedExpenseFailure.NoItems -> ExpenseFailure.NoItems
         GeneratedExpenseFailure.EmptyItemName -> ExpenseFailure.EmptyItemName
         is GeneratedExpenseFailure.ItemsDoNotAddUp -> ExpenseFailure.ItemsDoNotAddUp(expected.converted(), actual.converted())
+        GeneratedExpenseFailure.NegativeDiscount -> ExpenseFailure.NegativeDiscount
+        GeneratedExpenseFailure.DiscountAboveHundredPercent -> ExpenseFailure.DiscountAboveHundredPercent
+        GeneratedExpenseFailure.DiscountAbovePrice -> ExpenseFailure.DiscountAbovePrice
         GeneratedExpenseFailure.NegativeTip -> ExpenseFailure.NegativeTip
         GeneratedExpenseFailure.Overflow -> ExpenseFailure.Overflow
     }

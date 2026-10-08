@@ -472,6 +472,21 @@ class ExpenseError(EranosError):
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
+    class NegativeDiscount:
+        """A fixed discount below zero."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
+    class DiscountAboveHundredPercent:
+        """A percentage discount above 100 %."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
+    class DiscountAbovePrice:
+        """A fixed discount larger than what it reduces: the line total before the discount, or the unit price for a discount off each unit."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
     class NegativeTip:
         """A fixed tip below zero."""
 
@@ -506,6 +521,9 @@ type ExpenseFailure = (
     | ExpenseError.NoItems
     | ExpenseError.EmptyItemName
     | ExpenseError.ItemsDoNotAddUp
+    | ExpenseError.NegativeDiscount
+    | ExpenseError.DiscountAboveHundredPercent
+    | ExpenseError.DiscountAbovePrice
     | ExpenseError.NegativeTip
     | ExpenseError.Overflow
 )
@@ -897,6 +915,9 @@ _EXPENSE_FAILURES: dict[type[object], Callable[[Any], ExpenseFailure]] = {
     generated.ExpenseFailure.ITEMS_DO_NOT_ADD_UP: lambda failure: ExpenseError.ItemsDoNotAddUp(
         expected=_money.money_of(failure.expected), actual=_money.money_of(failure.actual)
     ),
+    generated.ExpenseFailure.NEGATIVE_DISCOUNT: lambda _: ExpenseError.NegativeDiscount(),
+    generated.ExpenseFailure.DISCOUNT_ABOVE_HUNDRED_PERCENT: lambda _: ExpenseError.DiscountAboveHundredPercent(),
+    generated.ExpenseFailure.DISCOUNT_ABOVE_PRICE: lambda _: ExpenseError.DiscountAbovePrice(),
     generated.ExpenseFailure.NEGATIVE_TIP: lambda _: ExpenseError.NegativeTip(),
     generated.ExpenseFailure.OVERFLOW: lambda _: ExpenseError.Overflow(),
 }

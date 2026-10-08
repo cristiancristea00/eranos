@@ -17,6 +17,8 @@ import {
     generatedTransfer,
 } from '../src/entries.js';
 import {
+    type Discount,
+    type DiscountInput,
     type Expense,
     type ExpenseInput,
     type ExpenseItem,
@@ -29,6 +31,7 @@ import {
     type TipRuleInput,
     CalendarDate,
     CurrencyCode,
+    DiscountScope,
     Email,
     ExchangeRate,
     ExpenseError,
@@ -49,7 +52,9 @@ import {
     createExpense,
     createMember,
     createTransfer,
+    expenseItemDiscountAmount,
     expenseItemLineTotal,
+    expenseItemLineTotalBeforeDiscount,
     expenseMembers,
     expenseTipAmount,
     expenseTotal,
@@ -235,8 +240,12 @@ void describe('the expenses, members, categories, and transfers', () => {
             (): ExpenseItem => ({ name: 'Toll', unitPrice: flat.euros(1_000n), split: payers }),
             // @ts-expect-error: a tip read back has its distribution.
             (): TipRule => ({ value }),
+            // @ts-expect-error: a discount names its value.
+            (): DiscountInput => ({ scope: DiscountScope.UNIT }),
+            // @ts-expect-error: a discount read back has its scope.
+            (): Discount => ({ value }),
         ];
-        assert.equal(uncompiled.length, 9);
+        assert.equal(uncompiled.length, 11);
     });
 
     /**
@@ -340,6 +349,171 @@ void describe('the expenses, members, categories, and transfers', () => {
         });
         assert.deepEqual(convertedExpense(generatedExpense(deli)), deli);
         assert.deepEqual(flat.group.expenseSync(flat.group.addExpenseSync(deli)), deli);
+    });
+
+    /**
+     * A discount that an app took off a line itself, rounding the line where the library rounds each unit or the other way,
+     * would show a bill whose lines do not add up to the amount the library checks them against; a whole price taken off
+     * that the library refused would leave an app no way to record a line on the house.
+     */
+    void it("takes an item's discount off the line or off each unit as the library does", () => {
+        const flat = new Flat();
+        const sharing = { kind: 'equal', members: [flat.ana, flat.bob] } as const;
+        const half = { kind: 'percentage', percentage: Percentage.parse('50') } as const;
+        // Three units at 3.33 EUR are 9.99 EUR. Half of each unit is 1.665 EUR, which rounds to 1.67 EUR, so each unit costs
+        // 1.66 EUR; half the line is 4.995 EUR, which rounds to 5.00 EUR.
+        const juice = { name: 'Juice', unitPrice: flat.euros(333n), split: sharing, quantity: Quantity.ofWhole(3n) };
+        const offEachJuice = { ...juice, discount: { value: half, scope: DiscountScope.UNIT } };
+        const offTheJuice = { ...juice, discount: { value: half } };
+        assert.ok(expenseItemLineTotalBeforeDiscount(offEachJuice).equals(flat.euros(999n)));
+        assert.ok(expenseItemDiscountAmount(offEachJuice).equals(flat.euros(501n)));
+        assert.ok(expenseItemLineTotal(offEachJuice).equals(flat.euros(498n)));
+        assert.ok(expenseItemLineTotalBeforeDiscount(offTheJuice).equals(flat.euros(999n)));
+        assert.ok(expenseItemDiscountAmount(offTheJuice).equals(flat.euros(500n)));
+        assert.ok(expenseItemLineTotal(offTheJuice).equals(flat.euros(499n)));
+
+        const euro = { kind: 'fixed', amount: flat.euros(100n) } as const;
+        const lemonade = { name: 'Lemonade', unitPrice: flat.euros(300n), split: sharing, quantity: Quantity.ofWhole(3n) };
+        const offEachLemonade = { ...lemonade, discount: { value: euro, scope: DiscountScope.UNIT } };
+        const offTheLemonade = { ...lemonade, discount: { value: euro, scope: DiscountScope.LINE } };
+        assert.ok(expenseItemDiscountAmount(offEachLemonade).equals(flat.euros(300n)));
+        assert.ok(expenseItemLineTotal(offEachLemonade).equals(flat.euros(600n)));
+        assert.ok(expenseItemDiscountAmount(offTheLemonade).equals(flat.euros(100n)));
+        assert.ok(expenseItemLineTotal(offTheLemonade).equals(flat.euros(800n)));
+        assert.ok(expenseItemLineTotalBeforeDiscount(lemonade).equals(flat.euros(900n)));
+        assert.ok(expenseItemDiscountAmount(lemonade).equals(flat.euros(0n)));
+        assert.ok(expenseItemLineTotal(lemonade).equals(flat.euros(900n)));
+
+        // The whole price taken off, by 100 % or by a fixed amount equal to it, leaves a free line.
+        const onTheHouse = { name: 'Papanași', unitPrice: flat.euros(900n), split: { kind: 'equal', members: [flat.bob] } } as const;
+        const free = { ...onTheHouse, discount: { value: { kind: 'percentage', percentage: Percentage.parse('100') } } } as const;
+        const eachFree = { ...lemonade, discount: { value: { kind: 'fixed', amount: flat.euros(300n) }, scope: DiscountScope.UNIT } } as const;
+        assert.ok(expenseItemDiscountAmount(free).equals(flat.euros(900n)));
+        assert.ok(expenseItemLineTotal(free).equals(flat.euros(0n)));
+        assert.ok(expenseItemLineTotal(eachFree).equals(flat.euros(0n)));
+        assert.ok(expenseItemLineTotal({ ...onTheHouse, discount: { value: { kind: 'fixed', amount: flat.euros(900n) } } }).equals(flat.euros(0n)));
+
+        // A free line divides to zeros: Bob's share is his half of the juice alone.
+        const round = createExpense({
+            name: 'Round',
+            cost: { kind: 'local', amount: flat.euros(1_298n) },
+            payers: { kind: 'equal', members: [flat.ana] },
+            split: { kind: 'itemised', items: [offEachJuice, { ...offTheLemonade, split: { kind: 'equal', members: [flat.ana] } }, free] },
+            date: flat.day,
+        });
+        const shares = flat.group.expenseSharesSync(flat.group.addExpenseSync(round));
+        assert.ok(undefined !== shares);
+        assert.ok(shares.members.find((share) => flat.bob === share.member)?.share.equals(flat.euros(249n)));
+        assert.ok(shares.members.find((share) => flat.ana === share.member)?.share.equals(flat.euros(1_049n)));
+    });
+
+    /**
+     * A discount the layer let through that the library refuses, or one it refused under another failure, would leave an app
+     * a line whose total it cannot show, or tell the user another reason than the library's.
+     */
+    void it('refuses a discount the line cannot take', () => {
+        const flat = new Flat();
+        const papanasi = { name: 'Papanași', unitPrice: flat.euros(900n), split: { kind: 'equal', members: [flat.ana] } } as const;
+        const lei = CurrencyCode.of('RON');
+        const refusals = [
+            { discount: { value: { kind: 'fixed', amount: flat.euros(-1n) } }, failure: { kind: 'negativeDiscount' } },
+            {
+                discount: { value: { kind: 'percentage', percentage: Percentage.ofBasisPoints(10_001) } },
+                failure: { kind: 'discountAboveHundredPercent' },
+            },
+            { discount: { value: { kind: 'fixed', amount: flat.euros(901n) } }, failure: { kind: 'discountAbovePrice' } },
+            // 10.00 EUR off a line of two units at 9.00 EUR would fit its 18.00 EUR, but off each unit it is above the price.
+            {
+                discount: { value: { kind: 'fixed', amount: flat.euros(1_000n) }, scope: DiscountScope.UNIT },
+                failure: { kind: 'discountAbovePrice' },
+                quantity: Quantity.ofWhole(2n),
+            },
+            {
+                discount: { value: { kind: 'fixed', amount: new Money(100n, lei) } },
+                failure: { kind: 'currencyMismatch', expected: flat.euro, found: lei },
+            },
+        ] as const;
+        for (const refusal of refusals) {
+            const item = { ...papanasi, quantity: 'quantity' in refusal ? refusal.quantity : Quantity.ONE, discount: refusal.discount };
+            for (const told of [expenseItemLineTotalBeforeDiscount, expenseItemDiscountAmount, expenseItemLineTotal]) {
+                assert.throws(
+                    () => told(item),
+                    (error: unknown) => {
+                        assert.ok(error instanceof ExpenseError);
+                        assert.deepEqual(error.failure, refusal.failure);
+                        return true;
+                    },
+                );
+            }
+        }
+        assert.throws(
+            () => expenseItemLineTotal({ ...papanasi, discount: { value: { kind: 'fixed', amount: flat.euros(1_000n) } } }),
+            (error: unknown) => error instanceof ExpenseError && 'the discount is larger than the price it reduces' === error.message,
+        );
+    });
+
+    /**
+     * A discount that converted with its value or its scope changed or dropped, that the group stored another way, or that
+     * read back without the scope the layer gives one left out would take another amount off the line than the app set.
+     */
+    void it('converts and stores every kind of discount whole, off the line unless it says otherwise', () => {
+        const flat = new Flat();
+        const sharing = { kind: 'equal', members: [flat.ana, flat.bob] } as const;
+        const tenth = { kind: 'percentage', percentage: Percentage.parse('10') } as const;
+        const euro = { kind: 'fixed', amount: flat.euros(100n) } as const;
+        const items: readonly ExpenseItemInput[] = [
+            { name: 'Telemea', unitPrice: flat.euros(4_200n), split: sharing, quantity: Quantity.fromNumber(0.35), discount: { value: tenth } },
+            {
+                name: 'Lemonade',
+                unitPrice: flat.euros(300n),
+                split: sharing,
+                quantity: Quantity.ofWhole(3n),
+                discount: { value: euro, scope: DiscountScope.UNIT },
+            },
+            { name: 'Wine', unitPrice: flat.euros(2_000n), split: sharing, discount: { value: tenth, scope: DiscountScope.UNIT } },
+            { name: 'Bread', unitPrice: flat.euros(500n), split: sharing, discount: { value: euro, scope: DiscountScope.LINE } },
+            { name: 'Water', unitPrice: flat.euros(150n), split: sharing },
+        ];
+        // 13.23 + 6.00 + 18.00 + 4.00 + 1.50.
+        const round = createExpense({
+            name: 'Round',
+            cost: { kind: 'local', amount: flat.euros(4_273n) },
+            payers: { kind: 'equal', members: [flat.ana] },
+            split: { kind: 'itemised', items },
+            date: flat.day,
+        });
+        assert.ok('itemised' === round.split.kind);
+        const discounts: ReadonlyArray<Discount | undefined> = round.split.items.map((item) => item.discount);
+        assert.deepEqual(discounts, [
+            { value: tenth, scope: DiscountScope.LINE },
+            { value: euro, scope: DiscountScope.UNIT },
+            { value: tenth, scope: DiscountScope.UNIT },
+            { value: euro, scope: DiscountScope.LINE },
+            undefined,
+        ]);
+        assert.deepEqual(Object.keys(round.split.items[4] ?? {}), ['name', 'unitPrice', 'split', 'quantity']);
+        assert.deepEqual(convertedExpense(generatedExpense(round)), round);
+        assert.deepEqual(flat.group.expenseSync(flat.group.addExpenseSync(round)), round);
+
+        // A record read back is passed again as it is, and a replacement without a line's discount clears it.
+        const stored = flat.group.expenseSync(round.id);
+        assert.ok('itemised' === stored?.split.kind);
+        const discount: DiscountInput | undefined = stored.split.items[0]?.discount;
+        assert.deepEqual(discount, { value: tenth, scope: DiscountScope.LINE });
+        assert.deepEqual(flat.group.replaceExpenseSync(stored), round);
+        const [telemea, ...rest] = stored.split.items;
+        assert.ok(undefined !== telemea);
+        const undiscounted = { name: telemea.name, unitPrice: telemea.unitPrice, split: telemea.split, quantity: telemea.quantity };
+        const fullPrice = {
+            ...stored,
+            cost: { kind: 'local', amount: flat.euros(4_420n) },
+            split: { kind: 'itemised', items: [undiscounted, ...rest] },
+        } as const;
+        flat.group.replaceExpenseSync(fullPrice);
+        const replaced = flat.group.expenseSync(round.id);
+        assert.ok('itemised' === replaced?.split.kind);
+        assert.equal(replaced.split.items[0]?.discount, undefined);
+        assert.deepEqual(replaced, fullPrice);
     });
 
     /** A split that listed other members than it divides among would show an app another set of participants. */

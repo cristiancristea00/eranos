@@ -1007,8 +1007,9 @@ fn list_of(element: &Ident, taken: bool) -> Named {
 
 /// The methods of the bridge's type `object` that are not a field's, which
 /// call the core's helpers: an expense's tip and total and the members it
-/// names, an item's line total, the members a split names, a balance's
-/// text, the currencies, and the no-tip rule.
+/// names, an item's line total before its discount, its discount's amount,
+/// and its line total, the members a split names, a balance's text, the
+/// currencies, and the no-tip rule.
 fn extras(object: &Ident) -> TokenStream {
     match object.to_string().as_str() {
         "EranosBalance" => quote! {
@@ -1077,15 +1078,42 @@ fn extras(object: &Ident) -> TokenStream {
         },
         "EranosExpenseItem" => quote! {
             /// The unit price times the quantity, rounded half away from zero to the currency's minor
-            /// unit, as the library computes it: zero for a free line, whose product is below half a
-            /// minor unit.
+            /// unit, as the library computes it: the line total before the discount, zero when the
+            /// product is below half a minor unit.
             ///
             /// # Errors
             ///
-            /// [`EranosError`] of the kind `Money` for a quantity that is not positive or an amount in
-            /// a currency the library does not list, of the kind `Expense` for an item the library
-            /// refuses, a split that does not divide the line total or a line total out of range
-            /// among them, and of the kind `Id` for an identifier that is not one.
+            /// As for `line_total`.
+            pub fn line_total_before_discount(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
+                eranos_bindings::expense_item_line_total_before_discount(&self.0)
+                    .map(|money| Box::new(EranosMoney(money)))
+                    .map_err(crate::failed)
+            }
+
+            /// What the discount takes off the line, as the library computes it: the line total
+            /// before the discount minus the line total, zero without a discount.
+            ///
+            /// # Errors
+            ///
+            /// As for `line_total`.
+            pub fn discount_amount(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
+                eranos_bindings::expense_item_discount_amount(&self.0)
+                    .map(|money| Box::new(EranosMoney(money)))
+                    .map_err(crate::failed)
+            }
+
+            /// The unit price times the quantity, rounded half away from zero to the currency's minor
+            /// unit, less the discount, as the library computes it: zero for a free line, whose
+            /// product is below half a minor unit or whose discount takes the whole price.
+            ///
+            /// # Errors
+            ///
+            /// [`EranosError`] of the kind `Money` for a quantity that is not positive, a percentage
+            /// discount below zero, or an amount in a currency the library does not list, of the kind
+            /// `Expense` for an item the library
+            /// refuses, a discount the line cannot take, a split that does not divide the line total,
+            /// or a line total out of range among them, and of the kind `Id` for an identifier that
+            /// is not one.
             pub fn line_total(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
                 eranos_bindings::expense_item_line_total(&self.0)
                     .map(|money| Box::new(EranosMoney(money)))

@@ -122,6 +122,12 @@ enum class Failure : std::uint8_t {
     EXPENSE_EMPTY_ITEM_NAME,
     /// The item line totals do not add up to the expense amount.
     EXPENSE_ITEMS_DO_NOT_ADD_UP,
+    /// A fixed discount below zero.
+    EXPENSE_NEGATIVE_DISCOUNT,
+    /// A percentage discount above 100 %.
+    EXPENSE_DISCOUNT_ABOVE_HUNDRED_PERCENT,
+    /// A fixed discount larger than what it reduces: the line total before the discount, or the unit price for a discount off each unit.
+    EXPENSE_DISCOUNT_ABOVE_PRICE,
     /// A fixed tip below zero.
     EXPENSE_NEGATIVE_TIP,
     /// A total that does not fit the range of an amount.

@@ -441,6 +441,120 @@ pub mod ffi {
         }
     }
 
+    /// A discount off a line of an itemised bill.
+    #[diplomat::opaque_mut]
+    #[derive(Debug)]
+    pub struct EranosDiscount(pub(crate) eranos_bindings::Discount);
+
+    impl EranosDiscount {
+        /// A discount of its required fields; every other field starts absent, empty, or at its
+        /// default.
+        #[must_use]
+        pub fn create(value: &EranosDiscountValue, scope: EranosDiscountScope) -> Box<Self> {
+            Box::new(Self(eranos_bindings::Discount {
+                value: value.0.clone(),
+                scope: scope.into(),
+            }))
+        }
+
+        /// How the discount is expressed.
+        #[must_use]
+        pub fn value(&self) -> Box<EranosDiscountValue> {
+            Box::new(EranosDiscountValue(self.0.value.clone()))
+        }
+
+        /// Sets how the discount is expressed.
+        pub fn set_value(&mut self, value: &EranosDiscountValue) {
+            self.0.value.clone_from(&value.0);
+        }
+
+        /// What the discount is taken off.
+        #[must_use]
+        pub fn scope(&self) -> EranosDiscountScope {
+            self.0.scope.into()
+        }
+
+        /// Sets what the discount is taken off.
+        pub fn set_scope(&mut self, scope: EranosDiscountScope) {
+            self.0.scope = scope.into();
+        }
+    }
+
+    /// What a discount is taken off.
+    #[derive(Debug)]
+    #[diplomat::enum_convert(eranos_bindings::DiscountScope)]
+    pub enum EranosDiscountScope {
+        /// The line total, the unit price times the quantity.
+        Line,
+        /// The price of each unit, before it is multiplied by the quantity.
+        Unit,
+    }
+
+    /// How a discount is expressed.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosDiscountValue(pub(crate) eranos_bindings::DiscountValue);
+
+    impl EranosDiscountValue {
+        /// A percentage of what the discount reduces, at most 100 %.
+        #[must_use]
+        pub fn create_percentage(basis_points: i32) -> Box<Self> {
+            Box::new(Self(eranos_bindings::DiscountValue::Percentage {
+                basis_points,
+            }))
+        }
+
+        /// A fixed amount in the item's currency, at most what the discount reduces.
+        #[must_use]
+        pub fn create_fixed(amount: &EranosMoney) -> Box<Self> {
+            Box::new(Self(eranos_bindings::DiscountValue::Fixed {
+                amount: amount.0.clone(),
+            }))
+        }
+
+        /// Which kind of discount value it is.
+        #[must_use]
+        pub const fn kind(&self) -> EranosDiscountValueKind {
+            match &self.0 {
+                eranos_bindings::DiscountValue::Percentage { .. } => {
+                    EranosDiscountValueKind::Percentage
+                }
+                eranos_bindings::DiscountValue::Fixed { .. } => EranosDiscountValueKind::Fixed,
+            }
+        }
+
+        /// The amount. Present in the kind `Fixed` alone.
+        #[must_use]
+        pub fn amount(&self) -> Option<Box<EranosMoney>> {
+            match &self.0 {
+                eranos_bindings::DiscountValue::Fixed { amount, .. } => {
+                    Some(Box::new(EranosMoney(amount.clone())))
+                }
+                eranos_bindings::DiscountValue::Percentage { .. } => None,
+            }
+        }
+
+        /// The percentage, in basis points: 1 000 for 10 %. Present in the kind `Percentage` alone.
+        #[must_use]
+        pub const fn basis_points(&self) -> Option<i32> {
+            match &self.0 {
+                eranos_bindings::DiscountValue::Percentage { basis_points, .. } => {
+                    Some(*basis_points)
+                }
+                eranos_bindings::DiscountValue::Fixed { .. } => None,
+            }
+        }
+    }
+
+    /// The kinds of discount value.
+    #[derive(Debug)]
+    pub enum EranosDiscountValueKind {
+        /// A percentage of what the discount reduces, at most 100 %.
+        Percentage,
+        /// A fixed amount in the item's currency, at most what the discount reduces.
+        Fixed,
+    }
+
     /// Something bought for the group.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
@@ -677,6 +791,7 @@ pub mod ffi {
                 unit_price: unit_price.0.clone(),
                 split: split.0.clone(),
                 quantity: 10000,
+                discount: None,
             })))
         }
 
@@ -728,16 +843,61 @@ pub mod ffi {
             self.0.quantity = quantity;
         }
 
+        /// The discount off the line or off each unit.
+        #[must_use]
+        pub fn discount(&self) -> Option<Box<EranosDiscount>> {
+            self.0
+                .discount
+                .clone()
+                .map(|value| Box::new(EranosDiscount(value)))
+        }
+
+        /// Sets the discount off the line or off each unit.
+        pub fn set_discount(&mut self, discount: &EranosDiscount) {
+            self.0.discount = Some(discount.0.clone());
+        }
+
+        /// Clears the discount off the line or off each unit.
+        pub fn clear_discount(&mut self) {
+            self.0.discount = None;
+        }
+
         /// The unit price times the quantity, rounded half away from zero to the currency's minor
-        /// unit, as the library computes it: zero for a free line, whose product is below half a
-        /// minor unit.
+        /// unit, as the library computes it: the line total before the discount, zero when the
+        /// product is below half a minor unit.
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `Money` for a quantity that is not positive or an amount in
-        /// a currency the library does not list, of the kind `Expense` for an item the library
-        /// refuses, a split that does not divide the line total or a line total out of range among
-        /// them, and of the kind `Id` for an identifier that is not one.
+        /// As for `line_total`.
+        pub fn line_total_before_discount(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
+            eranos_bindings::expense_item_line_total_before_discount(&self.0)
+                .map(|money| Box::new(EranosMoney(money)))
+                .map_err(crate::failed)
+        }
+
+        /// What the discount takes off the line, as the library computes it: the line total before
+        /// the discount minus the line total, zero without a discount.
+        ///
+        /// # Errors
+        ///
+        /// As for `line_total`.
+        pub fn discount_amount(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
+            eranos_bindings::expense_item_discount_amount(&self.0)
+                .map(|money| Box::new(EranosMoney(money)))
+                .map_err(crate::failed)
+        }
+
+        /// The unit price times the quantity, rounded half away from zero to the currency's minor
+        /// unit, less the discount, as the library computes it: zero for a free line, whose product
+        /// is below half a minor unit or whose discount takes the whole price.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a quantity that is not positive, a percentage
+        /// discount below zero, or an amount in a currency the library does not list, of the kind
+        /// `Expense` for an item the library refuses, a discount the line cannot take, a split that
+        /// does not divide the line total, or a line total out of range among them, and of the kind
+        /// `Id` for an identifier that is not one.
         pub fn line_total(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
             eranos_bindings::expense_item_line_total(&self.0)
                 .map(|money| Box::new(EranosMoney(money)))

@@ -1,8 +1,8 @@
 //! Expenses cross the bindings as records. A record converted back and forth
-//! would change how its cost divides; a split, an item, a tip, or an expense
-//! with a value the library refuses, or a number too large for its field,
-//! would reach the library; and an entry to add would lose the identifier
-//! its app gives it.
+//! would change how its cost divides; a split, an item, a discount, a tip,
+//! or an expense with a value the library refuses, or a number too large
+//! for its field, would reach the library; and an entry to add would lose
+//! the identifier its app gives it.
 
 use eranos::{CategoryId, CurrencyCode, ExpenseId};
 
@@ -120,6 +120,23 @@ fn empty_item_name(error: &EranosError) -> bool {
     )
 }
 
+/// Whether `error` is the expense failure `expected`.
+fn is_expense_failure(error: &EranosError, expected: &ExpenseFailure) -> bool {
+    matches!(error, EranosError::Expense { failure, .. } if expected == failure)
+}
+
+fn negative_discount(error: &EranosError) -> bool {
+    is_expense_failure(error, &ExpenseFailure::NegativeDiscount)
+}
+
+fn discount_above_hundred_percent(error: &EranosError) -> bool {
+    is_expense_failure(error, &ExpenseFailure::DiscountAboveHundredPercent)
+}
+
+fn discount_above_price(error: &EranosError) -> bool {
+    is_expense_failure(error, &ExpenseFailure::DiscountAbovePrice)
+}
+
 fn empty_name(error: &EranosError) -> bool {
     matches!(
         error,
@@ -210,6 +227,15 @@ fn fare() -> ExpenseItem {
         unit_price: lei(2_500),
         split: equal(&[ana(), bob()]),
         quantity: 20_000,
+        discount: None,
+    }
+}
+
+/// The fares with `value` taken off `scope`.
+fn discounted_fare(value: DiscountValue, scope: DiscountScope) -> ExpenseItem {
+    ExpenseItem {
+        discount: Some(Discount { value, scope }),
+        ..fare()
     }
 }
 
@@ -535,6 +561,114 @@ fn an_item_converts_both_ways_and_refuses_bad_lines() {
         let error = refusal.record.to_library().unwrap_err();
         assert!((refusal.is_expected)(&error), "{error:?}");
     }
+}
+
+/// An item's discount converted back and forth would change its value or
+/// what it is taken off, and one the line cannot take would reach the
+/// library.
+#[test]
+fn an_item_keeps_its_discount_and_refuses_one_its_line_cannot_take() {
+    // Off each unit and off the line, one of the whole price.
+    for item in [
+        discounted_fare(
+            DiscountValue::Fixed { amount: lei(500) },
+            DiscountScope::Unit,
+        ),
+        discounted_fare(
+            DiscountValue::Percentage {
+                basis_points: 10_000,
+            },
+            DiscountScope::Line,
+        ),
+    ] {
+        assert_eq!(
+            item.to_library()
+                .map(|converted| ExpenseItem::from_library(&converted)),
+            Ok(item)
+        );
+    }
+    let refusals = [
+        // 25.01 off a fare of 25.00, and 50.01 off a line of 50.00.
+        Refusal {
+            record: discounted_fare(
+                DiscountValue::Fixed { amount: lei(2_501) },
+                DiscountScope::Unit,
+            ),
+            is_expected: discount_above_price,
+        },
+        Refusal {
+            record: discounted_fare(
+                DiscountValue::Fixed { amount: lei(5_001) },
+                DiscountScope::Line,
+            ),
+            is_expected: discount_above_price,
+        },
+        Refusal {
+            record: discounted_fare(
+                DiscountValue::Fixed { amount: lei(-1) },
+                DiscountScope::Line,
+            ),
+            is_expected: negative_discount,
+        },
+        Refusal {
+            record: discounted_fare(
+                DiscountValue::Percentage {
+                    basis_points: 10_001,
+                },
+                DiscountScope::Unit,
+            ),
+            is_expected: discount_above_hundred_percent,
+        },
+        Refusal {
+            record: discounted_fare(
+                DiscountValue::Fixed {
+                    amount: unknown_money(),
+                },
+                DiscountScope::Line,
+            ),
+            is_expected: unknown_currency,
+        },
+    ];
+    for refusal in refusals {
+        let error = refusal.record.to_library().unwrap_err();
+        assert!((refusal.is_expected)(&error), "{error:?}");
+    }
+}
+
+/// A discount converted back and forth would change its value or what it
+/// is taken off, and a negative percentage would wrap into a large one.
+#[test]
+fn discounts_convert_both_ways_and_refuse_what_does_not_convert() {
+    let discounts = [
+        Discount {
+            value: DiscountValue::Fixed { amount: euros(100) },
+            scope: DiscountScope::Unit,
+        },
+        Discount {
+            value: DiscountValue::Percentage {
+                basis_points: 1_000,
+            },
+            scope: DiscountScope::Line,
+        },
+    ];
+    for discount in discounts {
+        assert_eq!(
+            discount.to_library().map(Discount::from_library),
+            Ok(discount)
+        );
+    }
+    let negative = Discount {
+        value: DiscountValue::Percentage { basis_points: -1 },
+        scope: DiscountScope::Line,
+    };
+    assert!(invalid_percentage(&negative.to_library().unwrap_err()));
+    let unknown = Discount {
+        value: DiscountValue::Fixed {
+            amount: unknown_money(),
+        },
+        scope: DiscountScope::Unit,
+    };
+    assert!(unknown_currency(&unknown.to_library().unwrap_err()));
 }
 
 /// A tip converted back and forth would change its value or how it is

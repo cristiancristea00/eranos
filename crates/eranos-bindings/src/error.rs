@@ -306,6 +306,12 @@ pub enum ExpenseFailure {
         /// What the parts add up to.
         actual: Money,
     },
+    /// [`ExpenseError::NegativeDiscount`].
+    NegativeDiscount,
+    /// [`ExpenseError::DiscountAboveHundredPercent`].
+    DiscountAboveHundredPercent,
+    /// [`ExpenseError::DiscountAbovePrice`].
+    DiscountAbovePrice,
     /// [`ExpenseError::NegativeTip`].
     NegativeTip,
     /// [`ExpenseError::Overflow`].
@@ -871,6 +877,27 @@ impl FromExpenseError for EranosError {
                 expected: Money::from_library(expected),
                 actual: Money::from_library(actual),
             },
+            detail: message,
+        }
+    }
+
+    fn negative_discount(message: String) -> Self {
+        Self::Expense {
+            failure: ExpenseFailure::NegativeDiscount,
+            detail: message,
+        }
+    }
+
+    fn discount_above_hundred_percent(message: String) -> Self {
+        Self::Expense {
+            failure: ExpenseFailure::DiscountAboveHundredPercent,
+            detail: message,
+        }
+    }
+
+    fn discount_above_price(message: String) -> Self {
+        Self::Expense {
+            failure: ExpenseFailure::DiscountAbovePrice,
             detail: message,
         }
     }

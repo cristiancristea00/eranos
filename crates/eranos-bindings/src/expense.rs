@@ -1,9 +1,12 @@
-//! Expenses, how they divide, their items, and their tips, as the bindings
-//! carry them.
+//! Expenses, how they divide, their items and their discounts, and their
+//! tips, as the bindings carry them.
 
 use eranos::MemberId;
 use eranos::{expense as library, money};
-use eranos_expense::{FromExpenseSplit, FromSplit, FromTipDistribution, FromTipValue};
+use eranos_expense::{
+    FromDiscountScope, FromDiscountValue, FromExpenseSplit, FromSplit, FromTipDistribution,
+    FromTipValue,
+};
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
@@ -187,6 +190,8 @@ pub struct ExpenseItem {
     /// How many units, in ten-thousandths: 10 000 for one unit, 4 520 for
     /// 0.452.
     pub quantity: i64,
+    /// The discount off the line or off each unit.
+    pub discount: Option<Discount>,
 }
 
 impl ExpenseItem {
@@ -197,6 +202,7 @@ impl ExpenseItem {
             unit_price: Money::from_library(item.unit_price()),
             split: Split::from_split(item.split()),
             quantity: ten_thousandths(item.quantity()),
+            discount: item.discount().map(Discount::from_library),
         }
     }
 
@@ -204,7 +210,8 @@ impl ExpenseItem {
     ///
     /// # Errors
     ///
-    /// The errors of [`Money::to_library`] and [`Split::to_library`],
+    /// The errors of [`Money::to_library`], [`Split::to_library`], and
+    /// [`Discount::to_library`],
     /// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
     /// for a quantity that is not positive, and those of the library's
     /// checks of an item:
@@ -212,15 +219,129 @@ impl ExpenseItem {
     /// for a blank name,
     /// [`ExpenseFailure::NonPositiveAmount`](crate::ExpenseFailure::NonPositiveAmount)
     /// for a unit price that is not positive,
-    /// [`ExpenseFailure::Overflow`](crate::ExpenseFailure::Overflow), and a
-    /// split that does not divide the line total.
+    /// [`ExpenseFailure::Overflow`](crate::ExpenseFailure::Overflow), a
+    /// discount the line cannot take
+    /// ([`ExpenseFailure::CurrencyMismatch`](crate::ExpenseFailure::CurrencyMismatch),
+    /// [`ExpenseFailure::NegativeDiscount`](crate::ExpenseFailure::NegativeDiscount),
+    /// [`ExpenseFailure::DiscountAboveHundredPercent`](crate::ExpenseFailure::DiscountAboveHundredPercent),
+    /// and
+    /// [`ExpenseFailure::DiscountAbovePrice`](crate::ExpenseFailure::DiscountAbovePrice)),
+    /// and a split that does not divide the line total.
     pub(crate) fn to_library(&self) -> Result<library::ExpenseItem, EranosError> {
         let builder = library::ExpenseItem::builder_with_split(
             self.name.clone(),
             self.unit_price.to_library()?,
             self.split.to_library()?,
         );
-        Ok(builder.quantity(quantity(self.quantity)?).build()?)
+        let discount = self
+            .discount
+            .as_ref()
+            .map(Discount::to_library)
+            .transpose()?;
+        Ok(builder
+            .quantity(quantity(self.quantity)?)
+            .discount(discount)
+            .build()?)
+    }
+}
+
+/// How a discount is expressed.
+#[eranos_glue_macros::mirrored]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DiscountValue {
+    /// A percentage of what the discount reduces, at most 100 %.
+    Percentage {
+        /// The percentage, in basis points: 1 000 for 10 %.
+        basis_points: i32,
+    },
+    /// A fixed amount in the item's currency, at most what the discount
+    /// reduces.
+    Fixed {
+        /// The amount.
+        amount: Money,
+    },
+}
+
+impl FromDiscountValue for DiscountValue {
+    fn percentage(percentage: money::Percentage) -> Self {
+        Self::Percentage {
+            basis_points: count(percentage.basis_points()),
+        }
+    }
+
+    fn fixed(amount: money::Money) -> Self {
+        Self::Fixed {
+            amount: Money::from_library(amount),
+        }
+    }
+}
+
+/// What a discount is taken off.
+#[eranos_glue_macros::mirrored]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DiscountScope {
+    /// The line total, the unit price times the quantity.
+    Line,
+    /// The price of each unit, before it is multiplied by the quantity.
+    Unit,
+}
+
+impl DiscountScope {
+    /// The library's scope.
+    pub(crate) const fn to_library(self) -> library::DiscountScope {
+        match self {
+            Self::Line => library::DiscountScope::Line,
+            Self::Unit => library::DiscountScope::Unit,
+        }
+    }
+}
+
+impl FromDiscountScope for DiscountScope {
+    fn line() -> Self {
+        Self::Line
+    }
+
+    fn unit() -> Self {
+        Self::Unit
+    }
+}
+
+/// A discount off a line of an itemised bill.
+#[eranos_glue_macros::mirrored]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Discount {
+    /// How the discount is expressed.
+    pub value: DiscountValue,
+    /// What the discount is taken off.
+    pub scope: DiscountScope,
+}
+
+impl Discount {
+    /// The record of `discount`.
+    pub(crate) fn from_library(discount: library::Discount) -> Self {
+        Self {
+            value: DiscountValue::from_discount_value(discount.value()),
+            scope: DiscountScope::from_discount_scope(discount.scope()),
+        }
+    }
+
+    /// The library's discount.
+    ///
+    /// # Errors
+    ///
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// for a fixed discount in a currency the library does not list, as for
+    /// [`Money::to_library`], and
+    /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
+    /// for a negative percentage.
+    pub(crate) fn to_library(&self) -> Result<library::Discount, EranosError> {
+        let discount = match &self.value {
+            DiscountValue::Percentage { basis_points } => {
+                library::Discount::percentage(percentage(*basis_points)?)
+            }
+            DiscountValue::Fixed { amount } => library::Discount::fixed(amount.to_library()?),
+        };
+        Ok(discount.scoped(self.scope.to_library()))
     }
 }
 

@@ -1,6 +1,8 @@
 package eranos
 
+import eranos.internal.expenseItemDiscountAmount
 import eranos.internal.expenseItemLineTotal
+import eranos.internal.expenseItemLineTotalBeforeDiscount
 import eranos.internal.expenseMembers
 import eranos.internal.expenseTipAmount
 import eranos.internal.expenseTotal
@@ -254,7 +256,7 @@ internal fun eranos.internal.ExpenseSplit.converted(): ExpenseSplit =
         is eranos.internal.ExpenseSplit.Itemised -> ExpenseSplit.Itemised(items.map { it.converted() })
     }
 
-/** A line of an itemised bill: [quantity] units of [name] at [unitPrice], which [split] divides. */
+/** A line of an itemised bill: [quantity] units of [name] at [unitPrice], less any [discount], which [split] divides. */
 public class ExpenseItem(
     /** What was bought. */
     public val name: String,
@@ -264,36 +266,171 @@ public class ExpenseItem(
     public val split: Split,
     /** How many units, to a ten-thousandth: one, [Quantity.ONE], unless given. */
     public val quantity: Quantity = Quantity.ONE,
+    /** The discount off the line or off each unit: none, for a line at full price, unless given. */
+    public val discount: Discount? = null,
 ) {
     /** The line as the generated code holds it. */
     internal val generated: eranos.internal.ExpenseItem
-        get() = eranos.internal.ExpenseItem(name, unitPrice.generated, split.generated, quantity.tenThousandths)
+        get() = eranos.internal.ExpenseItem(name, unitPrice.generated, split.generated, quantity.tenThousandths, discount?.generated)
+
+    /**
+     * The line total before the discount, as the library computes it: [unitPrice] times [quantity], rounded half away from
+     * zero to the currency's minor unit, which is zero when the product is below half a minor unit.
+     *
+     * @throws EranosException as [lineTotal] does.
+     */
+    @Throws(EranosException::class)
+    public fun lineTotalBeforeDiscount(): Money = converting { expenseItemLineTotalBeforeDiscount(generated).converted() }
+
+    /**
+     * What the [discount] takes off the line, as the library computes it: [lineTotalBeforeDiscount] minus [lineTotal], zero
+     * without a discount.
+     *
+     * @throws EranosException as [lineTotal] does.
+     */
+    @Throws(EranosException::class)
+    public fun discountAmount(): Money = converting { expenseItemDiscountAmount(generated).converted() }
 
     /**
      * The line total, as the library computes it: [unitPrice] times [quantity], rounded half away from zero to the currency's
-     * minor unit, which is zero for a free line, whose product is below half a minor unit.
+     * minor unit, less the [discount], which is zero for a free line, whose product is below half a minor unit or whose
+     * discount takes the whole price.
      *
-     * @throws EranosException.Id for a member whose identifier is not one, and [EranosException.Expense] with
-     *   [ExpenseFailure.EmptyItemName] for a blank name, [ExpenseFailure.NonPositiveAmount] for a unit price that is not
-     *   positive, [ExpenseFailure.Overflow] for a line total out of range, and the failures of a split that does not divide
-     *   the line total, among them [ExpenseFailure.AmountsDoNotAddUp] for a split of amounts on a free line.
+     * @throws EranosException.Id for a member whose identifier is not one, [EranosException.Money] with
+     *   [MoneyFailure.UnknownCurrency] for a fixed discount in a currency the library does not list, and
+     *   [EranosException.Expense] with [ExpenseFailure.EmptyItemName] for a blank name, [ExpenseFailure.NonPositiveAmount]
+     *   for a unit price that is not positive, [ExpenseFailure.Overflow] for a line total out of range, a discount the line
+     *   cannot take ([ExpenseFailure.CurrencyMismatch] for a fixed discount in another currency than the unit price,
+     *   [ExpenseFailure.NegativeDiscount], [ExpenseFailure.DiscountAboveHundredPercent], and
+     *   [ExpenseFailure.DiscountAbovePrice]), and the failures of a split that does not divide the line total, among them
+     *   [ExpenseFailure.AmountsDoNotAddUp] for a split of amounts on a free line.
      */
     @Throws(EranosException::class)
     public fun lineTotal(): Money = converting { expenseItemLineTotal(generated).converted() }
 
-    /** Whether [other] is of the same class, with the same [name], [unitPrice], [split], and [quantity]. */
+    /** Whether [other] is of the same class, with the same [name], [unitPrice], [split], [quantity], and [discount]. */
     override fun equals(other: Any?): Boolean =
-        other is ExpenseItem && name == other.name && unitPrice == other.unitPrice && split == other.split && quantity == other.quantity
+        other is ExpenseItem &&
+            name == other.name &&
+            unitPrice == other.unitPrice &&
+            split == other.split &&
+            quantity == other.quantity &&
+            discount == other.discount
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(name, unitPrice, split, quantity)
+    override fun hashCode(): Int = hashOf(name, unitPrice, split, quantity, discount)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "ExpenseItem(name=$name, unitPrice=$unitPrice, split=$split, quantity=$quantity)"
+    override fun toString(): String = "ExpenseItem(name=$name, unitPrice=$unitPrice, split=$split, quantity=$quantity, discount=$discount)"
 }
 
 /** The line the generated code holds as [this]. */
-internal fun eranos.internal.ExpenseItem.converted(): ExpenseItem = ExpenseItem(name, unitPrice.converted(), split.converted(), Quantity(quantity))
+internal fun eranos.internal.ExpenseItem.converted(): ExpenseItem =
+    ExpenseItem(name, unitPrice.converted(), split.converted(), Quantity(quantity), discount?.converted())
+
+/**
+ * A discount off a line of an itemised bill: [value], taken off [scope].
+ *
+ * Off the line, a percentage is taken of the line total before the discount and rounded half away from zero to the minor
+ * unit. Off each unit, a percentage of the unit price is rounded to the minor unit first, and the reduced price is then
+ * multiplied by the quantity, so three units at 3.33 with 50 % off cost 4.98 with the discount off each unit and 4.99 with
+ * it off the line. A discount of the whole price, 100 % or a fixed amount equal to what it reduces, makes a free line, whose
+ * total is zero; a larger one is refused by every call that reads the item.
+ */
+public class Discount(
+    /** How the discount is expressed. */
+    public val value: DiscountValue,
+    /** What the discount is taken off: the line as a whole, [DiscountScope.LINE], unless given. */
+    public val scope: DiscountScope = DiscountScope.LINE,
+) {
+    /** The discount as the generated code holds it. */
+    internal val generated: eranos.internal.Discount
+        get() = eranos.internal.Discount(value.generated, scope.generated)
+
+    /** Whether [other] is of the same class, with the same [value] and [scope]. */
+    override fun equals(other: Any?): Boolean = other is Discount && value == other.value && scope == other.scope
+
+    /** A hash of what [equals] compares. */
+    override fun hashCode(): Int = hashOf(value, scope)
+
+    /** A description of every field, for logs. */
+    override fun toString(): String = "Discount(value=$value, scope=$scope)"
+}
+
+/** The discount the generated code holds as [this]. */
+internal fun eranos.internal.Discount.converted(): Discount = Discount(value.converted(), scope.converted())
+
+/** How a discount is expressed. */
+public sealed interface DiscountValue {
+    /** A percentage of what the discount reduces, at most 100 %. */
+    public class Percentage(
+        /** The percentage. */
+        public val percentage: eranos.Percentage,
+    ) : DiscountValue {
+        /** Whether [other] is of the same class, with the same [percentage]. */
+        override fun equals(other: Any?): Boolean = other is Percentage && percentage == other.percentage
+
+        /** A hash of what [equals] compares. */
+        override fun hashCode(): Int = percentage.hashCode()
+
+        /** A description of every field, for logs. */
+        override fun toString(): String = "Percentage(percentage=$percentage)"
+    }
+
+    /** A fixed amount in the item's currency, at most what the discount reduces. */
+    public class Fixed(
+        /** The amount. */
+        public val amount: Money,
+    ) : DiscountValue {
+        /** Whether [other] is of the same class, with the same [amount]. */
+        override fun equals(other: Any?): Boolean = other is Fixed && amount == other.amount
+
+        /** A hash of what [equals] compares. */
+        override fun hashCode(): Int = amount.hashCode()
+
+        /** A description of every field, for logs. */
+        override fun toString(): String = "Fixed(amount=$amount)"
+    }
+}
+
+/** The discount's value as the generated code holds it. */
+internal val DiscountValue.generated: eranos.internal.DiscountValue
+    get() =
+        when (this) {
+            is DiscountValue.Percentage -> eranos.internal.DiscountValue.Percentage(percentage.basisPoints)
+            is DiscountValue.Fixed -> eranos.internal.DiscountValue.Fixed(amount.generated)
+        }
+
+/** The discount's value the generated code holds as [this]. */
+internal fun eranos.internal.DiscountValue.converted(): DiscountValue =
+    when (this) {
+        is eranos.internal.DiscountValue.Percentage -> DiscountValue.Percentage(Percentage(basisPoints))
+        is eranos.internal.DiscountValue.Fixed -> DiscountValue.Fixed(amount.converted())
+    }
+
+/** What a discount is taken off. */
+public enum class DiscountScope {
+    /** The line total, the unit price times the quantity: one discount for the whole line. */
+    LINE,
+
+    /** The price of each unit, before it is multiplied by the quantity. */
+    UNIT,
+}
+
+/** The scope as the generated code holds it. */
+internal val DiscountScope.generated: eranos.internal.DiscountScope
+    get() =
+        when (this) {
+            DiscountScope.LINE -> eranos.internal.DiscountScope.LINE
+            DiscountScope.UNIT -> eranos.internal.DiscountScope.UNIT
+        }
+
+/** The scope the generated code holds as [this]. */
+internal fun eranos.internal.DiscountScope.converted(): DiscountScope =
+    when (this) {
+        eranos.internal.DiscountScope.LINE -> DiscountScope.LINE
+        eranos.internal.DiscountScope.UNIT -> DiscountScope.UNIT
+    }
 
 /** A tip on top of an expense's amount, which its payers cover: [value], shared by [distribution]; [NONE] is no tip. */
 public class TipRule(

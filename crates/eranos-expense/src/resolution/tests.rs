@@ -13,7 +13,7 @@ use eranos_money::{Cost, Parts, Percentage, Quantity};
 use proptest::prelude::*;
 
 use super::*;
-use crate::{ExpenseItem, MemberAmount, MemberParts, Split, TipDistribution, TipRule};
+use crate::{Discount, ExpenseItem, MemberAmount, MemberParts, Split, TipDistribution, TipRule};
 
 /// Identifier text of one to 64 letters, digits, and hyphens.
 const IDENTIFIER: &str = "[A-Za-z0-9-]{1,64}";
@@ -309,6 +309,31 @@ fn an_equal_tip_skips_a_member_who_shares_only_a_free_line() {
     // consumed nothing.
     assert_eq!(rows(&resolved), vec![row(ana, 0, 210), row(bob, 210, 0)]);
     assert_eq!(resolved.debts, vec![debt(ana, bob, 210)]);
+}
+
+/// A line on the house, discounted to zero, divides to zeros as a free line
+/// does: a member who shares only it would be charged for a dish nobody
+/// paid for, or a part of an equal tip on what the others ate.
+#[test]
+fn a_line_on_the_house_divides_to_zeros() {
+    let (ana, bob) = (member(1), member(2));
+    let dessert = ExpenseItem::builder("Papanași", eur(900), [ana, bob])
+        .discount(Discount::percentage(Percentage::HUNDRED))
+        .build()
+        .unwrap();
+    let soup = ExpenseItem::builder("Ciorbă", eur(800), [ana])
+        .build()
+        .unwrap();
+    let bill = Expense::itemised_builder("Dinner", eur(800), bob, [dessert, soup], day())
+        .tip(TipRule::fixed(eur(100)).distributed(TipDistribution::Equal))
+        .build()
+        .unwrap();
+    let resolved = resolve_expense(&identified(&bill, entry(1)), CurrencyCode::EUR).unwrap();
+
+    // Ana consumed the soup and the whole tip; Bob, who paid the 9.00,
+    // consumed nothing.
+    assert_eq!(rows(&resolved), vec![row(ana, 0, 900), row(bob, 900, 0)]);
+    assert_eq!(resolved.debts, vec![debt(ana, bob, 900)]);
 }
 
 /// With several payers every participant owes every payer in proportion to

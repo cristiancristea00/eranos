@@ -26,6 +26,10 @@
 #include "eranos/detail/EranosCurrencyDetailsOutcome.hpp"
 #include "eranos/detail/EranosCurrencyRate.hpp"
 #include "eranos/detail/EranosCurrencyRateList.hpp"
+#include "eranos/detail/EranosDiscount.hpp"
+#include "eranos/detail/EranosDiscountScope.hpp"
+#include "eranos/detail/EranosDiscountValue.hpp"
+#include "eranos/detail/EranosDiscountValueKind.hpp"
 #include "eranos/detail/EranosEmail.hpp"
 #include "eranos/detail/EranosError.hpp"
 #include "eranos/detail/EranosErrorKind.hpp"
@@ -140,9 +144,11 @@ struct Category;
 struct CategoryTotal;
 struct ConvertedCost;
 struct CurrencyRate;
+struct Discount;
 struct EqualSplit;
 struct Expense;
 struct ExpenseShares;
+struct FixedDiscountValue;
 struct FixedTipValue;
 struct GetsBackBalance;
 struct ExpenseGroupOptions;
@@ -163,6 +169,7 @@ struct Parts;
 struct PartsSplit;
 struct Payment;
 struct Percentage;
+struct PercentageDiscountValue;
 struct PercentageTipValue;
 struct PercentagesSplit;
 struct Quantity;
@@ -173,6 +180,7 @@ struct TipRule;
 struct Transfer;
 struct UsernamePaymentAccountDetails;
 struct WholeExpenseSplit;
+enum class DiscountScope : std::uint8_t;
 enum class ErrorKind : std::uint8_t;
 enum class Failure : std::uint8_t;
 enum class IbanReason : std::uint8_t;

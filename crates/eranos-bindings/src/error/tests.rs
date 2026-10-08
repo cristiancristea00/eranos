@@ -23,7 +23,7 @@ struct Conversion {
 /// Every failure of the library, converted.
 #[expect(
     clippy::too_many_lines,
-    reason = "one entry for each of the 58 variants of the library's errors, which read best as one table"
+    reason = "one entry for each of the 62 variants of the library's errors, which read best as one table"
 )]
 fn conversions() -> Vec<Conversion> {
     vec![
@@ -335,6 +335,28 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
+            let error = ExpenseError::DiscountAboveHundredPercent;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Expense {
+                    failure: ExpenseFailure::DiscountAboveHundredPercent,
+                    detail: message,
+                },
+            }
+        },
+        {
+            let error = ExpenseError::DiscountAbovePrice;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Expense {
+                    failure: ExpenseFailure::DiscountAbovePrice,
+                    detail: message,
+                },
+            }
+        },
+        {
             let error = ExpenseError::DuplicateMember {
                 member: MemberId::new("member-10").unwrap(),
             };
@@ -401,6 +423,17 @@ fn conversions() -> Vec<Conversion> {
                             currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                         },
                     },
+                    detail: message,
+                },
+            }
+        },
+        {
+            let error = ExpenseError::NegativeDiscount;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Expense {
+                    failure: ExpenseFailure::NegativeDiscount,
                     detail: message,
                 },
             }
@@ -782,7 +815,7 @@ fn conversions() -> Vec<Conversion> {
 #[test]
 fn every_failure_of_the_library_converts_to_its_case() {
     let conversions = conversions();
-    assert_eq!(conversions.len(), 59);
+    assert_eq!(conversions.len(), 62);
     for Conversion {
         converted,
         expected,

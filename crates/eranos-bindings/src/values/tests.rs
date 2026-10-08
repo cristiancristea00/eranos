@@ -8,7 +8,10 @@ use eranos::{CurrencyCode, MemberId, ledger};
 use eranos_ledger::FromBalance;
 
 use super::*;
-use crate::expense::{ExpenseItem, MemberAmount, TipDistribution, TipRule, TipValue};
+use crate::expense::{
+    Discount, DiscountScope, DiscountValue, ExpenseItem, MemberAmount, TipDistribution, TipRule,
+    TipValue,
+};
 use crate::money::Cost;
 use crate::{
     CalendarFailure, ContactFailure, ExpenseFailure, IdFailure, LanguageFailure, MoneyFailure,
@@ -988,6 +991,7 @@ fn an_item_derives_its_line_total_as_the_library_does() {
         unit_price: euros(100),
         split: equal(&[member(1), member(2)]),
         quantity: 3_350,
+        discount: None,
     };
     assert_eq!(expense_item_line_total(&olives), Ok(euros(34)));
     let cheese = ExpenseItem {
@@ -1053,6 +1057,70 @@ fn an_item_derives_its_line_total_as_the_library_does() {
     )));
 }
 
+/// The receipt the apps show for a discounted item would differ from the
+/// one the library adds up: a percentage rounded another way, a discount
+/// off each unit multiplied as one off the line, or columns that do not add
+/// up; and an item whose discount the library refuses would show totals.
+#[test]
+fn an_item_derives_its_discount_as_the_library_does() {
+    // Three lemonades at 3.33, half off.
+    let lemonades = |scope| ExpenseItem {
+        name: "Lemonade".to_owned(),
+        unit_price: euros(333),
+        split: equal(&[member(1), member(2)]),
+        quantity: 30_000,
+        discount: Some(Discount {
+            value: DiscountValue::Percentage {
+                basis_points: 5_000,
+            },
+            scope,
+        }),
+    };
+    // Off the line: 5.00 off 9.99.
+    let off_the_line = lemonades(DiscountScope::Line);
+    assert_eq!(
+        expense_item_line_total_before_discount(&off_the_line),
+        Ok(euros(999))
+    );
+    assert_eq!(expense_item_discount_amount(&off_the_line), Ok(euros(500)));
+    assert_eq!(expense_item_line_total(&off_the_line), Ok(euros(499)));
+    // Off each unit: 1.67 off each of three.
+    let off_each_unit = lemonades(DiscountScope::Unit);
+    assert_eq!(
+        expense_item_line_total_before_discount(&off_each_unit),
+        Ok(euros(999))
+    );
+    assert_eq!(expense_item_discount_amount(&off_each_unit), Ok(euros(501)));
+    assert_eq!(expense_item_line_total(&off_each_unit), Ok(euros(498)));
+    // Without a discount nothing is taken off.
+    let full_price = ExpenseItem {
+        discount: None,
+        ..off_the_line.clone()
+    };
+    assert_eq!(expense_item_discount_amount(&full_price), Ok(euros(0)));
+    assert_eq!(
+        expense_item_line_total_before_discount(&full_price),
+        expense_item_line_total(&full_price)
+    );
+
+    // A discount above the line refuses every total.
+    let above = ExpenseItem {
+        discount: Some(Discount {
+            value: DiscountValue::Fixed {
+                amount: euros(1_000),
+            },
+            scope: DiscountScope::Line,
+        }),
+        ..off_the_line
+    };
+    let refused = Err(EranosError::from(
+        eranos::error::ExpenseError::DiscountAbovePrice,
+    ));
+    assert_eq!(expense_item_line_total_before_discount(&above), refused);
+    assert_eq!(expense_item_discount_amount(&above), refused);
+    assert_eq!(expense_item_line_total(&above), refused);
+}
+
 /// The members the apps list for an expense or a split would differ from
 /// the ones it involves, or come in another order than the library's.
 #[test]
@@ -1066,6 +1134,7 @@ fn an_expense_and_a_split_list_their_members() {
                 unit_price: euros(3_000),
                 split: equal(&[member(3), member(2)]),
                 quantity: 10_000,
+                discount: None,
             }],
         },
         ..dinner()
@@ -1107,6 +1176,7 @@ fn an_expense_and_a_split_list_their_members() {
                 unit_price: euros(3_000),
                 split: equal(&[member(2)]),
                 quantity: 0,
+                discount: None,
             }],
         },
         ..dinner()

@@ -1,11 +1,15 @@
 /// @file eranos/expense.h
-/// Expenses: what was bought, what it cost, who paid, and how it divides, with their costs, items, and tips.
+/// Expenses: what was bought, what it cost, who paid, and how it divides, with their costs, items, discounts, and tips.
 
 #ifndef ERANOS_EXPENSE_H
 #define ERANOS_EXPENSE_H
 
 #include "EranosCost.h"
 #include "EranosCostKind.h"
+#include "EranosDiscount.h"
+#include "EranosDiscountScope.h"
+#include "EranosDiscountValue.h"
+#include "EranosDiscountValueKind.h"
 #include "EranosExpense.h"
 #include "EranosExpenseItem.h"
 #include "EranosExpenseItemList.h"
@@ -41,6 +45,22 @@ typedef enum EranosTipDistribution EranosTipDistribution;
 static constexpr EranosTipDistribution ERANOS_TIP_DISTRIBUTION_PROPORTIONAL = EranosTipDistribution_Proportional;
 /// The same for every participant with a share of the amount above zero.
 static constexpr EranosTipDistribution ERANOS_TIP_DISTRIBUTION_EQUAL = EranosTipDistribution_Equal;
+
+/// The kind of a discount value. The values of EranosDiscountValueKind, by the names of the C layer.
+typedef enum EranosDiscountValueKind EranosDiscountValueKind;
+
+/// A percentage of what the discount reduces, at most 100 %.
+static constexpr EranosDiscountValueKind ERANOS_DISCOUNT_VALUE_KIND_PERCENTAGE = EranosDiscountValueKind_Percentage;
+/// A fixed amount in the item's currency, at most what the discount reduces.
+static constexpr EranosDiscountValueKind ERANOS_DISCOUNT_VALUE_KIND_FIXED = EranosDiscountValueKind_Fixed;
+
+/// What a discount is taken off. The values of EranosDiscountScope, by the names of the C layer.
+typedef enum EranosDiscountScope EranosDiscountScope;
+
+/// The line total, the unit price times the quantity.
+static constexpr EranosDiscountScope ERANOS_DISCOUNT_SCOPE_LINE = EranosDiscountScope_Line;
+/// The price of each unit, before it is multiplied by the quantity.
+static constexpr EranosDiscountScope ERANOS_DISCOUNT_SCOPE_UNIT = EranosDiscountScope_Unit;
 
 /// The kind of a expense split. The values of EranosExpenseSplitKind, by the names of the C layer.
 typedef enum EranosExpenseSplitKind EranosExpenseSplitKind;
@@ -468,7 +488,8 @@ static inline void eranosExpenseSplitDestroy(EranosExpenseSplit *const expenseSp
 /// A line of an itemised bill: `quantity` units of `name` at `unitPrice`, which `split` divides.
 typedef struct EranosExpenseItem EranosExpenseItem;
 
-/// A new item of its required fields; every other field starts absent, empty, or at its default: the quantity at one unit, ERANOS_QUANTITY_ONE.
+/// A new item of its required fields; every other field starts absent, empty, or at its default: the quantity at one unit, ERANOS_QUANTITY_ONE,
+/// and no discount.
 ///
 /// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param unitPrice The price of one unit, in the expense's currency
@@ -549,15 +570,61 @@ static inline void eranosExpenseItemSetQuantity(EranosExpenseItem *const item, i
     EranosExpenseItem_set_quantity(item, quantity);
 }
 
-/// The unit price times the quantity, rounded half away from zero to the currency's minor unit, as the library computes it: zero for a free line,
-/// whose product is below half a minor unit.
+/// The discount off the line or off each unit.
+///
+/// @param item The item
+/// @return A copy of the value, which the caller destroys, or nullptr for an item without a discount
+[[nodiscard]] static inline EranosDiscount *eranosExpenseItemDiscount(EranosExpenseItem const *const item) {
+    return EranosExpenseItem_discount(item);
+}
+
+/// Sets the discount off the line or off each unit.
+///
+/// @param item The item
+/// @param discount The discount off the line or off each unit
+static inline void eranosExpenseItemSetDiscount(EranosExpenseItem *const item, EranosDiscount const *const discount) {
+    EranosExpenseItem_set_discount(item, discount);
+}
+
+/// Clears the discount off the line or off each unit.
+///
+/// @param item The item
+static inline void eranosExpenseItemClearDiscount(EranosExpenseItem *const item) { EranosExpenseItem_clear_discount(item); }
+
+/// The unit price times the quantity, rounded half away from zero to the currency's minor unit, as the library computes it: the line total before
+/// the discount, zero when the product is below half a minor unit.
+///
+/// @param item The item
+/// @param lineTotalBeforeDiscount Receives the line total before the discount on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy, as for eranosExpenseItemLineTotal()
+[[nodiscard]] static inline EranosError *eranosExpenseItemLineTotalBeforeDiscount(EranosExpenseItem const *const item,
+                                                                                  EranosMoney **const lineTotalBeforeDiscount) {
+    EranosExpenseItem_line_total_before_discount_result const result = EranosExpenseItem_line_total_before_discount(item);
+    *lineTotalBeforeDiscount = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// What the discount takes off the line, as the library computes it: the line total before the discount minus the line total, zero without a
+/// discount.
+///
+/// @param item The item
+/// @param discountAmount Receives the discount amount on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy, as for eranosExpenseItemLineTotal()
+[[nodiscard]] static inline EranosError *eranosExpenseItemDiscountAmount(EranosExpenseItem const *const item, EranosMoney **const discountAmount) {
+    EranosExpenseItem_discount_amount_result const result = EranosExpenseItem_discount_amount(item);
+    *discountAmount = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The unit price times the quantity, rounded half away from zero to the currency's minor unit, less the discount, as the library computes it:
+/// zero for a free line, whose product is below half a minor unit or whose discount takes the whole price.
 ///
 /// @param item The item
 /// @param lineTotal Receives the line total on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a
-///   quantity that is not positive or an amount in a currency the library does not list, of the kind ERANOS_ERROR_KIND_EXPENSE for an item the
-///   library refuses, a split that does not divide the line total or a line total out of range among them, and of the kind ERANOS_ERROR_KIND_ID for
-///   an identifier that is not one
+///   quantity that is not positive, a percentage discount below zero, or an amount in a currency the library does not list, of the kind
+///   ERANOS_ERROR_KIND_EXPENSE for an item the library refuses, a discount the line cannot take, a split that does not divide the line total, or a
+///   line total out of range among them, and of the kind ERANOS_ERROR_KIND_ID for an identifier that is not one
 [[nodiscard]] static inline EranosError *eranosExpenseItemLineTotal(EranosExpenseItem const *const item, EranosMoney **const lineTotal) {
     EranosExpenseItem_line_total_result const result = EranosExpenseItem_line_total(item);
     *lineTotal = result.is_ok ? result.ok : nullptr;
@@ -618,6 +685,109 @@ static inline void eranosExpenseItemListPush(EranosExpenseItemList *const list, 
 static inline void eranosExpenseItemListDestroy(EranosExpenseItemList *const list) {
     if (nullptr != list) {
         EranosExpenseItemList_destroy(list);
+    }
+}
+
+/// A discount off a line of an itemised bill.
+typedef struct EranosDiscount EranosDiscount;
+
+/// A new discount of its required fields; every other field starts absent, empty, or at its default: the scope at the line,
+/// ERANOS_DISCOUNT_SCOPE_LINE.
+///
+/// @param value How the discount is expressed
+/// @return The discount, which the caller destroys
+[[nodiscard]] static inline EranosDiscount *eranosDiscountCreate(EranosDiscountValue const *const value) {
+    return EranosDiscount_create(value, ERANOS_DISCOUNT_SCOPE_LINE);
+}
+
+/// How the discount is expressed.
+///
+/// @param discount The discount
+/// @return A copy of the value, which the caller destroys
+[[nodiscard]] static inline EranosDiscountValue *eranosDiscountValue(EranosDiscount const *const discount) { return EranosDiscount_value(discount); }
+
+/// Sets how the discount is expressed.
+///
+/// @param discount The discount
+/// @param value How the discount is expressed
+static inline void eranosDiscountSetValue(EranosDiscount *const discount, EranosDiscountValue const *const value) {
+    EranosDiscount_set_value(discount, value);
+}
+
+/// What the discount is taken off: the line, ERANOS_DISCOUNT_SCOPE_LINE, until it is given another.
+///
+/// @param discount The discount
+/// @return What the discount is taken off
+[[nodiscard]] static inline EranosDiscountScope eranosDiscountScope(EranosDiscount const *const discount) { return EranosDiscount_scope(discount); }
+
+/// Sets what the discount is taken off.
+///
+/// @param discount The discount
+/// @param scope What the discount is taken off
+static inline void eranosDiscountSetScope(EranosDiscount *const discount, EranosDiscountScope const scope) {
+    EranosDiscount_set_scope(discount, scope);
+}
+
+/// Destroys @p discount; destroying nullptr does nothing, as free() does.
+///
+/// @param discount The discount, which no call uses after this one, or nullptr
+static inline void eranosDiscountDestroy(EranosDiscount *const discount) {
+    if (nullptr != discount) {
+        EranosDiscount_destroy(discount);
+    }
+}
+
+/// How a discount is expressed.
+typedef struct EranosDiscountValue EranosDiscountValue;
+
+/// A percentage of what the discount reduces, at most 100 %.
+///
+/// @param basisPoints The percentage, in basis points: 1 000 for 10 %
+/// @return The discount value, which the caller destroys
+[[nodiscard]] static inline EranosDiscountValue *eranosDiscountValueCreatePercentage(int32_t const basisPoints) {
+    return EranosDiscountValue_create_percentage(basisPoints);
+}
+
+/// A fixed amount in the item's currency, at most what the discount reduces.
+///
+/// @param amount The amount
+/// @return The discount value, which the caller destroys
+[[nodiscard]] static inline EranosDiscountValue *eranosDiscountValueCreateFixed(EranosMoney const *const amount) {
+    return EranosDiscountValue_create_fixed(amount);
+}
+
+/// Which kind of discount value it is.
+///
+/// @param discountValue The discount value
+/// @return The result
+[[nodiscard]] static inline EranosDiscountValueKind eranosDiscountValueKind(EranosDiscountValue const *const discountValue) {
+    return EranosDiscountValue_kind(discountValue);
+}
+
+/// The amount. Present in the kind ERANOS_DISCOUNT_VALUE_KIND_FIXED alone.
+///
+/// @param discountValue The discount value
+/// @return A copy of the value, which the caller destroys, or nullptr in every other kind
+[[nodiscard]] static inline EranosMoney *eranosDiscountValueAmount(EranosDiscountValue const *const discountValue) {
+    return EranosDiscountValue_amount(discountValue);
+}
+
+/// The percentage, in basis points: 1 000 for 10 %. Present in the kind ERANOS_DISCOUNT_VALUE_KIND_PERCENTAGE alone.
+///
+/// @param discountValue The discount value
+/// @param basisPoints Receives the basis points, when there is one
+/// @return Whether there is one
+[[nodiscard]] static inline bool eranosDiscountValueBasisPoints(EranosDiscountValue const *const discountValue, int32_t *const basisPoints) {
+    EranosDiscountValue_basis_points_result const result = EranosDiscountValue_basis_points(discountValue);
+    return eranosDetailPresentInt32(result.is_ok, &result.ok, basisPoints);
+}
+
+/// Destroys @p discountValue; destroying nullptr does nothing, as free() does.
+///
+/// @param discountValue The discount value, which no call uses after this one, or nullptr
+static inline void eranosDiscountValueDestroy(EranosDiscountValue *const discountValue) {
+    if (nullptr != discountValue) {
+        EranosDiscountValue_destroy(discountValue);
     }
 }
 

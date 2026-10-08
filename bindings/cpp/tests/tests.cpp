@@ -452,6 +452,16 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) n
     auto twoPizzas = pizza;
     twoPizzas.quantity = Quantity{20'000};
     checkValue(check, pizza, ExpenseItem("Pizza", one, EqualSplit{{ana, bob}}), twoPizzas, "items compare by quantity too");
+    auto discountedPizza = pizza;
+    discountedPizza.discount = Discount(PercentageDiscountValue{Percentage{1'000}});
+    checkValue(check, pizza, ExpenseItem("Pizza", one, EqualSplit{{ana, bob}}), discountedPizza, "items compare by discount too");
+    checkValue(check, PercentageDiscountValue{Percentage{1'000}}, PercentageDiscountValue{Percentage{1'000}},
+               PercentageDiscountValue{Percentage{500}}, "percentage discounts");
+    checkValue(check, FixedDiscountValue{one}, FixedDiscountValue{one}, FixedDiscountValue{two}, "fixed discounts");
+    Discount const offTheLine(FixedDiscountValue{one});
+    auto offEachUnit = offTheLine;
+    offEachUnit.scope = DiscountScope::UNIT;
+    checkValue(check, offTheLine, Discount(FixedDiscountValue{one}), offEachUnit, "discounts compare by scope too");
     checkValue(check, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{500}},
                "percentage tips");
     checkValue(check, FixedTipValue{one}, FixedTipValue{one}, FixedTipValue{two}, "fixed tips");
@@ -755,6 +765,111 @@ void anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero(Check &check) n
     check.that(lineTotal(olives) == Money(34, euro), "0.335 at 1.00 EUR is 33.5 cents, which rounds half away from zero to 0.34 EUR");
     olives.quantity = Quantity{0};
     check.that(isFailure(refusal(lineTotal(olives)), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY), "an item of no quantity has no line total");
+}
+
+static_assert(DiscountScope::LINE == Discount(PercentageDiscountValue{Percentage{1'000}}).scope, "a discount starts off the line at compile time");
+
+/// The totals the library computes for a line, in euro cents.
+struct LineTotals final {
+    /// The unit price times the quantity.
+    std::int64_t lineTotalBeforeDiscount;
+    /// What the discount takes off.
+    std::int64_t discountAmount;
+    /// What the line comes to.
+    std::int64_t lineTotal;
+};
+
+/// Whether the library computes @p expected, in cents of @p euro, for @p item.
+[[nodiscard]] bool totalsAre(ExpenseItem const &item, CurrencyCode const &euro, LineTotals const &expected) noexcept {
+    return lineTotalBeforeDiscount(item) == Money(expected.lineTotalBeforeDiscount, euro) &&
+           discountAmount(item) == Money(expected.discountAmount, euro) && lineTotal(item) == Money(expected.lineTotal, euro);
+}
+
+/// Whether every total of @p item is refused with an error of @p kind with @p failure.
+[[nodiscard]] bool totalsRefused(ExpenseItem const &item, ErrorKind const kind, Failure const failure) noexcept {
+    return isFailure(refusal(lineTotalBeforeDiscount(item)), kind, failure) && isFailure(refusal(discountAmount(item)), kind, failure) &&
+           isFailure(refusal(lineTotal(item)), kind, failure);
+}
+
+/// A discount the layer took itself would round a line otherwise than the library, which divides it, and so show an app a receipt that does not
+/// add up to the shares: off each unit, the library rounds each unit's discount, so 50 % off three units of 3.33 EUR leaves a cent less than 50 %
+/// off their line.
+void aDiscountComesOffEachUnitOrOffTheLineAsTheLibraryTakesIt(Check &check) noexcept {
+    auto const euro = CurrencyCode::of("EUR").value();
+    MemberId const ana("0199a000-0000-7000-8000-000000000001");
+    ExpenseItem cheese("Cheese", Money(333, euro), EqualSplit{{ana}});
+    cheese.quantity = Quantity{30'000};
+    check.that(!cheese.discount.has_value() && totalsAre(cheese, euro, {.lineTotalBeforeDiscount = 999, .discountAmount = 0, .lineTotal = 999}),
+               "an item starts without a discount, and its line loses nothing");
+    Discount halfOffEach(PercentageDiscountValue{Percentage{5'000}});
+    halfOffEach.scope = DiscountScope::UNIT;
+    cheese.discount = halfOffEach;
+    check.that(totalsAre(cheese, euro, {.lineTotalBeforeDiscount = 999, .discountAmount = 501, .lineTotal = 498}),
+               "50 % off each of 3 at 3.33 EUR leaves 1.66 EUR a unit, 4.98 EUR");
+    cheese.discount = Discount(PercentageDiscountValue{Percentage{5'000}});
+    check.that(totalsAre(cheese, euro, {.lineTotalBeforeDiscount = 999, .discountAmount = 500, .lineTotal = 499}),
+               "50 % off their line of 9.99 EUR is 5.00 EUR, rounded half away from zero, which leaves 4.99 EUR");
+    ExpenseItem lemonade("Lemonade", Money(300, euro), EqualSplit{{ana}});
+    lemonade.quantity = Quantity{30'000};
+    Discount oneOffEach(FixedDiscountValue{Money(100, euro)});
+    oneOffEach.scope = DiscountScope::UNIT;
+    lemonade.discount = oneOffEach;
+    check.that(totalsAre(lemonade, euro, {.lineTotalBeforeDiscount = 900, .discountAmount = 300, .lineTotal = 600}),
+               "1.00 EUR off each of 3 at 3.00 EUR is 3.00 EUR off their line");
+    lemonade.discount = Discount(FixedDiscountValue{Money(100, euro)});
+    check.that(totalsAre(lemonade, euro, {.lineTotalBeforeDiscount = 900, .discountAmount = 100, .lineTotal = 800}),
+               "1.00 EUR off their line of 9.00 EUR leaves 8.00 EUR");
+    ExpenseItem dessert("Papanași", Money(900, euro), EqualSplit{{ana}});
+    dessert.discount = Discount(PercentageDiscountValue{Percentage{10'000}});
+    check.that(totalsAre(dessert, euro, {.lineTotalBeforeDiscount = 900, .discountAmount = 900, .lineTotal = 0}), "100 % off makes a free line");
+    Discount wholePrice(FixedDiscountValue{Money(900, euro)});
+    wholePrice.scope = DiscountScope::UNIT;
+    dessert.discount = wholePrice;
+    check.that(totalsAre(dessert, euro, {.lineTotalBeforeDiscount = 900, .discountAmount = 900, .lineTotal = 0}),
+               "and so does the whole price off its unit");
+}
+
+/// A discount the library refuses, taken, would bill a line below zero or above its price, or mix currencies on one receipt; every total of the
+/// item refuses it with the failure of the rule it breaks, which converts from the generated failure by its number.
+void aDiscountTheLineCannotTakeIsRefusedByEveryTotal(Check &check) noexcept {
+    auto const euro = CurrencyCode::of("EUR").value();
+    MemberId const ana("0199a000-0000-7000-8000-000000000001");
+    ExpenseItem dessert("Papanași", Money(900, euro), EqualSplit{{ana}});
+    dessert.discount = Discount(FixedDiscountValue{Money(-100, euro)});
+    check.that(totalsRefused(dessert, ErrorKind::EXPENSE, Failure::EXPENSE_NEGATIVE_DISCOUNT), "a fixed discount below zero");
+    dessert.discount = Discount(PercentageDiscountValue{Percentage{10'001}});
+    check.that(totalsRefused(dessert, ErrorKind::EXPENSE, Failure::EXPENSE_DISCOUNT_ABOVE_HUNDRED_PERCENT), "a percentage above 100 %");
+    dessert.discount = Discount(PercentageDiscountValue{Percentage{-1}});
+    check.that(totalsRefused(dessert, ErrorKind::MONEY, Failure::MONEY_INVALID_PERCENTAGE), "a percentage below zero, which no percentage is");
+    dessert.discount = Discount(FixedDiscountValue{Money(1'000, euro)});
+    check.that(totalsRefused(dessert, ErrorKind::EXPENSE, Failure::EXPENSE_DISCOUNT_ABOVE_PRICE), "10.00 EUR off a line of 9.00 EUR");
+    ExpenseItem lemonade("Lemonade", Money(300, euro), EqualSplit{{ana}});
+    lemonade.quantity = Quantity{30'000};
+    Discount tooMuchOffEach(FixedDiscountValue{Money(301, euro)});
+    tooMuchOffEach.scope = DiscountScope::UNIT;
+    lemonade.discount = tooMuchOffEach;
+    check.that(totalsRefused(lemonade, ErrorKind::EXPENSE, Failure::EXPENSE_DISCOUNT_ABOVE_PRICE),
+               "3.01 EUR off each unit of 3.00 EUR, though their line is 9.00 EUR");
+    dessert.discount = Discount(FixedDiscountValue{Money(100, CurrencyCode::of("RON").value())});
+    check.that(totalsRefused(dessert, ErrorKind::EXPENSE, Failure::EXPENSE_CURRENCY_MISMATCH), "a fixed discount in another currency than the price");
+}
+
+/// A discount lost or changed on its way through the group would bill a line at full price once an app reads the expense back, or take a unit's
+/// discount off the line; both kinds of discount, off each unit and off the line, cross to the library and back.
+void aDiscountedLineReadsBackFromTheGroupAsItWasAdded(Check &check) noexcept {
+    Flat flat;
+    ExpenseItem cheese("Cheese", flat.euros(333), EqualSplit{{flat.ana, flat.bob}});
+    cheese.quantity = Quantity{30'000};
+    Discount halfOffEach(PercentageDiscountValue{Percentage{5'000}});
+    halfOffEach.scope = DiscountScope::UNIT;
+    cheese.discount = halfOffEach;
+    ExpenseItem wine("Wine", flat.euros(900), EqualSplit{{flat.ana, flat.bob}});
+    wine.discount = Discount(FixedDiscountValue{flat.euros(100)});
+    // The lines come to 4.98, 8.00, and 2.00 EUR.
+    Expense const market("Market", LocalCost{flat.euros(1'498)}, EqualSplit{{flat.ana}},
+                         ItemisedExpenseSplit{{cheese, wine, ExpenseItem("Bread", flat.euros(200), EqualSplit{{flat.ana, flat.bob}})}}, flat.day);
+    check.that(flat.group.addExpense(market) == market.id && flat.group.expense(market.id) == market,
+               "lines with a discount off each unit, off the line, and none read back unchanged");
 }
 
 // --- The group ---------------------------------------------------------------------------------------------------------
@@ -1171,6 +1286,9 @@ constexpr std::array TESTS = {
     Test{.name = "anArchivedMemberJoinsNoNewExpense", .body = anArchivedMemberJoinsNoNewExpense},
     Test{.name = "theHelpersReadAnEntryAsTheLibraryDoes", .body = theHelpersReadAnEntryAsTheLibraryDoes},
     Test{.name = "anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero", .body = anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero},
+    Test{.name = "aDiscountComesOffEachUnitOrOffTheLineAsTheLibraryTakesIt", .body = aDiscountComesOffEachUnitOrOffTheLineAsTheLibraryTakesIt},
+    Test{.name = "aDiscountTheLineCannotTakeIsRefusedByEveryTotal", .body = aDiscountTheLineCannotTakeIsRefusedByEveryTotal},
+    Test{.name = "aDiscountedLineReadsBackFromTheGroupAsItWasAdded", .body = aDiscountedLineReadsBackFromTheGroupAsItWasAdded},
     Test{.name = "aGroupHoldsItsDetailsAndChangesThem", .body = aGroupHoldsItsDetailsAndChangesThem},
     Test{.name = "theSummaryAndTheSharesAddUp", .body = theSummaryAndTheSharesAddUp},
     Test{.name = "eachStrategySettlesEveryBalance", .body = eachStrategySettlesEveryBalance},

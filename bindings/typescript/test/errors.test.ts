@@ -257,6 +257,21 @@ const conversions: readonly Conversion[] = [
         failure: { kind: 'itemsDoNotAddUp', expected: euros(8n), actual: euros(7n) },
     },
     {
+        generated: new internal.EranosError.Expense({ failure: new internal.ExpenseFailure.NegativeDiscount(), detail: 'detail' }),
+        type: ExpenseError,
+        failure: { kind: 'negativeDiscount' },
+    },
+    {
+        generated: new internal.EranosError.Expense({ failure: new internal.ExpenseFailure.DiscountAboveHundredPercent(), detail: 'detail' }),
+        type: ExpenseError,
+        failure: { kind: 'discountAboveHundredPercent' },
+    },
+    {
+        generated: new internal.EranosError.Expense({ failure: new internal.ExpenseFailure.DiscountAbovePrice(), detail: 'detail' }),
+        type: ExpenseError,
+        failure: { kind: 'discountAbovePrice' },
+    },
+    {
         generated: new internal.EranosError.Expense({ failure: new internal.ExpenseFailure.NegativeTip(), detail: 'detail' }),
         type: ExpenseError,
         failure: { kind: 'negativeTip' },
@@ -484,7 +499,7 @@ void describe('the conversions of every failure the generated code can report', 
      * app another failure than the library's.
      */
     void it('converts every failure of the generated code to its module and failure', () => {
-        assert.equal(conversions.length, 65);
+        assert.equal(conversions.length, 68);
         for (const conversion of conversions) {
             const converted = convertedError(conversion.generated);
             assert.ok(converted instanceof conversion.type);

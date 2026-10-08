@@ -1,6 +1,8 @@
 """Check that every entry goes through the group and back as it went in, what the group refuses, and what an entry's helpers work out."""
 
 import copy
+import dataclasses
+from typing import final
 
 import pytest
 
@@ -13,12 +15,17 @@ from eranos import (
     Category,
     ConvertedCost,
     CurrencyCode,
+    Discount,
+    DiscountScope,
     Email,
     EqualSplit,
     ExchangeRate,
     Expense,
     ExpenseError,
+    ExpenseFailure,
+    ExpenseGroup,
     ExpenseId,
+    FixedDiscount,
     FixedTip,
     GetsBackBalance,
     ExpenseGroupError,
@@ -39,6 +46,7 @@ from eranos import (
     PartsSplit,
     Percentage,
     PercentagesSplit,
+    PercentageDiscount,
     PercentageTip,
     PhoneNumber,
     Quantity,
@@ -445,6 +453,179 @@ def test_a_line_total_of_an_item_the_library_refuses_is_refused(flat: Flat) -> N
     with pytest.raises(ExpenseError) as overflow:
         gold.line_total()
     assert overflow.value.failure == ExpenseError.Overflow()
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class DiscountRefusal:
+    """A discount a line cannot take, and the failure the library refuses it with."""
+
+    discount: Discount
+    """The discount."""
+
+    failure: ExpenseFailure
+    """The failure."""
+
+
+def test_a_percentage_off_each_unit_is_rounded_per_unit_and_one_off_the_line_once(flat: Flat) -> None:
+    """
+    A discount rounded otherwise than the library's would show a receipt whose lines do not add up to what the group divides.
+
+    Three lemonades at 3.33 with half off cost 4.98 with the discount off each unit, whose 1.665 off rounds to 1.67, and 4.99 with it off the
+    line, whose 4.995 off rounds to 5.00.
+    """
+    half = PercentageDiscount(Percentage(5000))
+    lemonades = ExpenseItem(name='Lemonade', unit_price=flat.euros(333), split=EqualSplit((flat.ana, flat.bob)), quantity=Quantity.whole(3))
+    off_each_unit = copy.replace(lemonades, discount=Discount(half, DiscountScope.UNIT))
+    assert off_each_unit.line_total_before_discount() == flat.euros(999)
+    assert off_each_unit.discount_amount() == flat.euros(501)
+    assert off_each_unit.line_total() == flat.euros(498)
+    off_the_line = copy.replace(lemonades, discount=Discount(half, DiscountScope.LINE))
+    assert off_the_line.line_total_before_discount() == flat.euros(999)
+    assert off_the_line.discount_amount() == flat.euros(500)
+    assert off_the_line.line_total() == flat.euros(499)
+
+
+def test_a_fixed_discount_comes_off_each_unit_or_once_off_the_line(flat: Flat) -> None:
+    """A fixed discount taken once where the bill takes it off each unit, or the reverse, would charge a line another amount than the library."""
+    lemonades = ExpenseItem(name='Lemonade', unit_price=flat.euros(300), split=EqualSplit((flat.ana, flat.bob)), quantity=Quantity.whole(3))
+    off_each_unit = copy.replace(lemonades, discount=Discount(FixedDiscount(flat.euros(100)), DiscountScope.UNIT))
+    assert off_each_unit.line_total_before_discount() == flat.euros(900)
+    assert off_each_unit.discount_amount() == flat.euros(300)
+    assert off_each_unit.line_total() == flat.euros(600)
+    off_the_line = copy.replace(lemonades, discount=Discount(FixedDiscount(flat.euros(100)), DiscountScope.LINE))
+    assert off_the_line.line_total_before_discount() == flat.euros(900)
+    assert off_the_line.discount_amount() == flat.euros(100)
+    assert off_the_line.line_total() == flat.euros(800)
+
+
+def test_a_percentage_off_a_weighed_line_is_taken_of_its_rounded_total(flat: Flat) -> None:
+    """
+    A weighed line whose discount the layer worked out itself would show a receipt line the group does not divide.
+
+    A scale reports 0.35 kg as the float just below it, which the quantity reads in its shortest form, 0.35: at 42.00 EUR, 14.70 before 10 % off,
+    1.47 off, and 13.23 to pay.
+    """
+    telemea = ExpenseItem(
+        name='Telemea',
+        unit_price=flat.euros(4200),
+        split=EqualSplit((flat.ana, flat.bob)),
+        quantity=Quantity.from_float(0.35),
+        discount=Discount(PercentageDiscount(Percentage.parse('10'))),
+    )
+    assert telemea.line_total_before_discount() == flat.euros(1470)
+    assert telemea.discount_amount() == flat.euros(147)
+    assert telemea.line_total() == flat.euros(1323)
+
+
+def test_a_discount_of_the_whole_price_makes_a_free_line_that_divides_to_zeros(flat: Flat) -> None:
+    """
+    A free line the library refused, or charged anyone for, would stop an app from entering a dish on the house.
+
+    Its members share nothing of it, and a split of amounts on it is refused, since no amount above zero adds up to a line of zero.
+    """
+    on_the_house = ExpenseItem(
+        name='Papanași', unit_price=flat.euros(900), split=EqualSplit((flat.bob,)), discount=Discount(PercentageDiscount(Percentage(10000)))
+    )
+    assert on_the_house.line_total_before_discount() == flat.euros(900)
+    assert on_the_house.discount_amount() == flat.euros(900)
+    assert on_the_house.line_total() == flat.euros(0)
+    free_units = ExpenseItem(
+        name='Water',
+        unit_price=flat.euros(200),
+        split=EqualSplit((flat.ana,)),
+        quantity=Quantity.whole(2),
+        discount=Discount(FixedDiscount(flat.euros(200)), DiscountScope.UNIT),
+    )
+    assert free_units.discount_amount() == flat.euros(400)
+    assert free_units.line_total() == flat.euros(0)
+    soup = ExpenseItem(name='Ciorbă', unit_price=flat.euros(3000), split=EqualSplit((flat.ana,)))
+    dinner = Expense.create(
+        name='Dinner',
+        cost=LocalCost(flat.euros(3000)),
+        payers=EqualSplit((flat.ana,)),
+        split=ItemisedExpenseSplit((soup, on_the_house, free_units)),
+        date=flat.day,
+    )
+    shares = flat.group.expense_shares(flat.group.add_expense(dinner))
+    assert shares is not None
+    assert {share.member: share.share for share in shares.members} == {flat.ana: flat.euros(3000), flat.bob: flat.euros(0)}
+    by_amounts = copy.replace(on_the_house, split=AmountsSplit((MemberAmount(flat.bob, flat.euros(100)),)))
+    with pytest.raises(ExpenseError) as refused:
+        by_amounts.line_total()
+    assert refused.value.failure == ExpenseError.AmountsDoNotAddUp(expected=flat.euros(0), actual=flat.euros(100))
+
+
+def test_a_discount_the_line_cannot_take_is_refused_with_every_total(flat: Flat) -> None:
+    """
+    A discount the library refuses that an app could still show totals for would put on a receipt a line no expense can hold.
+
+    Two loaves at 2.50 take at most 2.50 off each and 5.00 off the line; a percentage cannot pass 100 %, a fixed discount cannot be negative, and
+    it is in the item's currency.
+    """
+    bread = ExpenseItem(name='Bread', unit_price=flat.euros(250), split=EqualSplit((flat.ana,)), quantity=Quantity.whole(2))
+    refusals = [
+        DiscountRefusal(discount=Discount(FixedDiscount(flat.euros(-1))), failure=ExpenseError.NegativeDiscount()),
+        DiscountRefusal(
+            discount=Discount(PercentageDiscount(Percentage(10001)), DiscountScope.UNIT), failure=ExpenseError.DiscountAboveHundredPercent()
+        ),
+        DiscountRefusal(discount=Discount(FixedDiscount(flat.euros(251)), DiscountScope.UNIT), failure=ExpenseError.DiscountAbovePrice()),
+        DiscountRefusal(discount=Discount(FixedDiscount(flat.euros(501)), DiscountScope.LINE), failure=ExpenseError.DiscountAbovePrice()),
+        DiscountRefusal(
+            discount=Discount(FixedDiscount(Money(100, CurrencyCode('RON')))),
+            failure=ExpenseError.CurrencyMismatch(expected=flat.euro, found=CurrencyCode('RON')),
+        ),
+    ]
+    for refusal in refusals:
+        item = copy.replace(bread, discount=refusal.discount)
+        for total in (item.line_total_before_discount, item.discount_amount, item.line_total):
+            with pytest.raises(ExpenseError) as refused:
+                total()
+            assert refused.value.failure == refusal.failure
+
+
+def test_an_items_discount_reads_back_as_it_was_added_and_saved(flat: Flat) -> None:
+    """An item whose discount came back from the group or a saved group otherwise than it went in would charge its line another amount."""
+    pizza = ExpenseItem(
+        name='Pizza',
+        unit_price=flat.euros(1050),
+        split=EqualSplit((flat.ana, flat.bob)),
+        quantity=Quantity.whole(2),
+        discount=Discount(PercentageDiscount(Percentage(1000))),
+    )
+    wine = ExpenseItem(
+        name='Wine',
+        unit_price=flat.euros(1200),
+        split=EqualSplit((flat.ana,)),
+        quantity=Quantity.parse('0.5'),
+        discount=Discount(FixedDiscount(flat.euros(100)), DiscountScope.UNIT),
+    )
+    bread = ExpenseItem(name='Bread', unit_price=flat.euros(300), split=EqualSplit((flat.bob,)))
+    # 21.00 less 2.10, 0.5 of 11.00, and 3.00 at full price.
+    receipt = Expense.create(
+        name='Receipt',
+        cost=LocalCost(flat.euros(2740)),
+        payers=EqualSplit((flat.ana,)),
+        split=ItemisedExpenseSplit((pizza, wine, bread)),
+        date=flat.day,
+    )
+    assert flat.group.add_expense(receipt) == receipt.id
+    assert flat.group.expense(receipt.id) == receipt
+    with ExpenseGroup.load(flat.group.save()) as loaded:
+        assert loaded.expense(receipt.id) == receipt
+
+
+def test_an_item_given_no_discount_is_at_full_price(flat: Flat) -> None:
+    """An item whose discount defaulted to anything but none would take money off a line given no discount."""
+    bread = ExpenseItem(name='Bread', unit_price=flat.euros(250), split=EqualSplit((flat.ana,)), quantity=Quantity.whole(2))
+    assert bread.discount is None
+    assert bread.discount_amount() == flat.euros(0)
+    assert bread.line_total_before_discount() == bread.line_total()
+
+
+def test_a_discount_without_a_scope_comes_off_the_line() -> None:
+    """A discount whose scope defaulted otherwise than the library's would take a fixed discount off every unit of a Python app's line."""
+    assert Discount(PercentageDiscount(Percentage(1000))).scope is DiscountScope.LINE
 
 
 def test_a_tip_without_a_distribution_is_shared_in_proportion() -> None:

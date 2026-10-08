@@ -246,6 +246,14 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
             message: "expected an amount in EUR, found one in USD",
         },
         Expected {
+            error: ExpenseError::DiscountAboveHundredPercent,
+            message: "a discount cannot be more than 100%",
+        },
+        Expected {
+            error: ExpenseError::DiscountAbovePrice,
+            message: "the discount is larger than the price it reduces",
+        },
+        Expected {
             error: ExpenseError::DuplicateMember { member: member() },
             message: "member 11111111-1111-1111-1111-111111111111 appears more than once in a split",
         },
@@ -267,6 +275,10 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
                 actual: euros(8_000),
             },
             message: "the items add up to 80.00 EUR instead of 90.00 EUR",
+        },
+        Expected {
+            error: ExpenseError::NegativeDiscount,
+            message: "a discount cannot be negative",
         },
         Expected {
             error: ExpenseError::NegativeTip,

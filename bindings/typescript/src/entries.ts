@@ -1,5 +1,6 @@
 /**
- * The entries of a group: its members, categories, expenses, and transfers, and the splits, costs, and tips they hold.
+ * The entries of a group: its members, categories, expenses, and transfers, and the splits, costs, discounts, and tips they
+ * hold.
  * Every entry is a plain object with its `id` from the moment it is made: a `{ id, … }` literal takes the app's own, and
  * {@link createMember} and its siblings take the other fields and generate one.
  *
@@ -208,10 +209,117 @@ export function generatedCost(cost: Cost): internal.Cost {
     }
 }
 
+/** How a discount is expressed. */
+export type DiscountValue =
+    | {
+          /** A percentage of what the discount reduces, at most 100 %. */
+          readonly kind: 'percentage';
+          /** The discount's share of what it reduces. */
+          readonly percentage: Percentage;
+      }
+    | {
+          /** A fixed amount in the item's currency, at most what the discount reduces. */
+          readonly kind: 'fixed';
+          /** The discount. */
+          readonly amount: Money;
+      };
+
+/** What a discount is taken off. */
+export enum DiscountScope {
+    /** The line total, the unit price times the quantity. */
+    LINE = 'LINE',
+    /** The price of each unit, before it is multiplied by the quantity. */
+    UNIT = 'UNIT',
+}
+
 /**
- * A line of an itemised bill, as the group holds it: `quantity` units of `name` at `unitPrice`, which `split` divides. Its
- * line total, which {@link expenseItemLineTotal} tells, is the unit price times the quantity, rounded half away from zero to
- * the currency's minor unit.
+ * A discount off a line of an itemised bill, as the group holds it: a percentage or a fixed amount, taken off the line as a
+ * whole or off the price of each unit.
+ *
+ * Off the line, a percentage is taken of the line total before the discount and rounded half away from zero to the minor
+ * unit. Off each unit, a percentage of the unit price is rounded to the minor unit first, and the reduced price is then
+ * multiplied by the quantity, so three units at 3.33 EUR with 50 % off cost 4.98 EUR with the discount off each unit and
+ * 4.99 EUR with it off the line. A discount of the whole price, 100 % or a fixed amount equal to what it reduces, makes a
+ * free line, whose total is zero; a larger one is refused.
+ */
+export interface Discount {
+    /** How the discount is expressed. */
+    readonly value: DiscountValue;
+    /** What the discount is taken off. */
+    readonly scope: DiscountScope;
+}
+
+/**
+ * A discount to set on a line of an itemised bill; it may leave out what it is taken off, which is then the line as a whole.
+ * Every {@link Discount} is one.
+ */
+export interface DiscountInput {
+    /** How the discount is expressed. */
+    readonly value: DiscountValue;
+    /** What the discount is taken off: the line as a whole unless given. */
+    readonly scope?: DiscountScope;
+}
+
+/** The discount that `discount` describes, taken off the line as a whole unless it says otherwise. */
+function completedDiscount(discount: DiscountInput): Discount {
+    return { value: discount.value, scope: discount.scope ?? DiscountScope.LINE };
+}
+
+/** The discount the generated code holds as `discount`. */
+function convertedDiscount(discount: internal.Discount): Discount {
+    return { value: convertedDiscountValue(discount.value), scope: convertedDiscountScope(discount.scope) };
+}
+
+/** The discount's value the generated code holds as `value`. */
+function convertedDiscountValue(value: internal.DiscountValue): DiscountValue {
+    switch (value.tag) {
+        case internal.DiscountValue_Tags.Percentage:
+            return { kind: 'percentage', percentage: Percentage.known(value.inner.basisPoints) };
+        case internal.DiscountValue_Tags.Fixed:
+            return { kind: 'fixed', amount: Money.converted(value.inner.amount) };
+    }
+}
+
+/** The scope the generated code holds as `scope`. */
+function convertedDiscountScope(scope: internal.DiscountScope): DiscountScope {
+    switch (scope) {
+        case internal.DiscountScope.Line:
+            return DiscountScope.LINE;
+        case internal.DiscountScope.Unit:
+            return DiscountScope.UNIT;
+    }
+}
+
+/** The discount as the generated code holds it. */
+function generatedDiscount(discount: Discount): internal.Discount {
+    return internal.Discount.create({ value: generatedDiscountValue(discount.value), scope: generatedDiscountScope(discount.scope) });
+}
+
+/** The discount's value as the generated code holds it. */
+function generatedDiscountValue(value: DiscountValue): internal.DiscountValue {
+    switch (value.kind) {
+        case 'percentage':
+            return new internal.DiscountValue.Percentage({ basisPoints: value.percentage.basisPoints });
+        case 'fixed':
+            return new internal.DiscountValue.Fixed({ amount: value.amount.generated() });
+    }
+}
+
+/** The scope as the generated code holds it. */
+function generatedDiscountScope(scope: DiscountScope): internal.DiscountScope {
+    switch (scope) {
+        case DiscountScope.LINE:
+            return internal.DiscountScope.Line;
+        case DiscountScope.UNIT:
+            return internal.DiscountScope.Unit;
+    }
+}
+
+/**
+ * A line of an itemised bill, as the group holds it: `quantity` units of `name` at `unitPrice`, less its `discount`, which
+ * `split` divides. Its line total before the discount, which {@link expenseItemLineTotalBeforeDiscount} tells, is the unit
+ * price times the quantity, rounded half away from zero to the currency's minor unit; its line total, which
+ * {@link expenseItemLineTotal} tells, is that total less what {@link expenseItemDiscountAmount} tells the discount takes off.
  */
 export interface ExpenseItem {
     /** What was bought. */
@@ -222,11 +330,13 @@ export interface ExpenseItem {
     readonly split: Split;
     /** How many units, to a ten-thousandth: 2 bottles, or 0.452 kg. */
     readonly quantity: Quantity;
+    /** The discount off the line or off each unit; absent for a line at full price. */
+    readonly discount?: Discount;
 }
 
 /**
  * A line of an itemised bill in an expense to add or replace; it may leave out its quantity, which is then
- * {@link Quantity.ONE}. Every {@link ExpenseItem} is one.
+ * {@link Quantity.ONE}, and its discount's scope, which is then the line as a whole. Every {@link ExpenseItem} is one.
  */
 export interface ExpenseItemInput {
     /** What was bought. */
@@ -237,11 +347,19 @@ export interface ExpenseItemInput {
     readonly split: Split;
     /** How many units, to a ten-thousandth: 2 bottles, or 0.452 kg; {@link Quantity.ONE} unless given. */
     readonly quantity?: Quantity;
+    /** The discount off the line or off each unit; none unless given. */
+    readonly discount?: DiscountInput;
 }
 
-/** The item that `item` describes, with a quantity of one unless it gives another. */
+/** The item that `item` describes, with a quantity of one unless it gives another, and its discount's scope. */
 function completedExpenseItem(item: ExpenseItemInput): ExpenseItem {
-    return { name: item.name, unitPrice: item.unitPrice, split: item.split, quantity: item.quantity ?? Quantity.ONE };
+    return {
+        name: item.name,
+        unitPrice: item.unitPrice,
+        split: item.split,
+        quantity: item.quantity ?? Quantity.ONE,
+        ...(undefined === item.discount ? {} : { discount: completedDiscount(item.discount) }),
+    };
 }
 
 /** The item the generated code holds as `item`. */
@@ -251,6 +369,7 @@ function convertedExpenseItem(item: internal.ExpenseItem): ExpenseItem {
         unitPrice: Money.converted(item.unitPrice),
         split: convertedSplit(item.split),
         quantity: Quantity.known(item.quantity),
+        ...(undefined === item.discount ? {} : { discount: convertedDiscount(item.discount) }),
     };
 }
 
@@ -261,21 +380,52 @@ function generatedExpenseItem(item: ExpenseItem): internal.ExpenseItem {
         unitPrice: item.unitPrice.generated(),
         split: generatedSplit(item.split),
         quantity: item.quantity.tenThousandths,
+        ...(undefined === item.discount ? {} : { discount: generatedDiscount(item.discount) }),
     });
 }
 
 /**
- * The line total of `item`, in its unit price's currency: the unit price times the quantity, rounded half away from zero to
- * the currency's minor unit, as the library adds the lines up against the expense's amount. A line whose product is below
- * half a minor unit is free: its total is zero.
+ * The line total of `item` before its discount, in its unit price's currency: the unit price times the quantity, rounded
+ * half away from zero to the currency's minor unit. A line whose product is below half a minor unit is free: its total is
+ * zero.
  *
  * @param item - The line
- * @returns The line total: 14.70 EUR for 0.35 units at 42.00 EUR, and 0.34 EUR for 0.335 units at 1.00 EUR
+ * @returns The line total before the discount: 14.70 EUR for 0.35 units at 42.00 EUR, whatever their discount
+ * @throws The failures of {@link expenseItemLineTotal}
+ */
+export function expenseItemLineTotalBeforeDiscount(item: ExpenseItemInput): Money {
+    return Money.converted(calling(() => internal.expenseItemLineTotalBeforeDiscount(generatedExpenseItem(completedExpenseItem(item)))));
+}
+
+/**
+ * What the discount of `item` takes off its line, in its unit price's currency: the line total before the discount minus
+ * the line total, as the library computes them.
+ *
+ * @param item - The line
+ * @returns The discount's amount: 1.47 EUR for 10 % off 0.35 units at 42.00 EUR, 3.00 EUR for 1.00 EUR off each of three
+ *   units, and zero for a line without a discount
+ * @throws The failures of {@link expenseItemLineTotal}
+ */
+export function expenseItemDiscountAmount(item: ExpenseItemInput): Money {
+    return Money.converted(calling(() => internal.expenseItemDiscountAmount(generatedExpenseItem(completedExpenseItem(item)))));
+}
+
+/**
+ * The line total of `item`, in its unit price's currency: the unit price times the quantity, rounded half away from zero to
+ * the currency's minor unit, less the discount, as the library adds the lines up against the expense's amount. A line whose
+ * product is below half a minor unit, or whose discount takes the whole price, is free: its total is zero.
+ *
+ * @param item - The line
+ * @returns The line total: 14.70 EUR for 0.35 units at 42.00 EUR, 13.23 EUR with 10 % off, and 0.34 EUR for 0.335 units at
+ *   1.00 EUR
  * @throws {@link IdError} for a member whose identifier is not one, {@link MoneyError} with the failure `unknownCurrency`
- *   for a unit price whose currency details are not the library's, and {@link ExpenseError} for a line the library refuses:
- *   `emptyItemName` for a blank name, `nonPositiveAmount` for a unit price that is not positive, the failures of a split
- *   that does not divide the line, among them `amountsDoNotAddUp` for amounts that do not add up to the line total, a free
- *   line's included, and `overflow` for a line total out of range
+ *   for a unit price or a fixed discount whose currency details are not the library's, and {@link ExpenseError} for a line
+ *   the library refuses: `emptyItemName` for a blank name, `nonPositiveAmount` for a unit price that is not positive,
+ *   `currencyMismatch` for a fixed discount in another currency than the unit price, `negativeDiscount` for a fixed
+ *   discount below zero, `discountAboveHundredPercent` for a percentage above 100 %, `discountAbovePrice` for a fixed
+ *   discount larger than what it reduces, the failures of a split that does not divide the line, among them
+ *   `amountsDoNotAddUp` for amounts that do not add up to the line total, a free line's included, and `overflow` for a line
+ *   total out of range
  */
 export function expenseItemLineTotal(item: ExpenseItemInput): Money {
     return Money.converted(calling(() => internal.expenseItemLineTotal(generatedExpenseItem(completedExpenseItem(item)))));
@@ -297,8 +447,8 @@ export type ExpenseSplit =
       };
 
 /**
- * How an expense to add or replace shares its cost, whose lines may leave out their quantity. Every {@link ExpenseSplit} is
- * one.
+ * How an expense to add or replace shares its cost, whose lines may leave out their quantity and their discount's scope.
+ * Every {@link ExpenseSplit} is one.
  */
 export type ExpenseSplitInput =
     | {
@@ -314,7 +464,7 @@ export type ExpenseSplitInput =
           readonly items: readonly ExpenseItemInput[];
       };
 
-/** The split that `split` describes, every line of it with its quantity. */
+/** The split that `split` describes, every line of it with its quantity and its discount's scope. */
 function completedExpenseSplit(split: ExpenseSplitInput): ExpenseSplit {
     switch (split.kind) {
         case 'whole':
@@ -498,9 +648,9 @@ export interface Expense {
  * An expense to add or replace: what it cost, who paid, and how it divides, with its identifier from the moment it is made.
  * A `{ id, … }` literal takes the app's own identifier, and {@link createExpense} generates one.
  *
- * It may leave out its tip, its category, how a tip is shared, and the quantity of each line of an itemised bill, which
- * take their defaults: no tip, the built-in category, in proportion to each share, and one unit. Every {@link Expense} is
- * one.
+ * It may leave out its tip, its category, how a tip is shared, and the quantity of each line of an itemised bill and what
+ * its discount is taken off, which take their defaults: no tip, the built-in category, in proportion to each share, one
+ * unit, and the line as a whole. Every {@link Expense} is one.
  */
 export interface ExpenseInput {
     /** The identifier, which the app gives: its own, or one that {@link generateExpenseId} makes. */

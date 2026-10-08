@@ -196,6 +196,37 @@ final class Conversions {
     }
 
     /**
+     * The discount's value the generated code holds as {@code value}.
+     *
+     * @param value the generated value
+     * @return the value
+     */
+    static DiscountValue converted(eranos.internal.DiscountValue value) {
+        return switch (value) {
+            case eranos.internal.DiscountValue.Percentage percentage ->
+                    new DiscountValue.Percentage(Percentage.known(percentage.basisPoints()));
+            case eranos.internal.DiscountValue.Fixed fixed ->
+                    new DiscountValue.Fixed(Money.converted(fixed.amount()));
+        };
+    }
+
+    /**
+     * The discount's value as the generated code holds it.
+     *
+     * @param value the value
+     * @return the generated value
+     */
+    static eranos.internal.DiscountValue generated(DiscountValue value) {
+        return switch (value) {
+            case DiscountValue.Percentage percentage ->
+                    new eranos.internal.DiscountValue.Percentage(
+                            percentage.percentage().basisPoints());
+            case DiscountValue.Fixed fixed ->
+                    new eranos.internal.DiscountValue.Fixed(fixed.amount().generated());
+        };
+    }
+
+    /**
      * The tip's value the generated code holds as {@code value}.
      *
      * @param value the generated value

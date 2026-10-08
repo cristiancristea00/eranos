@@ -5,13 +5,15 @@
 //! divide an expense into group-currency shares for the ledger, are the
 //! group's, and the facade does not re-export them; nor does it re-export
 //! the conversion traits
-//! ([`FromExpenseError`], [`FromExpenseSplit`], [`FromSplit`],
-//! [`FromTipDistribution`], and [`FromTipValue`]), through which a crate that
+//! ([`FromDiscountScope`], [`FromDiscountValue`], [`FromExpenseError`],
+//! [`FromExpenseSplit`], [`FromSplit`], [`FromTipDistribution`], and
+//! [`FromTipValue`]), through which a crate that
 //! tells every variant of an enum apart converts it without the wildcard arm
 //! a `match` outside this crate would need.
 #![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
+mod discount;
 mod error;
 mod expense_item;
 mod resolution;
@@ -20,6 +22,7 @@ mod tip_rule;
 
 use std::collections::BTreeSet;
 
+pub use discount::{Discount, DiscountScope, DiscountValue, FromDiscountScope, FromDiscountValue};
 pub use error::{ExpenseError, FromExpenseError};
 pub use expense_item::{ExpenseItem, ExpenseItemBuilder};
 pub use resolution::{resolve_expense, resolve_expense_at};

@@ -1,16 +1,17 @@
 //! Itemised receipts divide each line among the members who shared it. These
 //! tests keep every line valid (a name, a positive price, a line total that
-//! is the price times the quantity rounded half away from zero, free when
-//! that rounds to zero, a split that divides it), keep both constructors
-//! naming who shares a line, and keep the last split setter in force, on a
-//! new item and on one edited through `to_builder`.
+//! is the price times the quantity rounded half away from zero less its
+//! discount, free when that comes to zero, a split that divides it), keep
+//! both constructors naming who shares a line, and keep the last split
+//! setter and the last discount in force, on a new item and on one edited
+//! through `to_builder`.
 
-use eranos_money::CurrencyCode;
+use eranos_money::{CurrencyCode, Percentage};
 use proptest::prelude::*;
 
 use super::*;
 
-use crate::MemberAmount;
+use crate::{DiscountScope, MemberAmount};
 
 // Two members, in identifier order.
 
@@ -321,6 +322,131 @@ fn builder_setters_replace_each_field() {
     assert_eq!(half.line_total(), euros(1_200));
 }
 
+/// A discount would leave the line total as it was, or the receipt's
+/// columns, before the discount, the discount, and the line total, would
+/// not add up.
+#[test]
+fn a_discount_reduces_the_line_total() {
+    let lemonade =
+        || ExpenseItem::builder("Lemonade", euros(333), [ana(), bob()]).quantity(units(3));
+    let half = Discount::percentage(Percentage::parse("50").unwrap());
+    // 50 % off the line: 9.99 − 5.00.
+    let off_the_line = lemonade().discount(half).build().unwrap();
+    assert_eq!(off_the_line.line_total_before_discount(), euros(999));
+    assert_eq!(off_the_line.discount(), Some(half));
+    assert_eq!(off_the_line.discount_amount(), euros(500));
+    assert_eq!(off_the_line.line_total(), euros(499));
+    // 50 % off each unit: 3 × (3.33 − 1.67).
+    let off_each_unit = lemonade()
+        .discount(half.scoped(DiscountScope::Unit))
+        .build()
+        .unwrap();
+    assert_eq!(off_each_unit.line_total_before_discount(), euros(999));
+    assert_eq!(off_each_unit.discount_amount(), euros(501));
+    assert_eq!(off_each_unit.line_total(), euros(498));
+    // Without a discount, nothing is taken off.
+    assert_eq!(beers().discount(), None);
+    assert_eq!(beers().discount_amount(), euros(0));
+    assert_eq!(beers().line_total_before_discount(), beers().line_total());
+}
+
+/// A dish on the house would be refused, charged to its members, or shared
+/// by amounts that charge them for a line that costs nothing.
+#[test]
+fn a_discount_of_the_whole_price_makes_a_free_line() {
+    let on_the_house = Discount::percentage(Percentage::HUNDRED);
+    let free = ExpenseItem::builder("Papanași", euros(900), [ana(), bob()])
+        .discount(on_the_house)
+        .build()
+        .unwrap();
+    assert_eq!(free.line_total_before_discount(), euros(900));
+    assert_eq!(free.discount_amount(), euros(900));
+    assert_eq!(free.line_total(), euros(0));
+    // Positive amounts never add up to a free line's total of zero.
+    let shares = Split::amounts([MemberAmount::new(ana(), euros(900))]);
+    assert_eq!(
+        ExpenseItem::builder_with_split("Papanași", euros(900), shares)
+            .discount(on_the_house)
+            .build(),
+        Err(ExpenseError::AmountsDoNotAddUp {
+            expected: euros(0),
+            actual: euros(900)
+        })
+    );
+}
+
+/// A discount the line cannot take would be stored and break the receipt:
+/// one larger than what it reduces, above 100 %, below zero, or in another
+/// currency.
+#[test]
+fn a_discount_the_line_cannot_take_is_refused() {
+    let lemonade = || ExpenseItem::builder("Lemonade", euros(300), [ana()]).quantity(units(3));
+    // 10.00 off a line of 9.00, and 3.01 off a unit of 3.00.
+    assert_eq!(
+        lemonade().discount(Discount::fixed(euros(1_000))).build(),
+        Err(ExpenseError::DiscountAbovePrice)
+    );
+    assert_eq!(
+        lemonade()
+            .discount(Discount::fixed(euros(301)).scoped(DiscountScope::Unit))
+            .build(),
+        Err(ExpenseError::DiscountAbovePrice)
+    );
+    // A basis point above 100 %.
+    assert_eq!(
+        lemonade()
+            .discount(Discount::percentage(Percentage::from_basis_points(10_001)))
+            .build(),
+        Err(ExpenseError::DiscountAboveHundredPercent)
+    );
+    // A cent below zero.
+    assert_eq!(
+        lemonade().discount(Discount::fixed(euros(-1))).build(),
+        Err(ExpenseError::NegativeDiscount)
+    );
+    // A dollar.
+    let dollar = Money::from_minor_units(100, CurrencyCode::USD);
+    assert_eq!(
+        lemonade().discount(Discount::fixed(dollar)).build(),
+        Err(ExpenseError::CurrencyMismatch {
+            expected: CurrencyCode::EUR,
+            found: CurrencyCode::USD
+        })
+    );
+    // The line is checked before its split.
+    assert_eq!(
+        lemonade()
+            .shared_by([])
+            .discount(Discount::fixed(euros(1_000)))
+            .build(),
+        Err(ExpenseError::DiscountAbovePrice)
+    );
+}
+
+/// Editing a line would drop its discount, keep one the edit removed, or
+/// keep the first of two discounts set.
+#[test]
+fn to_builder_keeps_the_discount_and_none_clears_it() {
+    let tenth = Discount::percentage(Percentage::parse("10").unwrap());
+    let discounted = beers().to_builder().discount(tenth).build().unwrap();
+    // Rebuilt unchanged, discount included.
+    assert_eq!(discounted.to_builder().build().unwrap(), discounted);
+    assert_eq!(discounted.line_total(), euros(1_215));
+    // `None` clears it, and the line total follows.
+    let cleared = discounted.to_builder().discount(None).build().unwrap();
+    assert_eq!(cleared, beers());
+    // The last discount wins.
+    let unit = Discount::fixed(euros(50)).scoped(DiscountScope::Unit);
+    let last = beers()
+        .to_builder()
+        .discount(tenth)
+        .discount(unit)
+        .build()
+        .unwrap();
+    assert_eq!(last.discount(), Some(unit));
+    assert_eq!(last.line_total(), euros(1_200));
+}
+
 /// Saved receipts would fail to load, or an invalid line would load.
 #[cfg(feature = "serde")]
 #[test]
@@ -365,6 +491,49 @@ fn a_quantity_is_saved_as_text_and_left_out_at_one() {
     assert_eq!(loaded.line_total(), euros(1_200));
 }
 
+/// A line's discount would be lost on saving, written on every line without
+/// one, or saved beside totals that could disagree with it; and a tampered
+/// discount would load into a line that costs less than nothing.
+#[cfg(feature = "serde")]
+#[test]
+fn a_discount_is_saved_when_there_is_one() {
+    let lemonade = ExpenseItem::builder("Lemonade", euros(300), [ana()])
+        .quantity(units(3))
+        .discount(Discount::fixed(euros(100)).scoped(DiscountScope::Unit))
+        .build()
+        .unwrap();
+    let saved = serde_json::to_value(&lemonade).unwrap();
+    assert_eq!(
+        saved["discount"],
+        serde_json::json!({"value": {"fixed": {"minor_units": 100, "currency": "EUR"}}, "scope": "unit"})
+    );
+    assert_eq!(saved.get("line_total_before_discount"), None);
+    assert_eq!(saved.get("line_total"), None);
+    assert_eq!(
+        serde_json::from_value::<ExpenseItem>(saved.clone()).unwrap(),
+        lemonade
+    );
+    // A line without a discount writes none, and reads back without one.
+    let saved_beers = serde_json::to_value(beers()).unwrap();
+    assert_eq!(saved_beers.get("discount"), None);
+    assert_eq!(
+        serde_json::from_value::<ExpenseItem>(saved_beers)
+            .unwrap()
+            .discount(),
+        None
+    );
+    // Loading checks the discount as the builder does.
+    let mut above = saved;
+    above["discount"]["value"]["fixed"]["minor_units"] = serde_json::json!(301);
+    let refused = serde_json::from_value::<ExpenseItem>(above).unwrap_err();
+    assert!(
+        refused
+            .to_string()
+            .contains("the discount is larger than the price it reduces"),
+        "{refused}"
+    );
+}
+
 proptest! {
     /// A whole quantity whose line total differed from the unit price times
     /// the count would change the totals, and the stored shares, of saved
@@ -379,5 +548,47 @@ proptest! {
             .build()
             .unwrap();
         prop_assert_eq!(item.line_total(), euros(unit_price * i64::try_from(count).unwrap()));
+    }
+
+    /// A discount that took more than the line, or a receipt whose
+    /// discount and line total did not add up to the total before the
+    /// discount, would charge the line's members another amount than the
+    /// receipt prints.
+    #[test]
+    fn a_discount_takes_off_between_nothing_and_the_whole_line(
+        unit_price in 1_i64..1_000_000_000,
+        ten_thousandths in 1_u64..1_000_000,
+        percentage in proptest::option::of(0_u32..=10_000),
+        fixed_share in 0_u32..=10_000,
+        unit in any::<bool>(),
+    ) {
+        let quantity = Quantity::from_ten_thousandths(ten_thousandths).unwrap();
+        let before_discount = ExpenseItem::builder("Cheese", euros(unit_price), [ana()])
+            .quantity(quantity)
+            .build()
+            .unwrap()
+            .line_total();
+        let (scope, reduced) = if unit {
+            (DiscountScope::Unit, unit_price)
+        } else {
+            (DiscountScope::Line, before_discount.minor_units())
+        };
+        // A fixed discount is a share of what it reduces, so it fits.
+        let discount = percentage.map_or_else(
+            || Discount::fixed(euros(reduced * i64::from(fixed_share) / 10_000)),
+            |basis_points| Discount::percentage(Percentage::from_basis_points(basis_points)),
+        );
+        let item = ExpenseItem::builder("Cheese", euros(unit_price), [ana()])
+            .quantity(quantity)
+            .discount(discount.scoped(scope))
+            .build()
+            .unwrap();
+        prop_assert_eq!(item.line_total_before_discount(), before_discount);
+        prop_assert_eq!(
+            item.line_total().minor_units() + item.discount_amount().minor_units(),
+            before_discount.minor_units()
+        );
+        prop_assert!(0 <= item.line_total().minor_units());
+        prop_assert!(item.line_total().minor_units() <= before_discount.minor_units());
     }
 }

@@ -96,6 +96,12 @@ static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_NO_ITEMS = EranosFailure_E
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_EMPTY_ITEM_NAME = EranosFailure_ExpenseEmptyItemName;
 /// The item line totals do not add up to the expense amount.
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_ITEMS_DO_NOT_ADD_UP = EranosFailure_ExpenseItemsDoNotAddUp;
+/// A fixed discount below zero.
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_NEGATIVE_DISCOUNT = EranosFailure_ExpenseNegativeDiscount;
+/// A percentage discount above 100 %.
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_DISCOUNT_ABOVE_HUNDRED_PERCENT = EranosFailure_ExpenseDiscountAboveHundredPercent;
+/// A fixed discount larger than what it reduces: the line total before the discount, or the unit price for a discount off each unit.
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_DISCOUNT_ABOVE_PRICE = EranosFailure_ExpenseDiscountAbovePrice;
 /// A fixed tip below zero.
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_NEGATIVE_TIP = EranosFailure_ExpenseNegativeTip;
 /// A total that does not fit the range of an amount.

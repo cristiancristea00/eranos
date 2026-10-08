@@ -159,6 +159,43 @@ public final class eranos/CurrencyCode$Companion {
 	public final fun of (Ljava/lang/String;)Leranos/CurrencyCode;
 }
 
+public final class eranos/Discount {
+	public fun <init> (Leranos/DiscountValue;Leranos/DiscountScope;)V
+	public synthetic fun <init> (Leranos/DiscountValue;Leranos/DiscountScope;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getScope ()Leranos/DiscountScope;
+	public final fun getValue ()Leranos/DiscountValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/DiscountScope : java/lang/Enum {
+	public static final field LINE Leranos/DiscountScope;
+	public static final field UNIT Leranos/DiscountScope;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Leranos/DiscountScope;
+	public static fun values ()[Leranos/DiscountScope;
+}
+
+public abstract interface class eranos/DiscountValue {
+}
+
+public final class eranos/DiscountValue$Fixed : eranos/DiscountValue {
+	public fun <init> (Leranos/Money;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAmount ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/DiscountValue$Percentage : eranos/DiscountValue {
+	public fun <init> (Leranos/Percentage;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPercentage ()Leranos/Percentage;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class eranos/Email {
 	public static final field Companion Leranos/Email$Companion;
 	public fun equals (Ljava/lang/Object;)Z
@@ -300,6 +337,20 @@ public final class eranos/ExpenseFailure$CurrencyMismatch : eranos/ExpenseFailur
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class eranos/ExpenseFailure$DiscountAboveHundredPercent : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$DiscountAboveHundredPercent;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$DiscountAbovePrice : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$DiscountAbovePrice;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class eranos/ExpenseFailure$DuplicateMember : eranos/ExpenseFailure {
 	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
@@ -334,6 +385,13 @@ public final class eranos/ExpenseFailure$ItemsDoNotAddUp : eranos/ExpenseFailure
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getActual ()Leranos/Money;
 	public final fun getExpected ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$NegativeDiscount : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$NegativeDiscount;
+	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -691,15 +749,18 @@ public final class eranos/ExpenseId$Companion {
 }
 
 public final class eranos/ExpenseItem {
-	public fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;Leranos/Quantity;)V
-	public synthetic fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;Leranos/Quantity;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;Leranos/Quantity;Leranos/Discount;)V
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;Leranos/Quantity;Leranos/Discount;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun discountAmount ()Leranos/Money;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDiscount ()Leranos/Discount;
 	public final fun getName ()Ljava/lang/String;
 	public final fun getQuantity ()Leranos/Quantity;
 	public final fun getSplit ()Leranos/Split;
 	public final fun getUnitPrice ()Leranos/Money;
 	public fun hashCode ()I
 	public final fun lineTotal ()Leranos/Money;
+	public final fun lineTotalBeforeDiscount ()Leranos/Money;
 	public fun toString ()Ljava/lang/String;
 }
 

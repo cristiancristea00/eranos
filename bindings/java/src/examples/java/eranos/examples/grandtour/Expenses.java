@@ -118,24 +118,29 @@ final class Expenses {
     /** The receipt of the fado night: every line with its own split. */
     static List<ExpenseItem> fadoItems(People people) throws EranosException {
         return List.of(
-                new ExpenseItem(
-                        "Vinho verde",
-                        eur("12.00"),
-                        new Split.Equal(List.of(people.ana(), people.bob(), people.dan())),
-                        Quantity.ofWhole(2)),
-                new ExpenseItem("Bacalhau", eur("18.00"), new Split.Equal(List.of(people.carol()))),
-                new ExpenseItem(
-                        "Custard tarts",
-                        eur("1.50"),
-                        new Split.Parts(
-                                List.of(
-                                        new MemberParts(people.ana(), Parts.parse("1")),
-                                        new MemberParts(people.bob(), Parts.parse("1")),
-                                        new MemberParts(people.carol(), Parts.parse("1")),
-                                        new MemberParts(people.dan(), Parts.parse("1")),
-                                        new MemberParts(people.eva(), Parts.parse("2")))),
-                        Quantity.ofWhole(6)),
-                new ExpenseItem("Juice", eur("3.00"), new Split.Equal(List.of(people.eva()))));
+                ExpenseItem.builder(
+                                "Vinho verde",
+                                eur("12.00"),
+                                new Split.Equal(List.of(people.ana(), people.bob(), people.dan())))
+                        .quantity(Quantity.ofWhole(2))
+                        .build(),
+                ExpenseItem.builder(
+                                "Bacalhau", eur("18.00"), new Split.Equal(List.of(people.carol())))
+                        .build(),
+                ExpenseItem.builder(
+                                "Custard tarts",
+                                eur("1.50"),
+                                new Split.Parts(
+                                        List.of(
+                                                new MemberParts(people.ana(), Parts.parse("1")),
+                                                new MemberParts(people.bob(), Parts.parse("1")),
+                                                new MemberParts(people.carol(), Parts.parse("1")),
+                                                new MemberParts(people.dan(), Parts.parse("1")),
+                                                new MemberParts(people.eva(), Parts.parse("2")))))
+                        .quantity(Quantity.ofWhole(6))
+                        .build(),
+                ExpenseItem.builder("Juice", eur("3.00"), new Split.Equal(List.of(people.eva())))
+                        .build());
     }
 
     /** The fado night, item by item, paid by Carol and Dan, with a 10 % tip. */

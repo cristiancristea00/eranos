@@ -29,7 +29,7 @@ class ErrorTest {
      */
     @Test
     void everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
-        assertEquals(65, CONVERSIONS.size());
+        assertEquals(68, CONVERSIONS.size());
         for (Conversion conversion : CONVERSIONS) {
             EranosException converted =
                     assertInstanceOf(
@@ -285,6 +285,22 @@ class ErrorTest {
                             new eranos.internal.EranosException.Expense(
                                     new eranos.internal.ExpenseFailure.ItemsDoNotAddUp(
                                             generatedEuros(8), generatedEuros(7)),
+                                    "detail")),
+                    new Conversion(
+                            new ExpenseFailure.NegativeDiscount(),
+                            new eranos.internal.EranosException.Expense(
+                                    new eranos.internal.ExpenseFailure.NegativeDiscount(),
+                                    "detail")),
+                    new Conversion(
+                            new ExpenseFailure.DiscountAboveHundredPercent(),
+                            new eranos.internal.EranosException.Expense(
+                                    new eranos.internal.ExpenseFailure
+                                            .DiscountAboveHundredPercent(),
+                                    "detail")),
+                    new Conversion(
+                            new ExpenseFailure.DiscountAbovePrice(),
+                            new eranos.internal.EranosException.Expense(
+                                    new eranos.internal.ExpenseFailure.DiscountAbovePrice(),
                                     "detail")),
                     new Conversion(
                             new ExpenseFailure.NegativeTip(),

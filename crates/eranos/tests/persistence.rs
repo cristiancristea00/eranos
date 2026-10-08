@@ -17,11 +17,11 @@ use std::task::{Context, Poll, Waker};
 use eranos::cooperative::block_on;
 use eranos::error::ExpenseGroupError;
 use eranos::{
-    CalendarDate, Category, CategoryId, CategoryTotal, CurrencyCode, Email, ExchangeRate, Expense,
-    ExpenseGroup, ExpenseGroupId, ExpenseId, ExpenseItem, Iban, Language, Member, MemberAmount,
-    MemberId, MemberParts, MemberPercentage, Money, Parts, PaymentAccount, Percentage, PhoneNumber,
-    Quantity, SavedExpenseGroup, SettlementStrategy, Split, TimeOfDay, TipDistribution, TipRule,
-    Transfer, TransferId, Username,
+    CalendarDate, Category, CategoryId, CategoryTotal, CurrencyCode, Discount, DiscountScope,
+    Email, ExchangeRate, Expense, ExpenseGroup, ExpenseGroupId, ExpenseId, ExpenseItem, Iban,
+    Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts,
+    PaymentAccount, Percentage, PhoneNumber, Quantity, SavedExpenseGroup, SettlementStrategy,
+    Split, TimeOfDay, TipDistribution, TipRule, Transfer, TransferId, Username,
 };
 use serde_json::{Value, json};
 
@@ -74,13 +74,13 @@ fn trip() -> Trip {
 
     let bill = Expense::itemised_builder(
         "Bill",
-        eur("21.00"),
+        eur("19.50"),
         bob,
         [
             ExpenseItem::builder("Bacalhau", eur("12.00"), [ana])
                 .build()
                 .unwrap(),
-            // 1.5 l of wine at 6.00 a litre.
+            // 1.5 l of wine at 6.00 a litre, 1.00 off each litre.
             ExpenseItem::builder_with_split(
                 "Wine",
                 eur("6.00"),
@@ -90,6 +90,7 @@ fn trip() -> Trip {
                 ]),
             )
             .quantity(Quantity::parse("1.5").unwrap())
+            .discount(Discount::fixed(eur("1.00")).scoped(DiscountScope::Unit))
             .build()
             .unwrap(),
         ],
@@ -199,7 +200,7 @@ fn the_json_shape_is_pinned() {
     assert_eq!(bill["id"], json!(bill_id.to_string()));
     assert_eq!(
         bill["amount"],
-        json!({"currency": "EUR", "minor_units": 2100})
+        json!({"currency": "EUR", "minor_units": 1950})
     );
     assert_eq!(bill["date"], json!("2026-09-23"));
     assert_eq!(bill["time"], json!("20:30"));
@@ -215,11 +216,21 @@ fn the_json_shape_is_pinned() {
         bill["split"]["itemised"][1]["split"]["parts"][1][1],
         json!(150)
     );
-    // A quantity is its decimal text, left out at one; a line total is
-    // derived, so never written.
-    assert_eq!(bill["split"]["itemised"][1]["quantity"], json!("1.5"));
-    assert_eq!(bill["split"]["itemised"][0].get("quantity"), None);
-    assert_eq!(bill["split"]["itemised"][1].get("line_total"), None);
+    // A quantity is its decimal text, left out at one; a discount is its
+    // value and its scope, left out without one; a line total, before the
+    // discount or after it, is derived, so never written.
+    let items = &bill["split"]["itemised"];
+    assert_eq!(items[1]["quantity"], json!("1.5"));
+    assert_eq!(items[0].get("quantity"), None);
+    assert_eq!(
+        items[1]["discount"],
+        json!({"value": {"fixed": {"minor_units": 100, "currency": "EUR"}}, "scope": "unit"})
+    );
+    assert_eq!(items[0].get("discount"), None);
+    let wine = r#""quantity":"1.5","discount":{"value":{"fixed":{"minor_units":100,"currency":"EUR"}},"scope":"unit"}}"#;
+    assert!(text.contains(wine), "{text}");
+    assert_eq!(items[1].get("line_total_before_discount"), None);
+    assert_eq!(items[1].get("line_total"), None);
     assert_eq!(bill.get("total"), None);
     let tram = &value["expenses"][1];
     assert_eq!(tram["exchange_rate"], json!("0.2011"));
@@ -263,6 +274,32 @@ fn a_tampered_file_is_refused() {
     assert!(
         unbalanced.contains("percentages add up to 9999"),
         "{unbalanced}"
+    );
+    // A discount larger than the price it reduces, and one above 100 %
+    // saved without its scope.
+    let above_price = tamper(&|value| {
+        value["expenses"][0]["split"]["itemised"][1]["discount"]["value"]["fixed"]["minor_units"] =
+            json!(601);
+    });
+    assert!(
+        above_price.contains("the discount is larger than the price it reduces"),
+        "{above_price}"
+    );
+    let above_hundred = tamper(&|value| {
+        value["expenses"][0]["split"]["itemised"][0]["discount"] =
+            json!({"value": {"percentage": 10_001}});
+    });
+    assert!(
+        above_hundred.contains("a discount cannot be more than 100%"),
+        "{above_hundred}"
+    );
+    // A discount the items no longer add up to the amount with.
+    let rediscounted = tamper(&|value| {
+        value["expenses"][0]["split"]["itemised"][1]["discount"]["scope"] = json!("line");
+    });
+    assert!(
+        rediscounted.contains("the items add up to 20.00 EUR instead of 19.50 EUR"),
+        "{rediscounted}"
     );
     // An expense paid by someone who is not a member.
     let stranger = "stranger";
@@ -691,4 +728,12 @@ fn value_types_serialise_on_their_own() {
         TimeOfDay::new(7, 5).unwrap()
     );
     assert!(serde_json::from_value::<ExchangeRate>(json!("0")).is_err());
+    assert_eq!(
+        serde_json::to_value(Discount::percentage(Percentage::parse("10").unwrap())).unwrap(),
+        json!({"value": {"percentage": 1000}, "scope": "line"})
+    );
+    assert_eq!(
+        serde_json::from_value::<Discount>(json!({"value": {"percentage": 1000}})).unwrap(),
+        Discount::percentage(Percentage::parse("10").unwrap())
+    );
 }

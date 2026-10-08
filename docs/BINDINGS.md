@@ -124,8 +124,10 @@ flowchart TD
   (a new group's, a currency change's and its rates', and the one
   `money_parse` and `exchange_rate_convert` take) as its ISO 4217 code,
   exchange rates as decimals, amounts as 64-bit minor units, percentages in
-  basis points, parts in hundredths, and an item's quantity in
-  ten-thousandths. A currency the library answers with, in an amount, as
+  basis points, parts in hundredths, an item's quantity in
+  ten-thousandths, and its discount as a `Discount` of a `DiscountValue`, a
+  percentage in basis points or a fixed amount, and a `DiscountScope`, the
+  line or each unit. A currency the library answers with, in an amount, as
   the group currency, and in a failure, crosses as `CurrencyDetails`: its
   code, name, numeric code, and decimal places, so a layer shows an amount
   without looking its currency up. Days, months, years, hours, minutes,
@@ -145,12 +147,14 @@ flowchart TD
   an expense's `category` and `tip` read back as the library holds them, the
   built-in category's identifier and the no-tip rule (0 % shared
   proportionally) when the expense has no other, and a record to add or
-  replace sets them as given. A value the domain makes optional is optional,
-  never an empty stand-in: an expense's description, a member's last name,
-  and a transfer's note are optional text, which a replacement without it
-  clears; so are a new group's description and language; and the group's
-  `set_description` and `set_language` take optional text, none clearing the
-  value. Text is trimmed, and blank text reads back absent.
+  replace sets them as given; a discount's `scope` is required too, and
+  only each layer's constructors start it at the line. A value the domain
+  makes optional is optional, never an empty stand-in: an item's discount,
+  absent for a line at full price; an expense's description, a member's
+  last name, and a transfer's note, optional text, which a replacement
+  without it clears; so are a new group's description and language; and
+  the group's `set_description` and `set_language` take optional text, none
+  clearing the value. Text is trimmed, and blank text reads back absent.
 - **Identity is given or generated.** Every entry and every new group
   carries an identifier from the moment it is made: the app's own, any text
   the library accepts, such as the key of its store, or a generated one. The
@@ -220,9 +224,13 @@ flowchart TD
   ([§ 5](#5-the-text-a-binding-shows)); a value an entry holds as numbers
   has a check beside its formatter (`percentage_check`, `parts_check`,
   `quantity_check`, `calendar_date_check`, and `time_of_day_check`), which
-  refuses what the library refuses. `expense_item_line_total` answers an
-  item's line total as the library computes it, its unit price times its
-  quantity rounded half away from zero, so no layer multiplies one itself.
+  refuses what the library refuses.
+  `expense_item_line_total_before_discount`,
+  `expense_item_discount_amount`, and `expense_item_line_total` answer an
+  item's line total before its discount, its unit price times its quantity
+  rounded half away from zero, what its discount takes off, and its line
+  total, as the library computes them, so no layer multiplies a price or
+  takes a discount itself.
   `phone_number_parse` and `iban_parse` answer a record that carries the
   text the library derives: a `PhoneNumber` of `e164` and `international`,
   and an `Iban` of `iban` and `country_code`.
@@ -423,10 +431,11 @@ named `clear_` for its `set_`: `clear_description` returns nothing, and
 only the description's call `#[infallible]`. The generator's templates hold
 what the core cannot say: the group's constructors and read handle, the
 cancellation, and the methods of a record that are not a field's, such as an
-expense's total and an item's line total. A test of xtask fails while a
-committed file holds other code than the generator writes; it compares
-tokens, so rustfmt's commas, a `match` arm's braces, and the wrapping of a
-doc comment cannot fail it, and the files' line endings cannot either. The
+expense's total and an item's line totals and its discount's amount. A
+test of xtask fails while a committed file holds other code than the
+generator writes; it compares tokens, so rustfmt's commas, a `match` arm's
+braces, and the wrapping of a doc comment cannot fail it, and the files'
+line endings cannot either. The
 worker thread, the checks of text, the error, the dates and times,
 amounts, lists of text, and the value helpers stay hand-written beside
 them. Diplomat carries opaque objects, plain structs, and C-like enums, so
@@ -522,10 +531,16 @@ Design Guidelines:
   `quantity_from_f64`, and `exchange_rate_from_f64`
   ([§ 2](#2-what-every-binding-shares)), so a double is the same value in
   Swift as in every other language.
-- An item's `quantity` defaults to `Quantity.one`, and
-  `ExpenseItem.lineTotal()` reads the line total from the core's
-  `expense_item_line_total`, so the layer never multiplies a unit price
-  itself.
+- An item's `quantity` defaults to `Quantity.one` and its `discount` to
+  none. A `Discount` holds a `DiscountValue`, `.percentage` or `.fixed`,
+  and a `DiscountScope`, `.line` or `.unit`, which
+  `Discount(value:scope:)` starts at `.line`.
+  `ExpenseItem.lineTotalBeforeDiscount()`, `discountAmount()`, and
+  `lineTotal()` read the line total before the discount, what the
+  discount takes off, and the line total from the core's
+  `expense_item_line_total_before_discount`,
+  `expense_item_discount_amount`, and `expense_item_line_total`, so the
+  layer never multiplies a unit price or takes a discount itself.
 - Every call throws `EranosError` as a typed throw, with the core's case per
   module and a failure enum per module whose payloads are typed
   (`ExpenseGroupFailure.memberInUse(member:expenses:transfers:)`); a failure the
@@ -581,10 +596,16 @@ its code. The layer follows the Kotlin library guidelines:
   ([§ 2](#2-what-every-binding-shares)), so a double is the same value in
   Kotlin as in every other language. An `ExpenseItem`'s `quantity` is a
   `Quantity`, ten-thousandths in a `Long`, and defaults to `Quantity.ONE`,
-  one unit; its `lineTotal()` is the core's `expense_item_line_total`, so
-  no receipt multiplies in Kotlin. A `PhoneNumber` and an `Iban` keep the
-  international form and the country code of the record they cross with,
-  and read them with no call into the library.
+  one unit, and its `discount` defaults to `null`, none: a `Discount` of a
+  `DiscountValue`, the sealed interface of `Percentage` and `Fixed`, and a
+  `DiscountScope`, `LINE` or `UNIT`, which its constructor defaults to
+  `LINE`. The item's `lineTotalBeforeDiscount()`, `discountAmount()`, and
+  `lineTotal()` are the core's `expense_item_line_total_before_discount`,
+  `expense_item_discount_amount`, and `expense_item_line_total`, so no
+  receipt multiplies a price or takes a discount in Kotlin. A
+  `PhoneNumber` and an `Iban` keep the international form and the country
+  code of the record they cross with, and read them with no call into the
+  library.
 - A currency the library answers with, in an amount, as the group
   currency, and in a failure, is a `CurrencyCode` built from the
   `CurrencyDetails` it crosses with, never looked up by its code, so an
@@ -654,15 +675,26 @@ The layer follows Effective Java and Google Java Style:
   `Percentage`, `Parts`, `Quantity`, and `ExchangeRate` convert a double
   through the core's helpers ([§ 2](#2-what-every-binding-shares)), and
   refuse NaN and the infinities with `MoneyFailure.NotFinite`;
-  `Quantity.ofWhole` makes a quantity of whole units. An `ExpenseItem`'s
-  `quantity` is a `Quantity`, a `long` of ten-thousandths, which the
-  constructor without one starts at `Quantity.ONE`, and `lineTotal()`
-  reads the line total through the core's `expense_item_line_total`
-  rather than multiplying in Java. A `PhoneNumber` holds its
-  E.164 and international forms, and an `Iban` its text and country code,
-  as the records the library sends carry them: `international()` and
-  `countryCode()` read the stored text, and both cross back as the
-  records.
+  `Quantity.ofWhole` makes a quantity of whole units. A `PhoneNumber`
+  holds its E.164 and international forms, and an `Iban` its text and
+  country code, as the records the library sends carry them:
+  `international()` and `countryCode()` read the stored text, and both
+  cross back as the records.
+- An `ExpenseItem` is a final class built by a builder, as in Rust:
+  `ExpenseItem.builder(name, unitPrice, split)` starts its `quantity`, a
+  `Quantity` of ten-thousandths in a `long`, at `Quantity.ONE`, and its
+  discount at none, which `discount()` reads as an empty `Optional` and
+  the builder's `discount(null)` restores. A `Discount` is a record of a
+  `DiscountValue`, a sealed interface of the records `Percentage` and
+  `Fixed`, and a `DiscountScope`, `LINE` or `UNIT`, which the constructor
+  without one starts at `LINE`; both constructors refuse a `null`.
+  `build()` checks nothing, as `Expense`'s does not: the item's totals and
+  the group check the line. `lineTotalBeforeDiscount()`,
+  `discountAmount()`, and `lineTotal()` read the line total before the
+  discount, what the discount takes off, and the line total from the
+  core's `expense_item_line_total_before_discount`,
+  `expense_item_discount_amount`, and `expense_item_line_total`, so the
+  layer never multiplies a unit price or takes a discount itself.
 - An absent value is an empty `Optional`, a variant a record of a sealed
   interface, and a failure the library reports a checked
   `EranosException`, a subclass per module holding the module's failure.
@@ -725,29 +757,35 @@ build. The layer follows the Google TypeScript Style Guide:
   `fromNumber` of `Percentage`, `Parts`, `Quantity`, and `ExchangeRate`
   hand a number, which JavaScript holds as a double, to the core's
   `money_from_f64` and its siblings, so the same number is the same value
-  as in every other language. `expenseItemLineTotal(item)` answers a line's
-  total from the core's `expense_item_line_total`, so an app shows the
-  total the library adds up rather than multiplying one. A `PhoneNumber`
+  as in every other language. `expenseItemLineTotalBeforeDiscount(item)`,
+  `expenseItemDiscountAmount(item)`, and `expenseItemLineTotal(item)`
+  answer a line's total before its discount, what its discount takes off,
+  and its total from the core's `expense_item_line_total_before_discount`,
+  `expense_item_discount_amount`, and `expense_item_line_total`, so an app
+  shows the totals the library adds up rather than multiplying a price or
+  taking a discount itself. A `PhoneNumber`
   holds its `e164` and `international` forms, and an `Iban` its text and
   its `countryCode`, as the core's records carry them, so printing one
   calls nothing; the core refuses a record whose derived text is not the
   library's ([§ 5](#5-the-text-a-binding-shows)).
 - A record with a field the library gives a default has two types. The
   one every read returns keeps the record's name, `Member`, `Expense`,
-  `ExpenseItem`, and `TipRule`, and requires every field the library
-  always holds: a member's `accounts`, an expense's `tip` and `category`,
-  an item's `quantity`, and a tip's `distribution`. The one an add or a
-  replace takes, in both forms, adds the suffix `Input`, as GraphQL's
-  input types and the TypeScript generated from them do: `MemberInput`,
-  `ExpenseInput`, `ExpenseItemInput`, `TipRuleInput`, and
+  `ExpenseItem`, `Discount`, and `TipRule`, and requires every field the
+  library always holds: a member's `accounts`, an expense's `tip` and
+  `category`, an item's `quantity`, a discount's `scope`, and a tip's
+  `distribution`. The one an add or a replace takes, in both forms, adds
+  the suffix `Input`, as GraphQL's input types and the TypeScript
+  generated from them do: `MemberInput`, `ExpenseInput`,
+  `ExpenseItemInput`, `DiscountInput`, `TipRuleInput`, and
   `ExpenseSplitInput`, which holds the items. An input type lets those
   fields be left out, and an entry's requires its identifier;
   `createMember` and `createExpense` take it without the identifier, and
   `expenseTotal`, `expenseItemLineTotal`, and their siblings take it whole.
   The layer fills each of those fields in one place: no accounts, `NO_TIP`,
-  `UNCATEGORISED`, `Quantity.ONE`, and the proportional distribution. A
-  replace fills them as an add does, rather than keeping the values the
-  group holds. Every output type is assignable to its input type, so a
+  `UNCATEGORISED`, `Quantity.ONE`, `DiscountScope.LINE`, and the
+  proportional distribution. An item's `discount` is optional in both
+  types, absent for a line at full price. A replace fills them as an add
+  does, rather than keeping the values the group holds. Every output type is assignable to its input type, so a
   record read back is passed again as it is. The output keeps the record's name since an app
   reads records more often than it writes them. `Category` and
   `Transfer`, which have no field with a default, have one type each.
@@ -847,6 +885,21 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   `eranosExpenseItemLineTotal(item, &lineTotal)` gives the line total the
   library computes, rounded half away from zero, so no port multiplies a
   unit price itself.
+- An item starts without a discount, and `eranosExpenseItemDiscount`
+  gives nullptr until `eranosExpenseItemSetDiscount` gives it one, which
+  `eranosExpenseItemClearDiscount` removes. An `EranosDiscount` holds an
+  `EranosDiscountValue`, a percentage in basis points
+  (`eranosDiscountValueCreatePercentage(basisPoints)`) or a fixed amount
+  (`eranosDiscountValueCreateFixed(amount)`), and a scope,
+  `ERANOS_DISCOUNT_SCOPE_LINE` or `ERANOS_DISCOUNT_SCOPE_UNIT`;
+  `eranosDiscountCreate(value)` starts it at the line, and
+  `eranosDiscountSetScope` changes it.
+  `eranosExpenseItemLineTotalBeforeDiscount` and
+  `eranosExpenseItemDiscountAmount` give the line total before the discount
+  and what the discount takes off, as the library computes them, so no port
+  takes a discount itself. An item is a record that checks nothing when it
+  is set, so a discount its line cannot take is refused by each of the
+  item's totals and by the group call that carries it.
 - Text goes in as UTF-8 ended by a NUL, nullptr reading as empty text, and
   comes back in an `EranosText`, which the call replaces and ends with a
   NUL; a buffer of Diplomat's grows or ends the program, as the library's
@@ -944,7 +997,15 @@ Core Guidelines with the naming rule above:
   so an `ExpenseItem`'s `quantity` starts there; `Quantity::parse(text)`
   and `Quantity::whole(units)` make others, and the free
   `lineTotal(item)` returns the line total the library computes, so no
-  port multiplies a unit price itself.
+  port multiplies a unit price itself. An `ExpenseItem`'s `discount` is a
+  `std::optional<Discount>`, none for a line at full price; a `Discount`
+  holds its `value`, a `DiscountValue`, the `std::variant` of
+  `PercentageDiscountValue` and `FixedDiscountValue`, and its `scope`, a
+  `DiscountScope`, which its `explicit` constructor starts at
+  `DiscountScope::LINE`. The free `lineTotalBeforeDiscount(item)` and
+  `discountAmount(item)` return the line total before the discount and
+  what the discount takes off, as the library computes them, and each of
+  the three totals refuses a discount the line cannot take.
   `CurrencyCode` also keeps, in a `std::shared_ptr`, the library's details
   it was read from, which an amount in it crosses with, so neither an
   amount nor its text looks the currency up; its `decimalPlaces()` is a
@@ -1066,9 +1127,15 @@ reads its annotations without checking its code, and Ruff leaves it out:
   back with them.
 - An item's `quantity` is a `Quantity`, which holds ten-thousandths and
   defaults to `Quantity.ONE`, one unit, made by the core's
-  `quantity_from_whole` when the package loads. `ExpenseItem.line_total()`
-  answers with the core's `expense_item_line_total`, so the layer
-  multiplies no unit price itself.
+  `quantity_from_whole` when the package loads. Its `discount` defaults to
+  none; a `Discount(value, scope)` holds a `DiscountValue`, the union of
+  `PercentageDiscount` and `FixedDiscount`, and a `DiscountScope`, `LINE`
+  or `UNIT`, which defaults to `LINE`.
+  `ExpenseItem.line_total_before_discount()`, `discount_amount()`, and
+  `line_total()` answer with the core's
+  `expense_item_line_total_before_discount`,
+  `expense_item_discount_amount`, and `expense_item_line_total`, so the
+  layer multiplies no unit price and takes no discount itself.
 - A failure the library reports raises an `EranosError`, a subclass per
   module holding the module's failure, a dataclass nested in it
   (`ExpenseGroupError.MemberInUse`), with the library's message; a saved

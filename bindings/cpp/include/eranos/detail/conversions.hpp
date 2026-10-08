@@ -557,6 +557,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 [[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) noexcept {
     ExpenseItem result(value.name(), detail::fromDetail(*value.unit_price()), detail::fromDetail(*value.split()));
     result.quantity = Quantity{value.quantity()};
+    result.discount = optionalRecord<Discount>(value.discount());
     return result;
 }
 
@@ -568,8 +569,50 @@ template <typename Value, typename Argument, typename Start, typename Convert>
         })
         .transform([&value](std::unique_ptr<EranosExpenseItem> result) noexcept {
             result->set_quantity(value.quantity.tenThousandths);
+            if (value.discount) {
+                result->set_discount(*detail::toDetail(*value.discount));
+            }
             return result;
         });
+}
+
+/// The record of @p value.
+[[nodiscard]] inline Discount fromDetail(EranosDiscount const &value) noexcept {
+    Discount result(detail::fromDetail(*value.value()));
+    result.scope = detail::fromDetail(value.scope());
+    return result;
+}
+
+/// The generated record of @p value.
+[[nodiscard]] inline std::unique_ptr<EranosDiscount> toDetail(Discount const &value) noexcept {
+    return EranosDiscount::create(*detail::toDetail(value.value), detail::toDetail(value.scope));
+}
+
+/// The alternative of @p value.
+[[nodiscard]] inline DiscountValue fromDetail(EranosDiscountValue const &value) noexcept {
+    switch (value.kind()) {
+    case EranosDiscountValueKind::Percentage:
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
+        return PercentageDiscountValue{Percentage{value.basis_points().value()}};
+    case EranosDiscountValueKind::Fixed:
+        break;
+    }
+    return FixedDiscountValue{detail::fromDetail(*value.amount())};
+}
+
+/// The generated discount value of @p value.
+[[nodiscard]] inline std::unique_ptr<EranosDiscountValue> toDetail(PercentageDiscountValue const &value) noexcept {
+    return EranosDiscountValue::create_percentage(value.percentage.basisPoints);
+}
+
+/// The generated discount value of @p value.
+[[nodiscard]] inline std::unique_ptr<EranosDiscountValue> toDetail(FixedDiscountValue const &value) noexcept {
+    return EranosDiscountValue::create_fixed(*detail::toDetail(value.amount));
+}
+
+/// The generated discount value of @p value.
+[[nodiscard]] inline std::unique_ptr<EranosDiscountValue> toDetail(DiscountValue const &value) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return toDetail(alternative); }, value);
 }
 
 /// The alternative of @p value.
@@ -740,6 +783,28 @@ template <typename Value, typename Argument, typename Start, typename Convert>
         break;
     }
     return EranosTipDistribution::Equal;
+}
+
+/// The value of @p value.
+[[nodiscard]] inline constexpr DiscountScope fromDetail(EranosDiscountScope const value) noexcept {
+    switch (value) {
+    case EranosDiscountScope::Line:
+        return DiscountScope::LINE;
+    case EranosDiscountScope::Unit:
+        break;
+    }
+    return DiscountScope::UNIT;
+}
+
+/// The generated value of @p value.
+[[nodiscard]] inline constexpr EranosDiscountScope toDetail(DiscountScope const value) noexcept {
+    switch (value) {
+    case DiscountScope::LINE:
+        return EranosDiscountScope::Line;
+    case DiscountScope::UNIT:
+        break;
+    }
+    return EranosDiscountScope::Unit;
 }
 
 /// The record of @p value.

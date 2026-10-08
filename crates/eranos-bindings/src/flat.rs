@@ -270,6 +270,12 @@ pub enum FailureKind {
     ExpenseEmptyItemName,
     /// [`ExpenseFailure::ItemsDoNotAddUp`].
     ExpenseItemsDoNotAddUp,
+    /// [`ExpenseFailure::NegativeDiscount`].
+    ExpenseNegativeDiscount,
+    /// [`ExpenseFailure::DiscountAboveHundredPercent`].
+    ExpenseDiscountAboveHundredPercent,
+    /// [`ExpenseFailure::DiscountAbovePrice`].
+    ExpenseDiscountAbovePrice,
     /// [`ExpenseFailure::NegativeTip`].
     ExpenseNegativeTip,
     /// [`ExpenseFailure::Overflow`].
@@ -521,6 +527,13 @@ fn expense(failure: &ExpenseFailure) -> FlatFailure {
                 ..Payload::default()
             },
         },
+        ExpenseFailure::NegativeDiscount => FlatFailure::new(FailureKind::ExpenseNegativeDiscount),
+        ExpenseFailure::DiscountAboveHundredPercent => {
+            FlatFailure::new(FailureKind::ExpenseDiscountAboveHundredPercent)
+        }
+        ExpenseFailure::DiscountAbovePrice => {
+            FlatFailure::new(FailureKind::ExpenseDiscountAbovePrice)
+        }
         ExpenseFailure::NegativeTip => FlatFailure::new(FailureKind::ExpenseNegativeTip),
         ExpenseFailure::Overflow => FlatFailure::new(FailureKind::ExpenseOverflow),
     }

@@ -179,6 +179,18 @@ private let conversions: [Conversion] = [
         generated: .Expense(failure: .itemsDoNotAddUp(expected: generatedEuros(8), actual: generatedEuros(7)), detail: "detail")
     ),
     Conversion(
+        expected: .expense(.negativeDiscount, detail: "detail"),
+        generated: .Expense(failure: .negativeDiscount, detail: "detail")
+    ),
+    Conversion(
+        expected: .expense(.discountAboveHundredPercent, detail: "detail"),
+        generated: .Expense(failure: .discountAboveHundredPercent, detail: "detail")
+    ),
+    Conversion(
+        expected: .expense(.discountAbovePrice, detail: "detail"),
+        generated: .Expense(failure: .discountAbovePrice, detail: "detail")
+    ),
+    Conversion(
         expected: .expense(.negativeTip, detail: "detail"),
         generated: .Expense(failure: .negativeTip, detail: "detail")
     ),
@@ -321,7 +333,7 @@ private let conversions: [Conversion] = [
 /// the library's.
 @Test
 func everyFailureOfTheGeneratedCodeConvertsToItsCase() {
-    #expect(68 == conversions.count)
+    #expect(71 == conversions.count)
     for conversion in conversions {
         let error = Eranos.EranosError(conversion.generated)
         #expect(error == conversion.expected)

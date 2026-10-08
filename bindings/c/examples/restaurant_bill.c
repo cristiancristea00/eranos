@@ -1,6 +1,6 @@
 // An itemised restaurant bill: every line is split among the people who had it, quantities multiply the unit price, and
-// the tip is shared either in proportion to what each person ordered or equally. The port of the Rust example
-// `restaurant_bill`, which prints the same report.
+// the tip is shared either in proportion to what each person ordered or equally; then a line weighed on a scale, and
+// discounts off the line and off each unit. The port of the Rust example `restaurant_bill`, which prints the same report.
 
 #include "eranos.h"
 #include "report.h"
@@ -44,6 +44,32 @@ typedef struct LineRow {
 /// Adds @p row to @p table, a table of the receipt's lines, its cells in the order of the table's headers.
 static void addLineRow(Table *const table, LineRow const *const row) {
     tableAdd(table, (Line const[]){row->name, row->participants, row->quantity, row->unitPrice, row->lineTotal});
+}
+
+/// A row of the table of discounts: a line, its quantity, its unit price, and its total before and after its discount.
+typedef struct DiscountRow {
+    /// What was ordered.
+    Line name;
+    /// How many were ordered, or how much was weighed.
+    Line quantity;
+    /// The price of one.
+    Line unitPrice;
+    /// The quantity times the unit price.
+    Line lineTotalBeforeDiscount;
+    /// What the discount takes off.
+    Line discountAmount;
+    /// What the line comes to.
+    Line lineTotal;
+} DiscountRow;
+
+/// A table of discounted lines, its columns from @p numbersFrom on aligned to the right.
+[[nodiscard]] static Table *discountTable(size_t const numbersFrom) {
+    return tableCreate(6, (char const *const[]){"Item", "Quantity", "Unit price", "Before discount", "Discount", "Line total"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of discounted lines, its cells in the order of the table's headers.
+static void addDiscountRow(Table *const table, DiscountRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->quantity, row->unitPrice, row->lineTotalBeforeDiscount, row->discountAmount, row->lineTotal});
 }
 
 /// A row of the table of tips: what a friend ordered, and what they pay with the tip shared by consumption and equally.
@@ -105,6 +131,63 @@ static void addItem(EranosExpenseItemList *const items, char const *const name, 
     addItem(items, "Papanași", "9.00", partsSplit(papanasi, 2), 1);
     Members const everyone = {.count = 3, .ids = {friends->ana, friends->bob, friends->carol}};
     addItem(items, "Lemonade", "3.00", equalSplit(&everyone), 3);
+    return items;
+}
+
+/// A discount of @p basisPoints basis points off the line.
+[[nodiscard]] static EranosDiscount *percentageOff(int32_t const basisPoints) {
+    EranosDiscountValue *const value = eranosDiscountValueCreatePercentage(basisPoints);
+    EranosDiscount *const discount = eranosDiscountCreate(value);
+    eranosDiscountValueDestroy(value);
+    return discount;
+}
+
+/// A discount of @p amount euros off the line.
+[[nodiscard]] static EranosDiscount *eurosOff(char const *const amount) {
+    EranosMoney *const money = euros(amount);
+    EranosDiscountValue *const value = eranosDiscountValueCreateFixed(money);
+    EranosDiscount *const discount = eranosDiscountCreate(value);
+    eranosDiscountValueDestroy(value);
+    eranosMoneyDestroy(money);
+    return discount;
+}
+
+/// Adds the line @p name of the second round to @p items: @p quantity ten-thousandths of a unit at @p unitPrice euros, which @p split shares,
+/// with @p discount; destroys @p split and @p discount.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the unit price, in the order the library's constructor reads them.
+static void addDiscountedItem(EranosExpenseItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
+                              int64_t const quantity, EranosDiscount *const discount) {
+    EranosMoney *const price = euros(unitPrice);
+    EranosExpenseItem *item = nullptr;
+    must(eranosExpenseItemCreate(name, price, split, &item));
+    eranosExpenseItemSetQuantity(item, quantity);
+    eranosExpenseItemSetDiscount(item, discount);
+    eranosExpenseItemListPush(items, item);
+    eranosExpenseItemDestroy(item);
+    eranosMoneyDestroy(price);
+    eranosDiscountDestroy(discount);
+    eranosSplitDestroy(split);
+}
+
+/// A second round: telemea weighed on a scale with 10 % off the line, three lemonades with 1.00 off each, and papanași on the house.
+[[nodiscard]] static EranosExpenseItemList *secondRound(Friends const *const friends) {
+    EranosExpenseItemList *const items = eranosExpenseItemListCreate();
+    // The scale reports the weight as a double.
+    int64_t weight = 0;
+    must(eranosQuantityFromDouble(0.35, &weight));
+    int32_t tenPercent = 0;
+    must(eranosPercentageParse("10", &tenPercent));
+    Members const telemea = {.count = 2, .ids = {friends->ana, friends->bob}};
+    addDiscountedItem(items, "Telemea", "42.00", equalSplit(&telemea), weight, percentageOff(tenPercent));
+    int64_t three = 0;
+    must(eranosQuantityFromWhole(3, &three));
+    EranosDiscount *const oneOffEach = eurosOff("1.00");
+    eranosDiscountSetScope(oneOffEach, ERANOS_DISCOUNT_SCOPE_UNIT);
+    Members const everyone = {.count = 3, .ids = {friends->ana, friends->bob, friends->carol}};
+    addDiscountedItem(items, "Lemonade", "3.00", equalSplit(&everyone), three, oneOffEach);
+    int32_t hundredPercent = 0;
+    must(eranosPercentageParse("100", &hundredPercent));
+    addDiscountedItem(items, "Papanași", "9.00", soleSplit(friends->carol), ERANOS_QUANTITY_ONE, percentageOff(hundredPercent));
     return items;
 }
 
@@ -217,6 +300,96 @@ static void printReceipt(EranosExpenseGroup const *const group, Friends const *c
     eranosExpenseItemListDestroy(items);
 }
 
+/// The totals of a discounted line, in euro cents.
+typedef struct LineTotals {
+    /// The quantity times the unit price.
+    int64_t lineTotalBeforeDiscount;
+    /// What the discount takes off.
+    int64_t discountAmount;
+    /// What the line comes to.
+    int64_t lineTotal;
+} LineTotals;
+
+/// Section 4: prints the second round's lines, each with its total before the discount, the discount, and its line total, and a discount refused
+/// for being larger than its line.
+static void printWeighedLinesAndDiscounts(Friends const *const friends) {
+    section("4. Weighed lines and discounts");
+    EranosExpenseItemList *const round = secondRound(friends);
+    constexpr size_t LINES = 3;
+    check(LINES == eranosExpenseItemListLength(round), "the second round has three lines");
+    Table *const table = discountTable(1);
+    EranosText *const text = eranosTextCreate();
+    LineTotals totals[LINES] = {};
+    for (size_t index = 0; LINES > index; ++index) {
+        EranosExpenseItem *const item = eranosExpenseItemListGet(round, index);
+        EranosMoney *lineTotalBeforeDiscount = nullptr;
+        must(eranosExpenseItemLineTotalBeforeDiscount(item, &lineTotalBeforeDiscount));
+        EranosMoney *discountAmount = nullptr;
+        must(eranosExpenseItemDiscountAmount(item, &discountAmount));
+        EranosMoney *lineTotal = nullptr;
+        must(eranosExpenseItemLineTotal(item, &lineTotal));
+        totals[index] = (LineTotals){
+            .lineTotalBeforeDiscount = eranosMoneyMinorUnits(lineTotalBeforeDiscount),
+            .discountAmount = eranosMoneyMinorUnits(discountAmount),
+            .lineTotal = eranosMoneyMinorUnits(lineTotal),
+        };
+        eranosQuantityFormat(eranosExpenseItemQuantity(item), text);
+        Line const quantity = textLine(text);
+        eranosExpenseItemName(item, text);
+        addDiscountRow(table, &(DiscountRow){
+                                  .name = textLine(text),
+                                  .quantity = quantity,
+                                  .unitPrice = moneyLine(eranosExpenseItemUnitPrice(item)),
+                                  .lineTotalBeforeDiscount = moneyLine(lineTotalBeforeDiscount),
+                                  .discountAmount = moneyLine(discountAmount),
+                                  .lineTotal = moneyLine(lineTotal),
+                              });
+        eranosExpenseItemDestroy(item);
+    }
+    tablePrint(table);
+    EranosExpenseItem *const telemea = eranosExpenseItemListGet(round, 0);
+    eranosQuantityFormat(eranosExpenseItemQuantity(telemea), text);
+    Line const weight = textLine(text);
+    EranosMoney *before = nullptr;
+    must(eranosExpenseItemLineTotalBeforeDiscount(telemea, &before));
+    Line const telemeaBefore = moneyLine(before);
+    EranosMoney *const nine = euros("9.00");
+    EranosMoney *const ten = euros("10.00");
+    EranosSplit *const carol = soleSplit(friends->carol);
+    EranosExpenseItem *refused = nullptr;
+    must(eranosExpenseItemCreate("Papanași", nine, carol, &refused));
+    EranosDiscountValue *const tenOff = eranosDiscountValueCreateFixed(ten);
+    EranosDiscount *const tooLarge = eranosDiscountCreate(tenOff);
+    eranosExpenseItemSetDiscount(refused, tooLarge);
+    EranosMoney *notBuilt = nullptr;
+    EranosError *const error = eranosExpenseItemLineTotal(refused, &notBuilt);
+    check(nullptr != error && nullptr == notBuilt, "the discount must be refused");
+    Line const message = messageLine(error);
+    Line const tenText = moneyLine(ten);
+    Line const nineText = moneyLine(nine);
+    printFormatted("The scale reports %s kg as a double just below it; the quantity reads its shortest\n"
+                   "form, %s, so the telemea costs exactly %s before its discount. Taking %s\n"
+                   "off a %s line is refused when the item is built:\n"
+                   "  error: %s",
+                   weight.text, weight.text, telemeaBefore.text, tenText.text, nineText.text, message.text);
+
+    // 10 % of 14.70 is 1.47; 1.00 off each of three lemonades is 3.00; the papanași on the house leave a free line.
+    check(1'470 == totals[0].lineTotalBeforeDiscount, "the telemea costs 14.70 EUR before its discount");
+    check(147 == totals[0].discountAmount, "10 % of it is 1.47 EUR");
+    check(1'323 == totals[0].lineTotal, "which leaves 13.23 EUR");
+    check(300 == totals[1].discountAmount, "1.00 EUR off each of three lemonades is 3.00 EUR");
+    check(600 == totals[1].lineTotal, "which leaves 6.00 EUR");
+    check(900 == totals[2].discountAmount, "the papanași on the house take off all 9.00 EUR");
+    check(0 == totals[2].lineTotal, "which leaves a free line");
+    eranosDiscountDestroy(tooLarge);
+    eranosDiscountValueDestroy(tenOff);
+    eranosExpenseItemDestroy(refused);
+    eranosSplitDestroy(carol);
+    eranosExpenseItemDestroy(telemea);
+    eranosTextDestroy(text);
+    eranosExpenseItemListDestroy(round);
+}
+
 /// Prints what each friend ordered, and what they pay with the tip shared by consumption, in @p byConsumption, and
 /// equally, in @p even; @p ordered divides the dinner without a tip.
 static void printTips(EranosExpenseGroup const *const group, Friends const *const friends, EranosExpenseShares const *const ordered,
@@ -288,6 +461,8 @@ int main(void) {
     printFormatted("An amount of 55.00 EUR with these lines is refused when the expense is built:\n"
                    "  error: %s",
                    message.text);
+
+    printWeighedLinesAndDiscounts(&friends);
 
     // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to
     // each; an equal one 1.80 to everyone.

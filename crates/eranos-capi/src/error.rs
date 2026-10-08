@@ -125,6 +125,13 @@ pub mod ffi {
         ExpenseEmptyItemName,
         /// The item line totals do not add up to the expense amount.
         ExpenseItemsDoNotAddUp,
+        /// A fixed discount below zero.
+        ExpenseNegativeDiscount,
+        /// A percentage discount above 100 %.
+        ExpenseDiscountAboveHundredPercent,
+        /// A fixed discount larger than what it reduces: the line total before the discount, or
+        /// the unit price for a discount off each unit.
+        ExpenseDiscountAbovePrice,
         /// A fixed tip below zero.
         ExpenseNegativeTip,
         /// A total that does not fit the range of an amount.

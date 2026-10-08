@@ -26,8 +26,9 @@ library itself is plain Rust with no I/O and no async runtime.
 | Expense         | `Expense`            | What was bought: name, cost, payers, split, date, optional tip and category       |
 | Cost            | `Cost`               | An amount in the group currency, or in another one at a fixed exchange rate       |
 | Split           | `Split`              | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
-| Item            | `ExpenseItem`        | A receipt line of an itemised expense, with its own quantity and split            |
+| Item            | `ExpenseItem`        | A receipt line of an itemised expense: its own quantity, discount, and split      |
 | Quantity        | `Quantity`           | How many units a line counts: whole, or with four decimal places, as 0.452 kg     |
+| Discount        | `Discount`           | A percentage or a fixed amount off an item's line, or off each of its units       |
 | Tip             | `TipRule`            | A percentage or a fixed amount on top, shared proportionally or equally           |
 | Transfer        | `Transfer`           | Money one member paid another, such as a repayment                                |
 | Summary         | `Summary`            | Spending, paid, consumed, balances, and totals per category, always current       |
@@ -99,11 +100,12 @@ flowchart LR
   computed as floats: a double an app holds is converted once, on the way
   in, from its shortest decimal form, so 1.005 is 1.01 EUR in every
   language. An item's line total, its unit price times a quantity of up to
-  four decimal places, rounds half away from zero. Every division hands out
-  its leftover cents by the largest-remainder method, so the parts always
-  add up. Ties rotate with the expense's identifier, so the extra cent of
-  an even split does not always land on the same person, and a synced
-  expense divides identically on every device.
+  four decimal places, rounds half away from zero, and so does a
+  percentage discount, taken off the line or off each unit. Every division
+  hands out its leftover cents by the largest-remainder method, so the
+  parts always add up. Ties rotate with the expense's identifier, so the
+  extra cent of an even split does not always land on the same person, and
+  a synced expense divides identically on every device.
 - **Every currency, one ledger.** An expense in another currency than the
   group's has a converted cost, with an exchange rate fixed when it is
   entered; it is converted once, exactly, into the group currency. A plain
@@ -146,7 +148,7 @@ balances, and payments, and asserts its own numbers:
 | ---------------------- | --------------------------------------------------------------------------------------------- |
 | `quickstart`           | A trip in a few lines: members, expenses, totals, settlement                                  |
 | `split_methods`        | Equal, percentage, parts (half a share for a child), exact amounts, two payers                |
-| `restaurant_bill`      | Itemised receipt with quantities and per-item splits; proportional vs equal tip               |
+| `restaurant_bill`      | Itemised receipt with quantities and per-item splits; proportional vs equal tip; discounts    |
 | `multi_currency`       | Foreign expenses and a cash repayment at fixed rates; moving the books to another currency    |
 | `settling_up`          | The four strategies on one group, Adaptive on a larger one, then recording the payments       |
 | `members_and_accounts` | Contact details, IBAN validation, archiving a member                                          |

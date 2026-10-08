@@ -19,14 +19,39 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-/** The expenses, members, categories, and transfers, and the splits, costs, and tips they hold. */
+/**
+ * The expenses, members, categories, and transfers, and the splits, costs, items, discounts, and
+ * tips they hold.
+ */
 class EntriesTest {
+    /** A line's totals: before its discount, the discount's amount, and the line total. */
+    private record LineTotals(Money beforeDiscount, Money discount, Money lineTotal) {}
+
+    /** A discount and the failure the library refuses it with. */
+    private record Refusal(Discount discount, ExpenseFailure failure) {}
+
+    /** The totals of {@code item}, as the library computes them. */
+    private static LineTotals lineTotals(ExpenseItem item) throws EranosException {
+        return new LineTotals(
+                item.lineTotalBeforeDiscount(), item.discountAmount(), item.lineTotal());
+    }
+
     /**
      * A taxi in lei, itemised, paid by percentages, with a fixed tip shared equally: with {@link
      * #dinner}, every kind of cost, split, and tip.
      */
     private static Expense taxi(Flat flat) throws EranosException {
         CurrencyCode lei = CurrencyCode.of("RON");
+        ExpenseItem fare =
+                ExpenseItem.builder(
+                                "Fare",
+                                new Money(2_500, lei),
+                                new Split.Parts(
+                                        List.of(
+                                                new MemberParts(flat.ana, Parts.ofHundredths(100)),
+                                                new MemberParts(flat.bob, Parts.ofHundredths(50)))))
+                        .quantity(Quantity.ofWhole(2))
+                        .build();
         return Expense.builder(
                         "Taxi",
                         new Cost.Converted(new Money(5_000, lei), ExchangeRate.parse("0.2")),
@@ -34,20 +59,7 @@ class EntriesTest {
                                 List.of(
                                         new MemberPercentage(
                                                 flat.ana, Percentage.ofBasisPoints(10_000)))),
-                        new ExpenseSplit.Itemised(
-                                List.of(
-                                        new ExpenseItem(
-                                                "Fare",
-                                                new Money(2_500, lei),
-                                                new Split.Parts(
-                                                        List.of(
-                                                                new MemberParts(
-                                                                        flat.ana,
-                                                                        Parts.ofHundredths(100)),
-                                                                new MemberParts(
-                                                                        flat.bob,
-                                                                        Parts.ofHundredths(50)))),
-                                                Quantity.ofWhole(2)))),
+                        new ExpenseSplit.Itemised(List.of(fare)),
                         flat.day)
                 .tip(new TipRule(new TipValue.Fixed(new Money(500, lei)), TipDistribution.EQUAL))
                 .time(TimeOfDay.of(9, 5))
@@ -196,8 +208,9 @@ class EntriesTest {
      * The line total an app shows for an item would differ from the one the library adds up against
      * the expense's amount: rounded another way, multiplied as a double, or refused for a free
      * line; an item the library refuses would show a line total; an item that converted or stored
-     * with another quantity would divide another line; and an item that took {@code null} for its
-     * quantity would fail only when its expense reached the group.
+     * with another quantity would divide another line; a builder that changed another field than
+     * the one it was given would build another line; and an item that took {@code null} for a field
+     * would fail only when its expense reached the group.
      */
     @Test
     void anItemTellsItsLineTotalAsTheLibraryComputesIt() throws EranosException {
@@ -205,18 +218,27 @@ class EntriesTest {
         Split ana = new Split.Equal(List.of(flat.ana));
         // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
         ExpenseItem olives =
-                new ExpenseItem("Olives", flat.euros(100), ana, Quantity.parse("0.335"));
+                ExpenseItem.builder("Olives", flat.euros(100), ana)
+                        .quantity(Quantity.parse("0.335"))
+                        .build();
         assertEquals(flat.euros(34), olives.lineTotal());
         assertEquals(
                 flat.euros(1_470),
-                new ExpenseItem("Cheese", flat.euros(4_200), ana, Quantity.parse("0.35"))
+                ExpenseItem.builder("Cheese", flat.euros(4_200), ana)
+                        .quantity(Quantity.parse("0.35"))
+                        .build()
                         .lineTotal());
         assertEquals(
                 flat.euros(200),
-                new ExpenseItem("Bread", flat.euros(100), ana, Quantity.ofWhole(2)).lineTotal());
+                ExpenseItem.builder("Bread", flat.euros(100), ana)
+                        .quantity(Quantity.ofWhole(2))
+                        .build()
+                        .lineTotal());
         // A ten-thousandth of a cent rounds to zero: a free line.
         ExpenseItem free =
-                new ExpenseItem("Olives", flat.euros(100), ana, Quantity.ofTenThousandths(1));
+                ExpenseItem.builder("Olives", flat.euros(100), ana)
+                        .quantity(Quantity.ofTenThousandths(1))
+                        .build();
         assertEquals(flat.euros(0), free.lineTotal());
         for (ExpenseItem item : List.of(olives, free)) {
             assertEquals(item, ExpenseItem.converted(item.generated()));
@@ -235,14 +257,15 @@ class EntriesTest {
                 assertThrows(
                         EranosException.Expense.class,
                         () ->
-                                new ExpenseItem(
+                                ExpenseItem.builder(
                                                 "Olives",
                                                 flat.euros(100),
                                                 new Split.Amounts(
                                                         List.of(
                                                                 new MemberAmount(
-                                                                        flat.ana, flat.euros(1)))),
-                                                Quantity.ofTenThousandths(1))
+                                                                        flat.ana, flat.euros(1)))))
+                                        .quantity(Quantity.ofTenThousandths(1))
+                                        .build()
                                         .lineTotal());
         assertEquals(
                 new ExpenseFailure.AmountsDoNotAddUp(flat.euros(0), flat.euros(1)),
@@ -251,21 +274,192 @@ class EntriesTest {
                 assertThrows(
                         EranosException.Expense.class,
                         () ->
-                                new ExpenseItem(
-                                                "Olives",
-                                                flat.euros(Long.MAX_VALUE),
-                                                ana,
-                                                Quantity.ofWhole(2))
+                                ExpenseItem.builder("Olives", flat.euros(Long.MAX_VALUE), ana)
+                                        .quantity(Quantity.ofWhole(2))
+                                        .build()
                                         .lineTotal());
         assertEquals(new ExpenseFailure.Overflow(), overflow.failure());
         EranosException.Expense unnamed =
                 assertThrows(
                         EranosException.Expense.class,
-                        () -> new ExpenseItem(" ", flat.euros(100), ana).lineTotal());
+                        () -> ExpenseItem.builder(" ", flat.euros(100), ana).build().lineTotal());
         assertEquals(new ExpenseFailure.EmptyItemName(), unnamed.failure());
-        assertThrows(
-                NullPointerException.class,
-                () -> new ExpenseItem("Olives", flat.euros(100), ana, null));
+        ExpenseItem.Builder builder = olives.toBuilder();
+        assertThrows(NullPointerException.class, () -> builder.name(null));
+        assertThrows(NullPointerException.class, () -> builder.unitPrice(null));
+        assertThrows(NullPointerException.class, () -> builder.split(null));
+        assertThrows(NullPointerException.class, () -> builder.quantity(null));
+        assertEquals(olives, builder.build());
+        Split bob = new Split.Equal(List.of(flat.bob));
+        ExpenseItem cheese = builder.name("Cheese").unitPrice(flat.euros(4_200)).split(bob).build();
+        assertEquals("Cheese", cheese.name());
+        assertEquals(flat.euros(4_200), cheese.unitPrice());
+        assertEquals(bob, cheese.split());
+        assertEquals(olives.quantity(), cheese.quantity());
+    }
+
+    /**
+     * A discount an app showed another way than the library takes it would show a line total that
+     * the library does not add up against the expense's amount: off each unit, 50 % of 3.33 rounds
+     * to 1.67 before it is multiplied, so three units cost 4.98, and off the line, 50 % of 9.99
+     * rounds once, to 5.00, so they cost 4.99; a fixed discount taken once instead of off each
+     * unit, a line without a discount that showed one, or a discount of the whole price refused
+     * instead of making a free line would charge another amount.
+     */
+    @Test
+    void aDiscountComesOffTheLineOrEachUnitAsTheLibraryTakesIt() throws EranosException {
+        Flat flat = new Flat();
+        Split ana = new Split.Equal(List.of(flat.ana));
+        ExpenseItem.Builder soups =
+                ExpenseItem.builder("Soup", flat.euros(333), ana).quantity(Quantity.ofWhole(3));
+        DiscountValue half = new DiscountValue.Percentage(Percentage.ofBasisPoints(5_000));
+        assertEquals(
+                new LineTotals(flat.euros(999), flat.euros(501), flat.euros(498)),
+                lineTotals(soups.discount(new Discount(half, DiscountScope.UNIT)).build()));
+        assertEquals(
+                new LineTotals(flat.euros(999), flat.euros(500), flat.euros(499)),
+                lineTotals(soups.discount(new Discount(half)).build()));
+        ExpenseItem.Builder lemonades =
+                ExpenseItem.builder("Lemonade", flat.euros(300), ana).quantity(Quantity.ofWhole(3));
+        DiscountValue oneEuro = new DiscountValue.Fixed(flat.euros(100));
+        assertEquals(
+                new LineTotals(flat.euros(900), flat.euros(300), flat.euros(600)),
+                lineTotals(lemonades.discount(new Discount(oneEuro, DiscountScope.UNIT)).build()));
+        assertEquals(
+                new LineTotals(flat.euros(900), flat.euros(100), flat.euros(800)),
+                lineTotals(lemonades.discount(new Discount(oneEuro)).build()));
+        assertEquals(
+                new LineTotals(flat.euros(900), flat.euros(0), flat.euros(900)),
+                lineTotals(lemonades.discount(null).build()));
+        // The whole price, as a percentage or as a fixed amount, makes a free line.
+        ExpenseItem.Builder dessert = ExpenseItem.builder("Papanași", flat.euros(900), ana);
+        for (DiscountValue whole :
+                List.of(
+                        new DiscountValue.Percentage(Percentage.ofBasisPoints(10_000)),
+                        new DiscountValue.Fixed(flat.euros(900)))) {
+            assertEquals(
+                    new LineTotals(flat.euros(900), flat.euros(900), flat.euros(0)),
+                    lineTotals(dessert.discount(new Discount(whole)).build()));
+        }
+    }
+
+    /**
+     * A discount the library refuses that an item read totals for, or refused as another failure,
+     * would let an app show a line that the group will not take: a negative amount, a percentage
+     * above 100 %, an amount above the price it reduces, off the line or off each unit, and an
+     * amount in another currency.
+     */
+    @Test
+    void aDiscountTheLineCannotTakeIsRefused() throws EranosException {
+        Flat flat = new Flat();
+        CurrencyCode lei = CurrencyCode.of("RON");
+        ExpenseItem.Builder lemonades =
+                ExpenseItem.builder("Lemonade", flat.euros(300), new Split.Equal(List.of(flat.ana)))
+                        .quantity(Quantity.ofWhole(3));
+        List<Refusal> refusals =
+                List.of(
+                        new Refusal(
+                                new Discount(new DiscountValue.Fixed(flat.euros(-100))),
+                                new ExpenseFailure.NegativeDiscount()),
+                        new Refusal(
+                                new Discount(
+                                        new DiscountValue.Percentage(
+                                                Percentage.ofBasisPoints(10_001))),
+                                new ExpenseFailure.DiscountAboveHundredPercent()),
+                        new Refusal(
+                                new Discount(new DiscountValue.Fixed(flat.euros(901))),
+                                new ExpenseFailure.DiscountAbovePrice()),
+                        new Refusal(
+                                new Discount(
+                                        new DiscountValue.Fixed(flat.euros(301)),
+                                        DiscountScope.UNIT),
+                                new ExpenseFailure.DiscountAbovePrice()),
+                        new Refusal(
+                                new Discount(new DiscountValue.Fixed(new Money(100, lei))),
+                                new ExpenseFailure.CurrencyMismatch(flat.euro, lei)));
+        for (Refusal refusal : refusals) {
+            ExpenseItem item = lemonades.discount(refusal.discount()).build();
+            for (Executable total :
+                    List.<Executable>of(
+                            item::lineTotalBeforeDiscount, item::discountAmount, item::lineTotal)) {
+                EranosException.Expense refused =
+                        assertThrows(EranosException.Expense.class, total);
+                assertEquals(refusal.failure(), refused.failure());
+            }
+        }
+    }
+
+    /**
+     * A discount that converted with its value or scope changed, a builder that dropped it or could
+     * not clear it, or a group that stored it another way would take another amount off the line
+     * than the app set; a discount that took {@code null} would fail only when its expense reached
+     * the group; and a free line that divided to anything but zeros would charge its members for
+     * what they did not pay.
+     */
+    @Test
+    void aDiscountConvertsAndStoresWhole() throws EranosException {
+        Flat flat = new Flat();
+        assertEquals(
+                List.of(DiscountScope.LINE, DiscountScope.UNIT), List.of(DiscountScope.values()));
+        for (DiscountScope scope : DiscountScope.values()) {
+            assertEquals(scope, DiscountScope.converted(scope.generated()));
+        }
+        DiscountValue tenPerCent = new DiscountValue.Percentage(Percentage.ofBasisPoints(1_000));
+        DiscountValue oneEuro = new DiscountValue.Fixed(flat.euros(100));
+        for (DiscountValue value : List.of(tenPerCent, oneEuro)) {
+            assertEquals(value, Conversions.converted(Conversions.generated(value)));
+            assertEquals(new Discount(value, DiscountScope.LINE), new Discount(value));
+            for (DiscountScope scope : DiscountScope.values()) {
+                Discount discount = new Discount(value, scope);
+                assertEquals(discount, Discount.converted(discount.generated()));
+            }
+        }
+        assertThrows(NullPointerException.class, () -> new Discount(null));
+        assertThrows(NullPointerException.class, () -> new Discount(oneEuro, null));
+        assertThrows(NullPointerException.class, () -> new DiscountValue.Percentage(null));
+        assertThrows(NullPointerException.class, () -> new DiscountValue.Fixed(null));
+
+        Discount offEach = new Discount(oneEuro, DiscountScope.UNIT);
+        ExpenseItem lemonades =
+                ExpenseItem.builder(
+                                "Lemonade",
+                                flat.euros(300),
+                                new Split.Equal(List.of(flat.ana, flat.bob)))
+                        .quantity(Quantity.ofWhole(3))
+                        .discount(offEach)
+                        .build();
+        assertEquals(Optional.of(offEach), lemonades.discount());
+        ExpenseItem undiscounted = lemonades.toBuilder().discount(null).build();
+        assertEquals(Optional.empty(), undiscounted.discount());
+        assertValue(lemonades, lemonades.toBuilder().build(), undiscounted);
+        assertEquals(lemonades, ExpenseItem.converted(lemonades.generated()));
+        ExpenseItem wine =
+                ExpenseItem.builder("Wine", flat.euros(1_000), new Split.Equal(List.of(flat.ana)))
+                        .discount(new Discount(tenPerCent))
+                        .build();
+        ExpenseItem dessert =
+                ExpenseItem.builder("Papanași", flat.euros(900), new Split.Equal(List.of(flat.bob)))
+                        .discount(
+                                new Discount(
+                                        new DiscountValue.Percentage(
+                                                Percentage.ofBasisPoints(10_000))))
+                        .build();
+        // 6.00 for the lemonades, 9.00 for the wine, and nothing for the dessert.
+        Expense drinks =
+                Expense.builder(
+                                "Drinks",
+                                new Cost.Local(flat.euros(1_500)),
+                                new Split.Equal(List.of(flat.ana)),
+                                new ExpenseSplit.Itemised(List.of(lemonades, wine, dessert)),
+                                flat.day)
+                        .build();
+        ExpenseId id = flat.group.addExpense(drinks);
+        assertEquals(drinks, flat.group.expense(id).orElseThrow());
+        assertEquals(
+                List.of(
+                        new MemberShare(flat.ana, flat.euros(1_500), flat.euros(1_200)),
+                        new MemberShare(flat.bob, flat.euros(0), flat.euros(300))),
+                flat.group.expenseShares(id).orElseThrow().members());
     }
 
     /**
@@ -308,10 +502,11 @@ class EntriesTest {
                         new TipValue.Fixed(flat.euros(1)))) {
             assertEquals(value, Conversions.converted(Conversions.generated(value)));
         }
-        assertEquals(
-                Quantity.ONE,
-                new ExpenseItem("Bread", flat.euros(1), new Split.Equal(List.of(flat.bob)))
-                        .quantity());
+        ExpenseItem bread =
+                ExpenseItem.builder("Bread", flat.euros(1), new Split.Equal(List.of(flat.bob)))
+                        .build();
+        assertEquals(Quantity.ONE, bread.quantity());
+        assertEquals(Optional.empty(), bread.discount());
         assertEquals(
                 TipDistribution.PROPORTIONAL,
                 new TipRule(new TipValue.Fixed(flat.euros(1))).distribution());

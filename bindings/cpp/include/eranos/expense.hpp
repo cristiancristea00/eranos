@@ -1,5 +1,5 @@
 /// @file eranos/expense.hpp
-/// Expenses: what was bought, what it cost, who paid, and how it divides, with their costs, items, and tips.
+/// Expenses: what was bought, what it cost, who paid, and how it divides, with their costs, items, discounts, and tips.
 ///
 /// A part of eranos.hpp, which includes every part and then the conversions their functions call: include eranos.hpp.
 
@@ -35,6 +35,64 @@ enum class TipDistribution : std::uint8_t {
     EQUAL,
 };
 
+/// What a discount is taken off.
+enum class DiscountScope : std::uint8_t {
+    /// The line total, the unit price times the quantity.
+    LINE,
+    /// The price of each unit, before it is multiplied by the quantity.
+    UNIT,
+};
+
+/// A percentage of what the discount reduces, at most 100 %.
+struct PercentageDiscountValue final {
+    /// The percentage, in basis points: 1 000 for 10 %.
+    Percentage percentage;
+
+    /// Whether every field of two alternatives is equal.
+    ///
+    /// @param left An alternative
+    /// @param right Another alternative
+    /// @return Whether they are equal
+    [[nodiscard]] friend constexpr bool operator==(PercentageDiscountValue const &left, PercentageDiscountValue const &right) noexcept = default;
+};
+
+/// A fixed amount in the item's currency, at most what the discount reduces.
+struct FixedDiscountValue final {
+    /// The amount.
+    Money amount;
+
+    /// Whether every field of two alternatives is equal.
+    ///
+    /// @param left An alternative
+    /// @param right Another alternative
+    /// @return Whether they are equal
+    [[nodiscard]] friend constexpr bool operator==(FixedDiscountValue const &left, FixedDiscountValue const &right) noexcept = default;
+};
+
+/// How a discount is expressed. One of its alternatives: PercentageDiscountValue, FixedDiscountValue.
+using DiscountValue = std::variant<PercentageDiscountValue, FixedDiscountValue>;
+
+/// A discount off a line of an itemised bill.
+struct Discount final {
+    /// The record of its required fields; the scope starts at its default, the line, DiscountScope::LINE.
+    ///
+    /// @param value How the discount is expressed.
+    inline constexpr explicit Discount(DiscountValue value) noexcept : value(std::move(value)) {}
+
+    /// How the discount is expressed.
+    DiscountValue value;
+
+    /// What the discount is taken off: the line, DiscountScope::LINE, until it is given another.
+    DiscountScope scope{DiscountScope::LINE};
+
+    /// Whether every field of two records is equal.
+    ///
+    /// @param left A record
+    /// @param right Another record
+    /// @return Whether they are equal
+    [[nodiscard]] friend constexpr bool operator==(Discount const &left, Discount const &right) noexcept = default;
+};
+
 /// A line of an itemised bill: `quantity` units of `name` at `unitPrice`, which `split` divides.
 struct ExpenseItem final {
     /// The record of its required fields; the others start absent, empty, or at their default.
@@ -56,6 +114,9 @@ struct ExpenseItem final {
 
     /// How many units: one, Quantity{}, until it is given another.
     Quantity quantity{};
+
+    /// The discount off the line or off each unit: none, for a line at full price, until it is given one.
+    std::optional<Discount> discount;
 
     /// Whether every field of two records is equal.
     ///
@@ -249,13 +310,27 @@ struct Expense final {
     [[nodiscard]] friend constexpr bool operator==(Expense const &left, Expense const &right) noexcept = default;
 };
 
-/// The line total of an item: its unit price times its quantity, rounded half away from zero to the currency's minor unit, as the library computes
-/// it; zero for a free line, whose product is below half a minor unit.
+/// The line total of an item before its discount: its unit price times its quantity, rounded half away from zero to the currency's minor unit, as
+/// the library computes it; zero when the product is below half a minor unit.
 ///
 /// @param item The item
-/// @return The line total, or an error of the kind ErrorKind::MONEY for a quantity that is not positive, of the kind ErrorKind::EXPENSE for an
-///   item the library refuses, a split that does not divide the line total or a line total out of range among them, and of the kind ErrorKind::ID
-///   for an identifier that is not one
+/// @return The line total before the discount, or an error as for lineTotal()
+[[nodiscard]] std::expected<Money, Error> lineTotalBeforeDiscount(ExpenseItem const &item) noexcept;
+
+/// What the discount of an item takes off its line, as the library computes it: the line total before the discount minus the line total, zero
+/// without a discount.
+///
+/// @param item The item
+/// @return The discount's amount, or an error as for lineTotal()
+[[nodiscard]] std::expected<Money, Error> discountAmount(ExpenseItem const &item) noexcept;
+
+/// The line total of an item: its unit price times its quantity, rounded half away from zero to the currency's minor unit, less its discount, as
+/// the library computes it; zero for a free line, whose product is below half a minor unit or whose discount takes the whole price.
+///
+/// @param item The item
+/// @return The line total, or an error of the kind ErrorKind::MONEY for a quantity that is not positive or a percentage discount below zero, of the
+///   kind ErrorKind::EXPENSE for an item the library refuses, a discount the line cannot take, a split that does not divide the line total, or a line
+///   total out of range among them, and of the kind ErrorKind::ID for an identifier that is not one
 [[nodiscard]] std::expected<Money, Error> lineTotal(ExpenseItem const &item) noexcept;
 
 /// The tip of an expense in its currency, zero without one.
@@ -280,6 +355,12 @@ namespace detail {
 
 [[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) noexcept;
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseItem>, Error> toDetail(ExpenseItem const &value) noexcept;
+[[nodiscard]] inline Discount fromDetail(EranosDiscount const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosDiscount> toDetail(Discount const &value) noexcept;
+[[nodiscard]] inline DiscountValue fromDetail(EranosDiscountValue const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosDiscountValue> toDetail(PercentageDiscountValue const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosDiscountValue> toDetail(FixedDiscountValue const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosDiscountValue> toDetail(DiscountValue const &value) noexcept;
 [[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value) noexcept;
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value) noexcept;
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value) noexcept;
@@ -300,8 +381,25 @@ namespace detail {
 [[nodiscard]] inline std::vector<ExpenseItem> fromDetail(EranosExpenseItemList const &list) noexcept;
 [[nodiscard]] inline constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept;
 [[nodiscard]] inline constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept;
+[[nodiscard]] inline constexpr DiscountScope fromDetail(EranosDiscountScope const value) noexcept;
+[[nodiscard]] inline constexpr EranosDiscountScope toDetail(DiscountScope const value) noexcept;
 
 } // namespace detail
+
+inline std::expected<Money, Error> lineTotalBeforeDiscount(ExpenseItem const &item) noexcept {
+    return detail::toDetail(item)
+        .and_then([](std::unique_ptr<detail::EranosExpenseItem> const &converted) noexcept {
+            return detail::expectedOf(converted->line_total_before_discount());
+        })
+        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) noexcept { return detail::fromDetail(*amount); });
+}
+
+inline std::expected<Money, Error> discountAmount(ExpenseItem const &item) noexcept {
+    return detail::toDetail(item)
+        .and_then(
+            [](std::unique_ptr<detail::EranosExpenseItem> const &converted) noexcept { return detail::expectedOf(converted->discount_amount()); })
+        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) noexcept { return detail::fromDetail(*amount); });
+}
 
 inline std::expected<Money, Error> lineTotal(ExpenseItem const &item) noexcept {
     return detail::toDetail(item)

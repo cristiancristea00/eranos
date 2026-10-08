@@ -1,6 +1,7 @@
 //! An itemised restaurant bill: every line is split among the people who
 //! had it, quantities multiply the unit price, and the tip is shared either
-//! in proportion to what each person ordered or equally.
+//! in proportion to what each person ordered or equally; then a line
+//! weighed on a scale, and discounts off the line and off each unit.
 //!
 //! Run with `cargo run -p eranos --example restaurant_bill`.
 #![forbid(unsafe_code)]
@@ -8,9 +9,9 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, CurrencyCode, Expense, ExpenseGroup, ExpenseItem, ExpenseShares, Member,
-    MemberId, MemberParts, MemberShare, Money, Parts, Percentage, Quantity, Split, TipDistribution,
-    TipRule,
+    CalendarDate, CurrencyCode, Discount, DiscountScope, Expense, ExpenseGroup, ExpenseItem,
+    ExpenseShares, Member, MemberId, MemberParts, MemberShare, Money, Parts, Percentage, Quantity,
+    Split, TipDistribution, TipRule,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -26,6 +27,22 @@ struct LineRow {
     quantity: Quantity,
     #[tabled(rename = "Unit price")]
     unit_price: Money,
+    #[tabled(rename = "Line total")]
+    line_total: Money,
+}
+
+#[derive(Tabled)]
+struct DiscountRow {
+    #[tabled(rename = "Item")]
+    name: String,
+    #[tabled(rename = "Quantity")]
+    quantity: Quantity,
+    #[tabled(rename = "Unit price")]
+    unit_price: Money,
+    #[tabled(rename = "Before discount")]
+    line_total_before_discount: Money,
+    #[tabled(rename = "Discount")]
+    discount_amount: Money,
     #[tabled(rename = "Line total")]
     line_total: Money,
 }
@@ -99,6 +116,30 @@ fn receipt(
     ])
 }
 
+/// A second round: telemea weighed on a scale with 10 % off the line,
+/// three lemonades with 1.00 off each, and papanași on the house.
+fn second_round(
+    ana: MemberId,
+    bob: MemberId,
+    carol: MemberId,
+) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
+    // The scale reports the weight as a double.
+    let weight = Quantity::from_f64(0.35)?;
+    Ok(vec![
+        ExpenseItem::builder("Telemea", eur("42.00")?, [ana, bob])
+            .quantity(weight)
+            .discount(Discount::percentage(Percentage::parse("10")?))
+            .build()?,
+        ExpenseItem::builder("Lemonade", eur("3.00")?, [ana, bob, carol])
+            .quantity(Quantity::from_whole(3)?)
+            .discount(Discount::fixed(eur("1.00")?).scoped(DiscountScope::Unit))
+            .build()?,
+        ExpenseItem::builder("Papanași", eur("9.00")?, [carol])
+            .discount(Discount::percentage(Percentage::HUNDRED))
+            .build()?,
+    ])
+}
+
 /// How `expense` would divide if it were added to `group`, computed on a
 /// copy so the group itself is unchanged.
 fn preview(group: &ExpenseGroup, expense: Expense) -> Result<ExpenseShares, Box<dyn Error>> {
@@ -115,6 +156,56 @@ fn consumed(shares: &ExpenseShares, member: MemberId) -> Result<Money, Box<dyn E
         .member(member)
         .map(MemberShare::share)
         .ok_or("every member ordered")?)
+}
+
+/// Section 4: the second round's lines, each with its total before the
+/// discount, the discount, and its line total, and a discount refused for
+/// being larger than its line.
+fn weighed_lines_and_discounts(
+    ana: MemberId,
+    bob: MemberId,
+    carol: MemberId,
+) -> Result<(), Box<dyn Error>> {
+    section("4. Weighed lines and discounts");
+    let round = second_round(ana, bob, carol)?;
+    print_table(
+        round.iter().map(|item| DiscountRow {
+            name: item.name().to_owned(),
+            quantity: item.quantity(),
+            unit_price: item.unit_price(),
+            line_total_before_discount: item.line_total_before_discount(),
+            discount_amount: item.discount_amount(),
+            line_total: item.line_total(),
+        }),
+        1,
+    );
+    let [telemea, lemonade, papanasi] = round.as_slice() else {
+        return Err("the second round has three lines".into());
+    };
+    let (nine, ten) = (eur("9.00")?, eur("10.00")?);
+    let refused = ExpenseItem::builder("Papanași", nine, [carol])
+        .discount(Discount::fixed(ten))
+        .build();
+    println!(
+        "The scale reports {weight} kg as a double just below it; the quantity reads its shortest\n\
+         form, {weight}, so the telemea costs exactly {before} before its discount. Taking {ten}\n\
+         off a {nine} line is refused when the item is built:\n  \
+         error: {error}",
+        weight = telemea.quantity(),
+        before = telemea.line_total_before_discount(),
+        error = refused.err().ok_or("the discount must be refused")?
+    );
+
+    // 10 % of 14.70 is 1.47; 1.00 off each of three lemonades is 3.00; the
+    // papanași on the house leave a free line.
+    assert_eq!(telemea.line_total_before_discount(), eur("14.70")?);
+    assert_eq!(telemea.discount_amount(), eur("1.47")?);
+    assert_eq!(telemea.line_total(), eur("13.23")?);
+    assert_eq!(lemonade.discount_amount(), eur("3.00")?);
+    assert_eq!(lemonade.line_total(), eur("6.00")?);
+    assert_eq!(papanasi.discount_amount(), eur("9.00")?);
+    assert_eq!(papanasi.line_total(), eur("0.00")?);
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -199,6 +290,8 @@ fn main() -> Result<(), Box<dyn Error>> {
          error: {}",
         mismatched.err().ok_or("the mismatch must be refused")?
     );
+
+    weighed_lines_and_discounts(ana, bob, carol)?;
 
     // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol
     // 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to each; an equal one

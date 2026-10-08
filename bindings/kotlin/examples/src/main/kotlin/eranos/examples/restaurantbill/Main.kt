@@ -1,11 +1,14 @@
 // An itemised restaurant bill: every line is split among the people who had it, quantities multiply the unit price, and
-// the tip is shared either in proportion to what each person ordered or equally. The port of the Rust example
-// `restaurant_bill`, which prints the same report.
+// the tip is shared either in proportion to what each person ordered or equally; then a line weighed on a scale, and
+// discounts off the line and off each unit. The port of the Rust example `restaurant_bill`, which prints the same report.
 package eranos.examples.restaurantbill
 
 import eranos.CalendarDate
 import eranos.Cost
 import eranos.CurrencyCode
+import eranos.Discount
+import eranos.DiscountScope
+import eranos.DiscountValue
 import eranos.EranosException
 import eranos.Expense
 import eranos.ExpenseGroup
@@ -41,6 +44,22 @@ private data class LineRow(
 
     companion object {
         val HEADERS = listOf("Item", "Shared by", "Quantity", "Unit price", "Line total")
+    }
+}
+
+private data class DiscountRow(
+    val name: String,
+    val quantity: Quantity,
+    val unitPrice: Money,
+    val lineTotalBeforeDiscount: Money,
+    val discountAmount: Money,
+    val lineTotal: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, "$quantity", "$unitPrice", "$lineTotalBeforeDiscount", "$discountAmount", "$lineTotal")
+
+    companion object {
+        val HEADERS = listOf("Item", "Quantity", "Unit price", "Before discount", "Discount", "Line total")
     }
 }
 
@@ -80,6 +99,33 @@ private fun receipt(
         ExpenseItem("Lemonade", eur("3.00"), Split.Equal(listOf(ana, bob, carol)), quantity = Quantity.ofWhole(3)),
     )
 
+/** A second round: telemea weighed on a scale with 10 % off the line, three lemonades with 1.00 off each, and papanași on the house. */
+private fun secondRound(
+    ana: MemberId,
+    bob: MemberId,
+    carol: MemberId,
+): List<ExpenseItem> {
+    // The scale reports the weight as a double.
+    val weight = Quantity.fromDouble(0.35)
+    return listOf(
+        ExpenseItem(
+            "Telemea",
+            eur("42.00"),
+            Split.Equal(listOf(ana, bob)),
+            quantity = weight,
+            discount = Discount(DiscountValue.Percentage(Percentage.parse("10"))),
+        ),
+        ExpenseItem(
+            "Lemonade",
+            eur("3.00"),
+            Split.Equal(listOf(ana, bob, carol)),
+            quantity = Quantity.ofWhole(3),
+            discount = Discount(DiscountValue.Fixed(eur("1.00")), DiscountScope.UNIT),
+        ),
+        ExpenseItem("Papanași", eur("9.00"), Split.Equal(listOf(carol)), discount = Discount(DiscountValue.Percentage(Percentage.parse("100")))),
+    )
+}
+
 /**
  * How [expense] would divide if it were added to [group], computed on a copy loaded from the group's saved form, so the
  * group itself is unchanged.
@@ -94,6 +140,58 @@ private fun consumed(
     shares: ExpenseShares?,
     member: MemberId,
 ): Money? = shares?.members?.firstOrNull { share -> share.member == member }?.share
+
+/**
+ * Section 4: the second round's lines, each with its total before the discount, the discount, and its line total, and a
+ * discount refused for being larger than its line.
+ */
+private fun weighedLinesAndDiscounts(
+    ana: MemberId,
+    bob: MemberId,
+    carol: MemberId,
+) {
+    section("4. Weighed lines and discounts")
+    val round = secondRound(ana, bob, carol)
+    printTable(
+        DiscountRow.HEADERS,
+        round.map { item ->
+            DiscountRow(
+                name = item.name,
+                quantity = item.quantity,
+                unitPrice = item.unitPrice,
+                lineTotalBeforeDiscount = item.lineTotalBeforeDiscount(),
+                discountAmount = item.discountAmount(),
+                lineTotal = item.lineTotal(),
+            )
+        },
+        numbersFrom = 1,
+    )
+    val (telemea, lemonade, papanasi) = round
+    val nine = eur("9.00")
+    val ten = eur("10.00")
+    try {
+        ExpenseItem("Papanași", nine, Split.Equal(listOf(carol)), discount = Discount(DiscountValue.Fixed(ten))).lineTotal()
+        error("the discount must be refused")
+    } catch (refusal: EranosException) {
+        println(
+            """
+            The scale reports ${telemea.quantity} kg as a double just below it; the quantity reads its shortest
+            form, ${telemea.quantity}, so the telemea costs exactly ${telemea.lineTotalBeforeDiscount()} before its discount. Taking $ten
+            off a $nine line is refused when the item is built:
+              error: ${refusal.message}
+            """.trimIndent(),
+        )
+    }
+
+    // 10 % of 14.70 is 1.47; 1.00 off each of three lemonades is 3.00; the papanași on the house leave a free line.
+    check(eur("14.70") == telemea.lineTotalBeforeDiscount())
+    check(eur("1.47") == telemea.discountAmount())
+    check(eur("13.23") == telemea.lineTotal())
+    check(eur("3.00") == lemonade.discountAmount())
+    check(eur("6.00") == lemonade.lineTotal())
+    check(eur("9.00") == papanasi.discountAmount())
+    check(eur("0.00") == papanasi.lineTotal())
+}
 
 /** Prints the report of the dinner. */
 fun main() {
@@ -191,6 +289,8 @@ fun main() {
                 """.trimIndent(),
             )
         }
+
+        weighedLinesAndDiscounts(ana, bob, carol)
 
         // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to
         // each; an equal one 1.80 to everyone.

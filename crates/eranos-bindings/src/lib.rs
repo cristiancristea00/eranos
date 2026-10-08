@@ -63,8 +63,8 @@ pub use error::{
     PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
 pub use expense::{
-    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split,
-    TipDistribution, TipRule, TipValue,
+    Discount, DiscountScope, DiscountValue, Expense, ExpenseItem, ExpenseSplit, MemberAmount,
+    MemberParts, MemberPercentage, Split, TipDistribution, TipRule, TipValue,
 };
 pub use expense_group::{ExpenseGroupHandle, NewExpenseGroup};
 pub use flat::{ErrorKind, FailureKind, FlatError, IbanReasonKind, Payload};
@@ -80,7 +80,8 @@ pub use transfer::Transfer;
 pub use values::{
     balance_format, calendar_date_check, calendar_date_format, calendar_date_parse,
     category_id_uncategorised, currencies, currency_details, email_parse, exchange_rate_convert,
-    exchange_rate_from_f64, exchange_rate_parse, expense_item_line_total, expense_members,
+    exchange_rate_from_f64, exchange_rate_parse, expense_item_discount_amount,
+    expense_item_line_total, expense_item_line_total_before_discount, expense_members,
     expense_tip_amount, expense_total, iban_parse, identifier_generate, identifier_parse,
     language_parse, money_add, money_format, money_from_f64, money_parse, money_subtract,
     parts_check, parts_format, parts_from_f64, parts_parse, percentage_check, percentage_format,

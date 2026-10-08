@@ -1,6 +1,6 @@
 // An itemised restaurant bill: every line is split among the people who had it, quantities multiply the unit price, and
-// the tip is shared either in proportion to what each person ordered or equally. The port of the Rust example
-// `restaurant_bill`, which prints the same report.
+// the tip is shared either in proportion to what each person ordered or equally; then a line weighed on a scale, and
+// discounts off the line and off each unit. The port of the Rust example `restaurant_bill`, which prints the same report.
 
 import Eranos
 import Report
@@ -16,6 +16,21 @@ struct LineRow: TableRow {
 
     var cells: [String] {
         [name, participants, "\(quantity)", "\(unitPrice)", "\(lineTotal)"]
+    }
+}
+
+struct DiscountRow: TableRow {
+    static let headers = ["Item", "Quantity", "Unit price", "Before discount", "Discount", "Line total"]
+
+    let name: String
+    let quantity: Quantity
+    let unitPrice: Money
+    let lineTotalBeforeDiscount: Money
+    let discountAmount: Money
+    let lineTotal: Money
+
+    var cells: [String] {
+        [name, "\(quantity)", "\(unitPrice)", "\(lineTotalBeforeDiscount)", "\(discountAmount)", "\(lineTotal)"]
     }
 }
 
@@ -61,6 +76,47 @@ func receipt(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(Eran
     ]
 }
 
+/// A second round: telemea weighed on a scale with 10 % off the line, three lemonades with 1.00 off each, and papanași
+/// on the house.
+struct SecondRound {
+    let telemea: ExpenseItem
+    let lemonade: ExpenseItem
+    let papanasi: ExpenseItem
+
+    /// The round's lines, in the order of the receipt.
+    var items: [ExpenseItem] {
+        [telemea, lemonade, papanasi]
+    }
+}
+
+/// The second round's lines, with the members who had them.
+func secondRound(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(EranosError) -> SecondRound {
+    // The scale reports the weight as a double.
+    let weight = try Quantity(0.35)
+    return SecondRound(
+        telemea: ExpenseItem(
+            name: "Telemea",
+            unitPrice: try eur("42.00"),
+            split: .equal([ana, bob]),
+            quantity: weight,
+            discount: Discount(value: .percentage(try Percentage(parsing: "10")))
+        ),
+        lemonade: ExpenseItem(
+            name: "Lemonade",
+            unitPrice: try eur("3.00"),
+            split: .equal([ana, bob, carol]),
+            quantity: try Quantity(whole: 3),
+            discount: Discount(value: .fixed(try eur("1.00")), scope: .unit)
+        ),
+        papanasi: ExpenseItem(
+            name: "Papanași",
+            unitPrice: try eur("9.00"),
+            split: .equal([carol]),
+            discount: Discount(value: .percentage(try Percentage(parsing: "100")))
+        )
+    )
+}
+
 /// How `expense` would divide if it were added to `group`, computed on a copy loaded from the group's saved form, so
 /// the group itself is unchanged.
 func preview(_ group: ExpenseGroup, _ expense: Expense) throws(EranosError) -> ExpenseShares? {
@@ -71,6 +127,50 @@ func preview(_ group: ExpenseGroup, _ expense: Expense) throws(EranosError) -> E
 /// What `member` consumed of the expense that `shares` divides.
 func consumed(_ shares: ExpenseShares?, _ member: Member.ID) -> Money? {
     shares?.members.first { share in share.member == member }?.share
+}
+
+/// Section 4: the second round's lines, each with its total before the discount, the discount, and its line total, and a
+/// discount refused for being larger than its line.
+func weighedLinesAndDiscounts(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(EranosError) {
+    section("4. Weighed lines and discounts")
+    let round = try secondRound(ana, bob, carol)
+    printTable(
+        try round.items.map { item throws(EranosError) in
+            DiscountRow(
+                name: item.name,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                lineTotalBeforeDiscount: try item.lineTotalBeforeDiscount(),
+                discountAmount: try item.discountAmount(),
+                lineTotal: try item.lineTotal()
+            )
+        },
+        numbersFrom: 1
+    )
+    let telemea = round.telemea
+    let before = try telemea.lineTotalBeforeDiscount()
+    let (nine, ten) = (try eur("9.00"), try eur("10.00"))
+    let refused = ExpenseItem(name: "Papanași", unitPrice: nine, split: .equal([carol]), discount: Discount(value: .fixed(ten)))
+    do {
+        _ = try refused.lineTotal()
+        preconditionFailure("the discount must be refused")
+    } catch {
+        print("""
+            The scale reports \(telemea.quantity) kg as a double just below it; the quantity reads its shortest
+            form, \(telemea.quantity), so the telemea costs exactly \(before) before its discount. Taking \(ten)
+            off a \(nine) line is refused when the item is built:
+              error: \(error.detail)
+            """)
+    }
+
+    // 10 % of 14.70 is 1.47; 1.00 off each of three lemonades is 3.00; the papanași on the house leave a free line.
+    try expect("14.70", before)
+    try expect("1.47", telemea.discountAmount())
+    try expect("13.23", telemea.lineTotal())
+    try expect("3.00", round.lemonade.discountAmount())
+    try expect("6.00", round.lemonade.lineTotal())
+    try expect("9.00", round.papanasi.discountAmount())
+    try expect("0.00", round.papanasi.lineTotal())
 }
 
 func main() throws(EranosError) {
@@ -159,6 +259,8 @@ func main() throws(EranosError) {
               error: \(error.detail)
             """)
     }
+
+    try weighedLinesAndDiscounts(ana, bob, carol)
 
     // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to each;
     // an equal one 1.80 to everyone.

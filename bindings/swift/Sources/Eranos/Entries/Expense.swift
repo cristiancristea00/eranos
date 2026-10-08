@@ -235,16 +235,27 @@ public struct ExpenseItem: Hashable, Sendable {
     /// How many units: ``Quantity/one`` unless given another.
     public var quantity: Quantity
 
+    /// The discount off the line or off each unit: none, a line at full price, unless given one.
+    public var discount: Discount?
+
     var generated: EranosGenerated.ExpenseItem {
-        .init(name: name, unitPrice: unitPrice.generated, split: split.generated, quantity: quantity.tenThousandths)
+        .init(
+            name: name,
+            unitPrice: unitPrice.generated,
+            split: split.generated,
+            quantity: quantity.tenThousandths,
+            discount: discount?.generated
+        )
     }
 
-    /// A line of `quantity` units of `name` at `unitPrice`, which `split` divides.
-    public init(name: String, unitPrice: Money, split: Split, quantity: Quantity = .one) {
+    /// A line of `quantity` units of `name` at `unitPrice`, which `split` divides, with `discount`
+    /// off the line or off each unit.
+    public init(name: String, unitPrice: Money, split: Split, quantity: Quantity = .one, discount: Discount? = nil) {
         self.name = name
         self.unitPrice = unitPrice
         self.split = split
         self.quantity = quantity
+        self.discount = discount
     }
 
     init(_ item: EranosGenerated.ExpenseItem) {
@@ -252,25 +263,135 @@ public struct ExpenseItem: Hashable, Sendable {
             name: item.name,
             unitPrice: Money(item.unitPrice),
             split: Split(item.split),
-            quantity: Quantity(known: item.quantity)
+            quantity: Quantity(known: item.quantity),
+            discount: item.discount.map(Discount.init)
         )
     }
 
+    /// The line's total before its discount, as the library computes it: the unit price times the
+    /// quantity, rounded half away from zero to the currency's minor unit, so 0.335 at 1.00 EUR is
+    /// 0.34 EUR, and a product below half a minor unit is 0.00 EUR.
+    ///
+    /// - Throws: As ``lineTotal()`` does.
+    public func lineTotalBeforeDiscount() throws(EranosError) -> Money {
+        let total = try converting { try EranosGenerated.expenseItemLineTotalBeforeDiscount(item: generated) }
+        return Money(total)
+    }
+
+    /// What the discount takes off the line, as the library computes it: the line's total before
+    /// the discount minus its line total, 0.00 EUR for a line without a discount.
+    ///
+    /// - Throws: As ``lineTotal()`` does.
+    public func discountAmount() throws(EranosError) -> Money {
+        let amount = try converting { try EranosGenerated.expenseItemDiscountAmount(item: generated) }
+        return Money(amount)
+    }
+
     /// The line's total, as the library computes it: the unit price times the quantity, rounded
-    /// half away from zero to the currency's minor unit, so 0.335 at 1.00 EUR is 0.34 EUR, and a
-    /// product below half a minor unit is a free line, 0.00 EUR.
+    /// half away from zero to the currency's minor unit, less the discount, so 0.335 at 1.00 EUR is
+    /// 0.34 EUR. A product below half a minor unit, or a discount of the whole price, makes a free
+    /// line, 0.00 EUR.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for a member whose identifier is not one,
-    ///   ``EranosError/money(_:detail:)`` with ``MoneyFailure/unknownCurrency`` for a unit price
-    ///   whose currency details are not the library's for its code, and the failures of an item
-    ///   that does not build: ``EranosError/expense(_:detail:)`` with
+    ///   ``EranosError/money(_:detail:)`` with ``MoneyFailure/unknownCurrency`` for a unit price or
+    ///   a fixed discount whose currency details are not the library's for its code, and the
+    ///   failures of an item that does not build: ``EranosError/expense(_:detail:)`` with
     ///   ``ExpenseFailure/emptyItemName`` for a blank name, ``ExpenseFailure/nonPositiveAmount``
-    ///   for a unit price that is not positive, those of a split that does not divide the line
-    ///   total, among them ``ExpenseFailure/amountsDoNotAddUp(expected:actual:)``, and
-    ///   ``ExpenseFailure/overflow`` for a line total out of range.
+    ///   for a unit price that is not positive, ``ExpenseFailure/currencyMismatch(expected:found:)``
+    ///   for a fixed discount in another currency, ``ExpenseFailure/negativeDiscount`` for a fixed
+    ///   discount below zero, ``ExpenseFailure/discountAboveHundredPercent`` for a percentage above
+    ///   100 %, ``ExpenseFailure/discountAbovePrice`` for a discount larger than the price it
+    ///   reduces, those of a split that does not divide the line total, among them
+    ///   ``ExpenseFailure/amountsDoNotAddUp(expected:actual:)``, and ``ExpenseFailure/overflow`` for
+    ///   a line total out of range.
     public func lineTotal() throws(EranosError) -> Money {
         let total = try converting { try EranosGenerated.expenseItemLineTotal(item: generated) }
         return Money(total)
+    }
+}
+
+/// A discount off a line of an itemised bill: a percentage or a fixed amount, taken off the line
+/// as a whole or off the price of each unit.
+///
+/// Off the line, a percentage is taken of the line's total before the discount and rounded half
+/// away from zero to the minor unit. Off each unit, a percentage of the unit price is rounded to
+/// the minor unit first, and the reduced price is then multiplied by the quantity, so three units
+/// at 3.33 EUR with 50 % off cost 4.98 EUR with the discount off each unit and 4.99 EUR with it
+/// off the line. A discount of the whole price, 100 % or a fixed amount equal to what it reduces,
+/// makes a free line; a larger one is refused when the item is built.
+public struct Discount: Hashable, Sendable {
+    /// How the discount is expressed.
+    public var value: DiscountValue
+
+    /// What the discount is taken off: ``DiscountScope/line`` unless given another.
+    public var scope: DiscountScope
+
+    var generated: EranosGenerated.Discount {
+        .init(value: value.generated, scope: scope.generated)
+    }
+
+    /// A discount of `value`, taken off `scope`, which is the line as a whole unless given.
+    public init(value: DiscountValue, scope: DiscountScope = .line) {
+        self.value = value
+        self.scope = scope
+    }
+
+    init(_ discount: EranosGenerated.Discount) {
+        self.init(value: DiscountValue(discount.value), scope: DiscountScope(discount.scope))
+    }
+}
+
+/// How a discount is expressed.
+public enum DiscountValue: Hashable, Sendable {
+    /// A percentage of what the discount reduces, at most 100 %.
+    case percentage(Percentage)
+
+    /// A fixed amount in the item's currency, at most what the discount reduces.
+    case fixed(Money)
+
+    var generated: EranosGenerated.DiscountValue {
+        switch self {
+        case let .percentage(percentage):
+            .percentage(basisPoints: percentage.basisPoints)
+        case let .fixed(amount):
+            .fixed(amount: amount.generated)
+        }
+    }
+
+    init(_ value: EranosGenerated.DiscountValue) {
+        switch value {
+        case let .percentage(basisPoints):
+            self = .percentage(Percentage(known: basisPoints))
+        case let .fixed(amount):
+            self = .fixed(Money(amount))
+        }
+    }
+}
+
+/// What a discount is taken off.
+public enum DiscountScope: Hashable, Sendable, CaseIterable {
+    /// The line's total, the unit price times the quantity.
+    case line
+
+    /// The price of each unit, before it is multiplied by the quantity.
+    case unit
+
+    var generated: EranosGenerated.DiscountScope {
+        switch self {
+        case .line:
+            .line
+        case .unit:
+            .unit
+        }
+    }
+
+    init(_ scope: EranosGenerated.DiscountScope) {
+        switch scope {
+        case .line:
+            self = .line
+        case .unit:
+            self = .unit
+        }
     }
 }
 

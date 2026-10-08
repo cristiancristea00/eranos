@@ -661,6 +661,12 @@ public abstract sealed class EranosException extends Exception
                     new ExpenseFailure.ItemsDoNotAddUp(
                             eranos.Money.converted(itemsDoNotAddUp.expected()),
                             eranos.Money.converted(itemsDoNotAddUp.actual()));
+            case eranos.internal.ExpenseFailure.NegativeDiscount _ ->
+                    new ExpenseFailure.NegativeDiscount();
+            case eranos.internal.ExpenseFailure.DiscountAboveHundredPercent _ ->
+                    new ExpenseFailure.DiscountAboveHundredPercent();
+            case eranos.internal.ExpenseFailure.DiscountAbovePrice _ ->
+                    new ExpenseFailure.DiscountAbovePrice();
             case eranos.internal.ExpenseFailure.NegativeTip _ -> new ExpenseFailure.NegativeTip();
             case eranos.internal.ExpenseFailure.Overflow _ -> new ExpenseFailure.Overflow();
         };

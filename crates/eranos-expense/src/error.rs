@@ -65,6 +65,16 @@ pub enum ExpenseError {
         /// The sum of the item line totals.
         actual: Money,
     },
+    /// A fixed discount below zero.
+    #[error("a discount cannot be negative")]
+    NegativeDiscount,
+    /// A percentage discount above 100 %.
+    #[error("a discount cannot be more than 100%")]
+    DiscountAboveHundredPercent,
+    /// A fixed discount larger than what it reduces: the line total before
+    /// the discount, or the unit price for a discount off each unit.
+    #[error("the discount is larger than the price it reduces")]
+    DiscountAbovePrice,
     /// A fixed tip below zero.
     #[error("a tip cannot be negative")]
     NegativeTip,
@@ -109,6 +119,15 @@ pub trait FromExpenseError: Sized {
     /// The value for [`ExpenseError::ItemsDoNotAddUp`].
     fn items_do_not_add_up(expected: Money, actual: Money, message: String) -> Self;
 
+    /// The value for [`ExpenseError::NegativeDiscount`].
+    fn negative_discount(message: String) -> Self;
+
+    /// The value for [`ExpenseError::DiscountAboveHundredPercent`].
+    fn discount_above_hundred_percent(message: String) -> Self;
+
+    /// The value for [`ExpenseError::DiscountAbovePrice`].
+    fn discount_above_price(message: String) -> Self;
+
     /// The value for [`ExpenseError::NegativeTip`].
     fn negative_tip(message: String) -> Self;
 
@@ -140,6 +159,11 @@ pub trait FromExpenseError: Sized {
             ExpenseError::ItemsDoNotAddUp { expected, actual } => {
                 Self::items_do_not_add_up(*expected, *actual, message)
             }
+            ExpenseError::NegativeDiscount => Self::negative_discount(message),
+            ExpenseError::DiscountAboveHundredPercent => {
+                Self::discount_above_hundred_percent(message)
+            }
+            ExpenseError::DiscountAbovePrice => Self::discount_above_price(message),
             ExpenseError::NegativeTip => Self::negative_tip(message),
             ExpenseError::Overflow => Self::overflow(message),
         }

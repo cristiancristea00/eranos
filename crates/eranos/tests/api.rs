@@ -35,6 +35,9 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::error::SettlementError>();
         assert_send_and_sync::<eranos::error::TransferError>();
         // Expenses and how they divide.
+        assert_send_and_sync::<eranos::expense::Discount>();
+        assert_send_and_sync::<eranos::expense::DiscountScope>();
+        assert_send_and_sync::<eranos::expense::DiscountValue>();
         assert_send_and_sync::<eranos::expense::Expense>();
         assert_send_and_sync::<eranos::expense::ExpenseBuilder>();
         assert_send_and_sync::<eranos::expense::ExpenseSplit>();

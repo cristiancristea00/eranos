@@ -155,9 +155,62 @@ type Cost = LocalCost | ConvertedCost
 
 
 @final
+@dataclasses.dataclass(frozen=True, slots=True)
+class PercentageDiscount:
+    """A discount of a percentage of what it reduces, at most 100 %."""
+
+    percentage: Percentage
+    """The percentage."""
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True)
+class FixedDiscount:
+    """A discount of a fixed amount, in the item's currency, at most what it reduces."""
+
+    amount: Money
+    """The amount."""
+
+
+type DiscountValue = PercentageDiscount | FixedDiscount
+"""How a discount is expressed: a percentage of what it reduces, or a fixed amount."""
+
+
+@final
+class DiscountScope(enum.Enum):
+    """What a discount is taken off."""
+
+    LINE = enum.auto()
+    """The line total, the unit price times the quantity."""
+
+    UNIT = enum.auto()
+    """The price of each unit, before it is multiplied by the quantity."""
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True)
+class Discount:
+    """
+    A discount off a line of an itemised bill: what it is worth and what it is taken off.
+
+    Off the line, a percentage is taken of the line total before the discount and rounded half away from zero to the minor
+    unit. Off each unit, a percentage of the unit price is rounded to the minor unit first, and the reduced price is then
+    multiplied by the quantity, so three units at 3.33 with 50 % off cost 4.98 with the discount off each unit and 4.99 with
+    it off the line. A discount of the whole price, 100 % or a fixed amount equal to what it reduces, makes a free line,
+    whose total is zero.
+    """
+
+    value: DiscountValue
+    """How the discount is expressed."""
+
+    scope: DiscountScope = DiscountScope.LINE
+    """What the discount is taken off, the line total unless given."""
+
+
+@final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ExpenseItem:
-    """A line of an itemised bill: quantity units of name at unit_price, which split divides."""
+    """A line of an itemised bill: quantity units of name at unit_price, less its discount, which split divides."""
 
     name: str
     """What was bought."""
@@ -171,13 +224,48 @@ class ExpenseItem:
     quantity: Quantity = Quantity.ONE
     """How many units, ``Quantity.ONE`` unless given; a fractional quantity, such as 0.452 kg, has at most four decimal places."""
 
+    discount: Discount | None = None
+    """The discount off the line or off each unit, or none for a line at full price."""
+
+    def line_total_before_discount(self) -> Money:
+        """
+        Work out the line's total before its discount as the library does: the unit price times the quantity, rounded half away from zero.
+
+        A line whose product is below half a minor unit totals zero. The library refuses an item it cannot hold as
+        ``line_total`` does.
+
+        Returns:
+            The line total before the discount, in the unit price's currency.
+
+        """
+        with library_errors():
+            return money_of(generated.expense_item_line_total_before_discount(generated_item(self)))
+
+    def discount_amount(self) -> Money:
+        """
+        Work out what the discount takes off the line as the library does: the line total before the discount minus the line total.
+
+        A line without a discount has a discount of zero. The library refuses an item it cannot hold as ``line_total`` does.
+
+        Returns:
+            The discount, in the unit price's currency.
+
+        """
+        with library_errors():
+            return money_of(generated.expense_item_discount_amount(generated_item(self)))
+
     def line_total(self) -> Money:
         """
-        Work out the line's total as the library does: the unit price times the quantity, rounded half away from zero.
+        Work out the line's total as the library does: the unit price times the quantity, rounded half away from zero, less the discount.
 
-        A line whose product is below half a minor unit totals zero. The library refuses an item it cannot hold, with a blank
-        name, a unit price that is not positive, a split that does not divide the line total, or a line total out of range,
-        with an ``ExpenseError``, and one that names a member by text that is not an identifier with an ``IdError``.
+        A line whose product is below half a minor unit, or whose discount takes the whole price, totals zero. The library
+        refuses an item it cannot hold, with a blank name, a unit price that is not positive, a split that does not divide the
+        line total, a line total out of range, or a discount the line cannot take, with an ``ExpenseError``: a negative fixed
+        discount with ``ExpenseError.NegativeDiscount``, a percentage above 100 % with
+        ``ExpenseError.DiscountAboveHundredPercent``, a fixed discount larger than what it reduces with
+        ``ExpenseError.DiscountAbovePrice``, and one in another currency than the unit price's with
+        ``ExpenseError.CurrencyMismatch``. It refuses one that names a member by text that is not an identifier with an
+        ``IdError``.
 
         Returns:
             The line total, in the unit price's currency.
@@ -719,6 +807,48 @@ def cost_of(value: generated.Cost) -> Cost:
     return _COSTS[type(value)](value)
 
 
+def generated_discount(discount: Discount) -> generated.Discount:
+    """
+    Convert discount into the discount the generated module holds.
+
+    Args:
+        discount: The discount.
+
+    Returns:
+        The generated discount.
+
+    """
+    match discount.value:
+        case PercentageDiscount(percentage=percentage):
+            value = variant(generated.DiscountValue, generated.DiscountValue.PERCENTAGE(percentage.basis_points))
+        case FixedDiscount(amount=amount):
+            value = variant(generated.DiscountValue, generated.DiscountValue.FIXED(generated_money(amount)))
+        case _:
+            assert_never(discount.value)
+    return generated.Discount(value=value, scope=generated.DiscountScope[discount.scope.name])
+
+
+_DISCOUNT_VALUES: dict[type[object], Callable[[Any], DiscountValue]] = {
+    generated.DiscountValue.PERCENTAGE: lambda value: PercentageDiscount(Percentage(value.basis_points)),
+    generated.DiscountValue.FIXED: lambda value: FixedDiscount(money_of(value.amount)),
+}
+"""The discount's value of each case of the generated discount's value, by its class."""
+
+
+def discount_of(value: generated.Discount) -> Discount:
+    """
+    Convert the discount the generated module holds as value.
+
+    Args:
+        value: The generated discount.
+
+    Returns:
+        The discount.
+
+    """
+    return Discount(_DISCOUNT_VALUES[type(value.value)](value.value), DiscountScope[value.scope.name])
+
+
 def generated_item(item: ExpenseItem) -> generated.ExpenseItem:
     """
     Convert item into the item the generated module holds.
@@ -731,7 +861,11 @@ def generated_item(item: ExpenseItem) -> generated.ExpenseItem:
 
     """
     return generated.ExpenseItem(
-        name=item.name, unit_price=generated_money(item.unit_price), split=generated_split(item.split), quantity=item.quantity.ten_thousandths
+        name=item.name,
+        unit_price=generated_money(item.unit_price),
+        split=generated_split(item.split),
+        quantity=item.quantity.ten_thousandths,
+        discount=None if item.discount is None else generated_discount(item.discount),
     )
 
 
@@ -746,7 +880,13 @@ def item_of(value: generated.ExpenseItem) -> ExpenseItem:
         The item.
 
     """
-    return ExpenseItem(name=value.name, unit_price=money_of(value.unit_price), split=split_of(value.split), quantity=Quantity(value.quantity))
+    return ExpenseItem(
+        name=value.name,
+        unit_price=money_of(value.unit_price),
+        split=split_of(value.split),
+        quantity=Quantity(value.quantity),
+        discount=None if value.discount is None else discount_of(value.discount),
+    )
 
 
 def generated_expense_split(split: ExpenseSplit) -> generated.ExpenseSplit:

@@ -122,6 +122,18 @@ public sealed interface ExpenseFailure {
         }
     }
 
+    /** A fixed discount below zero. */
+    record NegativeDiscount() implements ExpenseFailure {}
+
+    /** A percentage discount above 100 %. */
+    record DiscountAboveHundredPercent() implements ExpenseFailure {}
+
+    /**
+     * A fixed discount larger than what it reduces: the line total before the discount, or the unit
+     * price for a discount off each unit.
+     */
+    record DiscountAbovePrice() implements ExpenseFailure {}
+
     /** A fixed tip below zero. */
     record NegativeTip() implements ExpenseFailure {}
 

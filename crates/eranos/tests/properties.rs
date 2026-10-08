@@ -1,5 +1,6 @@
 //! Properties of random groups through the public API: every split method,
-//! itemised bills with whole and fractional quantities, both tip
+//! itemised bills with whole and fractional quantities and discounts off
+//! the line or off each unit, both tip
 //! distributions, several payers, foreign currencies, and transfers. Whatever the entries, the books must balance
 //! (paid, consumed, and spent agree; balances sum to zero; categories add up),
 //! every strategy's plan must clear every balance, the fewest-payments plan
@@ -17,9 +18,9 @@
 
 use eranos::cooperative::block_on;
 use eranos::{
-    CalendarDate, CategoryTotal, Cost, CurrencyCode, CurrencyRate, ExchangeRate, Expense,
-    ExpenseGroup, ExpenseId, ExpenseItem, Member, MemberAmount, MemberId, MemberParts,
-    MemberPercentage, Money, Parts, Percentage, Quantity, SettlementStrategy, Split,
+    CalendarDate, CategoryTotal, Cost, CurrencyCode, CurrencyRate, Discount, DiscountScope,
+    ExchangeRate, Expense, ExpenseGroup, ExpenseId, ExpenseItem, Member, MemberAmount, MemberId,
+    MemberParts, MemberPercentage, Money, Parts, Percentage, Quantity, SettlementStrategy, Split,
     TipDistribution, TipRule, Transfer, TransferId, error::ExpenseGroupError,
 };
 use proptest::prelude::*;
@@ -150,12 +151,32 @@ impl ForeignRecipe {
 }
 
 /// A line of an itemised bill: its unit price in minor units, its
-/// quantity in ten-thousandths, and how it is divided.
+/// quantity in ten-thousandths, how it is divided, and its discount.
 #[derive(Debug, Clone)]
 struct ExpenseItemRecipe {
     price: i64,
     split: SplitRecipe,
     quantity: u64,
+    discount: Option<DiscountRecipe>,
+}
+
+/// A discount of a percentage in basis points, off each unit or off the
+/// line.
+#[derive(Debug, Clone, Copy)]
+struct DiscountRecipe {
+    basis_points: u32,
+    unit: bool,
+}
+
+impl DiscountRecipe {
+    const fn discount(self) -> Discount {
+        let scope = if self.unit {
+            DiscountScope::Unit
+        } else {
+            DiscountScope::Line
+        };
+        Discount::percentage(Percentage::from_basis_points(self.basis_points)).scoped(scope)
+    }
 }
 
 /// A tip: fixed in minor units or a percentage in basis points, and shared
@@ -196,11 +217,20 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
                         5_000_u64..40_000,
                     ],
                     split_recipe(),
+                    // Below 50 %, which leaves more than half a price less
+                    // half a cent, so every line still costs a cent.
+                    proptest::option::of(
+                        (0_u32..5_000, any::<bool>())
+                            .prop_map(|(basis_points, unit)| DiscountRecipe { basis_points, unit }),
+                    ),
                 )
-                    .prop_map(|(price, quantity, split)| ExpenseItemRecipe {
-                        price,
-                        split,
-                        quantity,
+                    .prop_map(|(price, quantity, split, discount)| {
+                        ExpenseItemRecipe {
+                            price,
+                            split,
+                            quantity,
+                            discount,
+                        }
                     }),
                 1..4,
             ),
@@ -264,6 +294,7 @@ impl ExpenseRecipe {
                     // rounds, so it is read from an item built first.
                     let priced = ExpenseItem::builder("Item", money(item.price), [members[0]])
                         .quantity(Quantity::from_ten_thousandths(item.quantity).unwrap())
+                        .discount(item.discount.map(DiscountRecipe::discount))
                         .build()
                         .unwrap();
                     let line = priced.line_total();

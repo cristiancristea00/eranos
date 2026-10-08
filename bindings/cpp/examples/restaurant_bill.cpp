@@ -1,6 +1,6 @@
 // An itemised restaurant bill: every line is split among the people who had it, quantities multiply the unit price, and
-// the tip is shared either in proportion to what each person ordered or equally. The port of the Rust example
-// `restaurant_bill`, which prints the same report.
+// the tip is shared either in proportion to what each person ordered or equally; then a line weighed on a scale, and
+// discounts off the line and off each unit. The port of the Rust example `restaurant_bill`, which prints the same report.
 
 #include "eranos.hpp"
 #include "report.hpp"
@@ -39,6 +39,32 @@ struct LineRow final {
     ///
     /// @return The cells
     [[nodiscard]] inline constexpr Cells<5> cells() const noexcept { return {name, participants, quantity, unitPrice, lineTotal}; }
+};
+
+/// A row of the table of discounts: a line, its quantity, its unit price, and its total before and after its discount.
+struct DiscountRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static inline constexpr Cells<6> HEADERS{"Item", "Quantity", "Unit price", "Before discount", "Discount", "Line total"};
+
+    /// What was ordered.
+    std::string name;
+    /// How many were ordered, or how much was weighed.
+    std::string quantity;
+    /// The price of one.
+    std::string unitPrice;
+    /// The quantity times the unit price.
+    std::string lineTotalBeforeDiscount;
+    /// What the discount takes off.
+    std::string discountAmount;
+    /// What the line comes to.
+    std::string lineTotal;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] inline constexpr Cells<6> cells() const noexcept {
+        return {name, quantity, unitPrice, lineTotalBeforeDiscount, discountAmount, lineTotal};
+    }
 };
 
 /// A row of the table of tips: what a friend ordered, and what they pay with the tip shared by consumption and equally.
@@ -85,6 +111,71 @@ struct TipRow final {
         line("Papanași", "9.00", PartsSplit{{MemberParts(ana, Parts{100}), MemberParts(carol, Parts{200})}}, 1),
         line("Lemonade", "3.00", EqualSplit{{ana, bob, carol}}, 3),
     };
+}
+
+/// The second round: telemea weighed on a scale with 10 % off the line, three lemonades with 1.00 off each, and papanași on the house.
+struct SecondRound final {
+    /// The telemea, weighed on a scale.
+    ExpenseItem telemea;
+    /// The lemonades.
+    ExpenseItem lemonade;
+    /// The papanași, on the house.
+    ExpenseItem papanasi;
+};
+
+/// The second round, shared by @p ana, @p bob, and @p carol.
+[[nodiscard]] SecondRound secondRound(MemberId const &ana, MemberId const &bob, MemberId const &carol) noexcept {
+    ExpenseItem telemea("Telemea", euros("42.00"), EqualSplit{{ana, bob}});
+    // The scale reports the weight as a double.
+    telemea.quantity = must(Quantity::fromDouble(0.35));
+    telemea.discount = Discount(PercentageDiscountValue{must(Percentage::parse("10"))});
+    ExpenseItem lemonade("Lemonade", euros("3.00"), EqualSplit{{ana, bob, carol}});
+    lemonade.quantity = must(Quantity::whole(3));
+    Discount oneOffEach(FixedDiscountValue{euros("1.00")});
+    oneOffEach.scope = DiscountScope::UNIT;
+    lemonade.discount = oneOffEach;
+    ExpenseItem papanasi("Papanași", euros("9.00"), EqualSplit{{carol}});
+    papanasi.discount = Discount(PercentageDiscountValue{must(Percentage::parse("100"))});
+    return {.telemea = std::move(telemea), .lemonade = std::move(lemonade), .papanasi = std::move(papanasi)};
+}
+
+/// The row of the table of discounts for @p item.
+[[nodiscard]] DiscountRow discountRow(ExpenseItem const &item) noexcept {
+    return {
+        .name = item.name,
+        .quantity = item.quantity.toString(),
+        .unitPrice = item.unitPrice.toString(),
+        .lineTotalBeforeDiscount = must(lineTotalBeforeDiscount(item)).toString(),
+        .discountAmount = must(discountAmount(item)).toString(),
+        .lineTotal = must(lineTotal(item)).toString(),
+    };
+}
+
+/// Section 4: prints the second round's lines, each with its total before the discount, the discount, and its line total, and a discount refused
+/// for being larger than its line.
+void printWeighedLinesAndDiscounts(MemberId const &ana, MemberId const &bob, MemberId const &carol) noexcept {
+    section("4. Weighed lines and discounts");
+    auto const round = secondRound(ana, bob, carol);
+    printTable(std::vector<DiscountRow>{discountRow(round.telemea), discountRow(round.lemonade), discountRow(round.papanasi)}, 1);
+    ExpenseItem refused("Papanași", euros("9.00"), EqualSplit{{carol}});
+    refused.discount = Discount(FixedDiscountValue{euros("10.00")});
+    auto const error = refusal(lineTotal(refused));
+    check(error.has_value(), "the discount must be refused");
+    std::println("The scale reports {0} kg as a double just below it; the quantity reads its shortest\n"
+                 "form, {0}, so the telemea costs exactly {1} before its discount. Taking {2}\n"
+                 "off a {3} line is refused when the item is built:\n"
+                 "  error: {4}",
+                 round.telemea.quantity.toString(), must(lineTotalBeforeDiscount(round.telemea)).toString(), euros("10.00").toString(),
+                 euros("9.00").toString(), message(error));
+
+    // 10 % of 14.70 is 1.47; 1.00 off each of three lemonades is 3.00; the papanași on the house leave a free line.
+    check(euros("14.70") == lineTotalBeforeDiscount(round.telemea), "the telemea costs 14.70 EUR before its discount");
+    check(euros("1.47") == discountAmount(round.telemea), "10 % of it is 1.47 EUR");
+    check(euros("13.23") == lineTotal(round.telemea), "which leaves 13.23 EUR");
+    check(euros("3.00") == discountAmount(round.lemonade), "1.00 EUR off each of three lemonades is 3.00 EUR");
+    check(euros("6.00") == lineTotal(round.lemonade), "which leaves 6.00 EUR");
+    check(euros("9.00") == discountAmount(round.papanasi), "the papanași on the house take off all 9.00 EUR");
+    check(euros("0.00") == lineTotal(round.papanasi), "which leaves a free line");
 }
 
 /// How @p expense would divide if it were added to @p group, computed on a copy loaded from the group's saved form, so the
@@ -170,6 +261,8 @@ void run() noexcept {
     std::println("An amount of 55.00 EUR with these lines is refused when the expense is built:\n"
                  "  error: {}",
                  message(mismatch));
+
+    printWeighedLinesAndDiscounts(ana, bob, carol);
 
     // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to each;
     // an equal one 1.80 to everyone.

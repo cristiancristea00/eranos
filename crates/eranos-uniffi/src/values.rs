@@ -488,22 +488,56 @@ pub(crate) fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
     eranos_bindings::expense_total(expense)
 }
 
+/// The line total of `item` before its discount, as the library computes
+/// it, so every binding shows the same one.
+///
+/// It is the unit price times the quantity, rounded half away from zero to
+/// the currency's minor unit: zero when the product is below half a minor
+/// unit.
+///
+/// # Errors
+///
+/// As for `expense_item_line_total`.
+#[uniffi::export]
+pub(crate) fn expense_item_line_total_before_discount(
+    item: &ExpenseItem,
+) -> Result<Money, EranosError> {
+    eranos_bindings::expense_item_line_total_before_discount(item)
+}
+
+/// What the discount of `item` takes off its line, as the library computes
+/// it: the line total before the discount minus the line total, zero
+/// without a discount.
+///
+/// # Errors
+///
+/// As for `expense_item_line_total`.
+#[uniffi::export]
+pub(crate) fn expense_item_discount_amount(item: &ExpenseItem) -> Result<Money, EranosError> {
+    eranos_bindings::expense_item_discount_amount(item)
+}
+
 /// The line total of `item`, as the library computes it, so every binding
 /// shows the same line total.
 ///
 /// It is the unit price times the quantity, rounded half away from zero to
-/// the currency's minor unit: zero for a free line, whose product is below
-/// half a minor unit.
+/// the currency's minor unit, less the discount: zero for a free line,
+/// whose product is below half a minor unit or whose discount takes the
+/// whole price.
 ///
 /// # Errors
 ///
 /// The errors of the item's conversion, among them
 /// `MoneyFailure::UnknownCurrency` for an amount whose currency details are
-/// not the library's for its code and `MoneyFailure::InvalidQuantity` for a
-/// quantity that is not positive, and those of the library's checks of an
-/// item, among them `ExpenseFailure::AmountsDoNotAddUp` for a split of
-/// amounts that does not add up to the line total, a free line's included,
-/// and `ExpenseFailure::Overflow` for a line total out of range.
+/// not the library's for its code, `MoneyFailure::InvalidQuantity` for a
+/// quantity that is not positive, and `MoneyFailure::InvalidPercentage` for
+/// a percentage discount below zero, and those of the library's checks of an
+/// item, among them `ExpenseFailure::NegativeDiscount`,
+/// `ExpenseFailure::DiscountAboveHundredPercent`, and
+/// `ExpenseFailure::DiscountAbovePrice` for a discount the line cannot
+/// take, `ExpenseFailure::AmountsDoNotAddUp` for a split of amounts that
+/// does not add up to the line total, a free line's included, and
+/// `ExpenseFailure::Overflow` for a line total out of range.
 #[uniffi::export]
 pub(crate) fn expense_item_line_total(item: &ExpenseItem) -> Result<Money, EranosError> {
     eranos_bindings::expense_item_line_total(item)

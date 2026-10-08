@@ -55,7 +55,8 @@
 //! decimal form half away from zero: 1.005 is 1.01 EUR, though the double
 //! nearest 1.005 lies below it. An item's line total is its unit price
 //! times its [`Quantity`], which has up to four decimal places, rounded
-//! half away from zero. Every division, whether a [`Split`] among members, a
+//! half away from zero, less its [`Discount`], whose percentage rounds the
+//! same way. Every division, whether a [`Split`] among members, a
 //! [`TipRule`], an [`ExpenseItem`] of an itemised bill, or a conversion at an
 //! [`ExchangeRate`], hands out its leftover minor units by the
 //! largest-remainder method, so the parts always add up to the whole. Ties
@@ -209,8 +210,9 @@ pub mod expense {
 
     #[doc(inline)]
     pub use eranos_expense::{
-        Expense, ExpenseBuilder, ExpenseItem, ExpenseItemBuilder, ExpenseSplit, MemberAmount,
-        MemberParts, MemberPercentage, Split, TipDistribution, TipRule, TipValue,
+        Discount, DiscountScope, DiscountValue, Expense, ExpenseBuilder, ExpenseItem,
+        ExpenseItemBuilder, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split,
+        TipDistribution, TipRule, TipValue,
     };
 }
 pub mod expense_group {
@@ -305,8 +307,8 @@ pub use calendar::{CalendarDate, TimeOfDay};
 pub use category::Category;
 #[doc(no_inline)]
 pub use expense::{
-    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split,
-    TipDistribution, TipRule, TipValue,
+    Discount, DiscountScope, DiscountValue, Expense, ExpenseItem, ExpenseSplit, MemberAmount,
+    MemberParts, MemberPercentage, Split, TipDistribution, TipRule, TipValue,
 };
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
