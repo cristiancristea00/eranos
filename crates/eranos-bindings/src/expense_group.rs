@@ -219,9 +219,9 @@ impl ExpenseGroupHandle {
 }
 
 /// The asynchronous currency change of the group `shared` holds: the change
-/// to `currency` at `rates` is checked before the exclusive lock is taken,
-/// and yields while it holds it, so a cancellation stops it at its next
-/// yield, the group unchanged.
+/// to `currency` at `rates` is checked under the exclusive lock, as the
+/// synchronous form checks it, and the change yields while it holds the
+/// lock, so a cancellation stops it at its next yield, the group unchanged.
 ///
 /// # Errors
 ///
@@ -232,8 +232,8 @@ pub(crate) async fn change_currency(
     rates: Vec<CurrencyRate>,
     cancellation: Option<Arc<Cancellation>>,
 ) -> Result<(), EranosError> {
-    let change = CurrencyChange::new(&currency, &rates)?;
     let mut group = cancellable(shared.write(), cancellation.clone()).await?;
+    let change = CurrencyChange::new(&currency, &rates)?;
     let changing = group.change_currency_async(change.currency, &change.rates);
     let changed = cancellable(changing, cancellation).await?;
     drop(group);
