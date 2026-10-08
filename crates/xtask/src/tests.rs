@@ -489,7 +489,7 @@ fn every_command_line_runs_what_it_names() {
             run(&words(&["doctor"]), &mut routed),
             doctor::run(&mut called)
         ),
-        (Err(Failure::Doctor(2)), Err(Failure::Doctor(2)))
+        (Err(Failure::Doctor(3)), Err(Failure::Doctor(3)))
     ));
     assert_eq!(routed.steps, called.steps);
     for line in [

@@ -417,11 +417,12 @@ jobs:
           echo "$RUNNER_TEMP/ktlint" >>"$GITHUB_PATH"
       # From the release tags that Brewfile.develop names, each for the
       # release of the crate it serves.
-      - name: Install cargo-ndk, diplomat-tool, and uniffi-bindgen-react-native
+      - name: Install cargo-ndk, diplomat-tool, uniffi-bindgen-react-native, and wasm-bindgen-cli
         run: |
           cargo install --locked --git https://github.com/bbqsrc/cargo-ndk --tag v4.1.2 cargo-ndk
           cargo install --locked --git https://github.com/rust-diplomat/diplomat --tag v0.16.1 diplomat-tool
-          cargo install --locked --git https://github.com/jhugman/uniffi-bindgen-react-native --tag 0.31.0-5 uniffi-bindgen-react-native
+          cargo install --locked --git https://github.com/jhugman/uniffi-bindgen-react-native --tag 0.31.0-6 uniffi-bindgen-react-native
+          cargo install --locked --git https://github.com/wasm-bindgen/wasm-bindgen --tag 0.2.114 wasm-bindgen-cli
       - run: cargo xtask gates
         env:
           JAVA_HOME_21: ${{ steps.jdk-21.outputs.path }}
@@ -489,11 +490,12 @@ jobs:
         run: |
           brew install llvm doxygen ktlint swiftlint
           echo "LLVM_HOME=$(brew --prefix llvm)" >>"$GITHUB_ENV"
-      - name: Install cargo-ndk, diplomat-tool, and uniffi-bindgen-react-native
+      - name: Install cargo-ndk, diplomat-tool, uniffi-bindgen-react-native, and wasm-bindgen-cli
         run: |
           cargo install --locked --git https://github.com/bbqsrc/cargo-ndk --tag v4.1.2 cargo-ndk
           cargo install --locked --git https://github.com/rust-diplomat/diplomat --tag v0.16.1 diplomat-tool
-          cargo install --locked --git https://github.com/jhugman/uniffi-bindgen-react-native --tag 0.31.0-5 uniffi-bindgen-react-native
+          cargo install --locked --git https://github.com/jhugman/uniffi-bindgen-react-native --tag 0.31.0-6 uniffi-bindgen-react-native
+          cargo install --locked --git https://github.com/wasm-bindgen/wasm-bindgen --tag 0.2.114 wasm-bindgen-cli
       - uses: taiki-e/install-action@v2.87.19
         with:
           tool: cargo-llvm-cov@0.9.1

@@ -14,7 +14,7 @@ layer is tested.
 | Kotlin               | `bindings/kotlin`, the Gradle modules `eranos` and `eranos-android` | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen`                  | Android from API level 26, on four ABIs, and the JVM from release 17              |
 | Java                 | `bindings/java`, the JPMS module `eranos`                           | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen-java`             | JDK 25 and later                                                                  |
 | Kotlin Multiplatform | `bindings/kmp`                                                      | `eranos-kmp` on UniFFI 0.29.4, gobley 0.3.7                         | the JVM, Android, and eight Apple targets                                         |
-| TypeScript           | `bindings/typescript`, the npm package `eranos`                     | `eranos-web` on UniFFI 0.31.2, uniffi-bindgen-react-native 0.31.0-5 | browsers, and Node 24 and later                                                   |
+| TypeScript           | `bindings/typescript`, the npm package `eranos`                     | `eranos-web` on UniFFI 0.31.2, uniffi-bindgen-react-native 0.31.0-6 | browsers, and Node 24 and later                                                   |
 | C                    | `bindings/c`, `eranos.h`                                            | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C23                                                                               |
 | C++                  | `bindings/cpp`, `eranos.hpp`                                        | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C++23                                                                             |
 | Python               | `bindings/python`, the package `eranos`                             | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen`                  | Python 3.14 and later                                                             |
@@ -388,10 +388,10 @@ the generated code sits beneath each package's hand-written layer.
 `eranos-web` builds the same glue for browsers and Node. A crate carries
 the derives of one UniFFI release, so it includes the three source files of
 `eranos-uniffi` by path and compiles them against 0.31.2, the release whose
-metadata uniffi-bindgen-react-native 0.31.0-5 reads, with what the
+metadata uniffi-bindgen-react-native 0.31.0-6 reads, with what the
 generator's `wasm2` flavour links: `uniffi-runtime-wasm`, the runtime its
-code calls, and `wasm-bindgen` at 0.2.100, the release of the command-line
-support the generator embeds to write the glue beside the module. On
+code calls, and `wasm-bindgen` at 0.2.114, the release of the command-line
+tool the generator runs to write the glue beside the module. On
 `wasm32-unknown-unknown`, UniFFI's core compiles only with its
 `wasm-unstable-single-threaded` feature, which drops the `Send` and `Sync`
 bounds a target without threads has no use for.

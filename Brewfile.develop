@@ -75,4 +75,10 @@ cargo "diplomat-tool", source: "https://github.com/rust-diplomat/diplomat?tag=v0
 # another runtime. From its release tag, whose lock file `cargo install
 # --locked` reads; the npm package of the same name ships none, and builds
 # the tool on first use.
-cargo "uniffi-bindgen-react-native", source: "https://github.com/jhugman/uniffi-bindgen-react-native?tag=0.31.0-5"
+cargo "uniffi-bindgen-react-native", source: "https://github.com/jhugman/uniffi-bindgen-react-native?tag=0.31.0-6"
+
+# Rewrites the web package's WebAssembly module and writes the glue beside
+# it, run by uniffi-bindgen-react-native. Pinned to the release of the
+# `wasm-bindgen` crate the web crate links: the tool takes a module built
+# against its own release alone.
+cargo "wasm-bindgen-cli", source: "https://github.com/wasm-bindgen/wasm-bindgen?tag=0.2.114"

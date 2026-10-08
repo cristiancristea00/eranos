@@ -25,8 +25,8 @@ and the test suites in [TESTING.md](TESTING.md).
   Node 24, Python 3.14 and uv, LLVM (clang, clang-format, clang-tidy,
   llvm-profdata, and llvm-cov), Doxygen, ktlint, SwiftLint, actionlint,
   zizmor, cargo-deny, the Android command-line tools, cargo-ndk 4.1.2,
-  diplomat-tool 0.16.1, and uniffi-bindgen-react-native 0.31.0-5, the
-  last three built from their release tags. `cargo xtask doctor` prints
+  diplomat-tool 0.16.1, uniffi-bindgen-react-native 0.31.0-6, and
+  wasm-bindgen 0.2.114, the last four built from their release tags. `cargo xtask doctor` prints
   every tool the gates run with the version found, the variables below
   with theirs, and for one that is missing, or a Node other than 24 first
   on `PATH`, the entry of Brewfile.develop that installs it; it fails

@@ -141,11 +141,11 @@ uniffi = { version = "=0.32.2", default-features = false }
 uniffi-bindgen-java = "=0.5.1"
 # The allocator and panic hook that the web bindings' player calls, of the
 # release of uniffi-bindgen-react-native that generates them.
-uniffi-runtime-wasm = "=0.31.0-5"
-# Pinned exactly: uniffi-bindgen-react-native 0.31.0-5 embeds
-# wasm-bindgen-cli-support 0.2.100, which rewrites the module against glue of
-# its own release and refuses a module built with another.
-wasm-bindgen = "=0.2.100"
+uniffi-runtime-wasm = "=0.31.0-6"
+# Pinned exactly: uniffi-bindgen-react-native 0.31.0-6 runs `wasm-bindgen`
+# 0.2.114, which rewrites the module against glue of its own release and
+# refuses a module built with another.
+wasm-bindgen = "=0.2.114"
 # The bridge of the C and C++ bindings, and the runtime its generated code
 # links; diplomat-tool 0.16.1 reads the bridge of this release alone.
 diplomat = "=0.16.1"

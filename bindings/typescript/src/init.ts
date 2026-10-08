@@ -42,7 +42,6 @@ export function init(source: WasmSource): Promise<void> {
  */
 async function load(source: WasmSource): Promise<void> {
     const module = await openWasm(source, { resolveModule: (name: string) => Promise.resolve(imports.get(name)) });
-    // The generated table is read-only, and the player's parameter type is not; the player only reads it.
-    setNativeModule(module.registerSync(PLAYER_DEFINITIONS as unknown as Parameters<typeof module.registerSync>[0]));
+    setNativeModule(module.registerSync(PLAYER_DEFINITIONS));
     bindings.initialize();
 }

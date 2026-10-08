@@ -11,11 +11,15 @@ use crate::tests::Recorder;
 const BREWFILE: &str = include_str!("../../../../Brewfile.develop");
 
 /// What the recorder answers `cargo install --list`, and every other probe,
-/// with: both tools that print no version of their own.
+/// with: the three tools that print no version of their own.
 const INSTALLED_TOOLS: &str = "diplomat-tool v0.16.1 (https://github.com/rust-diplomat/diplomat?tag=v0.16.1#125df445):
     diplomat-tool
-uniffi-bindgen-react-native v0.31.0-5 (https://github.com/jhugman/uniffi-bindgen-react-native?tag=0.31.0-5#0f7fc67e):
+uniffi-bindgen-react-native v0.31.0-6 (https://github.com/jhugman/uniffi-bindgen-react-native?tag=0.31.0-6#3dd1cd13):
     uniffi-bindgen-react-native
+wasm-bindgen-cli v0.2.114 (https://github.com/wasm-bindgen/wasm-bindgen?tag=0.2.114#22cfd556):
+    wasm-bindgen
+    wasm-bindgen-test-runner
+    wasm2es6js
 ";
 
 /// A recorder whose probes find every tool, and whose `node` is Node 24.

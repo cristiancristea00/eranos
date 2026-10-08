@@ -108,7 +108,7 @@ struct Installed {
 /// The tools that cargo installed from the release tags Brewfile.develop
 /// names, and that print no version of their own: `cargo install --list`
 /// names each with its version.
-const INSTALLED: [Installed; 2] = [
+const INSTALLED: [Installed; 3] = [
     Installed {
         entry: "cargo \"diplomat-tool\"",
         name: "diplomat-tool",
@@ -116,6 +116,10 @@ const INSTALLED: [Installed; 2] = [
     Installed {
         entry: "cargo \"uniffi-bindgen-react-native\"",
         name: "uniffi-bindgen-react-native",
+    },
+    Installed {
+        entry: "cargo \"wasm-bindgen-cli\"",
+        name: "wasm-bindgen-cli",
     },
 ];
 
