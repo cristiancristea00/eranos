@@ -676,7 +676,7 @@ pub mod ffi {
                 name: crate::text(name)?,
                 unit_price: unit_price.0.clone(),
                 split: split.0.clone(),
-                quantity: 1,
+                quantity: 10000,
             })))
         }
 
@@ -717,15 +717,31 @@ pub mod ffi {
             self.0.split.clone_from(&split.0);
         }
 
-        /// How many units, from 1.
+        /// How many units, in ten-thousandths: 10 000 for one unit, 4 520 for 0.452.
         #[must_use]
-        pub const fn quantity(&self) -> i32 {
+        pub const fn quantity(&self) -> i64 {
             self.0.quantity
         }
 
-        /// Sets how many units, from 1.
-        pub const fn set_quantity(&mut self, quantity: i32) {
+        /// Sets how many units, in ten-thousandths: 10 000 for one unit, 4 520 for 0.452.
+        pub const fn set_quantity(&mut self, quantity: i64) {
             self.0.quantity = quantity;
+        }
+
+        /// The unit price times the quantity, rounded half away from zero to the currency's minor
+        /// unit, as the library computes it: zero for a free line, whose product is below half a
+        /// minor unit.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a quantity that is not positive or an amount in
+        /// a currency the library does not list, of the kind `Expense` for an item the library
+        /// refuses, a split that does not divide the line total or a line total out of range among
+        /// them, and of the kind `Id` for an identifier that is not one.
+        pub fn line_total(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
+            eranos_bindings::expense_item_line_total(&self.0)
+                .map(|money| Box::new(EranosMoney(money)))
+                .map_err(crate::failed)
         }
     }
 

@@ -10,7 +10,7 @@ struct LineRow: TableRow {
 
     let name: String
     let participants: String
-    let quantity: Int32
+    let quantity: Quantity
     let unitPrice: Money
     let lineTotal: Money
 
@@ -51,13 +51,13 @@ func expect(_ expected: String, _ found: Money?) throws(EranosError) {
 func receipt(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(EranosError) -> [ExpenseItem] {
     [
         ExpenseItem(name: "Ciorbă", unitPrice: try eur("8.00"), split: .equal([ana])),
-        ExpenseItem(name: "Sarmale", unitPrice: try eur("14.00"), split: .equal([bob, carol]), quantity: 2),
+        ExpenseItem(name: "Sarmale", unitPrice: try eur("14.00"), split: .equal([bob, carol]), quantity: try Quantity(whole: 2)),
         ExpenseItem(
             name: "Papanași",
             unitPrice: try eur("9.00"),
             split: .parts([MemberParts(member: ana, parts: try Parts(hundredths: 100)), MemberParts(member: carol, parts: try Parts(hundredths: 200))])
         ),
-        ExpenseItem(name: "Lemonade", unitPrice: try eur("3.00"), split: .equal([ana, bob, carol]), quantity: 3)
+        ExpenseItem(name: "Lemonade", unitPrice: try eur("3.00"), split: .equal([ana, bob, carol]), quantity: try Quantity(whole: 3))
     ]
 }
 
@@ -94,7 +94,7 @@ func main() throws(EranosError) {
                 participants: try names(group, item.split.members),
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                lineTotal: Money(minorUnits: item.unitPrice.minorUnits * Int64(item.quantity), currency: item.unitPrice.currency)
+                lineTotal: try item.lineTotal()
             )
         },
         numbersFrom: 2

@@ -49,8 +49,8 @@ pub enum TipDistribution {
 pub struct ExpenseItem {
     /// What was bought.
     pub name: String,
-    /// How many units.
-    pub quantity: i32,
+    /// How many units, in ten-thousandths.
+    pub quantity: i64,
     /// Whom to call.
     pub phone: Option<PhoneNumber>,
     /// Where to pay.

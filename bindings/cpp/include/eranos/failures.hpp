@@ -91,7 +91,10 @@ enum class Failure : std::uint8_t {
     MONEY_INVALID_PARTS,
     /// A percentage that is not a decimal number with at most two decimal places.
     MONEY_INVALID_PERCENTAGE,
-    /// A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is.
+    /// A quantity that is not a positive decimal number with at most four decimal places, or whose ten-thousandths do not fit a 64-bit signed
+    /// integer.
+    MONEY_INVALID_QUANTITY,
+    /// A double that is NaN or infinite, which no amount, percentage, number of parts, quantity, or exchange rate is.
     MONEY_NOT_FINITE,
     /// A number or a result that does not fit its range.
     MONEY_OVERFLOW,
@@ -117,8 +120,6 @@ enum class Failure : std::uint8_t {
     EXPENSE_NO_ITEMS,
     /// An item whose name is blank.
     EXPENSE_EMPTY_ITEM_NAME,
-    /// An item quantity of zero.
-    EXPENSE_ZERO_QUANTITY,
     /// The item line totals do not add up to the expense amount.
     EXPENSE_ITEMS_DO_NOT_ADD_UP,
     /// A fixed tip below zero.

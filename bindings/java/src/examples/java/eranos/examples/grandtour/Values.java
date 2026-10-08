@@ -15,13 +15,17 @@ import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.ExpenseGroup;
+import eranos.ExpenseItem;
 import eranos.IdFailure;
 import eranos.Language;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.Money;
+import eranos.MoneyFailure;
 import eranos.Parts;
 import eranos.Percentage;
+import eranos.Quantity;
+import eranos.Split;
 import eranos.TimeOfDay;
 import eranos.examples.grandtour.Tables.CurrencyRow;
 import eranos.examples.grandtour.Tables.ValueRow;
@@ -32,7 +36,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Section 13 of the tour: currencies, amounts, percentages, parts, rates, dates, times,
+ * Section 13 of the tour: currencies, amounts, percentages, parts, rates, quantities, dates, times,
  * identifiers, and language tags, on their own.
  */
 final class Values {
@@ -132,6 +136,35 @@ final class Values {
         check(150 == parts.hundredths());
     }
 
+    static void quantities(People people) throws EranosException {
+        Quantity weight = Quantity.parse("0.452");
+        // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+        ExpenseItem olives =
+                new ExpenseItem(
+                        "Olives",
+                        eur("1.00"),
+                        new Split.Equal(List.of(people.ana())),
+                        Quantity.parse("0.335"));
+        Optional<EranosException> fiveDecimals = refusal(() -> Quantity.parse("0.00005"));
+        Optional<EranosException> zero = refusal(() -> Quantity.parse("0"));
+        System.out.println(
+                "Quantities have four decimal places; line totals round half away from zero:");
+        printTable(
+                ValueRow.HEADERS,
+                List.of(
+                        new ValueRow(
+                                "a quantity of 0.452",
+                                weight + ", " + weight.tenThousandths() + " ten-thousandths"),
+                        new ValueRow("a quantity of 0.00005", message(fiveDecimals)),
+                        new ValueRow("a quantity of 0", message(zero)),
+                        new ValueRow("0.335 at 1.00 EUR", olives.lineTotal().toString())),
+                2);
+        check(4_520 == weight.tenThousandths());
+        check(Optional.of(new MoneyFailure.InvalidQuantity()).equals(moneyFailure(fiveDecimals)));
+        check(Optional.of(new MoneyFailure.InvalidQuantity()).equals(moneyFailure(zero)));
+        check(eur("0.34").equals(olives.lineTotal()));
+    }
+
     static void datesAndIdentifiers(ExpenseGroup group, People people) throws EranosException {
         CalendarDate date = CalendarDate.parse("2026-10-01");
         TimeOfDay time = TimeOfDay.parse("22:15");
@@ -188,11 +221,19 @@ final class Values {
                 .map(EranosException.Id::failure);
     }
 
+    /** The failure of an amount or a number that {@code refused} holds, if it is the money's. */
+    private static Optional<MoneyFailure> moneyFailure(Optional<EranosException> refused) {
+        return refused.filter(EranosException.Money.class::isInstance)
+                .map(EranosException.Money.class::cast)
+                .map(EranosException.Money::failure);
+    }
+
     static void values(ExpenseGroup group, People people) throws EranosException {
         section("13. Values on their own");
         currencies();
         amounts();
         ratios();
+        quantities(people);
         datesAndIdentifiers(group, people);
     }
 }

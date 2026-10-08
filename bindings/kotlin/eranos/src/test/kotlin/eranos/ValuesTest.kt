@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-/** The currencies, amounts, ratios, dates, times, contact details, and identifiers. */
+/** The currencies, amounts, ratios, quantities, dates, times, contact details, and identifiers. */
 class ValuesTest {
     /**
      * A currency, an amount, or a check that read or wrote another way than the library's would show an app another amount
@@ -150,11 +150,50 @@ class ValuesTest {
     }
 
     /**
-     * An app that holds amounts, percentages, parts, or rates as doubles would get other cents or digits in Kotlin than the
-     * library rounds to, or a value back from NaN, an infinity, or a number out of range.
+     * A quantity read or written another way than the library's, or one the library refuses let through, would multiply a
+     * line by another number of units than the group does.
      */
     @Test
-    fun amountsRatiosAndRatesConvertFromDoublesAsTheLibraryDoes() {
+    fun quantitiesReadAndWriteAsTheLibraryDoes() {
+        val weight = Quantity.parse("0.452")
+        assertEquals(4_520L, weight.tenThousandths)
+        assertEquals("0.452", weight.toString())
+        assertValue(weight, Quantity.ofTenThousandths(4_520), Quantity.ofTenThousandths(4_521))
+        assertEquals("0.0001", Quantity.ofTenThousandths(1).toString())
+        assertEquals("1.5", Quantity.parse("1.50").toString())
+        assertEquals(Quantity.ofTenThousandths(30_000), Quantity.ofWhole(3))
+        assertEquals("3", Quantity.ofWhole(3).toString())
+        assertEquals(Quantity.ofWhole(1), Quantity.ONE)
+        assertEquals("1", Quantity.ONE.toString())
+        assertEquals("922337203685477.5807", Quantity.ofTenThousandths(Long.MAX_VALUE).toString())
+        val refusals: List<() -> Quantity> =
+            listOf(
+                { Quantity.ofTenThousandths(0) },
+                { Quantity.ofTenThousandths(-1) },
+                { Quantity.ofTenThousandths(Long.MIN_VALUE) },
+                { Quantity.ofWhole(0) },
+                { Quantity.ofWhole(-1) },
+                { Quantity.ofWhole(Long.MAX_VALUE / 10_000 + 1) },
+                { Quantity.parse("0") },
+                { Quantity.parse("0.00005") },
+                { Quantity.parse("-1") },
+                { Quantity.parse("half") },
+                { Quantity.fromDouble(0.00004) },
+                { Quantity.fromDouble(-1.0) },
+            )
+        for (refusal in refusals) {
+            val refused = assertThrows<EranosException.Money> { refusal() }
+            assertEquals(MoneyFailure.InvalidQuantity, refused.failure)
+            assertEquals("invalid quantity: expected a positive number with at most 4 decimal places", refused.message)
+        }
+    }
+
+    /**
+     * An app that holds amounts, percentages, parts, quantities, or rates as doubles would get other cents or digits in Kotlin
+     * than the library rounds to, or a value back from NaN, an infinity, or a number out of range.
+     */
+    @Test
+    fun amountsRatiosQuantitiesAndRatesConvertFromDoublesAsTheLibraryDoes() {
         val euro = CurrencyCode.of("EUR")
         val lei = CurrencyCode.of("RON")
         // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
@@ -165,6 +204,7 @@ class ValuesTest {
         assertEquals(30, Percentage.fromDouble(0.1 + 0.2).basisPoints)
         assertEquals(1_235, Percentage.fromDouble(12.345).basisPoints)
         assertEquals(101, Parts.fromDouble(1.005).hundredths)
+        assertEquals(4_521L, Quantity.fromDouble(0.45205).tenThousandths)
         assertEquals("25.5", ExchangeRate.fromDouble(25.5).toString())
         assertEquals("0.30000000000000004", ExchangeRate.fromDouble(0.1 + 0.2).toString())
 
@@ -182,6 +222,7 @@ class ValuesTest {
                 { value -> Money.fromDouble(value, euro) },
                 { value -> Percentage.fromDouble(value) },
                 { value -> Parts.fromDouble(value) },
+                { value -> Quantity.fromDouble(value) },
                 { value -> ExchangeRate.fromDouble(value) },
             )
         for (value in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {

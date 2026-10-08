@@ -446,18 +446,6 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Expense {
-                failure: ExpenseFailure::ZeroQuantity,
-                detail: DETAIL.to_owned(),
-            },
-            flat: FlatError {
-                kind: ErrorKind::Expense,
-                failure: Some(FailureKind::ExpenseZeroQuantity),
-                message: DETAIL.to_owned(),
-                payload: Payload::default(),
-            },
-        },
-        Flattening {
             error: EranosError::ExpenseGroup {
                 failure: ExpenseGroupFailure::ArchivedMember {
                     member: MEMBER.to_owned(),
@@ -892,6 +880,18 @@ fn flattenings() -> Vec<Flattening> {
             flat: FlatError {
                 kind: ErrorKind::Money,
                 failure: Some(FailureKind::MoneyInvalidPercentage),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
+            error: EranosError::Money {
+                failure: MoneyFailure::InvalidQuantity,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::Money,
+                failure: Some(FailureKind::MoneyInvalidQuantity),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },

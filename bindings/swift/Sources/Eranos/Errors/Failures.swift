@@ -117,9 +117,6 @@ public enum ExpenseFailure: Sendable, Hashable {
     /// An item whose name is blank.
     case emptyItemName
 
-    /// An item quantity of zero.
-    case zeroQuantity
-
     /// The item line totals do not add up to the expense amount.
     case itemsDoNotAddUp(expected: Money, actual: Money)
 
@@ -153,8 +150,6 @@ extension ExpenseFailure {
             self = .noItems
         case .emptyItemName:
             self = .emptyItemName
-        case .zeroQuantity:
-            self = .zeroQuantity
         case let .itemsDoNotAddUp(expected, actual):
             self = .itemsDoNotAddUp(expected: Money(expected), actual: Money(actual))
         case .negativeTip:
@@ -356,8 +351,12 @@ public enum MoneyFailure: Sendable, Hashable {
     /// A percentage that is not a decimal number with at most two decimal places.
     case invalidPercentage
 
-    /// A double that is NaN or infinite, which no amount, percentage, number of parts, or
-    /// exchange rate is.
+    /// A quantity that is not a positive decimal number with at most four decimal places, or whose
+    /// ten-thousandths do not fit an `Int64`.
+    case invalidQuantity
+
+    /// A double that is NaN or infinite, which no amount, percentage, number of parts, quantity,
+    /// or exchange rate is.
     case notFinite
 
     /// A number or a result that does not fit its range.
@@ -381,6 +380,8 @@ extension MoneyFailure {
             self = .invalidParts
         case .invalidPercentage:
             self = .invalidPercentage
+        case .invalidQuantity:
+            self = .invalidQuantity
         case .notFinite:
             self = .notFinite
         case .overflow:

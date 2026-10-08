@@ -32,7 +32,7 @@ class EntriesTest {
                                     Split.Parts(
                                         listOf(MemberParts(flat.ana, Parts.ofHundredths(100)), MemberParts(flat.bob, Parts.ofHundredths(50))),
                                     ),
-                                quantity = 2,
+                                quantity = Quantity.ofWhole(2),
                             ),
                         ),
                     ),
@@ -137,6 +137,36 @@ class EntriesTest {
     }
 
     /**
+     * A line total multiplied or rounded in Kotlin rather than by the library would show a receipt another amount than the
+     * group divides, and an item whose fractional quantity crossed another way would bill another weight.
+     */
+    @Test
+    fun anItemTellsTheLineTotalTheLibraryComputes() {
+        val flat = Flat()
+        val ana = Split.Equal(listOf(flat.ana))
+        // 0.35 kg at 42.00 EUR a kilogram.
+        val cheese = ExpenseItem("Cheese", flat.euros(4_200), ana, Quantity.parse("0.35"))
+        assertEquals(flat.euros(1_470), cheese.lineTotal())
+        // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+        assertEquals(flat.euros(34), ExpenseItem("Olives", flat.euros(100), ana, Quantity.parse("0.335")).lineTotal())
+        assertEquals(flat.euros(1_350), ExpenseItem("Beer", flat.euros(450), ana, Quantity.ofWhole(3)).lineTotal())
+        val bread = ExpenseItem("Bread", flat.euros(120), ana)
+        assertEquals(Quantity.ONE, bread.quantity)
+        assertEquals(flat.euros(120), bread.lineTotal())
+        // A ten-thousandth of a cent rounds to a free line.
+        assertEquals(flat.euros(0), ExpenseItem("Mint", flat.euros(1), ana, Quantity.ofTenThousandths(1)).lineTotal())
+        val overflow =
+            assertThrows<EranosException.Expense> {
+                ExpenseItem("Gold", flat.euros(Long.MAX_VALUE), ana, Quantity.ofWhole(2)).lineTotal()
+            }
+        assertEquals(ExpenseFailure.Overflow, overflow.failure)
+
+        val deli = Expense("Deli", Cost.Local(flat.euros(1_470)), ana, ExpenseSplit.Itemised(listOf(cheese)), flat.day)
+        assertEquals(deli, deli.generated.converted())
+        assertEquals(deli, present(flat.group.expenseBlocking(flat.group.addBlocking(deli))))
+    }
+
+    /**
      * A split, a cost, or a tip that compared, hashed, or printed with a field left out would merge two an app holds apart.
      */
     @Test
@@ -181,8 +211,8 @@ class EntriesTest {
         val itemised = expenses.taxi.split as ExpenseSplit.Itemised
         assertValue(itemised, ExpenseSplit.Itemised(itemised.items), ExpenseSplit.Itemised(emptyList()))
         val item = itemised.items[0]
-        assertValue(item, ExpenseItem(item.name, item.unitPrice, item.split, 2), ExpenseItem(item.name, item.unitPrice, item.split))
-        assertEquals(1, ExpenseItem("Bread", flat.euros(1), equal).quantity)
+        assertValue(item, ExpenseItem(item.name, item.unitPrice, item.split, Quantity.ofWhole(2)), ExpenseItem(item.name, item.unitPrice, item.split))
+        assertEquals(Quantity.ONE, ExpenseItem("Bread", flat.euros(1), equal).quantity)
         assertValue(
             expenses.taxi.tip,
             TipRule(TipValue.Fixed(Money(500, CurrencyCode.of("RON"))), TipDistribution.EQUAL),

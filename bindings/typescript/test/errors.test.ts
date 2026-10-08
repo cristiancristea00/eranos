@@ -155,6 +155,11 @@ const conversions: readonly Conversion[] = [
         failure: { kind: 'invalidPercentage' },
     },
     {
+        generated: new internal.EranosError.Money({ failure: new internal.MoneyFailure.InvalidQuantity(), detail: 'detail' }),
+        type: MoneyError,
+        failure: { kind: 'invalidQuantity' },
+    },
+    {
         generated: new internal.EranosError.Money({ failure: new internal.MoneyFailure.NotFinite(), detail: 'detail' }),
         type: MoneyError,
         failure: { kind: 'notFinite' },
@@ -239,11 +244,6 @@ const conversions: readonly Conversion[] = [
         generated: new internal.EranosError.Expense({ failure: new internal.ExpenseFailure.EmptyItemName(), detail: 'detail' }),
         type: ExpenseError,
         failure: { kind: 'emptyItemName' },
-    },
-    {
-        generated: new internal.EranosError.Expense({ failure: new internal.ExpenseFailure.ZeroQuantity(), detail: 'detail' }),
-        type: ExpenseError,
-        failure: { kind: 'zeroQuantity' },
     },
     {
         generated: new internal.EranosError.Expense({

@@ -1,5 +1,69 @@
-//! The decimal text of a double, rounded to a number of places: the one way
-//! a float becomes an amount, a percentage, parts, or an exchange rate.
+//! Decimal text: the fixed-point numbers that percentages, parts, and
+//! quantities are written in, and the text of a double rounded to a number
+//! of places, the one way a float becomes an amount, a percentage, parts, a
+//! quantity, or an exchange rate.
+
+use std::fmt;
+use std::iter;
+
+/// The number of units of `10^-places` that `text` writes: digits with an
+/// optional `.` followed by at most `places` digits, so `1.5` at two places
+/// is 150 and `0.452` at four is 4 520.
+///
+/// `None` for anything else, a sign, an exponent, whitespace, or a point
+/// without a digit on either side included, and for a value above
+/// `u64::MAX`. A fraction shorter than `places` is padded with zeros.
+pub(crate) fn parse_fixed(text: &str, places: u8) -> Option<u64> {
+    let (whole, fraction) = match text.split_once('.') {
+        Some((_, "")) => return None,
+        Some((whole, fraction)) => (whole, fraction),
+        None => (text, ""),
+    };
+    let is_digits = |part: &str| part.bytes().all(|byte| byte.is_ascii_digit());
+    if whole.is_empty() || !is_digits(whole) || !is_digits(fraction) {
+        return None;
+    }
+    let padding = usize::from(places).checked_sub(fraction.len())?;
+    whole
+        .bytes()
+        .chain(fraction.bytes())
+        .chain(iter::repeat_n(b'0', padding))
+        .try_fold(0_u64, |value, digit| {
+            value.checked_mul(10)?.checked_add(u64::from(digit - b'0'))
+        })
+}
+
+/// Writes `units` of `10^-places` as a decimal without trailing zeros,
+/// followed by `unit`: 1 250 at two places with `%` is `12.5%`, 4 520 at
+/// four places is `0.452`, and -5 at two places is `-0.05`.
+///
+/// It takes any `i64`, zero and negative numbers included, and writes a
+/// negative one after a minus sign. Callers pass a constant of this crate
+/// for `places`, two or four, so the power of ten fits in a `u64`, which
+/// holds every power up to the 19th.
+pub(crate) fn write_fixed(
+    formatter: &mut fmt::Formatter<'_>,
+    units: i64,
+    places: u8,
+    unit: &str,
+) -> fmt::Result {
+    let sign = if 0 > units { "-" } else { "" };
+    let magnitude = units.unsigned_abs();
+    let divisor = 10_u64.pow(u32::from(places));
+    let whole = magnitude / divisor;
+    let mut fraction = magnitude % divisor;
+    if 0 == fraction {
+        return write!(formatter, "{sign}{whole}{unit}");
+    }
+    // A fraction that is not zero and below `10^places` has at most
+    // `places - 1` trailing zeros, so the width stays at least one.
+    let mut width = usize::from(places);
+    while fraction.is_multiple_of(10) {
+        fraction /= 10;
+        width -= 1;
+    }
+    write!(formatter, "{sign}{whole}.{fraction:0width$}{unit}")
+}
 
 /// `value` as the shortest decimal that reads back as the same double,
 /// rounded half away from zero to at most `places` decimal places; `None`

@@ -217,6 +217,10 @@ class ErrorTest {
                                     new eranos.internal.MoneyFailure.InvalidPercentage(),
                                     "detail")),
                     new Conversion(
+                            new MoneyFailure.InvalidQuantity(),
+                            new eranos.internal.EranosException.Money(
+                                    new eranos.internal.MoneyFailure.InvalidQuantity(), "detail")),
+                    new Conversion(
                             new MoneyFailure.NotFinite(),
                             new eranos.internal.EranosException.Money(
                                     new eranos.internal.MoneyFailure.NotFinite(), "detail")),
@@ -276,10 +280,6 @@ class ErrorTest {
                             new ExpenseFailure.EmptyItemName(),
                             new eranos.internal.EranosException.Expense(
                                     new eranos.internal.ExpenseFailure.EmptyItemName(), "detail")),
-                    new Conversion(
-                            new ExpenseFailure.ZeroQuantity(),
-                            new eranos.internal.EranosException.Expense(
-                                    new eranos.internal.ExpenseFailure.ZeroQuantity(), "detail")),
                     new Conversion(
                             new ExpenseFailure.ItemsDoNotAddUp(euros(8), euros(7)),
                             new eranos.internal.EranosException.Expense(

@@ -16,15 +16,15 @@ use std::pin::pin;
 use std::task::{Context, Waker};
 
 use eranos::cooperative::block_on;
-use eranos::error::{ExpenseError, ExpenseGroupError, IdError, TransferError};
+use eranos::error::{ExpenseError, ExpenseGroupError, IdError, MoneyError, TransferError};
 use eranos::expense::ExpenseBuilder;
 use eranos::{
     Balance, CalendarDate, Category, CategoryId, CategoryTotal, Cost, CurrencyCode, CurrencyRate,
     Email, ExchangeRate, Expense, ExpenseGroup, ExpenseId, ExpenseItem, ExpenseShares,
     ExpenseSplit, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
     MemberShare, Money, Parts, PaymentAccount, PaymentAccountDetails, PaymentAccountKind,
-    Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy, SharedExpenseGroup, Split,
-    TimeOfDay, TipDistribution, TipRule, TipValue, Transfer, Username,
+    Percentage, PhoneNumber, Quantity, SavedExpenseGroup, SettlementStrategy, SharedExpenseGroup,
+    Split, TimeOfDay, TipDistribution, TipRule, TipValue, Transfer, Username,
 };
 use tabled::settings::formatting::AlignmentStrategy;
 use tabled::settings::object::Columns;
@@ -126,7 +126,7 @@ struct ItemRow {
     #[tabled(rename = "Shared by")]
     shared_by: String,
     #[tabled(rename = "Quantity")]
-    quantity: u32,
+    quantity: Quantity,
     #[tabled(rename = "Unit price")]
     unit_price: Money,
     #[tabled(rename = "Line total")]
@@ -746,7 +746,7 @@ fn fado_items(people: &People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
     } = *people;
     Ok(vec![
         ExpenseItem::builder("Vinho verde", eur("12.00")?, [ana, bob, dan])
-            .quantity(2)
+            .quantity(Quantity::from_whole(2)?)
             .build()?,
         ExpenseItem::builder("Bacalhau", eur("18.00")?, [carol]).build()?,
         ExpenseItem::builder_with_split(
@@ -760,7 +760,7 @@ fn fado_items(people: &People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
                 MemberParts::new(eva, Parts::from_whole(2)?),
             ]),
         )
-        .quantity(6)
+        .quantity(Quantity::from_whole(6)?)
         .build()?,
         ExpenseItem::builder("Juice", eur("3.00")?, [eva]).build()?,
     ])
@@ -1725,6 +1725,43 @@ fn ratios() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn quantities(people: &People) -> Result<(), Box<dyn Error>> {
+    let weight = Quantity::parse("0.452")?;
+    // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    let olives = ExpenseItem::builder("Olives", eur("1.00")?, [people.ana])
+        .quantity(Quantity::parse("0.335")?)
+        .build()?;
+    let five_decimals = Quantity::parse("0.00005");
+    let zero = Quantity::parse("0");
+    println!("Quantities have four decimal places; line totals round half away from zero:");
+    print_table(
+        [
+            ValueRow {
+                input: "a quantity of 0.452",
+                result: format!("{weight}, {} ten-thousandths", weight.ten_thousandths()),
+            },
+            ValueRow {
+                input: "a quantity of 0.00005",
+                result: message(&five_decimals),
+            },
+            ValueRow {
+                input: "a quantity of 0",
+                result: message(&zero),
+            },
+            ValueRow {
+                input: "0.335 at 1.00 EUR",
+                result: olives.line_total().to_string(),
+            },
+        ],
+        2,
+    );
+    assert_eq!(weight.ten_thousandths(), 4_520);
+    assert_eq!(five_decimals, Err(MoneyError::InvalidQuantity));
+    assert_eq!(zero, Err(MoneyError::InvalidQuantity));
+    assert_eq!(olives.line_total(), eur("0.34")?);
+    Ok(())
+}
+
 fn dates_and_identifiers(people: &People) -> Result<(), Box<dyn Error>> {
     let date = CalendarDate::parse("2026-10-01")?;
     let time = TimeOfDay::parse("22:15")?;
@@ -1807,6 +1844,7 @@ fn values(people: &People) -> Result<(), Box<dyn Error>> {
     currencies()?;
     amounts()?;
     ratios()?;
+    quantities(people)?;
     dates_and_identifiers(people)
 }
 

@@ -218,7 +218,7 @@ flowchart TD
 | `eranos-contact`         | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                                   | core; icu_properties, rlibphonenumber                                                                                  |
 | `eranos-ledger`          | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                                       | core, money                                                                                                            |
 | `eranos-calendar`        | `CalendarDate`, `TimeOfDay`, `CalendarError`; `format_calendar_date`, `format_time_of_day`                                                                                                                                               | core; jiff                                                                                                             |
-| `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`, `format_minor_units`, `format_basis_points`, `format_hundredths`                                                     | core; iso4217-static                                                                                                   |
+| `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `Quantity`, `MoneyError`; `allocation`, `format_minor_units`, `format_basis_points`, `format_hundredths`, `format_ten_thousandths`               | core; iso4217-static                                                                                                   |
 | `eranos-core`            | the five identifiers, `CategoryKey`, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                    | uuid                                                                                                                   |
 | `eranos-glue-macros`     | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                                          | eranos-glue; syn                                                                                                       |
 | `eranos-glue`            | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge                | proc-macro2, quote, syn                                                                                                |
@@ -289,8 +289,10 @@ the cost is shared: an `ExpenseSplit::Whole(Split)` or
 `ExpenseSplit::Itemised(Vec<ExpenseItem>)`. A split is `Equal`, `Parts`
 (hundredths, so 0.5 for a child), `Percentages` (basis points summing to
 exactly 10 000), or `Amounts` (summing exactly to what is divided). An
-**item** has a unit price, a quantity, and its own split; the line totals
-must add up to the amount. A **tip** is fixed or a percentage of the amount,
+**item** has a unit price, a quantity (a `Quantity`, one unless set), and
+its own split; its line total is the unit price times the quantity,
+rounded half away from zero, and the line totals must add up to the
+amount. A **tip** is fixed or a percentage of the amount,
 added on top, and shared `Proportional`ly (by consumption) or `Equal`ly. A
 **transfer** is money one member paid another, with a cost like an
 expense's.
@@ -332,13 +334,30 @@ cannot be removed.
   forms of `CalendarDate` and `TimeOfDay` write through eranos-calendar's
   `format_calendar_date` and `format_time_of_day`, which take any `i32`
   ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)).
-- **Doubles.** Apps hold amounts, percentages, parts, and rates as doubles,
-  so `Money`, `Percentage`, `Parts`, and `ExchangeRate` each have a
-  `from_f64`, and every binding calls it, so the same double is the same
-  value in every language. It writes the double as std's `Display` does,
-  the shortest decimal that reads back as the same double and never with an
-  exponent, rounds that text half away from zero to the type's places (the
-  currency's, 2, 2, and 18), where the first dropped digit decides, and
+- `Quantity` is ten-thousandths (0.452 = 4 520), positive and at most
+  `i64::MAX`, so that it crosses the bindings as a signed 64-bit integer;
+  its text form, which `parse` reads back, has no trailing zeros and
+  writes through `format_ten_thousandths`. Percentages, parts, and
+  quantities read and write their decimals through one fixed-point parser
+  and writer, given their places. An item's line total is
+  `allocation::apply_ten_thousandths(unit price, quantity)`: the product in
+  `i128`, divided by 10 000 and rounded **half away from zero**, so 0.335
+  at 1.00 EUR is 0.34 EUR and a whole quantity gives the exact product. A
+  line whose product is below half a minor unit is free: its total is zero
+  and its split divides it to zeros, so a split of amounts on it, which
+  cannot add up to zero, is refused as `AmountsDoNotAddUp`; an expense of
+  free lines alone adds up to no positive amount, which `build` refuses. A
+  line beyond the range is refused as `Overflow`.
+  `apply_basis_points`, which a percentage tip uses, is the same division
+  of basis points.
+- **Doubles.** Apps hold amounts, percentages, parts, quantities, and rates
+  as doubles, so `Money`, `Percentage`, `Parts`, `Quantity`, and
+  `ExchangeRate` each have a `from_f64`, and every binding calls it, so the
+  same double is the same value in every language. It writes the double as
+  std's `Display` does, the shortest decimal that reads back as the same
+  double and never with an exponent, rounds that text half away from zero
+  to the type's places (the currency's, 2, 2, 4, and 18), where the first
+  dropped digit decides, and
   parses the result with the type's own parser, so a double meets the
   checks typed text meets. Rounding the text rather than the double keeps
   what the user typed: the double nearest 1.005 lies below it, so
@@ -544,7 +563,7 @@ ledger's range.
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `IdError`             | the identifiers' `new` and `parse`, for text that is empty, longer than 64 bytes, holds a control character, or starts or ends with whitespace                                                                                 |
 | `CalendarError`       | building and reading dates and times of day                                                                                                                                                                                    |
-| `MoneyError`          | building, reading, and combining amounts, currencies, rates, percentages, and parts                                                                                                                                            |
+| `MoneyError`          | building, reading, and combining amounts, currencies, rates, percentages, parts, and quantities                                                                                                                                |
 | `PaymentAccountError` | `PaymentAccount::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                                                                                                                            |
 | `ContactError`        | `Email::parse`, `PhoneNumber::parse`                                                                                                                                                                                           |
 | `MemberError`         | `MemberBuilder::build`                                                                                                                                                                                                         |
@@ -596,11 +615,14 @@ never the derived totals:
 - Identifiers are their text, currencies their code, rates decimal
   strings, dates `YYYY-MM-DD` and times `hh:mm` (read back by the ISO 8601
   parser behind `CalendarDate::parse` and `TimeOfDay::parse`), percentages
-  basis points, parts hundredths, and each share of a split the two-element
-  array `[member, value]`. Absent optional fields are omitted, and so are the
+  basis points, parts hundredths, an item's quantity its decimal text
+  (`"quantity": "1.5"`), which a reader that parses JSON numbers as doubles
+  cannot round, and each share of a split the two-element array
+  `[member, value]`. Absent optional fields are omitted, and so are the
   built-in category, an expense's category when it is the built-in one
-  (every group has it again when it loads), and a tip equal to
-  `TipRule::NONE`, no tip at all. Keys follow the field order of
+  (every group has it again when it loads), a tip equal to
+  `TipRule::NONE`, no tip at all, and a quantity of one, which an item
+  without one reads as. An item's line total is derived, so not written. Keys follow the field order of
   [AGENTS.md](../AGENTS.md): `format` and `id` first, then the fields that
   describe the value in their natural order, the optional ones after the
   required, and a group's collections last.

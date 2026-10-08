@@ -216,5 +216,25 @@ pub(crate) fn parts(hundredths: i32) -> Result<library::Parts, EranosError> {
     Ok(library::Parts::from_hundredths(hundredths)?)
 }
 
+/// The quantity of `ten_thousandths`.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
+/// for a number that is not positive.
+pub(crate) fn quantity(ten_thousandths: i64) -> Result<library::Quantity, EranosError> {
+    let ten_thousandths =
+        u64::try_from(ten_thousandths).map_err(|_| MoneyError::InvalidQuantity)?;
+    Ok(library::Quantity::from_ten_thousandths(ten_thousandths)?)
+}
+
+/// The ten-thousandths of `quantity`, as the bindings' 64-bit signed
+/// integers hold them.
+pub(crate) fn ten_thousandths(quantity: library::Quantity) -> i64 {
+    // A quantity holds at most `i64::MAX` ten-thousandths, so the fallback
+    // never applies.
+    i64::try_from(quantity.ten_thousandths()).unwrap_or(i64::MAX)
+}
+
 #[cfg(test)]
 mod tests;

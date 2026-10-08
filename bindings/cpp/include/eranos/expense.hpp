@@ -54,8 +54,8 @@ struct ExpenseItem final {
     /// How the line's total divides.
     Split split;
 
-    /// How many units, from 1.
-    std::int32_t quantity{1};
+    /// How many units: one, Quantity{}, until it is given another.
+    Quantity quantity{};
 
     /// Whether every field of two records is equal.
     ///
@@ -249,6 +249,15 @@ struct Expense final {
     [[nodiscard]] friend constexpr bool operator==(Expense const &left, Expense const &right) noexcept = default;
 };
 
+/// The line total of an item: its unit price times its quantity, rounded half away from zero to the currency's minor unit, as the library computes
+/// it; zero for a free line, whose product is below half a minor unit.
+///
+/// @param item The item
+/// @return The line total, or an error of the kind ErrorKind::MONEY for a quantity that is not positive, of the kind ErrorKind::EXPENSE for an
+///   item the library refuses, a split that does not divide the line total or a line total out of range among them, and of the kind ErrorKind::ID
+///   for an identifier that is not one
+[[nodiscard]] std::expected<Money, Error> lineTotal(ExpenseItem const &item) noexcept;
+
 /// The tip of an expense in its currency, zero without one.
 ///
 /// @param expense The expense
@@ -293,6 +302,12 @@ namespace detail {
 [[nodiscard]] inline constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept;
 
 } // namespace detail
+
+inline std::expected<Money, Error> lineTotal(ExpenseItem const &item) noexcept {
+    return detail::toDetail(item)
+        .and_then([](std::unique_ptr<detail::EranosExpenseItem> const &converted) noexcept { return detail::expectedOf(converted->line_total()); })
+        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) noexcept { return detail::fromDetail(*amount); });
+}
 
 inline std::expected<Money, Error> tipAmount(Expense const &expense) noexcept {
     return detail::toDetail(expense)

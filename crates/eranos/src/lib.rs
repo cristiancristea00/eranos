@@ -48,12 +48,14 @@
 //! # Money is exact
 //!
 //! Amounts are whole numbers of minor units ([`Money`]), never stored or
-//! computed as floats. An app that holds amounts, percentages, parts, or
-//! rates as doubles converts each once, on the way in, with
-//! [`Money::from_f64`] or the `from_f64` of [`Percentage`], [`Parts`], and
-//! [`ExchangeRate`], which round the double's shortest decimal form half
-//! away from zero: 1.005 is 1.01 EUR, though the double nearest 1.005 lies
-//! below it. Every division, whether a [`Split`] among members, a
+//! computed as floats. An app that holds amounts, percentages, parts,
+//! quantities, or rates as doubles converts each once, on the way in, with
+//! [`Money::from_f64`] or the `from_f64` of [`Percentage`], [`Parts`],
+//! [`Quantity`], and [`ExchangeRate`], which round the double's shortest
+//! decimal form half away from zero: 1.005 is 1.01 EUR, though the double
+//! nearest 1.005 lies below it. An item's line total is its unit price
+//! times its [`Quantity`], which has up to four decimal places, rounded
+//! half away from zero. Every division, whether a [`Split`] among members, a
 //! [`TipRule`], an [`ExpenseItem`] of an itemised bill, or a conversion at an
 //! [`ExchangeRate`], hands out its leftover minor units by the
 //! largest-remainder method, so the parts always add up to the whole. Ties
@@ -272,8 +274,8 @@ pub mod member {
     };
 }
 pub mod money {
-    //! Money, currencies, exchange rates, costs, and the ratios splits are
-    //! made of.
+    //! Money, currencies, exchange rates, costs, the ratios splits are made
+    //! of, and the quantities of a bill's items.
     //!
     //! Amounts are whole numbers of minor units (cents): arithmetic is exact,
     //! and every split distributes its leftover minor units so parts always
@@ -281,7 +283,7 @@ pub mod money {
 
     #[doc(inline)]
     pub use eranos_money::{
-        Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money, Parts, Percentage,
+        Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money, Parts, Percentage, Quantity,
     };
 }
 pub mod settlement {
@@ -321,7 +323,9 @@ pub use member::{
     Username,
 };
 #[doc(no_inline)]
-pub use money::{Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
+pub use money::{
+    Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money, Parts, Percentage, Quantity,
+};
 #[doc(no_inline)]
 pub use settlement::{Payment, SettlementPlan, SettlementStrategy};
 #[doc(no_inline)]

@@ -227,14 +227,15 @@ test in `crates/xtask` checks every root.
 - **Amounts are never floats.** They are never stored or computed as floats:
   a float is converted once, on the way in, from its shortest decimal form,
   and amounts are `i64` minor units. A double becomes an amount, a
-  percentage, parts, or a rate only through the `from_f64` of `Money`,
-  `Percentage`, `Parts`, or `ExchangeRate`, which every binding calls: it
-  rounds the double's shortest round-trip text half away from zero to the
-  type's places and parses it. Every division goes through
-  `eranos_money::allocation::allocate`, every conversion through
-  `ExchangeRate::convert`, and every percentage through
-  `allocation::apply_basis_points`, so parts always add up and rounding is
-  the documented rule (largest remainder; half away from zero).
+  percentage, parts, a quantity, or a rate only through the `from_f64` of
+  `Money`, `Percentage`, `Parts`, `Quantity`, or `ExchangeRate`, which
+  every binding calls: it rounds the double's shortest round-trip text half
+  away from zero to the type's places and parses it. Every division goes
+  through `eranos_money::allocation::allocate`, every conversion through
+  `ExchangeRate::convert`, every percentage through
+  `allocation::apply_basis_points`, and every fractional quantity through
+  `allocation::apply_ten_thousandths`, so parts always add up and rounding
+  is the documented rule (largest remainder; half away from zero).
 - **Library code does not panic.** `unwrap` and `expect` warn everywhere
   but in tests and in constant initialisers, where a failure stops the
   build rather than a running app; arithmetic on user amounts is checked

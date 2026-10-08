@@ -1,5 +1,5 @@
 /// @file eranos/ratios.hpp
-/// Exchange rates, percentages, and parts: the ratios that convert and divide amounts.
+/// Exchange rates, percentages, parts, and quantities: the decimals that convert, divide, and multiply amounts.
 ///
 /// A part of eranos.hpp, which includes every part and then the conversions their functions call: include eranos.hpp.
 
@@ -138,6 +138,46 @@ struct Parts final {
     [[nodiscard]] friend constexpr bool operator==(Parts const &left, Parts const &right) noexcept = default;
 };
 
+/// A quantity of an item, in ten-thousandths of a unit: 10000 for one unit, 4520 for 0.452. The library checks it when a call carries it.
+struct Quantity final {
+    /// The quantity written @p text: "0.452".
+    ///
+    /// @param text The quantity's text
+    /// @return The quantity, or an error of the kind ErrorKind::MONEY for text that is not a positive decimal with at most four decimal places, or a
+    ///   quantity out of range, and ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<Quantity, Error> parse(std::string_view const text) noexcept;
+
+    /// The quantity of @p units whole units: 3 is 30000 ten-thousandths.
+    ///
+    /// @param units The units
+    /// @return The quantity, or an error of the kind ErrorKind::MONEY for a number that is not positive, or out of range
+    [[nodiscard]] static std::expected<Quantity, Error> whole(std::int64_t const units) noexcept;
+
+    /// The quantity of the double @p value: 0.45205 is 0.4521, 4521 ten-thousandths. The library writes the double in its shortest decimal form,
+    /// rounds it half away from zero to four decimal places, and parses it.
+    ///
+    /// @param value The quantity, as a double
+    /// @return The quantity, or an error of the kind ErrorKind::MONEY for a value that is NaN or infinite, rounds to zero or below, or is out of
+    ///   range
+    [[nodiscard]] static std::expected<Quantity, Error> fromDouble(double const value) noexcept;
+
+    /// The ten-thousandths: 10000, one unit, until it is given another.
+    std::int64_t tenThousandths{10'000};
+
+    /// The quantity as the library writes it: "0.452". Zero and a negative number of ten-thousandths, which the library refuses when a call carries
+    /// them, are written the same way: "0" and "-0.452".
+    ///
+    /// @return The text
+    [[nodiscard]] std::string toString() const noexcept;
+
+    /// Whether two quantities have one number of ten-thousandths.
+    ///
+    /// @param left A quantity
+    /// @param right Another quantity
+    /// @return Whether they are equal
+    [[nodiscard]] friend constexpr bool operator==(Quantity const &left, Quantity const &right) noexcept = default;
+};
+
 inline std::expected<ExchangeRate, Error> ExchangeRate::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosExchangeRate::parse(text)).transform(detail::exchangeRateOf);
 }
@@ -176,6 +216,26 @@ inline std::expected<Parts, Error> Parts::fromDouble(double const value) noexcep
 }
 
 inline std::string Parts::toString() const noexcept { return detail::EranosParts::format(hundredths); }
+
+inline std::expected<Quantity, Error> Quantity::parse(std::string_view const text) noexcept {
+    return detail::expectedOf(detail::EranosQuantity::parse(text)).transform([](std::int64_t const tenThousandths) noexcept {
+        return Quantity{tenThousandths};
+    });
+}
+
+inline std::expected<Quantity, Error> Quantity::whole(std::int64_t const units) noexcept {
+    return detail::expectedOf(detail::EranosQuantity::from_whole(units)).transform([](std::int64_t const tenThousandths) noexcept {
+        return Quantity{tenThousandths};
+    });
+}
+
+inline std::expected<Quantity, Error> Quantity::fromDouble(double const value) noexcept {
+    return detail::expectedOf(detail::EranosQuantity::from_double(value)).transform([](std::int64_t const tenThousandths) noexcept {
+        return Quantity{tenThousandths};
+    });
+}
+
+inline std::string Quantity::toString() const noexcept { return detail::EranosQuantity::format(tenThousandths); }
 
 } // namespace eranos
 

@@ -104,14 +104,6 @@ impl FromExpenseError for ConvertedExpenseError {
         }
     }
 
-    fn zero_quantity(message: String) -> Self {
-        Self {
-            method: "zero_quantity",
-            held: String::new(),
-            message,
-        }
-    }
-
     fn items_do_not_add_up(expected: Money, actual: Money, message: String) -> Self {
         Self {
             method: "items_do_not_add_up",
@@ -203,11 +195,6 @@ fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
         Case {
             error: ExpenseError::EmptyItemName,
             method: "empty_item_name",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::ZeroQuantity,
-            method: "zero_quantity",
             held: String::new(),
         },
         Case {

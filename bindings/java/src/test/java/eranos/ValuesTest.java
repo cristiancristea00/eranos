@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The currencies, amounts, ratios, dates, times, contact details, and identifiers, and the values
- * an expense starts at.
+ * The currencies, amounts, ratios, quantities, dates, times, contact details, and identifiers, and
+ * the values an expense starts at.
  */
 class ValuesTest {
     /**
@@ -187,6 +187,48 @@ class ValuesTest {
         assertThrows(EranosException.Money.class, () -> Parts.parse("half"));
     }
 
+    /**
+     * A quantity read, built, or written another way than the library's would divide another line
+     * total, and one the library refuses, or one too large for a {@code long}, would reach an item.
+     */
+    @Test
+    void quantitiesReadAndWriteAsTheLibraryDoes() throws EranosException {
+        Quantity weight = Quantity.parse("0.452");
+        assertEquals(4_520, weight.tenThousandths());
+        assertEquals("0.452", weight.toString());
+        assertValue(weight, Quantity.ofTenThousandths(4_520), Quantity.ONE);
+        assertEquals(30_000, Quantity.parse(" 3 ").tenThousandths());
+        assertEquals(Long.MAX_VALUE, Quantity.parse("922337203685477.5807").tenThousandths());
+        assertEquals("0.0001", Quantity.ofTenThousandths(1).toString());
+        assertEquals(10_000, Quantity.ONE.tenThousandths());
+        assertEquals("1", Quantity.ONE.toString());
+        Quantity three = Quantity.ofWhole(3);
+        assertEquals(30_000, three.tenThousandths());
+        assertEquals("3", three.toString());
+        assertEquals(
+                9_223_372_036_854_770_000L,
+                Quantity.ofWhole(922_337_203_685_477L).tenThousandths());
+        for (long tenThousandths : List.of(0L, -1L, Long.MIN_VALUE)) {
+            assertEquals(
+                    new MoneyFailure.InvalidQuantity(),
+                    moneyFailure(() -> Quantity.ofTenThousandths(tenThousandths)));
+        }
+        for (String text : List.of("0", "0.00005", "-1", "1e2", "half", "922337203685477.5808")) {
+            assertEquals(
+                    new MoneyFailure.InvalidQuantity(), moneyFailure(() -> Quantity.parse(text)));
+        }
+        for (long units : List.of(0L, -1L, Long.MIN_VALUE, 922_337_203_685_478L, Long.MAX_VALUE)) {
+            assertEquals(
+                    new MoneyFailure.InvalidQuantity(),
+                    moneyFailure(() -> Quantity.ofWhole(units)));
+        }
+        EranosException.Money zero =
+                assertThrows(EranosException.Money.class, () -> Quantity.parse("0"));
+        assertEquals(
+                "invalid quantity: expected a positive number with at most 4 decimal places",
+                zero.getMessage());
+    }
+
     /** The failure of the money module that {@code call} throws. */
     private static MoneyFailure moneyFailure(Executable call) {
         return assertThrows(EranosException.Money.class, call).failure();
@@ -218,12 +260,13 @@ class ValuesTest {
     }
 
     /**
-     * A rate, a percentage, or parts held as a double would become other digits in Java than in the
-     * library, a number too large for the layer's integers would wrap, or NaN or an infinity would
-     * come back as a value.
+     * A rate, a percentage, parts, or a quantity held as a double would become other digits in Java
+     * than in the library, a number too large for the layer's integers would wrap, or NaN or an
+     * infinity would come back as a value.
      */
     @Test
-    void ratesAndRatiosConvertFromDoublesAsTheLibraryConvertsThem() throws EranosException {
+    void ratesRatiosAndQuantitiesConvertFromDoublesAsTheLibraryConvertsThem()
+            throws EranosException {
         assertEquals(ExchangeRate.parse("25.5"), ExchangeRate.fromDouble(25.5));
         assertEquals("0.30000000000000004", ExchangeRate.fromDouble(0.1 + 0.2).toString());
         assertEquals(
@@ -245,6 +288,15 @@ class ValuesTest {
                     new MoneyFailure.InvalidParts(), moneyFailure(() -> Parts.fromDouble(value)));
         }
 
+        assertEquals(4_521, Quantity.fromDouble(0.45205).tenThousandths());
+        assertEquals(Quantity.parse("1.5"), Quantity.fromDouble(1.5));
+        // Above 922 337 203 685 477.5807, the ten-thousandths do not fit a long.
+        for (double value : List.of(0.00004, -1.0, 1e21)) {
+            assertEquals(
+                    new MoneyFailure.InvalidQuantity(),
+                    moneyFailure(() -> Quantity.fromDouble(value)));
+        }
+
         for (double value :
                 List.of(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
             assertEquals(
@@ -253,6 +305,8 @@ class ValuesTest {
             assertEquals(
                     new MoneyFailure.NotFinite(), moneyFailure(() -> Percentage.fromDouble(value)));
             assertEquals(new MoneyFailure.NotFinite(), moneyFailure(() -> Parts.fromDouble(value)));
+            assertEquals(
+                    new MoneyFailure.NotFinite(), moneyFailure(() -> Quantity.fromDouble(value)));
         }
     }
 

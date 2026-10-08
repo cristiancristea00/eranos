@@ -18,6 +18,7 @@ import eranos.MemberParts
 import eranos.Money
 import eranos.Parts
 import eranos.Percentage
+import eranos.Quantity
 import eranos.Split
 import eranos.TipDistribution
 import eranos.TipRule
@@ -31,7 +32,7 @@ import eranos.examples.title
 private data class LineRow(
     val name: String,
     val participants: String,
-    val quantity: Int,
+    val quantity: Quantity,
     val unitPrice: Money,
     val lineTotal: Money,
 ) : Row {
@@ -70,13 +71,13 @@ private fun receipt(
 ): List<ExpenseItem> =
     listOf(
         ExpenseItem("Ciorbă", eur("8.00"), Split.Equal(listOf(ana))),
-        ExpenseItem("Sarmale", eur("14.00"), Split.Equal(listOf(bob, carol)), quantity = 2),
+        ExpenseItem("Sarmale", eur("14.00"), Split.Equal(listOf(bob, carol)), quantity = Quantity.ofWhole(2)),
         ExpenseItem(
             "Papanași",
             eur("9.00"),
             Split.Parts(listOf(MemberParts(ana, Parts.ofHundredths(hundredths = 100)), MemberParts(carol, Parts.ofHundredths(hundredths = 200)))),
         ),
-        ExpenseItem("Lemonade", eur("3.00"), Split.Equal(listOf(ana, bob, carol)), quantity = 3),
+        ExpenseItem("Lemonade", eur("3.00"), Split.Equal(listOf(ana, bob, carol)), quantity = Quantity.ofWhole(3)),
     )
 
 /**
@@ -119,7 +120,7 @@ fun main() {
                     participants = names(group, item.split.members),
                     quantity = item.quantity,
                     unitPrice = item.unitPrice,
-                    lineTotal = Money(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency),
+                    lineTotal = item.lineTotal(),
                 )
             },
             numbersFrom = 2,

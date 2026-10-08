@@ -1241,15 +1241,15 @@ static void printItems(EranosExpenseGroup const *const group, Id const id) {
         EranosSplit *const itemSplit = eranosExpenseItemSplit(item);
         Members const sharedBy = splitMembers(itemSplit);
         EranosMoney *const unitPrice = eranosExpenseItemUnitPrice(item);
-        int32_t const quantity = eranosExpenseItemQuantity(item);
-        EranosCurrencyDetails *const currency = eranosMoneyCurrency(unitPrice);
-        EranosMoney *const total = eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, currency);
-        eranosCurrencyDetailsDestroy(currency);
+        EranosMoney *total = nullptr;
+        must(eranosExpenseItemLineTotal(item, &total));
+        eranosQuantityFormat(eranosExpenseItemQuantity(item), text);
+        Line const quantity = textLine(text);
         eranosExpenseItemName(item, text);
         addItemRow(table, &(ItemRow){
                               .name = textLine(text),
                               .sharedBy = names(group, &sharedBy),
-                              .quantity = lineOf("%ld", (long)quantity),
+                              .quantity = quantity,
                               .unitPrice = moneyLine(unitPrice),
                               .lineTotal = moneyLine(total),
                           });
@@ -1263,14 +1263,16 @@ static void printItems(EranosExpenseGroup const *const group, Id const id) {
     eranosExpenseDestroy(expense);
 }
 
-/// Adds the line @p name of a receipt to @p items: @p quantity of @p unitPrice euros, which @p split shares; destroys
-/// @p split.
+/// Adds the line @p name of a receipt to @p items: @p units whole units of @p unitPrice euros, which @p split shares;
+/// destroys @p split.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the unit price, in the order the library's constructor reads them.
 static void addItem(EranosExpenseItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
-                    int32_t const quantity) {
+                    int64_t const units) {
     EranosMoney *const price = eur(unitPrice);
     EranosExpenseItem *item = nullptr;
     must(eranosExpenseItemCreate(name, price, split, &item));
+    int64_t quantity = 0;
+    must(eranosQuantityFromWhole(units, &quantity));
     eranosExpenseItemSetQuantity(item, quantity);
     eranosExpenseItemListPush(items, item);
     eranosExpenseItemDestroy(item);
@@ -2451,6 +2453,53 @@ static void ratios(void) {
     check(150 == hundredths, "1.5 parts are 150 hundredths");
 }
 
+/// The message the library refuses @p text with as a quantity, which it checks is ERANOS_FAILURE_MONEY_INVALID_QUANTITY.
+[[nodiscard]] static Line quantityRefusal(char const *const text) {
+    int64_t tenThousandths = 0;
+    EranosError *const refusal = eranosQuantityParse(text, &tenThousandths);
+    check(isFailure(refusal, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY), "the text is refused as a quantity");
+    return messageLine(refusal);
+}
+
+/// Prints what quantities read and print, and a line total that rounds half away from zero.
+static void quantities(People const *const people) {
+    int64_t weight = 0;
+    must(eranosQuantityParse("0.452", &weight));
+    EranosText *const text = eranosTextCreate();
+    eranosQuantityFormat(weight, text);
+    Line const weightLine = textLine(text);
+    eranosTextDestroy(text);
+    // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    int64_t olivesQuantity = 0;
+    must(eranosQuantityParse("0.335", &olivesQuantity));
+    EranosMoney *const price = eur("1.00");
+    EranosSplit *const ana = soleSplit(people->ana);
+    EranosExpenseItem *olives = nullptr;
+    must(eranosExpenseItemCreate("Olives", price, ana, &olives));
+    eranosExpenseItemSetQuantity(olives, olivesQuantity);
+    EranosMoney *lineTotal = nullptr;
+    must(eranosExpenseItemLineTotal(olives, &lineTotal));
+    int64_t const lineTotalUnits = eranosMoneyMinorUnits(lineTotal);
+    Line const lineTotalLine = moneyLine(lineTotal);
+    eranosExpenseItemDestroy(olives);
+    eranosSplitDestroy(ana);
+    eranosMoneyDestroy(price);
+    Line const fiveDecimals = quantityRefusal("0.00005");
+    Line const zero = quantityRefusal("0");
+    printLine("Quantities have four decimal places; line totals round half away from zero:");
+    Table *const table = valueTable(2);
+    addValueRow(table, &(ValueRow){
+                           .input = lineOf("a quantity of 0.452"),
+                           .result = lineOf("%s, %lld ten-thousandths", weightLine.text, (long long)weight),
+                       });
+    addValueRow(table, &(ValueRow){.input = lineOf("a quantity of 0.00005"), .result = fiveDecimals});
+    addValueRow(table, &(ValueRow){.input = lineOf("a quantity of 0"), .result = zero});
+    addValueRow(table, &(ValueRow){.input = lineOf("0.335 at 1.00 EUR"), .result = lineTotalLine});
+    tablePrint(table);
+    check(4'520 == weight, "0.452 is 4520 ten-thousandths");
+    check(34 == lineTotalUnits, "0.335 at 1.00 EUR is 0.34 EUR");
+}
+
 /// The message the library refuses @p text with as a member's identifier, which it checks is @p failure.
 [[nodiscard]] static Line identifierRefusal(EranosExpenseGroup const *const group, char const *const text, EranosFailure const failure) {
     EranosMember *member = nullptr;
@@ -2509,12 +2558,13 @@ static void datesAndIdentifiers(EranosExpenseGroup const *const group, People co
     check(found, "Ana's identifier comes back the same");
 }
 
-/// Prints the values on their own: currencies, amounts, ratios, dates, times, identifiers, and language tags.
+/// Prints the values on their own: currencies, amounts, ratios, quantities, dates, times, identifiers, and language tags.
 static void values(EranosExpenseGroup const *const group, People const *const people) {
     section("13. Values on their own");
     currencies();
     amounts();
     ratios();
+    quantities(people);
     datesAndIdentifiers(group, people);
 }
 

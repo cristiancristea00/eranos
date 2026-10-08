@@ -1,5 +1,6 @@
 package eranos
 
+import eranos.internal.expenseItemLineTotal
 import eranos.internal.expenseMembers
 import eranos.internal.expenseTipAmount
 import eranos.internal.expenseTotal
@@ -261,12 +262,24 @@ public class ExpenseItem(
     public val unitPrice: Money,
     /** How the line's total divides. */
     public val split: Split,
-    /** How many units, from 1. */
-    public val quantity: Int = 1,
+    /** How many units, to a ten-thousandth: one, [Quantity.ONE], unless given. */
+    public val quantity: Quantity = Quantity.ONE,
 ) {
     /** The line as the generated code holds it. */
     internal val generated: eranos.internal.ExpenseItem
-        get() = eranos.internal.ExpenseItem(name, unitPrice.generated, split.generated, quantity)
+        get() = eranos.internal.ExpenseItem(name, unitPrice.generated, split.generated, quantity.tenThousandths)
+
+    /**
+     * The line total, as the library computes it: [unitPrice] times [quantity], rounded half away from zero to the currency's
+     * minor unit, which is zero for a free line, whose product is below half a minor unit.
+     *
+     * @throws EranosException.Id for a member whose identifier is not one, and [EranosException.Expense] with
+     *   [ExpenseFailure.EmptyItemName] for a blank name, [ExpenseFailure.NonPositiveAmount] for a unit price that is not
+     *   positive, [ExpenseFailure.Overflow] for a line total out of range, and the failures of a split that does not divide
+     *   the line total, among them [ExpenseFailure.AmountsDoNotAddUp] for a split of amounts on a free line.
+     */
+    @Throws(EranosException::class)
+    public fun lineTotal(): Money = converting { expenseItemLineTotal(generated).converted() }
 
     /** Whether [other] is of the same class, with the same [name], [unitPrice], [split], and [quantity]. */
     override fun equals(other: Any?): Boolean =
@@ -280,7 +293,7 @@ public class ExpenseItem(
 }
 
 /** The line the generated code holds as [this]. */
-internal fun eranos.internal.ExpenseItem.converted(): ExpenseItem = ExpenseItem(name, unitPrice.converted(), split.converted(), quantity)
+internal fun eranos.internal.ExpenseItem.converted(): ExpenseItem = ExpenseItem(name, unitPrice.converted(), split.converted(), Quantity(quantity))
 
 /** A tip on top of an expense's amount, which its payers cover: [value], shared by [distribution]; [NONE] is no tip. */
 public class TipRule(

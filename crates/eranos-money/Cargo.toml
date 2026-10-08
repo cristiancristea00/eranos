@@ -1,5 +1,5 @@
 # eranos-money: amounts, currencies, exchange rates, costs, percentages,
-# parts, and the exact apportionment every split uses. An internal crate: the
+# parts, quantities, and the exact apportionment every split uses. An internal crate: the
 # `eranos` crate re-exports the types callers use.
 [package]
 name = "eranos-money"
@@ -11,7 +11,7 @@ publish.workspace = true
 
 [features]
 # `Serialize` and `Deserialize` for amounts, currencies, rates, costs,
-# percentages, and parts.
+# percentages, parts, and quantities.
 serde = ["dep:serde", "eranos-core/serde"]
 
 [dependencies]

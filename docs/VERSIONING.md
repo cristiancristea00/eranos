@@ -27,12 +27,14 @@ so two spellings of one UUID, such as uppercase and lowercase hexadecimal
 digits or the braced form, are two identifiers, which split and sort
 differently.
 
-The conversion of a double into an amount, a percentage, parts, or a rate,
-by `from_f64`, is part of the numbers too: it rounds the double's shortest
-decimal form as std's `Display` writes it, which the tests pin, so a
-change to the rounding counts as breaking, and a toolchain that wrote
-another form would fail the tests rather than change a stored cent
-([ARCHITECTURE § 4](ARCHITECTURE.md#4-money-and-rounding)).
+The conversion of a double into an amount, a percentage, parts, a
+quantity, or a rate, by `from_f64`, is part of the numbers too: it rounds
+the double's shortest decimal form as std's `Display` writes it, which the
+tests pin, so a change to the rounding counts as breaking, and a toolchain
+that wrote another form would fail the tests rather than change a stored
+cent ([ARCHITECTURE § 4](ARCHITECTURE.md#4-money-and-rounding)). So is an
+item's line total, its unit price times its quantity rounded half away
+from zero, which the shares of an itemised expense divide.
 
 The internal crates (`eranos-core` to `eranos-expense-group`) are outside
 the contract on their own: they are not published, they take the workspace's

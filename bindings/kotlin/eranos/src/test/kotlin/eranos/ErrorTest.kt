@@ -181,6 +181,10 @@ private val conversions: List<Conversion> =
             generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.InvalidPercentage, "detail"),
         ),
         Conversion(
+            failure = MoneyFailure.InvalidQuantity,
+            generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.InvalidQuantity, "detail"),
+        ),
+        Conversion(
             failure = MoneyFailure.NotFinite,
             generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.NotFinite, "detail"),
         ),
@@ -239,10 +243,6 @@ private val conversions: List<Conversion> =
         Conversion(
             failure = ExpenseFailure.EmptyItemName,
             generated = eranos.internal.EranosException.Expense(eranos.internal.ExpenseFailure.EmptyItemName, "detail"),
-        ),
-        Conversion(
-            failure = ExpenseFailure.ZeroQuantity,
-            generated = eranos.internal.EranosException.Expense(eranos.internal.ExpenseFailure.ZeroQuantity, "detail"),
         ),
         Conversion(
             failure = ExpenseFailure.ItemsDoNotAddUp(euros(8), euros(7)),

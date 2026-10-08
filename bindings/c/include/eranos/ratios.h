@@ -1,5 +1,5 @@
 /// @file eranos/ratios.h
-/// Exchange rates, percentages, and parts: the ratios that convert and divide amounts.
+/// Exchange rates, percentages, parts, and quantities: the decimals that convert, divide, and multiply amounts.
 
 #ifndef ERANOS_RATIOS_H
 #define ERANOS_RATIOS_H
@@ -7,6 +7,7 @@
 #include "EranosExchangeRate.h"
 #include "EranosParts.h"
 #include "EranosPercentage.h"
+#include "EranosQuantity.h"
 #include "eranos/detail.h"
 #include "eranos/text.h"
 
@@ -145,6 +146,68 @@ static inline void eranosPercentageFormat(int32_t const basisPoints, EranosText 
 ///   negative number
 [[nodiscard]] static inline EranosError *eranosPercentageCheck(int32_t const basisPoints) {
     EranosPercentage_check_result const result = EranosPercentage_check(basisPoints);
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// One unit, in ten-thousandths: the quantity an item starts at.
+static constexpr int64_t ERANOS_QUANTITY_ONE = 10'000;
+
+/// The quantity written `text`, in ten-thousandths: "0.452" is 4520.
+///
+/// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param tenThousandths Receives the ten-thousandths on success
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for text that
+///   is not a positive decimal with at most four decimal places, or a quantity out of range, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosQuantityParse(char const *const text, int64_t *const tenThousandths) {
+    EranosQuantity_parse_result const result = EranosQuantity_parse(eranosDetailView(text));
+    *tenThousandths = result.is_ok ? result.ok : 0;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The quantity of @p units whole units, in ten-thousandths: 3 is 30000.
+///
+/// @param units The units
+/// @param tenThousandths Receives the ten-thousandths on success
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a number
+///   that is not positive, or out of range
+[[nodiscard]] static inline EranosError *eranosQuantityFromWhole(int64_t const units, int64_t *const tenThousandths) {
+    EranosQuantity_from_whole_result const result = EranosQuantity_from_whole(units);
+    *tenThousandths = result.is_ok ? result.ok : 0;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The quantity of the double @p value, in ten-thousandths: 0.45205 is 4521. The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to four decimal places, and parses it.
+///
+/// @param value The quantity, as a double
+/// @param tenThousandths Receives the ten-thousandths on success
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a value
+///   that is NaN or infinite, rounds to zero or below, or is out of range
+[[nodiscard]] static inline EranosError *eranosQuantityFromDouble(double const value, int64_t *const tenThousandths) {
+    EranosQuantity_from_double_result const result = EranosQuantity_from_double(value);
+    *tenThousandths = result.is_ok ? result.ok : 0;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// Writes the quantity of `tenThousandths` ten-thousandths as the library does: "0.452". It writes zero and a negative number, which
+/// eranosQuantityCheck() refuses, the same way: "0" and "-0.452".
+///
+/// @param tenThousandths The ten-thousandths
+/// @param text Receives the text, replacing what it held
+static inline void eranosQuantityFormat(int64_t const tenThousandths, EranosText *const text) {
+    eranosDetailClear(text);
+    EranosQuantity_format(tenThousandths, text);
+    eranosDetailFinish(text);
+}
+
+/// Checks that `tenThousandths` is a quantity, as an item requires.
+///
+/// @param tenThousandths The ten-thousandths
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a number
+///   that is not positive
+[[nodiscard]] static inline EranosError *eranosQuantityCheck(int64_t const tenThousandths) {
+    EranosQuantity_check_result const result = EranosQuantity_check(tenThousandths);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

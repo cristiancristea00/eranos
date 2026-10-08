@@ -93,8 +93,11 @@ pub mod ffi {
         MoneyInvalidParts,
         /// A percentage that is not a decimal number with at most two decimal places.
         MoneyInvalidPercentage,
-        /// A double that is NaN or infinite, which no amount, percentage, number of parts, or
-        /// exchange rate is.
+        /// A quantity that is not a positive decimal number with at most four decimal places, or
+        /// whose ten-thousandths do not fit a 64-bit signed integer.
+        MoneyInvalidQuantity,
+        /// A double that is NaN or infinite, which no amount, percentage, number of parts, quantity,
+        /// or exchange rate is.
         MoneyNotFinite,
         /// A number or a result that does not fit its range.
         MoneyOverflow,
@@ -120,8 +123,6 @@ pub mod ffi {
         ExpenseNoItems,
         /// An item whose name is blank.
         ExpenseEmptyItemName,
-        /// An item quantity of zero.
-        ExpenseZeroQuantity,
         /// The item line totals do not add up to the expense amount.
         ExpenseItemsDoNotAddUp,
         /// A fixed tip below zero.

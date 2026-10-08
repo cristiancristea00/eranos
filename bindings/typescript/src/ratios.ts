@@ -1,5 +1,5 @@
 /**
- * Exchange rates, percentages, and parts.
+ * Exchange rates, percentages, parts, and quantities.
  *
  * @packageDocumentation
  */
@@ -235,5 +235,99 @@ export class Parts {
      */
     toString(): string {
         return internal.partsFormat(this.hundredths);
+    }
+}
+
+/** A number of units of a line of a bill, to a ten-thousandth: 0.452 kg of cheese is 4 520 ten-thousandths. */
+export class Quantity {
+    /** One unit, which a line of a bill holds unless it is given another quantity. */
+    // The literal, since a module constant is evaluated before `init` loads the WebAssembly module; a test holds it to the
+    // library's.
+    static readonly ONE: Quantity = new Quantity(10_000n);
+
+    private constructor(
+        /** The quantity in ten-thousandths: 10 000 for one unit, 4 520 for 0.452. */
+        readonly tenThousandths: bigint,
+    ) {}
+
+    /**
+     * The quantity of `tenThousandths` ten-thousandths.
+     *
+     * @param tenThousandths - The quantity in ten-thousandths: 10 000 for one unit, 4 520 for 0.452
+     * @returns The quantity
+     * @throws {@link MoneyError} with the failure `invalidQuantity` for a number that is not positive
+     */
+    static ofTenThousandths(tenThousandths: bigint): Quantity {
+        calling(() => {
+            internal.quantityCheck(tenThousandths);
+        });
+        return new Quantity(tenThousandths);
+    }
+
+    /**
+     * The quantity of `units` whole units: 3 is 30 000 ten-thousandths.
+     *
+     * @param units - The number of whole units
+     * @returns The quantity
+     * @throws {@link MoneyError} with the failure `invalidQuantity` for a number that is not positive and one whose
+     *   ten-thousandths do not fit in 64 bits
+     */
+    static ofWhole(units: bigint): Quantity {
+        return new Quantity(calling(() => internal.quantityFromWhole(units)));
+    }
+
+    /**
+     * The quantity written `text`: "1", "0.452", or "2.5".
+     *
+     * @param text - The quantity's text
+     * @returns The quantity
+     * @throws {@link MoneyError} with the failure `invalidQuantity` for text that is not a positive decimal with at most four
+     *   decimal places, and for a quantity whose ten-thousandths do not fit in 64 bits
+     */
+    static parse(text: string): Quantity {
+        return new Quantity(calling(() => internal.quantityParse(text)));
+    }
+
+    /**
+     * The quantity of the number `value`: 0.45205 is 0.4521.
+     *
+     * The library writes the number in its shortest decimal form, rounds it half away from zero to four decimal places, and
+     * parses it.
+     *
+     * @param value - The quantity as a number
+     * @returns The quantity
+     * @throws {@link MoneyError} with the failure `notFinite` for NaN and the infinities, and `invalidQuantity` for a number
+     *   that rounds to zero or below and one whose ten-thousandths do not fit in 64 bits
+     */
+    static fromNumber(value: number): Quantity {
+        return new Quantity(calling(() => internal.quantityFromF64(value)));
+    }
+
+    /**
+     * The quantity of `tenThousandths`, a number the library gave.
+     *
+     * @internal
+     */
+    static known(tenThousandths: bigint): Quantity {
+        return new Quantity(tenThousandths);
+    }
+
+    /**
+     * Whether `other` is the same quantity.
+     *
+     * @param other - The quantity to compare
+     * @returns Whether the two are equal
+     */
+    equals(other: Quantity): boolean {
+        return this.tenThousandths === other.tenThousandths;
+    }
+
+    /**
+     * The quantity as the library writes it.
+     *
+     * @returns The text: "0.452"
+     */
+    toString(): string {
+        return internal.quantityFormat(this.tenThousandths);
     }
 }

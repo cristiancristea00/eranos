@@ -40,6 +40,7 @@ import {
     Parts,
     Percentage,
     PhoneNumber,
+    Quantity,
     TimeOfDay,
     TipDistribution,
     UNCATEGORISED,
@@ -48,6 +49,7 @@ import {
     createExpense,
     createMember,
     createTransfer,
+    expenseItemLineTotal,
     expenseMembers,
     expenseTipAmount,
     expenseTotal,
@@ -94,7 +96,7 @@ function expenses(flat: Flat): Expenses {
                             { member: flat.bob, parts: Parts.ofHundredths(50) },
                         ],
                     },
-                    quantity: 2,
+                    quantity: Quantity.ofWhole(2n),
                 },
                 { name: 'Toll', unitPrice: new Money(1_000n, lei), split: { kind: 'equal', members: [flat.bob] } },
             ],
@@ -154,7 +156,7 @@ void describe('the expenses, members, categories, and transfers', () => {
         const group = flat.group;
         const { dinner, taxi } = expenses(flat);
         assert.ok('itemised' === taxi.split.kind);
-        assert.equal(taxi.split.items[1]?.quantity, 1);
+        assert.equal(taxi.split.items[1]?.quantity, Quantity.ONE);
         assert.equal(dinner.tip.distribution, TipDistribution.PROPORTIONAL);
         assert.equal(dinner.category, UNCATEGORISED);
 
@@ -175,7 +177,7 @@ void describe('the expenses, members, categories, and transfers', () => {
         };
         const tip = { value: { kind: 'percentage', percentage: Percentage.ofBasisPoints(1_000) } } as const;
         assert.equal(await group.addExpense({ ...bare, tip }), bare.id);
-        const filled = { ...bare, split: { kind: 'itemised', items: [{ ...toll, quantity: 1 }] }, tip: NO_TIP, category: UNCATEGORISED };
+        const filled = { ...bare, split: { kind: 'itemised', items: [{ ...toll, quantity: Quantity.ONE }] }, tip: NO_TIP, category: UNCATEGORISED };
         const tipped = { ...filled, tip: { ...tip, distribution: TipDistribution.PROPORTIONAL } };
         assert.deepEqual(group.expenseSync(bare.id), tipped);
         assert.deepEqual(await group.replaceExpense({ ...bare, category: flat.food }), tipped);
@@ -289,6 +291,55 @@ void describe('the expenses, members, categories, and transfers', () => {
         assert.throws(() => expenseMembers({ ...taxi, payers: { kind: 'equal', members: [memberId(' ana')] } }), IdError);
         assert.throws(() => expenseTipAmount({ ...taxi, tip: { value: { kind: 'fixed', amount: flat.euros(1n) } } }), ExpenseError);
         assert.throws(() => expenseTotal({ ...taxi, tip: { value: { kind: 'fixed', amount: new Money(-1n, lei) } } }), ExpenseError);
+    });
+
+    /**
+     * A line total that an app computed another way than the library's, multiplying a double or rounding another way, would
+     * show a bill whose lines do not add up to the amount the library checks them against; a fractional quantity or a free
+     * line that the group stored another way, or refused, would divide another bill than the app built.
+     */
+    void it("tells an item's line total as the library does, and stores a fractional quantity whole", () => {
+        const flat = new Flat();
+        const sharing = { kind: 'equal', members: [flat.ana, flat.bob] } as const;
+        const cheese = { name: 'Cheese', unitPrice: flat.euros(4_200n), split: sharing, quantity: Quantity.parse('0.35') };
+        // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+        const olives = { name: 'Olives', unitPrice: flat.euros(100n), split: sharing, quantity: Quantity.parse('0.335') };
+        // A ten-thousandth of 1.00 EUR is a hundredth of a cent, which rounds to zero: a free line.
+        const free = { ...olives, name: 'Bread', quantity: Quantity.ofTenThousandths(1n) };
+        assert.ok(expenseItemLineTotal(cheese).equals(flat.euros(1_470n)));
+        assert.ok(expenseItemLineTotal(olives).equals(flat.euros(34n)));
+        assert.ok(expenseItemLineTotal(free).equals(flat.euros(0n)));
+        assert.ok(expenseItemLineTotal({ ...olives, quantity: Quantity.ofWhole(2n) }).equals(flat.euros(200n)));
+        assert.ok(expenseItemLineTotal({ name: 'Water', unitPrice: flat.euros(150n), split: sharing }).equals(flat.euros(150n)));
+
+        const refusals = [
+            {
+                item: { ...free, split: { kind: 'amounts', shares: [{ member: flat.ana, amount: flat.euros(1n) }] } } as const,
+                failure: { kind: 'amountsDoNotAddUp', expected: flat.euros(0n), actual: flat.euros(1n) },
+            },
+            { item: { ...olives, unitPrice: flat.euros(9_223_372_036_854_775_807n), quantity: Quantity.ofWhole(2n) }, failure: { kind: 'overflow' } },
+            { item: { ...olives, name: ' ' }, failure: { kind: 'emptyItemName' } },
+        ];
+        for (const refusal of refusals) {
+            assert.throws(
+                () => expenseItemLineTotal(refusal.item),
+                (error: unknown) => {
+                    assert.ok(error instanceof ExpenseError);
+                    assert.deepEqual(error.failure, refusal.failure);
+                    return true;
+                },
+            );
+        }
+
+        const deli = createExpense({
+            name: 'Deli',
+            cost: { kind: 'local', amount: flat.euros(1_504n) },
+            payers: { kind: 'equal', members: [flat.ana] },
+            split: { kind: 'itemised', items: [cheese, olives, free] },
+            date: flat.day,
+        });
+        assert.deepEqual(convertedExpense(generatedExpense(deli)), deli);
+        assert.deepEqual(flat.group.expenseSync(flat.group.addExpenseSync(deli)), deli);
     });
 
     /** A split that listed other members than it divides among would show an app another set of participants. */

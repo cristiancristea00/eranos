@@ -2,8 +2,8 @@
 //! comes from the library through them.
 
 use eranos_bindings::{
-    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Iban, Money, PhoneNumber,
-    TimeOfDay, TipRule,
+    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, ExpenseItem, Iban, Money,
+    PhoneNumber, TimeOfDay, TipRule,
 };
 
 /// A new identifier, which any entry or group can take.
@@ -247,6 +247,66 @@ pub(crate) fn parts_check(hundredths: i32) -> Result<(), EranosError> {
     eranos_bindings::parts_check(hundredths)
 }
 
+/// The quantity written `text`, in ten-thousandths: "0.452" is 4 520.
+///
+/// # Errors
+///
+/// `MoneyFailure::InvalidQuantity` for text that is not a positive decimal
+/// with at most four decimal places, and for a quantity whose
+/// ten-thousandths do not fit an `i64`.
+#[uniffi::export]
+pub(crate) fn quantity_parse(text: &str) -> Result<i64, EranosError> {
+    eranos_bindings::quantity_parse(text)
+}
+
+/// The quantity of `units` whole units, in ten-thousandths: 3 is 30 000.
+///
+/// # Errors
+///
+/// `MoneyFailure::InvalidQuantity` for a number that is not positive, and
+/// for one whose ten-thousandths do not fit an `i64`.
+#[uniffi::export]
+pub(crate) fn quantity_from_whole(units: i64) -> Result<i64, EranosError> {
+    eranos_bindings::quantity_from_whole(units)
+}
+
+/// The quantity of the double `value`, in ten-thousandths: 0.45205 is
+/// 4 521.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to four decimal places, and parses it.
+///
+/// # Errors
+///
+/// `MoneyFailure::NotFinite` for NaN and the infinities, and
+/// `MoneyFailure::InvalidQuantity` for a value that rounds to zero or below
+/// and one whose ten-thousandths do not fit an `i64`.
+#[uniffi::export]
+pub(crate) fn quantity_from_f64(value: f64) -> Result<i64, EranosError> {
+    eranos_bindings::quantity_from_f64(value)
+}
+
+/// The quantity of `ten_thousandths`, as the library writes it: "0.452".
+///
+/// It writes the number as the library's text form of a quantity does, so
+/// it cannot fail: zero and a negative number, which `quantity_check`
+/// refuses, are written the same way, "0" and "-0.452".
+#[must_use]
+#[uniffi::export]
+pub(crate) fn quantity_format(ten_thousandths: i64) -> String {
+    eranos_bindings::quantity_format(ten_thousandths)
+}
+
+/// Checks that `ten_thousandths` is a quantity, as an item requires.
+///
+/// # Errors
+///
+/// `MoneyFailure::InvalidQuantity` for a number that is not positive.
+#[uniffi::export]
+pub(crate) fn quantity_check(ten_thousandths: i64) -> Result<(), EranosError> {
+    eranos_bindings::quantity_check(ten_thousandths)
+}
+
 /// The date written `text` in ISO 8601: "2026-09-23".
 ///
 /// # Errors
@@ -426,6 +486,27 @@ pub(crate) fn expense_tip_amount(expense: &Expense) -> Result<Money, EranosError
 #[uniffi::export]
 pub(crate) fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
     eranos_bindings::expense_total(expense)
+}
+
+/// The line total of `item`, as the library computes it, so every binding
+/// shows the same line total.
+///
+/// It is the unit price times the quantity, rounded half away from zero to
+/// the currency's minor unit: zero for a free line, whose product is below
+/// half a minor unit.
+///
+/// # Errors
+///
+/// The errors of the item's conversion, among them
+/// `MoneyFailure::UnknownCurrency` for an amount whose currency details are
+/// not the library's for its code and `MoneyFailure::InvalidQuantity` for a
+/// quantity that is not positive, and those of the library's checks of an
+/// item, among them `ExpenseFailure::AmountsDoNotAddUp` for a split of
+/// amounts that does not add up to the line total, a free line's included,
+/// and `ExpenseFailure::Overflow` for a line total out of range.
+#[uniffi::export]
+pub(crate) fn expense_item_line_total(item: &ExpenseItem) -> Result<Money, EranosError> {
+    eranos_bindings::expense_item_line_total(item)
 }
 
 /// Every member `expense` involves, as a payer or a participant, as

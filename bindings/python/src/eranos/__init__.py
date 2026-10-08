@@ -106,6 +106,7 @@ from eranos._identifiers import (
     parse_transfer_id,
 )
 from eranos._money import Money
+from eranos._quantity import Quantity
 from eranos._ratios import ExchangeRate, Parts, Percentage
 from eranos._totals import (
     Balance,
@@ -236,6 +237,7 @@ __all__ = [
     'PercentageTip',
     'PercentagesSplit',
     'PhoneNumber',
+    'Quantity',
     'SettledBalance',
     'SettlementError',
     'SettlementFailure',

@@ -8,7 +8,7 @@
 //! identifier, given or generated, through every edit, and keep the way a
 //! cost is shared through `FromExpenseSplit`.
 
-use eranos_money::{CurrencyCode, Percentage};
+use eranos_money::{CurrencyCode, Percentage, Quantity};
 
 use super::*;
 
@@ -92,7 +92,7 @@ fn full_expense() -> Expense {
 /// wine for Ana and Carol.
 fn itemised_expense() -> Expense {
     let wine = ExpenseItem::builder("Wine", euros(2_000), [ana(), carol()])
-        .quantity(2)
+        .quantity(Quantity::from_whole(2).unwrap())
         .build()
         .unwrap();
     dinner()
@@ -344,6 +344,37 @@ fn items_must_add_up_to_the_amount() {
             .items([item("Yacht", i64::MAX), item("Yacht", i64::MAX)])
             .build(),
         Err(ExpenseError::Overflow)
+    );
+}
+
+/// A free line, whose total rounds to zero, would be refused though the
+/// receipt lists it, or count towards the amount; and an expense of free
+/// lines alone would record a purchase that cost nothing.
+#[test]
+fn a_free_line_adds_nothing_and_an_expense_of_free_lines_is_refused() {
+    let free = ExpenseItem::builder("Mint", euros(1), [bob()])
+        .quantity(Quantity::parse("0.4").unwrap())
+        .build()
+        .unwrap();
+    // Beside a line of 90.00, the free line leaves the amount at 90.00.
+    let expense = dinner()
+        .paid_by(ana())
+        .items([item("Dinner", 9_000), free.clone()])
+        .build()
+        .unwrap();
+    assert!(matches!(expense.split(), ExpenseSplit::Itemised(items) if 2 == items.len()));
+    // On its own, it adds up to an amount of zero, which no expense has.
+    assert_eq!(
+        Expense::itemised_builder("Mint", euros(0), ana(), [free.clone()], september_23()).build(),
+        Err(ExpenseError::NonPositiveAmount)
+    );
+    // Any positive amount is more than its line adds up to.
+    assert_eq!(
+        Expense::itemised_builder("Mint", euros(1), ana(), [free], september_23()).build(),
+        Err(ExpenseError::ItemsDoNotAddUp {
+            expected: euros(1),
+            actual: euros(0)
+        })
     );
 }
 

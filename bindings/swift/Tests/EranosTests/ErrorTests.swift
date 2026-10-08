@@ -119,6 +119,10 @@ private let conversions: [Conversion] = [
         generated: .Money(failure: .invalidPercentage, detail: "detail")
     ),
     Conversion(
+        expected: .money(.invalidQuantity, detail: "detail"),
+        generated: .Money(failure: .invalidQuantity, detail: "detail")
+    ),
+    Conversion(
         expected: .money(.notFinite, detail: "detail"),
         generated: .Money(failure: .notFinite, detail: "detail")
     ),
@@ -169,10 +173,6 @@ private let conversions: [Conversion] = [
     Conversion(
         expected: .expense(.emptyItemName, detail: "detail"),
         generated: .Expense(failure: .emptyItemName, detail: "detail")
-    ),
-    Conversion(
-        expected: .expense(.zeroQuantity, detail: "detail"),
-        generated: .Expense(failure: .zeroQuantity, detail: "detail")
     ),
     Conversion(
         expected: .expense(.itemsDoNotAddUp(expected: euros(8), actual: euros(7)), detail: "detail"),

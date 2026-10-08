@@ -197,9 +197,6 @@ public sealed interface ExpenseFailure {
     /** An item whose name is blank. */
     public data object EmptyItemName : ExpenseFailure
 
-    /** An item quantity of zero. */
-    public data object ZeroQuantity : ExpenseFailure
-
     /** The item line totals do not add up to the expense amount. */
     public class ItemsDoNotAddUp(
         /** The expense amount. */
@@ -237,7 +234,6 @@ internal fun GeneratedExpenseFailure.converted(): ExpenseFailure =
         is GeneratedExpenseFailure.PercentagesDoNotAddUp -> ExpenseFailure.PercentagesDoNotAddUp(totalBasisPoints)
         GeneratedExpenseFailure.NoItems -> ExpenseFailure.NoItems
         GeneratedExpenseFailure.EmptyItemName -> ExpenseFailure.EmptyItemName
-        GeneratedExpenseFailure.ZeroQuantity -> ExpenseFailure.ZeroQuantity
         is GeneratedExpenseFailure.ItemsDoNotAddUp -> ExpenseFailure.ItemsDoNotAddUp(expected.converted(), actual.converted())
         GeneratedExpenseFailure.NegativeTip -> ExpenseFailure.NegativeTip
         GeneratedExpenseFailure.Overflow -> ExpenseFailure.Overflow
@@ -606,7 +602,10 @@ public sealed interface MoneyFailure {
     /** A percentage that is not a decimal number with at most two decimal places. */
     public data object InvalidPercentage : MoneyFailure
 
-    /** A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is. */
+    /** A quantity that is not a positive decimal number with at most four decimal places, or whose ten-thousandths do not fit a `Long`. */
+    public data object InvalidQuantity : MoneyFailure
+
+    /** A double that is NaN or infinite, which no amount, percentage, number of parts, quantity, or exchange rate is. */
     public data object NotFinite : MoneyFailure
 
     /** A number or a result that does not fit its range. */
@@ -623,6 +622,7 @@ internal fun GeneratedMoneyFailure.converted(): MoneyFailure =
         GeneratedMoneyFailure.InvalidExchangeRate -> MoneyFailure.InvalidExchangeRate
         GeneratedMoneyFailure.InvalidParts -> MoneyFailure.InvalidParts
         GeneratedMoneyFailure.InvalidPercentage -> MoneyFailure.InvalidPercentage
+        GeneratedMoneyFailure.InvalidQuantity -> MoneyFailure.InvalidQuantity
         GeneratedMoneyFailure.NotFinite -> MoneyFailure.NotFinite
         GeneratedMoneyFailure.Overflow -> MoneyFailure.Overflow
     }

@@ -9,7 +9,7 @@ use std::collections::BTreeSet;
 
 use eranos_calendar::CalendarDate;
 use eranos_core::ExpenseId;
-use eranos_money::{Cost, Parts, Percentage};
+use eranos_money::{Cost, Parts, Percentage, Quantity};
 use proptest::prelude::*;
 
 use super::*;
@@ -187,7 +187,7 @@ fn items_divide_by_their_own_splits() {
         .build()
         .unwrap();
     let beer = ExpenseItem::builder("Beer", eur(450), [ana, bob])
-        .quantity(2)
+        .quantity(Quantity::from_whole(2).unwrap())
         .build()
         .unwrap();
     let bill = Expense::itemised_builder("Bill", eur(2100), bob, [pizza, beer], day())
@@ -203,6 +203,55 @@ fn items_divide_by_their_own_splits() {
         vec![row(ana, 0, 1815), row(bob, 2310, 495)]
     );
     assert_eq!(resolved.debts, vec![debt(ana, bob, 1815)]);
+}
+
+/// An item of a fractional quantity divides its rounded line total, the
+/// amount the expense's items add up to; dividing the unrounded product
+/// would hand out a share of a cent that no line holds.
+#[test]
+fn a_fractional_item_divides_its_rounded_line_total() {
+    let (ana, bob) = (member(1), member(2));
+    // 0.335 kg at 1.00 a kilogram is 33.5 cents, a line of 0.34.
+    let olives = ExpenseItem::builder("Olives", eur(100), [ana, bob])
+        .quantity(Quantity::parse("0.335").unwrap())
+        .build()
+        .unwrap();
+    let bread = ExpenseItem::builder("Bread", eur(166), [ana])
+        .build()
+        .unwrap();
+    let bill = Expense::itemised_builder("Market", eur(200), bob, [olives, bread], day())
+        .build()
+        .unwrap();
+    let resolved = resolve_expense(&identified(&bill, entry(1)), CurrencyCode::EUR).unwrap();
+
+    // Ana: 1.66 + 0.17; Bob: 0.17, and he paid the 2.00.
+    assert_eq!(rows(&resolved), vec![row(ana, 0, 183), row(bob, 200, 17)]);
+}
+
+/// A free line, whose total rounds to zero, divides to zeros: a member who
+/// shares only it would be charged a cent the line does not cost, or be
+/// dropped from the expense they took part in.
+#[test]
+fn a_free_line_divides_to_zeros() {
+    let (ana, bob) = (member(1), member(2));
+    // 0.4 of a cent rounds to zero.
+    let mint = ExpenseItem::builder("Mint", eur(1), [ana, bob])
+        .quantity(Quantity::parse("0.4").unwrap())
+        .build()
+        .unwrap();
+    let bread = ExpenseItem::builder("Bread", eur(200), [ana])
+        .build()
+        .unwrap();
+    let bill = Expense::itemised_builder("Market", eur(200), bob, [mint, bread], day())
+        .tip(TipRule::fixed(eur(10)))
+        .build()
+        .unwrap();
+    let resolved = resolve_expense(&identified(&bill, entry(1)), CurrencyCode::EUR).unwrap();
+
+    // Ana consumed the bread and its whole proportional tip; Bob, who paid
+    // the 2.10, consumed nothing.
+    assert_eq!(rows(&resolved), vec![row(ana, 0, 210), row(bob, 210, 0)]);
+    assert_eq!(resolved.debts, vec![debt(ana, bob, 210)]);
 }
 
 /// With several payers every participant owes every payer in proportion to

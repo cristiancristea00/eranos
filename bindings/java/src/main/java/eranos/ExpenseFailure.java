@@ -103,9 +103,6 @@ public sealed interface ExpenseFailure {
     /** An item whose name is blank. */
     record EmptyItemName() implements ExpenseFailure {}
 
-    /** An item quantity of zero. */
-    record ZeroQuantity() implements ExpenseFailure {}
-
     /**
      * The item line totals do not add up to the expense amount.
      *

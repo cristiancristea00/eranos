@@ -12,7 +12,7 @@
 use eranos::{
     Balance, CalendarDate, Category, CategoryId, CurrencyCode, CurrencyRate, ExchangeRate, Expense,
     ExpenseGroup, ExpenseItem, Member, MemberId, MemberParts, MemberPercentage, MemberShare, Money,
-    Parts, Percentage, SettlementStrategy, Split, TipDistribution, TipRule, Transfer,
+    Parts, Percentage, Quantity, SettlementStrategy, Split, TipDistribution, TipRule, Transfer,
     error::ExpenseGroupError,
 };
 
@@ -316,6 +316,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     let bob = group.add_member(member("Bob"))?;
     let carol = group.add_member(member("Carol"))?;
     let two_parts = Parts::from_whole(2)?;
+    let three = Quantity::from_whole(3)?;
     let items = || -> Result<Vec<ExpenseItem>, eranos::error::ExpenseError> {
         Ok(vec![
             // Ana's steak and Bob's pasta.
@@ -323,7 +324,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
             ExpenseItem::builder("Pasta", eur("15.00"), [bob]).build()?,
             // Three bottles of water shared by everyone: 1.50 each.
             ExpenseItem::builder("Water", eur("1.50"), [ana, bob, carol])
-                .quantity(3)
+                .quantity(three)
                 .build()?,
             // A dessert for Bob and Carol, Carol eating two thirds.
             ExpenseItem::builder_with_split(

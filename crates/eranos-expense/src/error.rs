@@ -57,9 +57,6 @@ pub enum ExpenseError {
     /// An item whose name is blank.
     #[error("the item name must not be empty")]
     EmptyItemName,
-    /// An item quantity of zero.
-    #[error("an item quantity must be at least 1")]
-    ZeroQuantity,
     /// The item line totals do not add up to the expense amount.
     #[error("the items add up to {actual} instead of {expected}")]
     ItemsDoNotAddUp {
@@ -109,9 +106,6 @@ pub trait FromExpenseError: Sized {
     /// The value for [`ExpenseError::EmptyItemName`].
     fn empty_item_name(message: String) -> Self;
 
-    /// The value for [`ExpenseError::ZeroQuantity`].
-    fn zero_quantity(message: String) -> Self;
-
     /// The value for [`ExpenseError::ItemsDoNotAddUp`].
     fn items_do_not_add_up(expected: Money, actual: Money, message: String) -> Self;
 
@@ -143,7 +137,6 @@ pub trait FromExpenseError: Sized {
             }
             ExpenseError::NoItems => Self::no_items(message),
             ExpenseError::EmptyItemName => Self::empty_item_name(message),
-            ExpenseError::ZeroQuantity => Self::zero_quantity(message),
             ExpenseError::ItemsDoNotAddUp { expected, actual } => {
                 Self::items_do_not_add_up(*expected, *actual, message)
             }

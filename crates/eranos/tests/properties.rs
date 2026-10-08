@@ -1,6 +1,6 @@
 //! Properties of random groups through the public API: every split method,
-//! itemised bills, both tip distributions, several payers, foreign
-//! currencies, and transfers. Whatever the entries, the books must balance
+//! itemised bills with whole and fractional quantities, both tip
+//! distributions, several payers, foreign currencies, and transfers. Whatever the entries, the books must balance
 //! (paid, consumed, and spent agree; balances sum to zero; categories add up),
 //! every strategy's plan must clear every balance, the fewest-payments plan
 //! must beat or match greedy, a plan awaited in an executor must equal the
@@ -19,8 +19,8 @@ use eranos::cooperative::block_on;
 use eranos::{
     CalendarDate, CategoryTotal, Cost, CurrencyCode, CurrencyRate, ExchangeRate, Expense,
     ExpenseGroup, ExpenseId, ExpenseItem, Member, MemberAmount, MemberId, MemberParts,
-    MemberPercentage, Money, Parts, Percentage, SettlementStrategy, Split, TipDistribution,
-    TipRule, Transfer, TransferId, error::ExpenseGroupError,
+    MemberPercentage, Money, Parts, Percentage, Quantity, SettlementStrategy, Split,
+    TipDistribution, TipRule, Transfer, TransferId, error::ExpenseGroupError,
 };
 use proptest::prelude::*;
 
@@ -150,12 +150,12 @@ impl ForeignRecipe {
 }
 
 /// A line of an itemised bill: its unit price in minor units, its
-/// quantity, and how it is divided.
+/// quantity in ten-thousandths, and how it is divided.
 #[derive(Debug, Clone)]
 struct ExpenseItemRecipe {
     price: i64,
     split: SplitRecipe,
-    quantity: u32,
+    quantity: u64,
 }
 
 /// A tip: fixed in minor units or a percentage in basis points, and shared
@@ -187,13 +187,21 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
         proptest::option::weighted(
             0.3,
             proptest::collection::vec(
-                (1_i64..20_000, 1_u32..4, split_recipe()).prop_map(|(price, quantity, split)| {
-                    ExpenseItemRecipe {
+                (
+                    1_i64..20_000,
+                    // Whole units, or a fraction from 0.5, which keeps a line
+                    // of the smallest price at a cent.
+                    prop_oneof![
+                        (1_u64..4).prop_map(|units| units * 10_000),
+                        5_000_u64..40_000,
+                    ],
+                    split_recipe(),
+                )
+                    .prop_map(|(price, quantity, split)| ExpenseItemRecipe {
                         price,
                         split,
                         quantity,
-                    }
-                }),
+                    }),
                 1..4,
             ),
         ),
@@ -252,15 +260,18 @@ impl ExpenseRecipe {
             let items: Vec<ExpenseItem> = items
                 .iter()
                 .map(|item| {
-                    let line = money(item.price * i64::from(item.quantity));
-                    ExpenseItem::builder_with_split(
-                        "Item",
-                        money(item.price),
-                        item.split.build(members, line),
-                    )
-                    .quantity(item.quantity)
-                    .build()
-                    .unwrap()
+                    // The split divides the line total, which the item
+                    // rounds, so it is read from an item built first.
+                    let priced = ExpenseItem::builder("Item", money(item.price), [members[0]])
+                        .quantity(Quantity::from_ten_thousandths(item.quantity).unwrap())
+                        .build()
+                        .unwrap();
+                    let line = priced.line_total();
+                    priced
+                        .to_builder()
+                        .split(item.split.build(members, line))
+                        .build()
+                        .unwrap()
                 })
                 .collect();
             let amount: i64 = items

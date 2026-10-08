@@ -150,11 +150,11 @@ fn invalid_time(error: &EranosError) -> bool {
     )
 }
 
-fn zero_quantity(error: &EranosError) -> bool {
+fn invalid_quantity(error: &EranosError) -> bool {
     matches!(
         error,
-        EranosError::Expense {
-            failure: ExpenseFailure::ZeroQuantity,
+        EranosError::Money {
+            failure: MoneyFailure::InvalidQuantity,
             ..
         }
     )
@@ -203,13 +203,13 @@ fn splits() -> [Split; 4] {
     ]
 }
 
-/// The one line of the taxi's bill.
+/// The one line of the taxi's bill: two fares.
 fn fare() -> ExpenseItem {
     ExpenseItem {
         name: "Fare".to_owned(),
         unit_price: lei(2_500),
         split: equal(&[ana(), bob()]),
-        quantity: 2,
+        quantity: 20_000,
     }
 }
 
@@ -326,7 +326,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
                 },
                 ..taxi()
             },
-            is_expected: zero_quantity,
+            is_expected: invalid_quantity,
         },
         Refusal {
             record: Expense {
@@ -463,30 +463,51 @@ fn a_split_refuses_what_does_not_convert() {
     }
 }
 
-/// An item converted back and forth would change its line, and one the
-/// library refuses would reach it.
+/// An item converted back and forth would change its line or its
+/// quantity's decimals, a free line would be refused, and one the library
+/// refuses, a quantity that is not positive among them, would reach it.
 #[test]
 fn an_item_converts_both_ways_and_refuses_bad_lines() {
-    let item = fare();
-    assert_eq!(
-        item.to_library()
-            .map(|converted| ExpenseItem::from_library(&converted)),
-        Ok(fare())
-    );
+    // Whole and fractional quantities, and a free line: a ten-thousandth of
+    // 25.00 RON is a quarter of a ban, which rounds to zero.
+    for item in [
+        fare(),
+        ExpenseItem {
+            quantity: 4_520,
+            ..fare()
+        },
+        ExpenseItem {
+            quantity: 1,
+            ..fare()
+        },
+    ] {
+        assert_eq!(
+            item.to_library()
+                .map(|converted| ExpenseItem::from_library(&converted)),
+            Ok(item)
+        );
+    }
     let refusals = [
         Refusal {
             record: ExpenseItem {
                 quantity: -1,
                 ..fare()
             },
-            is_expected: zero_quantity,
+            is_expected: invalid_quantity,
         },
         Refusal {
             record: ExpenseItem {
                 quantity: 0,
                 ..fare()
             },
-            is_expected: zero_quantity,
+            is_expected: invalid_quantity,
+        },
+        Refusal {
+            record: ExpenseItem {
+                quantity: i64::MIN,
+                ..fare()
+            },
+            is_expected: invalid_quantity,
         },
         Refusal {
             record: ExpenseItem {

@@ -23,6 +23,7 @@ import eranos.MemberShare;
 import eranos.Money;
 import eranos.Parts;
 import eranos.Percentage;
+import eranos.Quantity;
 import eranos.Split;
 import eranos.TipDistribution;
 import eranos.TipRule;
@@ -43,7 +44,7 @@ public final class Main {
 
     /** A line of the receipt, a row of the receipt's table. */
     private record LineRow(
-            String name, String participants, int quantity, Money unitPrice, Money lineTotal)
+            String name, String participants, Quantity quantity, Money unitPrice, Money lineTotal)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Item", "Shared by", "Quantity", "Unit price", "Line total");
@@ -53,7 +54,7 @@ public final class Main {
             return List.of(
                     name,
                     participants,
-                    String.valueOf(quantity),
+                    quantity.toString(),
                     unitPrice.toString(),
                     lineTotal.toString());
         }
@@ -99,7 +100,11 @@ public final class Main {
             throws EranosException {
         return List.of(
                 new ExpenseItem("Ciorbă", eur("8.00"), new Split.Equal(List.of(ana))),
-                new ExpenseItem("Sarmale", eur("14.00"), new Split.Equal(List.of(bob, carol)), 2),
+                new ExpenseItem(
+                        "Sarmale",
+                        eur("14.00"),
+                        new Split.Equal(List.of(bob, carol)),
+                        Quantity.ofWhole(2)),
                 new ExpenseItem(
                         "Papanași",
                         eur("9.00"),
@@ -108,7 +113,10 @@ public final class Main {
                                         new MemberParts(ana, Parts.ofHundredths(100)),
                                         new MemberParts(carol, Parts.ofHundredths(200))))),
                 new ExpenseItem(
-                        "Lemonade", eur("3.00"), new Split.Equal(List.of(ana, bob, carol)), 3));
+                        "Lemonade",
+                        eur("3.00"),
+                        new Split.Equal(List.of(ana, bob, carol)),
+                        Quantity.ofWhole(3)));
     }
 
     /** The dinner, its tip of 10 % shared by {@code distribution}. */
@@ -174,17 +182,13 @@ public final class Main {
             section("1. The receipt");
             List<LineRow> lines = new ArrayList<>();
             for (ExpenseItem item : receipt(ana, bob, carol)) {
-                Money total =
-                        new Money(
-                                item.unitPrice().minorUnits() * item.quantity(),
-                                item.unitPrice().currency());
                 lines.add(
                         new LineRow(
                                 item.name(),
                                 names(group, item.split().members()),
                                 item.quantity(),
                                 item.unitPrice(),
-                                total));
+                                item.lineTotal()));
             }
             printTable(LineRow.HEADERS, lines, 2);
             System.out.print(

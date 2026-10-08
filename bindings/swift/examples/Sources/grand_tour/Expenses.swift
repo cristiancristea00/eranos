@@ -73,7 +73,7 @@ func printItems(_ group: ExpenseGroup, _ id: Expense.ID) throws(EranosError) {
                 sharedBy: try names(group, item.split.members),
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                lineTotal: Money(minorUnits: item.unitPrice.minorUnits * Int64(item.quantity), currency: item.unitPrice.currency)
+                lineTotal: try item.lineTotal()
             )
         },
         numbersFrom: 2
@@ -83,7 +83,12 @@ func printItems(_ group: ExpenseGroup, _ id: Expense.ID) throws(EranosError) {
 /// The receipt of the fado night: every line with its own split.
 func fadoItems(_ people: People) throws(EranosError) -> [ExpenseItem] {
     [
-        ExpenseItem(name: "Vinho verde", unitPrice: try eur("12.00"), split: .equal([people.ana, people.bob, people.dan]), quantity: 2),
+        ExpenseItem(
+            name: "Vinho verde",
+            unitPrice: try eur("12.00"),
+            split: .equal([people.ana, people.bob, people.dan]),
+            quantity: try Quantity(whole: 2)
+        ),
         ExpenseItem(name: "Bacalhau", unitPrice: try eur("18.00"), split: .equal([people.carol])),
         ExpenseItem(
             name: "Custard tarts",
@@ -95,7 +100,7 @@ func fadoItems(_ people: People) throws(EranosError) -> [ExpenseItem] {
                 MemberParts(member: people.dan, parts: try Parts(parsing: "1")),
                 MemberParts(member: people.eva, parts: try Parts(parsing: "2"))
             ]),
-            quantity: 6
+            quantity: try Quantity(whole: 6)
         ),
         ExpenseItem(name: "Juice", unitPrice: try eur("3.00"), split: .equal([people.eva]))
     ]

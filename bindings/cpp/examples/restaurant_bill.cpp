@@ -70,10 +70,10 @@ struct TipRow final {
 /// The amount @p text of euros.
 [[nodiscard]] Money euros(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
-/// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) noexcept {
+/// The line @p name of @p units whole units at @p unitPrice euros, which @p split shares.
+[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int64_t const units) noexcept {
     ExpenseItem item(std::move(name), euros(unitPrice), std::move(split));
-    item.quantity = quantity;
+    item.quantity = must(Quantity::whole(units));
     return item;
 }
 
@@ -117,13 +117,12 @@ void run() noexcept {
     section("1. The receipt");
     std::vector<LineRow> lines;
     for (auto const &item : receipt(ana, bob, carol)) {
-        Money const total(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency);
         lines.push_back({
             .name = item.name,
             .participants = names(group, must(participants(item.split))),
-            .quantity = std::to_string(item.quantity),
+            .quantity = item.quantity.toString(),
             .unitPrice = item.unitPrice.toString(),
-            .lineTotal = total.toString(),
+            .lineTotal = must(lineTotal(item)).toString(),
         });
     }
     printTable(lines, 2);

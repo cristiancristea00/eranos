@@ -45,6 +45,7 @@ export {
     createExpense,
     createMember,
     createTransfer,
+    expenseItemLineTotal,
     expenseMembers,
     expenseTipAmount,
     expenseTotal,
@@ -106,7 +107,7 @@ export {
 } from './identifiers.js';
 export { init } from './init.js';
 export { Money } from './money.js';
-export { ExchangeRate, Parts, Percentage } from './ratios.js';
+export { ExchangeRate, Parts, Percentage, Quantity } from './ratios.js';
 export {
     type Balance,
     type CategoryTotal,

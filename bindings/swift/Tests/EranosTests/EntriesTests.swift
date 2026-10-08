@@ -27,7 +27,7 @@ private struct Expenses {
                         MemberParts(member: flat.ana, parts: Parts(hundredths: 100)),
                         MemberParts(member: flat.bob, parts: Parts(hundredths: 50))
                     ]),
-                    quantity: 2
+                    quantity: Quantity(whole: 2)
                 )
             ]),
             date: flat.day,
@@ -91,6 +91,44 @@ func anExpenseTellsItsTipTotalAndMembers() throws {
         try unreadable.members()
     }
     #expect(TipDistribution.allCases == [.proportional, .equal])
+}
+
+/// A line total an app computed on its own could differ from the library's, which rounds a
+/// fractional quantity's product half away from zero to the minor unit, and an item built without
+/// a quantity would count another number of units than one.
+@Test
+func anItemsLineTotalIsTheLibrarysAndItsQuantityStartsAtOne() throws {
+    let flat = try Flat()
+    let flour = ExpenseItem(name: "Flour", unitPrice: flat.euros(4_200), split: .equal([flat.ana]), quantity: try Quantity(parsing: "0.35"))
+    #expect(try flat.euros(1_470) == flour.lineTotal())
+    // 33.5 cents, which round away from zero.
+    let olives = ExpenseItem(name: "Olives", unitPrice: flat.euros(100), split: .equal([flat.ana]), quantity: try Quantity(parsing: "0.335"))
+    #expect(try flat.euros(34) == olives.lineTotal())
+    // A ten-thousandth of a cent, which rounds to a free line.
+    let crumb = ExpenseItem(name: "Crumb", unitPrice: flat.euros(1), split: .equal([flat.ana]), quantity: try Quantity(tenThousandths: 1))
+    #expect(try flat.euros(0) == crumb.lineTotal())
+
+    let bread = ExpenseItem(name: "Bread", unitPrice: flat.euros(250), split: .equal([flat.ana, flat.bob]))
+    #expect(Quantity.one == bread.quantity)
+    #expect(try flat.euros(250) == bread.lineTotal())
+    #expect(ExpenseItem(bread.generated) == bread)
+    var loaves = bread
+    loaves.quantity = try Quantity(whole: 3)
+    #expect(try flat.euros(750) == loaves.lineTotal())
+    #expect(ExpenseItem(loaves.generated) == loaves)
+    #expect(ExpenseItem(flour.generated) == flour)
+
+    var unnamed = bread
+    unnamed.name = " "
+    #expect(throws: EranosError.expense(.emptyItemName, detail: "the item name must not be empty")) {
+        try unnamed.lineTotal()
+    }
+    var dearest = bread
+    dearest.unitPrice = flat.euros(.max)
+    dearest.quantity = try Quantity(whole: 2)
+    #expect(throws: EranosError.expense(.overflow, detail: "the amounts are out of range")) {
+        try dearest.lineTotal()
+    }
 }
 
 /// An expense built without a tip or a category would start at, or read back as, another tip or

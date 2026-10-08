@@ -12,9 +12,11 @@ import {
     Money,
     Parts,
     Percentage,
+    Quantity,
     TimeOfDay,
     TipDistribution,
     createExpense,
+    expenseItemLineTotal,
     expenseMembers,
     expenseTipAmount,
     expenseTotal,
@@ -55,7 +57,7 @@ const shareColumns: Columns<ShareRow> = [
 interface ItemRow {
     readonly name: string;
     readonly sharedBy: string;
-    readonly quantity: number;
+    readonly quantity: Quantity;
     readonly unitPrice: Money;
     readonly lineTotal: Money;
 }
@@ -63,7 +65,7 @@ interface ItemRow {
 const itemColumns: Columns<ItemRow> = [
     { header: 'Item', text: (row) => row.name },
     { header: 'Shared by', text: (row) => row.sharedBy },
-    { header: 'Quantity', text: (row) => String(row.quantity) },
+    { header: 'Quantity', text: (row) => row.quantity.toString() },
     { header: 'Unit price', text: (row) => row.unitPrice.toString() },
     { header: 'Line total', text: (row) => row.lineTotal.toString() },
 ];
@@ -132,7 +134,7 @@ function printItems(group: ExpenseGroup, id: ExpenseId): void {
             sharedBy: names(group, splitMembers(item.split)),
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            lineTotal: new Money(item.unitPrice.minorUnits * BigInt(item.quantity), item.unitPrice.currency),
+            lineTotal: expenseItemLineTotal(item),
         })),
         2,
     );
@@ -141,7 +143,12 @@ function printItems(group: ExpenseGroup, id: ExpenseId): void {
 /** The receipt of the fado night: every line with its own split. */
 function fadoItems(people: People): ExpenseItemInput[] {
     return [
-        { name: 'Vinho verde', unitPrice: eur('12.00'), split: { kind: 'equal', members: [people.ana, people.bob, people.dan] }, quantity: 2 },
+        {
+            name: 'Vinho verde',
+            unitPrice: eur('12.00'),
+            split: { kind: 'equal', members: [people.ana, people.bob, people.dan] },
+            quantity: Quantity.ofWhole(2n),
+        },
         { name: 'Bacalhau', unitPrice: eur('18.00'), split: { kind: 'equal', members: [people.carol] } },
         {
             name: 'Custard tarts',
@@ -156,7 +163,7 @@ function fadoItems(people: People): ExpenseItemInput[] {
                     { member: people.eva, parts: Parts.parse('2') },
                 ],
             },
-            quantity: 6,
+            quantity: Quantity.ofWhole(6n),
         },
         { name: 'Juice', unitPrice: eur('3.00'), split: { kind: 'equal', members: [people.eva] } },
     ];

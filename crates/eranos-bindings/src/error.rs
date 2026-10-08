@@ -299,8 +299,6 @@ pub enum ExpenseFailure {
     NoItems,
     /// [`ExpenseError::EmptyItemName`].
     EmptyItemName,
-    /// [`ExpenseError::ZeroQuantity`].
-    ZeroQuantity,
     /// [`ExpenseError::ItemsDoNotAddUp`].
     ItemsDoNotAddUp {
         /// What the parts must add up to.
@@ -467,6 +465,8 @@ pub enum MoneyFailure {
     InvalidParts,
     /// [`MoneyError::InvalidPercentage`].
     InvalidPercentage,
+    /// [`MoneyError::InvalidQuantity`].
+    InvalidQuantity,
     /// [`MoneyError::NotFinite`].
     NotFinite,
     /// [`MoneyError::Overflow`].
@@ -663,6 +663,13 @@ impl FromMoneyError for EranosError {
         }
     }
 
+    fn invalid_quantity(message: String) -> Self {
+        Self::Money {
+            failure: MoneyFailure::InvalidQuantity,
+            detail: message,
+        }
+    }
+
     fn not_finite(message: String) -> Self {
         Self::Money {
             failure: MoneyFailure::NotFinite,
@@ -850,13 +857,6 @@ impl FromExpenseError for EranosError {
     fn empty_item_name(message: String) -> Self {
         Self::Expense {
             failure: ExpenseFailure::EmptyItemName,
-            detail: message,
-        }
-    }
-
-    fn zero_quantity(message: String) -> Self {
-        Self::Expense {
-            failure: ExpenseFailure::ZeroQuantity,
             detail: message,
         }
     }

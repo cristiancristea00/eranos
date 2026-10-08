@@ -232,15 +232,15 @@ public struct ExpenseItem: Hashable, Sendable {
     /// How the line's total divides.
     public var split: Split
 
-    /// How many units, from 1.
-    public var quantity: Int32
+    /// How many units: ``Quantity/one`` unless given another.
+    public var quantity: Quantity
 
     var generated: EranosGenerated.ExpenseItem {
-        .init(name: name, unitPrice: unitPrice.generated, split: split.generated, quantity: quantity)
+        .init(name: name, unitPrice: unitPrice.generated, split: split.generated, quantity: quantity.tenThousandths)
     }
 
     /// A line of `quantity` units of `name` at `unitPrice`, which `split` divides.
-    public init(name: String, unitPrice: Money, split: Split, quantity: Int32 = 1) {
+    public init(name: String, unitPrice: Money, split: Split, quantity: Quantity = .one) {
         self.name = name
         self.unitPrice = unitPrice
         self.split = split
@@ -248,7 +248,29 @@ public struct ExpenseItem: Hashable, Sendable {
     }
 
     init(_ item: EranosGenerated.ExpenseItem) {
-        self.init(name: item.name, unitPrice: Money(item.unitPrice), split: Split(item.split), quantity: item.quantity)
+        self.init(
+            name: item.name,
+            unitPrice: Money(item.unitPrice),
+            split: Split(item.split),
+            quantity: Quantity(known: item.quantity)
+        )
+    }
+
+    /// The line's total, as the library computes it: the unit price times the quantity, rounded
+    /// half away from zero to the currency's minor unit, so 0.335 at 1.00 EUR is 0.34 EUR, and a
+    /// product below half a minor unit is a free line, 0.00 EUR.
+    ///
+    /// - Throws: ``EranosError/id(_:detail:)`` for a member whose identifier is not one,
+    ///   ``EranosError/money(_:detail:)`` with ``MoneyFailure/unknownCurrency`` for a unit price
+    ///   whose currency details are not the library's for its code, and the failures of an item
+    ///   that does not build: ``EranosError/expense(_:detail:)`` with
+    ///   ``ExpenseFailure/emptyItemName`` for a blank name, ``ExpenseFailure/nonPositiveAmount``
+    ///   for a unit price that is not positive, those of a split that does not divide the line
+    ///   total, among them ``ExpenseFailure/amountsDoNotAddUp(expected:actual:)``, and
+    ///   ``ExpenseFailure/overflow`` for a line total out of range.
+    public func lineTotal() throws(EranosError) -> Money {
+        let total = try converting { try EranosGenerated.expenseItemLineTotal(item: generated) }
+        return Money(total)
     }
 }
 

@@ -1,10 +1,10 @@
 //! The failure of building, reading, or combining an amount, a currency, a
-//! rate, a percentage, or a number of parts.
+//! rate, a percentage, a number of parts, or a quantity.
 
 use crate::CurrencyCode;
 
-/// An amount, a currency, an exchange rate, a percentage, or a number of
-/// parts that could not be built, read, or computed.
+/// An amount, a currency, an exchange rate, a percentage, a number of parts,
+/// or a quantity that could not be built, read, or computed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
 pub enum MoneyError {
@@ -42,8 +42,12 @@ pub enum MoneyError {
     /// places.
     #[error("invalid percentage: expected a number with at most 2 decimal places")]
     InvalidPercentage,
+    /// A quantity that is not a positive decimal number with at most four
+    /// decimal places, or whose ten-thousandths do not fit in an `i64`.
+    #[error("invalid quantity: expected a positive number with at most 4 decimal places")]
+    InvalidQuantity,
     /// A double that is NaN or infinite, which no amount, percentage, number
-    /// of parts, or exchange rate is.
+    /// of parts, quantity, or exchange rate is.
     #[error("the number is not finite")]
     NotFinite,
     /// A number or a result that does not fit its range.
@@ -75,6 +79,9 @@ pub trait FromMoneyError: Sized {
     /// The value for [`MoneyError::InvalidPercentage`].
     fn invalid_percentage(message: String) -> Self;
 
+    /// The value for [`MoneyError::InvalidQuantity`].
+    fn invalid_quantity(message: String) -> Self;
+
     /// The value for [`MoneyError::NotFinite`].
     fn not_finite(message: String) -> Self;
 
@@ -98,6 +105,7 @@ pub trait FromMoneyError: Sized {
             MoneyError::InvalidExchangeRate => Self::invalid_exchange_rate(message),
             MoneyError::InvalidParts => Self::invalid_parts(message),
             MoneyError::InvalidPercentage => Self::invalid_percentage(message),
+            MoneyError::InvalidQuantity => Self::invalid_quantity(message),
             MoneyError::NotFinite => Self::not_finite(message),
             MoneyError::Overflow => Self::overflow(message),
         }

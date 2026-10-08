@@ -1,4 +1,4 @@
-"""Check that every entry and every variant goes through the group and comes back as it went in, and what the group refuses."""
+"""Check that every entry goes through the group and back as it went in, what the group refuses, and what an entry's helpers work out."""
 
 import copy
 
@@ -17,6 +17,7 @@ from eranos import (
     EqualSplit,
     ExchangeRate,
     Expense,
+    ExpenseError,
     ExpenseId,
     FixedTip,
     GetsBackBalance,
@@ -40,6 +41,7 @@ from eranos import (
     PercentagesSplit,
     PercentageTip,
     PhoneNumber,
+    Quantity,
     SettledBalance,
     TimeOfDay,
     TipRule,
@@ -71,13 +73,19 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
     )
     assert flat.group.add_expense(lunch) == lunch.id
     assert flat.group.expense(lunch.id) == lunch
-    pizza = ExpenseItem(name='Pizza', unit_price=flat.euros(1200), split=EqualSplit((flat.ana, flat.bob)), quantity=2)
-    wine = ExpenseItem(name='Wine', unit_price=flat.euros(600), split=PercentagesSplit((MemberPercentage(flat.ana, Percentage(10000)),)))
+    pizza = ExpenseItem(name='Pizza', unit_price=flat.euros(1050), split=EqualSplit((flat.ana, flat.bob)), quantity=Quantity.whole(2))
+    wine = ExpenseItem(
+        name='Wine',
+        unit_price=flat.euros(1200),
+        split=PercentagesSplit((MemberPercentage(flat.ana, Percentage(10000)),)),
+        quantity=Quantity.parse('0.5'),
+    )
+    bread = ExpenseItem(name='Bread', unit_price=flat.euros(300), split=EqualSplit((flat.bob,)))
     receipt = Expense.create(
         name='Receipt',
         cost=LocalCost(flat.euros(3000)),
         payers=AmountsSplit((MemberAmount(flat.bob, flat.euros(3300)),)),
-        split=ItemisedExpenseSplit((pizza, wine)),
+        split=ItemisedExpenseSplit((pizza, wine, bread)),
         date=flat.day,
         tip=TipRule(FixedTip(flat.euros(300)), TipDistribution.EQUAL),
     )
@@ -403,6 +411,40 @@ def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:
     with pytest.raises(IdError) as unknown:
         flat.expense('Snack', MemberId(' ana'), (flat.ana,)).members()
     assert unknown.value.failure == IdError.SurroundingWhitespace()
+
+
+def test_an_items_line_total_is_its_unit_price_times_its_quantity_rounded_half_away_from_zero(flat: Flat) -> None:
+    """A line total worked out otherwise than the library's would show a receipt whose lines do not add up to what the group divides."""
+    split = EqualSplit((flat.ana, flat.bob))
+    cheese = ExpenseItem(name='Cheese', unit_price=flat.euros(4200), split=split, quantity=Quantity.parse('0.35'))
+    assert cheese.line_total() == flat.euros(1470)
+    # 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    olives = ExpenseItem(name='Olives', unit_price=flat.euros(100), split=split, quantity=Quantity.parse('0.335'))
+    assert olives.line_total() == flat.euros(34)
+    beers = ExpenseItem(name='Beer', unit_price=flat.euros(450), split=split, quantity=Quantity.whole(3))
+    assert beers.line_total() == flat.euros(1350)
+    # 0.0049 at 1.00 EUR is under half a cent, a free line.
+    sample = ExpenseItem(name='Sample', unit_price=flat.euros(100), split=split, quantity=Quantity.parse('0.0049'))
+    assert sample.line_total() == flat.euros(0)
+
+
+def test_an_item_given_no_quantity_counts_one_unit(flat: Flat) -> None:
+    """An item whose quantity defaulted otherwise than the library's would charge a line given no quantity for another number of units."""
+    bread = ExpenseItem(name='Bread', unit_price=flat.euros(250), split=EqualSplit((flat.ana,)))
+    assert bread.quantity == Quantity.ONE
+    assert bread.line_total() == flat.euros(250)
+
+
+def test_a_line_total_of_an_item_the_library_refuses_is_refused(flat: Flat) -> None:
+    """A line total worked out for an item the group refuses would show a receipt line that no expense can hold."""
+    wine = ExpenseItem(name='Wine', unit_price=flat.euros(600), split=AmountsSplit((MemberAmount(flat.ana, flat.euros(100)),)))
+    with pytest.raises(ExpenseError) as unbalanced:
+        wine.line_total()
+    assert isinstance(unbalanced.value.failure, ExpenseError.AmountsDoNotAddUp)
+    gold = ExpenseItem(name='Gold', unit_price=flat.euros(2**62), split=EqualSplit((flat.ana,)), quantity=Quantity.whole(4))
+    with pytest.raises(ExpenseError) as overflow:
+        gold.line_total()
+    assert overflow.value.failure == ExpenseError.Overflow()
 
 
 def test_a_tip_without_a_distribution_is_shared_in_proportion() -> None:

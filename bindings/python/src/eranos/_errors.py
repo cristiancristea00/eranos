@@ -315,8 +315,13 @@ class MoneyError(EranosError):
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
+    class InvalidQuantity:
+        """A quantity that is not a positive decimal number with at most four decimal places, or whose ten-thousandths do not fit in 64 bits."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
     class NotFinite:
-        """A float that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is."""
+        """A float that is NaN or infinite, which no amount, percentage, number of parts, quantity, or exchange rate is."""
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
@@ -345,6 +350,7 @@ type MoneyFailure = (
     | MoneyError.InvalidExchangeRate
     | MoneyError.InvalidParts
     | MoneyError.InvalidPercentage
+    | MoneyError.InvalidQuantity
     | MoneyError.NotFinite
     | MoneyError.Overflow
 )
@@ -455,11 +461,6 @@ class ExpenseError(EranosError):
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
-    class ZeroQuantity:
-        """An item quantity of zero."""
-
-    @final
-    @dataclasses.dataclass(frozen=True, slots=True)
     class ItemsDoNotAddUp:
         """The item line totals do not add up to the expense amount."""
 
@@ -504,7 +505,6 @@ type ExpenseFailure = (
     | ExpenseError.PercentagesDoNotAddUp
     | ExpenseError.NoItems
     | ExpenseError.EmptyItemName
-    | ExpenseError.ZeroQuantity
     | ExpenseError.ItemsDoNotAddUp
     | ExpenseError.NegativeTip
     | ExpenseError.Overflow
@@ -868,6 +868,7 @@ _MONEY_FAILURES: dict[type[object], Callable[[Any], MoneyFailure]] = {
     generated.MoneyFailure.INVALID_EXCHANGE_RATE: lambda _: MoneyError.InvalidExchangeRate(),
     generated.MoneyFailure.INVALID_PARTS: lambda _: MoneyError.InvalidParts(),
     generated.MoneyFailure.INVALID_PERCENTAGE: lambda _: MoneyError.InvalidPercentage(),
+    generated.MoneyFailure.INVALID_QUANTITY: lambda _: MoneyError.InvalidQuantity(),
     generated.MoneyFailure.NOT_FINITE: lambda _: MoneyError.NotFinite(),
     generated.MoneyFailure.OVERFLOW: lambda _: MoneyError.Overflow(),
 }
@@ -893,7 +894,6 @@ _EXPENSE_FAILURES: dict[type[object], Callable[[Any], ExpenseFailure]] = {
     ),
     generated.ExpenseFailure.NO_ITEMS: lambda _: ExpenseError.NoItems(),
     generated.ExpenseFailure.EMPTY_ITEM_NAME: lambda _: ExpenseError.EmptyItemName(),
-    generated.ExpenseFailure.ZERO_QUANTITY: lambda _: ExpenseError.ZeroQuantity(),
     generated.ExpenseFailure.ITEMS_DO_NOT_ADD_UP: lambda failure: ExpenseError.ItemsDoNotAddUp(
         expected=_money.money_of(failure.expected), actual=_money.money_of(failure.actual)
     ),

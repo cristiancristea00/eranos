@@ -52,6 +52,7 @@ cancels the call, which leaves the group as it was.
 - ``ExchangeRate``
 - ``Percentage``
 - ``Parts``
+- ``Quantity``
 - ``CalendarDate``
 - ``TimeOfDay``
 - ``Email``

@@ -30,7 +30,7 @@ import {
 } from './identifiers.js';
 import * as internal from './internal/eranos.js';
 import { Money } from './money.js';
-import { ExchangeRate, Parts, Percentage } from './ratios.js';
+import { ExchangeRate, Parts, Percentage, Quantity } from './ratios.js';
 
 /** The exact amount one member pays of a split. */
 export interface MemberAmount {
@@ -208,7 +208,11 @@ export function generatedCost(cost: Cost): internal.Cost {
     }
 }
 
-/** A line of an itemised bill, as the group holds it: `quantity` units of `name` at `unitPrice`, which `split` divides. */
+/**
+ * A line of an itemised bill, as the group holds it: `quantity` units of `name` at `unitPrice`, which `split` divides. Its
+ * line total, which {@link expenseItemLineTotal} tells, is the unit price times the quantity, rounded half away from zero to
+ * the currency's minor unit.
+ */
 export interface ExpenseItem {
     /** What was bought. */
     readonly name: string;
@@ -216,13 +220,13 @@ export interface ExpenseItem {
     readonly unitPrice: Money;
     /** How the line's total divides. */
     readonly split: Split;
-    /** How many units, from 1. */
-    readonly quantity: number;
+    /** How many units, to a ten-thousandth: 2 bottles, or 0.452 kg. */
+    readonly quantity: Quantity;
 }
 
 /**
- * A line of an itemised bill in an expense to add or replace; it may leave out its quantity, which is then one. Every
- * {@link ExpenseItem} is one.
+ * A line of an itemised bill in an expense to add or replace; it may leave out its quantity, which is then
+ * {@link Quantity.ONE}. Every {@link ExpenseItem} is one.
  */
 export interface ExpenseItemInput {
     /** What was bought. */
@@ -231,13 +235,50 @@ export interface ExpenseItemInput {
     readonly unitPrice: Money;
     /** How the line's total divides. */
     readonly split: Split;
-    /** How many units, from 1; one unless given. */
-    readonly quantity?: number;
+    /** How many units, to a ten-thousandth: 2 bottles, or 0.452 kg; {@link Quantity.ONE} unless given. */
+    readonly quantity?: Quantity;
 }
 
 /** The item that `item` describes, with a quantity of one unless it gives another. */
 function completedExpenseItem(item: ExpenseItemInput): ExpenseItem {
-    return { name: item.name, unitPrice: item.unitPrice, split: item.split, quantity: item.quantity ?? 1 };
+    return { name: item.name, unitPrice: item.unitPrice, split: item.split, quantity: item.quantity ?? Quantity.ONE };
+}
+
+/** The item the generated code holds as `item`. */
+function convertedExpenseItem(item: internal.ExpenseItem): ExpenseItem {
+    return {
+        name: item.name,
+        unitPrice: Money.converted(item.unitPrice),
+        split: convertedSplit(item.split),
+        quantity: Quantity.known(item.quantity),
+    };
+}
+
+/** The item as the generated code holds it. */
+function generatedExpenseItem(item: ExpenseItem): internal.ExpenseItem {
+    return internal.ExpenseItem.create({
+        name: item.name,
+        unitPrice: item.unitPrice.generated(),
+        split: generatedSplit(item.split),
+        quantity: item.quantity.tenThousandths,
+    });
+}
+
+/**
+ * The line total of `item`, in its unit price's currency: the unit price times the quantity, rounded half away from zero to
+ * the currency's minor unit, as the library adds the lines up against the expense's amount. A line whose product is below
+ * half a minor unit is free: its total is zero.
+ *
+ * @param item - The line
+ * @returns The line total: 14.70 EUR for 0.35 units at 42.00 EUR, and 0.34 EUR for 0.335 units at 1.00 EUR
+ * @throws {@link IdError} for a member whose identifier is not one, {@link MoneyError} with the failure `unknownCurrency`
+ *   for a unit price whose currency details are not the library's, and {@link ExpenseError} for a line the library refuses:
+ *   `emptyItemName` for a blank name, `nonPositiveAmount` for a unit price that is not positive, the failures of a split
+ *   that does not divide the line, among them `amountsDoNotAddUp` for amounts that do not add up to the line total, a free
+ *   line's included, and `overflow` for a line total out of range
+ */
+export function expenseItemLineTotal(item: ExpenseItemInput): Money {
+    return Money.converted(calling(() => internal.expenseItemLineTotal(generatedExpenseItem(completedExpenseItem(item)))));
 }
 
 /** How an expense's cost is shared, as the group holds it: as a whole, or line by line of an itemised bill. */
@@ -293,15 +334,7 @@ export function convertedExpenseSplit(split: internal.ExpenseSplit): ExpenseSpli
         case internal.ExpenseSplit_Tags.Whole:
             return { kind: 'whole', split: convertedSplit(split.inner.split) };
         case internal.ExpenseSplit_Tags.Itemised:
-            return {
-                kind: 'itemised',
-                items: split.inner.items.map((item) => ({
-                    name: item.name,
-                    unitPrice: Money.converted(item.unitPrice),
-                    split: convertedSplit(item.split),
-                    quantity: item.quantity,
-                })),
-            };
+            return { kind: 'itemised', items: split.inner.items.map(convertedExpenseItem) };
     }
 }
 
@@ -315,16 +348,7 @@ export function generatedExpenseSplit(split: ExpenseSplit): internal.ExpenseSpli
         case 'whole':
             return new internal.ExpenseSplit.Whole({ split: generatedSplit(split.split) });
         case 'itemised':
-            return new internal.ExpenseSplit.Itemised({
-                items: split.items.map((item) =>
-                    internal.ExpenseItem.create({
-                        name: item.name,
-                        unitPrice: item.unitPrice.generated(),
-                        split: generatedSplit(item.split),
-                        quantity: item.quantity,
-                    }),
-                ),
-            });
+            return new internal.ExpenseSplit.Itemised({ items: split.items.map(generatedExpenseItem) });
     }
 }
 

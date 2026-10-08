@@ -385,7 +385,14 @@ export type MoneyFailure =
           readonly kind: 'invalidPercentage';
       }
     | {
-          /** A number that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is. */
+          /**
+           * A quantity that is not a positive decimal number with at most four decimal places, or whose ten-thousandths do not
+           * fit in 64 bits.
+           */
+          readonly kind: 'invalidQuantity';
+      }
+    | {
+          /** A number that is NaN or infinite, which no amount, percentage, number of parts, quantity, or exchange rate is. */
           readonly kind: 'notFinite';
       }
     | {
@@ -454,10 +461,6 @@ export type ExpenseFailure =
     | {
           /** An item whose name is blank. */
           readonly kind: 'emptyItemName';
-      }
-    | {
-          /** An item quantity of zero. */
-          readonly kind: 'zeroQuantity';
       }
     | {
           /** The item line totals do not add up to the expense amount. */
@@ -775,6 +778,8 @@ function convertedMoneyFailure(failure: internal.MoneyFailure): MoneyFailure {
             return { kind: 'invalidParts' };
         case internal.MoneyFailure_Tags.InvalidPercentage:
             return { kind: 'invalidPercentage' };
+        case internal.MoneyFailure_Tags.InvalidQuantity:
+            return { kind: 'invalidQuantity' };
         case internal.MoneyFailure_Tags.NotFinite:
             return { kind: 'notFinite' };
         case internal.MoneyFailure_Tags.Overflow:
@@ -818,8 +823,6 @@ function convertedExpenseFailure(failure: internal.ExpenseFailure): ExpenseFailu
             return { kind: 'noItems' };
         case internal.ExpenseFailure_Tags.EmptyItemName:
             return { kind: 'emptyItemName' };
-        case internal.ExpenseFailure_Tags.ZeroQuantity:
-            return { kind: 'zeroQuantity' };
         case internal.ExpenseFailure_Tags.ItemsDoNotAddUp:
             return { kind: 'itemsDoNotAddUp', expected: Money.converted(failure.inner.expected), actual: Money.converted(failure.inner.actual) };
         case internal.ExpenseFailure_Tags.NegativeTip:

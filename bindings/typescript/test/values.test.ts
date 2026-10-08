@@ -22,6 +22,7 @@ import {
     Parts,
     Percentage,
     PhoneNumber,
+    Quantity,
     TimeOfDay,
     Username,
     categoryId,
@@ -72,7 +73,7 @@ function forgedCurrency(code: string, name: string, numericCode: number, decimal
     return new privateConstructor(code, name, numericCode, decimalPlaces);
 }
 
-void describe('the currencies, amounts, ratios, dates, times, contact details, and identifiers', () => {
+void describe('the currencies, amounts, ratios, quantities, dates, times, contact details, and identifiers', () => {
     /** A currency, an amount, or a check that read or wrote another way than the library's would show an app another amount than the group holds. */
     void it('reads and writes currencies and amounts as the library does', () => {
         const euro = CurrencyCode.of('EUR');
@@ -225,10 +226,50 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
     });
 
     /**
-     * An app that holds amounts, rates, percentages, or parts as numbers would get other cents or digits in this package than
-     * the library converts them to, or a value back from NaN, from an infinity, or from a number out of range.
+     * A quantity read, built, or written another way than the library's, or one the library refuses let through, would give
+     * a line of a bill another total than the library adds up; a {@link Quantity.ONE} other than the library's one unit would
+     * give every line without a quantity another total.
      */
-    void it('converts numbers to amounts, rates, percentages, and parts as the library does', () => {
+    void it('reads, builds, and writes quantities as the library does, from one unit up', () => {
+        assert.equal(Quantity.ONE.tenThousandths, internal.quantityFromWhole(1n));
+        assert.ok(Quantity.ONE.equals(Quantity.ofWhole(1n)));
+        assert.ok(Quantity.ONE.equals(Quantity.parse('1')));
+        assert.equal(Quantity.ONE.toString(), '1');
+
+        const weight = Quantity.parse('0.452');
+        assert.equal(weight.tenThousandths, 4_520n);
+        assert.equal(weight.toString(), '0.452');
+        assert.ok(weight.equals(Quantity.ofTenThousandths(4_520n)));
+        assert.ok(!weight.equals(Quantity.ofTenThousandths(4_521n)));
+        assert.equal(Quantity.parse(' 3 ').tenThousandths, 30_000n);
+        assert.equal(Quantity.ofWhole(3n).tenThousandths, 30_000n);
+        assert.deepEqual(
+            [1n, 4_520n, 10_000n, 15_000n, 20_500n].map((tenThousandths) => Quantity.ofTenThousandths(tenThousandths).toString()),
+            ['0.0001', '0.452', '1', '1.5', '2.05'],
+        );
+        // The largest quantities: the ten-thousandths of each fit the bindings' 64-bit integers, one more would not.
+        assert.equal(Quantity.parse('922337203685477.5807').tenThousandths, 9_223_372_036_854_775_807n);
+        assert.equal(Quantity.ofWhole(922_337_203_685_477n).tenThousandths, 9_223_372_036_854_770_000n);
+        assert.equal(Quantity.ofTenThousandths(9_223_372_036_854_775_807n).toString(), '922337203685477.5807');
+
+        const invalid = { kind: 'invalidQuantity' };
+        const message = 'invalid quantity: expected a positive number with at most 4 decimal places';
+        for (const tenThousandths of [0n, -1n, -4_520n]) {
+            assertRefused(() => Quantity.ofTenThousandths(tenThousandths), MoneyError, invalid, message);
+        }
+        for (const text of ['0', '0.00005', '-1', '1e2', 'half', '922337203685477.5808']) {
+            assertRefused(() => Quantity.parse(text), MoneyError, invalid, message);
+        }
+        for (const units of [0n, -1n, 922_337_203_685_478n]) {
+            assertRefused(() => Quantity.ofWhole(units), MoneyError, invalid, message);
+        }
+    });
+
+    /**
+     * An app that holds amounts, rates, percentages, parts, or quantities as numbers would get other cents or digits in this
+     * package than the library converts them to, or a value back from NaN, from an infinity, or from a number out of range.
+     */
+    void it('converts numbers to amounts, rates, percentages, parts, and quantities as the library does', () => {
         const euro = CurrencyCode.of('EUR');
         const yen = CurrencyCode.of('JPY');
         // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
@@ -251,6 +292,13 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assertRefused(() => Parts.fromNumber(0.004), MoneyError, { kind: 'invalidParts' });
         assertRefused(() => Parts.fromNumber(30_000_000), MoneyError, { kind: 'invalidParts' });
 
+        assert.equal(Quantity.fromNumber(0.45205).tenThousandths, 4_521n);
+        assert.equal(Quantity.fromNumber(1.5).tenThousandths, 15_000n);
+        assertRefused(() => Quantity.fromNumber(0.00004), MoneyError, { kind: 'invalidQuantity' });
+        assertRefused(() => Quantity.fromNumber(-1), MoneyError, { kind: 'invalidQuantity' });
+        // Above 922 337 203 685 477.5807, the ten-thousandths no longer fit the bindings' 64-bit integers.
+        assertRefused(() => Quantity.fromNumber(1e21), MoneyError, { kind: 'invalidQuantity' });
+
         const notFinite = { kind: 'notFinite' };
         const message = 'the number is not finite';
         for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
@@ -258,6 +306,7 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
             assertRefused(() => ExchangeRate.fromNumber(value), MoneyError, notFinite, message);
             assertRefused(() => Percentage.fromNumber(value), MoneyError, notFinite, message);
             assertRefused(() => Parts.fromNumber(value), MoneyError, notFinite, message);
+            assertRefused(() => Quantity.fromNumber(value), MoneyError, notFinite, message);
         }
     });
 

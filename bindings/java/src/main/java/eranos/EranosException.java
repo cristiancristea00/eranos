@@ -608,6 +608,8 @@ public abstract sealed class EranosException extends Exception
             case eranos.internal.MoneyFailure.InvalidParts _ -> new MoneyFailure.InvalidParts();
             case eranos.internal.MoneyFailure.InvalidPercentage _ ->
                     new MoneyFailure.InvalidPercentage();
+            case eranos.internal.MoneyFailure.InvalidQuantity _ ->
+                    new MoneyFailure.InvalidQuantity();
             case eranos.internal.MoneyFailure.NotFinite _ -> new MoneyFailure.NotFinite();
             case eranos.internal.MoneyFailure.Overflow _ -> new MoneyFailure.Overflow();
         };
@@ -655,7 +657,6 @@ public abstract sealed class EranosException extends Exception
             case eranos.internal.ExpenseFailure.NoItems _ -> new ExpenseFailure.NoItems();
             case eranos.internal.ExpenseFailure.EmptyItemName _ ->
                     new ExpenseFailure.EmptyItemName();
-            case eranos.internal.ExpenseFailure.ZeroQuantity _ -> new ExpenseFailure.ZeroQuantity();
             case eranos.internal.ExpenseFailure.ItemsDoNotAddUp itemsDoNotAddUp ->
                     new ExpenseFailure.ItemsDoNotAddUp(
                             eranos.Money.converted(itemsDoNotAddUp.expected()),

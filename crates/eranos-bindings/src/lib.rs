@@ -14,8 +14,8 @@
 //! library answers with, in an amount or as the group currency, as its
 //! [`CurrencyDetails`], exchange rates as decimals, amounts as 64-bit minor
 //! units with their currency's details, percentages in basis points, parts
-//! in hundredths, a phone number in E.164 form with its international form,
-//! and an IBAN with its country code. Every value is checked by the
+//! in hundredths, quantities in ten-thousandths, a phone number in E.164
+//! form with its international form, and an IBAN with its country code. Every value is checked by the
 //! library's own rules on its way in, so a bad one is a typed
 //! [`EranosError`]: an amount whose currency details are not the library's
 //! for its code is refused with [`MoneyFailure::UnknownCurrency`], a phone
@@ -80,12 +80,13 @@ pub use transfer::Transfer;
 pub use values::{
     balance_format, calendar_date_check, calendar_date_format, calendar_date_parse,
     category_id_uncategorised, currencies, currency_details, email_parse, exchange_rate_convert,
-    exchange_rate_from_f64, exchange_rate_parse, expense_members, expense_tip_amount,
-    expense_total, iban_parse, identifier_generate, identifier_parse, language_parse, money_add,
-    money_format, money_from_f64, money_parse, money_subtract, parts_check, parts_format,
-    parts_from_f64, parts_parse, percentage_check, percentage_format, percentage_from_f64,
-    percentage_parse, phone_number_parse, split_members, time_of_day_check, time_of_day_format,
-    time_of_day_parse, tip_rule_none, username_parse,
+    exchange_rate_from_f64, exchange_rate_parse, expense_item_line_total, expense_members,
+    expense_tip_amount, expense_total, iban_parse, identifier_generate, identifier_parse,
+    language_parse, money_add, money_format, money_from_f64, money_parse, money_subtract,
+    parts_check, parts_format, parts_from_f64, parts_parse, percentage_check, percentage_format,
+    percentage_from_f64, percentage_parse, phone_number_parse, quantity_check, quantity_format,
+    quantity_from_f64, quantity_from_whole, quantity_parse, split_members, time_of_day_check,
+    time_of_day_format, time_of_day_parse, tip_rule_none, username_parse,
 };
 
 /// The identifier `text`, as it is.

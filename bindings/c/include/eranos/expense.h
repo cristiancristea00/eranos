@@ -468,7 +468,7 @@ static inline void eranosExpenseSplitDestroy(EranosExpenseSplit *const expenseSp
 /// A line of an itemised bill: `quantity` units of `name` at `unitPrice`, which `split` divides.
 typedef struct EranosExpenseItem EranosExpenseItem;
 
-/// A new item of its required fields; every other field starts absent, empty, or at its default.
+/// A new item of its required fields; every other field starts absent, empty, or at its default: the quantity at one unit, ERANOS_QUANTITY_ONE.
 ///
 /// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param unitPrice The price of one unit, in the expense's currency
@@ -534,18 +534,34 @@ static inline void eranosExpenseItemSetSplit(EranosExpenseItem *const item, Eran
     EranosExpenseItem_set_split(item, split);
 }
 
-/// How many units, from 1.
+/// How many units, in ten-thousandths: ERANOS_QUANTITY_ONE, 10000, for one unit, 4520 for 0.452.
 ///
 /// @param item The item
-/// @return How many units, from 1
-[[nodiscard]] static inline int32_t eranosExpenseItemQuantity(EranosExpenseItem const *const item) { return EranosExpenseItem_quantity(item); }
+/// @return How many units, in ten-thousandths
+[[nodiscard]] static inline int64_t eranosExpenseItemQuantity(EranosExpenseItem const *const item) { return EranosExpenseItem_quantity(item); }
 
-/// Sets how many units, from 1.
+/// Sets how many units, in ten-thousandths: ERANOS_QUANTITY_ONE, 10000, for one unit, 4520 for 0.452. The library checks the quantity when a call
+/// carries the item, as eranosQuantityCheck() does.
 ///
 /// @param item The item
-/// @param quantity How many units, from 1
-static inline void eranosExpenseItemSetQuantity(EranosExpenseItem *const item, int32_t const quantity) {
+/// @param quantity How many units, in ten-thousandths
+static inline void eranosExpenseItemSetQuantity(EranosExpenseItem *const item, int64_t const quantity) {
     EranosExpenseItem_set_quantity(item, quantity);
+}
+
+/// The unit price times the quantity, rounded half away from zero to the currency's minor unit, as the library computes it: zero for a free line,
+/// whose product is below half a minor unit.
+///
+/// @param item The item
+/// @param lineTotal Receives the line total on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a
+///   quantity that is not positive or an amount in a currency the library does not list, of the kind ERANOS_ERROR_KIND_EXPENSE for an item the
+///   library refuses, a split that does not divide the line total or a line total out of range among them, and of the kind ERANOS_ERROR_KIND_ID for
+///   an identifier that is not one
+[[nodiscard]] static inline EranosError *eranosExpenseItemLineTotal(EranosExpenseItem const *const item, EranosMoney **const lineTotal) {
+    EranosExpenseItem_line_total_result const result = EranosExpenseItem_line_total(item);
+    *lineTotal = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
 /// Destroys @p item; destroying nullptr does nothing, as free() does.

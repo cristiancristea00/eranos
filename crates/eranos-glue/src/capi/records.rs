@@ -39,8 +39,9 @@ struct FieldDefault {
 
 /// What a field that a record's constructor leaves out starts at.
 enum Start {
-    /// The integer.
-    Integer(i32),
+    /// The integer, which fits the widest integer field a record has, an
+    /// `i64`.
+    Integer(i64),
     /// What the core's value helper of this name returns.
     Helper(&'static str),
 }
@@ -49,7 +50,7 @@ impl Start {
     /// The expression of the value.
     fn tokens(&self) -> TokenStream {
         match self {
-            Self::Integer(value) => Literal::i32_unsuffixed(*value).into_token_stream(),
+            Self::Integer(value) => Literal::i64_unsuffixed(*value).into_token_stream(),
             Self::Helper(name) => {
                 let helper = format_ident!("{name}");
                 quote!(eranos_bindings::#helper())
@@ -60,7 +61,8 @@ impl Start {
 
 /// The fields of a record that start at a value of their own when the
 /// record is created without them: an expense has no tip and is in the
-/// built-in category, and a line of a bill is of one unit.
+/// built-in category, and a line of a bill is of one unit, 10 000
+/// ten-thousandths.
 const DEFAULTS: [FieldDefault; 3] = [
     FieldDefault {
         field: "tip",
@@ -75,7 +77,7 @@ const DEFAULTS: [FieldDefault; 3] = [
     FieldDefault {
         field: "quantity",
         record: "ExpenseItem",
-        value: Start::Integer(1),
+        value: Start::Integer(10_000),
     },
 ];
 
@@ -1005,8 +1007,8 @@ fn list_of(element: &Ident, taken: bool) -> Named {
 
 /// The methods of the bridge's type `object` that are not a field's, which
 /// call the core's helpers: an expense's tip and total and the members it
-/// names, the members a split names, a balance's text, the currencies, and
-/// the no-tip rule.
+/// names, an item's line total, the members a split names, a balance's
+/// text, the currencies, and the no-tip rule.
 fn extras(object: &Ident) -> TokenStream {
     match object.to_string().as_str() {
         "EranosBalance" => quote! {
@@ -1070,6 +1072,23 @@ fn extras(object: &Ident) -> TokenStream {
             pub fn participants(&self) -> Result<Box<EranosTextList>, Box<EranosError>> {
                 eranos_bindings::expense_members(&self.0)
                     .map(|members| Box::new(EranosTextList(members)))
+                    .map_err(crate::failed)
+            }
+        },
+        "EranosExpenseItem" => quote! {
+            /// The unit price times the quantity, rounded half away from zero to the currency's minor
+            /// unit, as the library computes it: zero for a free line, whose product is below half a
+            /// minor unit.
+            ///
+            /// # Errors
+            ///
+            /// [`EranosError`] of the kind `Money` for a quantity that is not positive or an amount in
+            /// a currency the library does not list, of the kind `Expense` for an item the library
+            /// refuses, a split that does not divide the line total or a line total out of range
+            /// among them, and of the kind `Id` for an identifier that is not one.
+            pub fn line_total(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
+                eranos_bindings::expense_item_line_total(&self.0)
+                    .map(|money| Box::new(EranosMoney(money)))
                     .map_err(crate::failed)
             }
         },

@@ -2,13 +2,12 @@
 //! carry them.
 
 use eranos::MemberId;
-use eranos::error::ExpenseError;
 use eranos::{expense as library, money};
 use eranos_expense::{FromExpenseSplit, FromSplit, FromTipDistribution, FromTipValue};
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::money::{Cost, Money, parts, percentage};
+use crate::money::{Cost, Money, parts, percentage, quantity, ten_thousandths};
 use crate::{EranosError, identifier};
 
 /// An exact amount one member pays.
@@ -185,8 +184,9 @@ pub struct ExpenseItem {
     pub unit_price: Money,
     /// How the line total divides.
     pub split: Split,
-    /// How many units, from 1.
-    pub quantity: i32,
+    /// How many units, in ten-thousandths: 10 000 for one unit, 4 520 for
+    /// 0.452.
+    pub quantity: i64,
 }
 
 impl ExpenseItem {
@@ -196,7 +196,7 @@ impl ExpenseItem {
             name: item.name().to_owned(),
             unit_price: Money::from_library(item.unit_price()),
             split: Split::from_split(item.split()),
-            quantity: count(item.quantity()),
+            quantity: ten_thousandths(item.quantity()),
         }
     }
 
@@ -204,20 +204,23 @@ impl ExpenseItem {
     ///
     /// # Errors
     ///
-    /// The errors of [`Split::to_library`],
+    /// The errors of [`Money::to_library`] and [`Split::to_library`],
+    /// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
+    /// for a quantity that is not positive, and those of the library's
+    /// checks of an item:
     /// [`ExpenseFailure::EmptyItemName`](crate::ExpenseFailure::EmptyItemName)
-    /// for a blank name, and
-    /// [`ExpenseFailure::ZeroQuantity`](crate::ExpenseFailure::ZeroQuantity)
-    /// for a quantity below 1.
+    /// for a blank name,
+    /// [`ExpenseFailure::NonPositiveAmount`](crate::ExpenseFailure::NonPositiveAmount)
+    /// for a unit price that is not positive,
+    /// [`ExpenseFailure::Overflow`](crate::ExpenseFailure::Overflow), and a
+    /// split that does not divide the line total.
     pub(crate) fn to_library(&self) -> Result<library::ExpenseItem, EranosError> {
-        let quantity = u32::try_from(self.quantity).map_err(|_| ExpenseError::ZeroQuantity)?;
-        Ok(library::ExpenseItem::builder_with_split(
+        let builder = library::ExpenseItem::builder_with_split(
             self.name.clone(),
             self.unit_price.to_library()?,
             self.split.to_library()?,
-        )
-        .quantity(quantity)
-        .build()?)
+        );
+        Ok(builder.quantity(quantity(self.quantity)?).build()?)
     }
 }
 

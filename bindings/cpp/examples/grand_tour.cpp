@@ -765,22 +765,21 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) noexcept {
     std::vector<ItemRow> rows;
     rows.reserve(itemised->items.size());
     for (auto const &item : itemised->items) {
-        Money const lineTotal(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency);
         rows.push_back({
             .name = item.name,
             .sharedBy = names(group, must(participants(item.split))),
-            .quantity = std::to_string(item.quantity),
+            .quantity = item.quantity.toString(),
             .unitPrice = item.unitPrice.toString(),
-            .lineTotal = lineTotal.toString(),
+            .lineTotal = must(lineTotal(item)).toString(),
         });
     }
     printTable(rows, 2);
 }
 
-/// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) noexcept {
+/// The line @p name of @p units whole units at @p unitPrice euros, which @p split shares.
+[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int64_t const units) noexcept {
     ExpenseItem item(std::move(name), eur(unitPrice), std::move(split));
-    item.quantity = quantity;
+    item.quantity = must(Quantity::whole(units));
     return item;
 }
 
@@ -1423,6 +1422,30 @@ void ratios() noexcept {
     check(150 == parts.hundredths, "1.5 parts are 150 hundredths");
 }
 
+/// Prints what quantities read and print, and a line total that rounds half away from zero.
+void quantities(People const &people) noexcept {
+    auto const weight = must(Quantity::parse("0.452"));
+    // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    ExpenseItem olives("Olives", eur("1.00"), EqualSplit{{people.ana}});
+    olives.quantity = must(Quantity::parse("0.335"));
+    auto const olivesTotal = must(lineTotal(olives));
+    auto const fiveDecimals = refusal(Quantity::parse("0.00005"));
+    auto const zero = refusal(Quantity::parse("0"));
+    printLine("Quantities have four decimal places; line totals round half away from zero:");
+    printTable<ValueRow>(
+        {
+            {.input = "a quantity of 0.452", .result = std::format("{}, {} ten-thousandths", weight.toString(), weight.tenThousandths)},
+            {.input = "a quantity of 0.00005", .result = message(fiveDecimals)},
+            {.input = "a quantity of 0", .result = message(zero)},
+            {.input = "0.335 at 1.00 EUR", .result = olivesTotal.toString()},
+        },
+        2);
+    check(4'520 == weight.tenThousandths, "0.452 is 4520 ten-thousandths");
+    check(fiveDecimals.has_value() && Failure::MONEY_INVALID_QUANTITY == fiveDecimals->failure(), "a quantity has at most four decimal places");
+    check(zero.has_value() && Failure::MONEY_INVALID_QUANTITY == zero->failure(), "no quantity is zero");
+    check(eur("0.34") == olivesTotal, "0.335 at 1.00 EUR is 0.34 EUR");
+}
+
 /// The message the library refuses @p text with as a member's identifier, which it checks is @p failure.
 [[nodiscard]] std::string identifierRefusal(ExpenseGroup const &group, std::string text, Failure const failure) noexcept {
     auto const refused = refusal(group.member(MemberId(std::move(text))));
@@ -1460,12 +1483,13 @@ void datesAndIdentifiers(ExpenseGroup const &group, People const &people) noexce
     check(people.ana == found, "Ana's identifier comes back the same");
 }
 
-/// Prints the values on their own: currencies, amounts, ratios, dates, times, identifiers, and language tags.
+/// Prints the values on their own: currencies, amounts, ratios, quantities, dates, times, identifiers, and language tags.
 void values(ExpenseGroup const &group, People const &people) noexcept {
     section("13. Values on their own");
     currencies();
     amounts();
     ratios();
+    quantities(people);
     datesAndIdentifiers(group, people);
 }
 

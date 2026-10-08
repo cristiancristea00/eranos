@@ -155,6 +155,17 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
+            let error = MoneyError::InvalidQuantity;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Money {
+                    failure: MoneyFailure::InvalidQuantity,
+                    detail: message,
+                },
+            }
+        },
+        {
             let error = MoneyError::NotFinite;
             let message = error.to_string();
             Conversion {
@@ -464,17 +475,6 @@ fn conversions() -> Vec<Conversion> {
                     failure: ExpenseFailure::PercentagesDoNotAddUp {
                         total_basis_points: 14,
                     },
-                    detail: message,
-                },
-            }
-        },
-        {
-            let error = ExpenseError::ZeroQuantity;
-            let message = error.to_string();
-            Conversion {
-                converted: EranosError::from(error),
-                expected: EranosError::Expense {
-                    failure: ExpenseFailure::ZeroQuantity,
                     detail: message,
                 },
             }

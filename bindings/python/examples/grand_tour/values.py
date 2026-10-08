@@ -1,4 +1,4 @@
-"""Print section 13 of the tour: currencies, amounts, percentages, parts, rates, dates, times, identifiers, and language tags, on their own."""
+"""Print section 13 of the tour: currencies, amounts, ratios, quantities, dates, times, identifiers, and language tags, on their own."""
 
 import copy
 import dataclasses
@@ -9,12 +9,16 @@ from eranos import (
     CalendarDate,
     ConvertedCost,
     CurrencyCode,
+    EqualSplit,
     ExchangeRate,
+    ExpenseItem,
     IdError,
     Language,
     Money,
+    MoneyError,
     Parts,
     Percentage,
+    Quantity,
     TimeOfDay,
     parse_member_id,
 )
@@ -167,6 +171,37 @@ def _ratios() -> None:
     assert str(rate) == '4.9765'
 
 
+def _quantities(people: People) -> None:
+    """
+    Print a quantity as the library reads and writes it, what it refuses, and a line total it rounds.
+
+    Args:
+        people: The members of the trip.
+
+    """
+    weight = Quantity.parse('0.452')
+    # 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    olives = ExpenseItem(name='Olives', unit_price=eur('1.00'), split=EqualSplit((people.ana,)), quantity=Quantity.parse('0.335'))
+    five_decimals = refusal(lambda: Quantity.parse('0.00005'))
+    zero = refusal(lambda: Quantity.parse('0'))
+    print_lines('Quantities have four decimal places; line totals round half away from zero:')
+    print_table(
+        ValueRow,
+        [
+            ValueRow(input='a quantity of 0.452', result=f'{weight}, {weight.ten_thousandths} ten-thousandths'),
+            ValueRow(input='a quantity of 0.00005', result=message(five_decimals)),
+            ValueRow(input='a quantity of 0', result=message(zero)),
+            ValueRow(input='0.335 at 1.00 EUR', result=str(olives.line_total())),
+        ],
+        2,
+    )
+    assert weight.ten_thousandths == 4_520
+    for error in (five_decimals, zero):
+        assert isinstance(error, MoneyError), 'the quantity is refused'
+        assert error.failure == MoneyError.InvalidQuantity()
+    assert olives.line_total() == eur('0.34')
+
+
 def _dates_and_identifiers(people: People) -> None:
     """
     Print dates, times, an identifier, and language tags as the library reads and writes them, and what it refuses.
@@ -230,4 +265,5 @@ def values(people: People) -> None:
     _currencies()
     _amounts()
     _ratios()
+    _quantities(people)
     _dates_and_identifiers(people)

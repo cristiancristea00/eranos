@@ -385,8 +385,8 @@ fn a_taken_record_copies_its_records_and_lists() {
 }
 
 /// A constructor that takes no text cannot fail and is `#[must_use]`, a
-/// field with a default of its own starts at it, and the no-tip rule has a
-/// constructor of its own.
+/// field with a default of its own starts at it, the no-tip rule has a
+/// constructor of its own, and an item reads its line total from the core.
 #[test]
 fn a_constructor_without_text_cannot_fail_and_a_default_holds() {
     let named = named();
@@ -427,8 +427,20 @@ fn a_constructor_without_text_cannot_fail_and_a_default_holds() {
         .to_string()
     );
     let item = methods(&named["EranosExpenseItem"]);
-    assert!(code(&item, "create").contains("quantity : 1"));
+    assert!(code(&item, "create").contains("quantity : 10000"));
     assert!(!code(&item, "create").contains("quantity : &"));
+    // An item's line total comes from the core, after the accessors.
+    assert_eq!(names(&item).last(), Some(&"line_total"));
+    assert_written(
+        &item,
+        &[quote! {
+            pub fn line_total(&self) -> Result<Box<EranosMoney>, Box<EranosError>> {
+                eranos_bindings::expense_item_line_total(&self.0)
+                    .map(|money| Box::new(EranosMoney(money)))
+                    .map_err(crate::failed)
+            }
+        }],
+    );
 }
 
 /// A record that only comes back is read-only, a getter of every field.

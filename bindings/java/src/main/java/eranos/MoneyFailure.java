@@ -57,8 +57,14 @@ public sealed interface MoneyFailure {
     record InvalidPercentage() implements MoneyFailure {}
 
     /**
-     * A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange
-     * rate is.
+     * A quantity that is not a positive decimal number with at most four decimal places, or whose
+     * ten-thousandths do not fit a {@code long}.
+     */
+    record InvalidQuantity() implements MoneyFailure {}
+
+    /**
+     * A double that is NaN or infinite, which no amount, percentage, number of parts, quantity, or
+     * exchange rate is.
      */
     record NotFinite() implements MoneyFailure {}
 

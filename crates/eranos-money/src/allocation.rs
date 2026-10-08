@@ -1,5 +1,6 @@
 //! Exact apportionment: splitting an amount by weights so the parts always
-//! add up to the amount, plus the rounding helpers conversions and tips use.
+//! add up to the amount, plus the rounding helpers conversions, tips, and
+//! quantities use.
 
 use std::cmp::Ordering;
 
@@ -130,9 +131,25 @@ pub(crate) const fn divide_rounding_half_away(numerator: i128, denominator: i128
 
 /// `amount × basis_points / 10 000`, rounded half away from zero; `None` when
 /// the result does not fit in `i64`.
+///
+/// A basis point is a ten-thousandth, so this is
+/// [`apply_ten_thousandths`] of the basis points.
 #[must_use]
 pub fn apply_basis_points(amount: i64, basis_points: u32) -> Option<i64> {
-    let product = i128::from(amount) * i128::from(basis_points);
+    apply_ten_thousandths(amount, u64::from(basis_points))
+}
+
+/// `amount × ten_thousandths / 10 000`, rounded half away from zero; `None`
+/// when the result does not fit in `i64`.
+///
+/// It multiplies an item's unit price by its quantity, which is held in
+/// ten-thousandths: 42.00 EUR times 0.35 is 14.70 EUR, and 1.00 EUR times
+/// 0.335 is 0.34 EUR. A whole quantity gives the exact product.
+#[must_use]
+pub fn apply_ten_thousandths(amount: i64, ten_thousandths: u64) -> Option<i64> {
+    // |amount| ≤ 2^63 and ten_thousandths < 2^64, so the product fits in
+    // i128.
+    let product = i128::from(amount) * i128::from(ten_thousandths);
     i64::try_from(divide_rounding_half_away(product, 10_000)).ok()
 }
 

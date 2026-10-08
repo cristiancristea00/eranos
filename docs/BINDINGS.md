@@ -124,13 +124,17 @@ flowchart TD
   (a new group's, a currency change's and its rates', and the one
   `money_parse` and `exchange_rate_convert` take) as its ISO 4217 code,
   exchange rates as decimals, amounts as 64-bit minor units, percentages in
-  basis points, and parts in hundredths. A currency the library answers
-  with, in an amount, as the group currency, and in a failure, crosses as
-  `CurrencyDetails`: its code, name, numeric code, and decimal places, so a
-  layer shows an amount without looking its currency up. Days, months,
-  years, hours, minutes, quantities, basis points, and hundredths are 32-bit
-  signed integers, which every target language has: Kotlin's unsigned types
-  are invisible from Java, and JavaScript has one number type. A currency's
+  basis points, parts in hundredths, and an item's quantity in
+  ten-thousandths. A currency the library answers with, in an amount, as
+  the group currency, and in a failure, crosses as `CurrencyDetails`: its
+  code, name, numeric code, and decimal places, so a layer shows an amount
+  without looking its currency up. Days, months, years, hours, minutes,
+  basis points, and hundredths are 32-bit signed integers, which every
+  target language has: Kotlin's unsigned types are invisible from Java, and
+  JavaScript has one number type. Minor units and quantities are 64-bit
+  signed integers (a `bigint` in TypeScript): a quantity of four decimal
+  places, 0.452 as 4 520, holds up to `i64::MAX` ten-thousandths, the
+  library's own limit, so every quantity it holds crosses. A currency's
   decimal places are the one exception, a `u8` as the library holds them, so
   the core writes an amount for every value the field can hold. A record is
   checked by the library's rules on its way in, so a bad value, a number too
@@ -170,7 +174,7 @@ flowchart TD
   `Category`, `Contact`, `Money`, `Member`, `Expense`, `Settlement`,
   `Transfer`, `ExpenseGroup`, and `Language`. Each holds the module's failure, an enum
   with a case per variant of the module's error and what the variant holds
-  (`ExpenseGroupFailure::MemberInUse { expenses, member, transfers }`), and, as
+  (`ExpenseGroupFailure::MemberInUse { member, expenses, transfers }`), and, as
   `detail`, the library's message; a field named `message` would clash
   with the property of every Kotlin exception. A caller catches a whole
   module or one failure, and no failure needs its crate's name in front.
@@ -207,17 +211,21 @@ flowchart TD
   details), so every text a binding shows is the library's, and give the
   values an expense starts at: `category_id_uncategorised`, the built-in
   category's identifier, and `tip_rule_none`, the no-tip rule.
-  `money_from_f64`, `percentage_from_f64`, `parts_from_f64`, and
-  `exchange_rate_from_f64` convert a double as the library does
-  ([ARCHITECTURE.md § 4](ARCHITECTURE.md#4-money-and-rounding)), so an app
-  that holds values as doubles gets the same ones in every language. Every
+  `money_from_f64`, `percentage_from_f64`, `parts_from_f64`,
+  `quantity_from_f64`, and `exchange_rate_from_f64` convert a double as the
+  library does ([ARCHITECTURE.md § 4](ARCHITECTURE.md#4-money-and-rounding)),
+  so an app that holds values as doubles gets the same ones in every
+  language, and `quantity_from_whole` makes a quantity of whole units. Every
   formatter writes from what it is given and cannot fail
   ([§ 5](#5-the-text-a-binding-shows)); a value an entry holds as numbers
   has a check beside its formatter (`percentage_check`, `parts_check`,
-  `calendar_date_check`, and `time_of_day_check`), which refuses what the
-  library refuses. `phone_number_parse` and `iban_parse` answer a record
-  that carries the text the library derives: a `PhoneNumber` of `e164` and
-  `international`, and an `Iban` of `iban` and `country_code`.
+  `quantity_check`, `calendar_date_check`, and `time_of_day_check`), which
+  refuses what the library refuses. `expense_item_line_total` answers an
+  item's line total as the library computes it, its unit price times its
+  quantity rounded half away from zero, so no layer multiplies one itself.
+  `phone_number_parse` and `iban_parse` answer a record that carries the
+  text the library derives: a `PhoneNumber` of `e164` and `international`,
+  and an `Iban` of `iban` and `country_code`.
 - **Shapes every generator takes.** The types keep to what UniFFI 0.29,
   the oldest version the glue crates use, can mirror: records, enums with
   data, one error enum, and objects; no methods on records, and no
@@ -282,8 +290,8 @@ row.
 ## 5. The text a binding shows
 
 Every text a binding shows comes from the library: amounts, balances,
-rates, percentages, parts, dates, times, currencies, language tags,
-contact and account details, error messages, and the saved group. The
+rates, percentages, parts, quantities, dates, times, currencies, language
+tags, contact and account details, error messages, and the saved group. The
 value helpers of [§ 2](#2-what-every-binding-shares) write each as the
 library does, and every layer's values print through them, so a report
 reads the same in every language, and a change to how the library writes a
@@ -300,17 +308,18 @@ rather than dividing by a power of ten, which overflows an `i64` from 19
 places. A test of the core holds both to the library's text for every
 currency and every kind of balance.
 
-A percentage, parts, a date, and a time print from their numbers through
-the writers the library's own text forms call:
-`eranos_money::format_basis_points` and `format_hundredths`, and
-`eranos_calendar::format_calendar_date` and `format_time_of_day`. They take
-any number, so `percentage_format`, `parts_format`, `calendar_date_format`,
-and `time_of_day_format` cannot fail: a number the library refuses, a
-negative percentage, zero parts, 30 February, or 24:00, is written the way
-a valid one is, "-12.5%", "0", "2026-02-30", and "24:00", and the check
-beside each formatter is what refuses it. A layer that holds a value it
-checked when it made it prints it without a fallback; C, whose structs
-hold any numbers, checks with the check.
+A percentage, parts, a quantity, a date, and a time print from their
+numbers through the writers the library's own text forms call:
+`eranos_money::format_basis_points`, `format_hundredths`, and
+`format_ten_thousandths`, and `eranos_calendar::format_calendar_date` and
+`format_time_of_day`. They take any number, so `percentage_format`,
+`parts_format`, `quantity_format`, `calendar_date_format`, and
+`time_of_day_format` cannot fail: a number the library refuses, a negative
+percentage, zero parts, a zero quantity, 30 February, or 24:00, is written
+the way a valid one is, "-12.5%", "0", "0", "2026-02-30", and "24:00", and
+the check beside each formatter is what refuses it. A layer that holds a
+value it checked when it made it prints it without a fallback; C, whose
+structs hold any numbers, checks with the check.
 
 A phone number and an IBAN cross with the text the library derives from
 them, which the core fills whenever it reads one from the library: a
@@ -414,33 +423,35 @@ named `clear_` for its `set_`: `clear_description` returns nothing, and
 only the description's call `#[infallible]`. The generator's templates hold
 what the core cannot say: the group's constructors and read handle, the
 cancellation, and the methods of a record that are not a field's, such as an
-expense's total. A test of xtask fails while a committed file holds other
-code than the generator writes; it compares tokens, so rustfmt's commas, a
-`match` arm's braces, and the wrapping of a doc comment cannot fail it, and
-the files' line endings cannot either. The worker thread, the checks of
-text, the error, the dates and times, amounts, lists of text, and the value
-helpers stay hand-written beside them. Diplomat carries opaque
-objects, plain structs, and C-like enums, so a record, a list, and an enum
-with data is an opaque object: a record has a constructor of its required
-fields, which starts every other field absent, empty, or at its default
-(an item's quantity at 1, an expense's tip at the no-tip rule and its
-category at the built-in one), a getter of every field, and, for an entry,
-a setter of each; a list has `len` and `get`, and `create` and `push` when
-a caller builds one; an enum with data has `kind`, a constructor per
-variant, and a getter per field. A record the library parses,
+expense's total and an item's line total. A test of xtask fails while a
+committed file holds other code than the generator writes; it compares
+tokens, so rustfmt's commas, a `match` arm's braces, and the wrapping of a
+doc comment cannot fail it, and the files' line endings cannot either. The
+worker thread, the checks of text, the error, the dates and times,
+amounts, lists of text, and the value helpers stay hand-written beside
+them. Diplomat carries opaque objects, plain structs, and C-like enums, so
+a record, a list, and an enum with data is an opaque object: a record has
+a constructor of its required fields, which starts every other field
+absent, empty, or at its default (an item's quantity at one unit, 10 000
+ten-thousandths; an expense's tip at the no-tip rule and its category at
+the built-in one), a getter of every field, and, for an entry, a setter of
+each; a list has `len` and `get`, and `create` and `push` when a caller
+builds one; an enum with data has `kind`, a constructor per variant, and a
+getter per field. A record the library parses,
 `EranosPhoneNumber` or `EranosIban`, is read-only and made only by its
 `parse`, so C never pairs a value with text the library did not derive
 from it: `EranosMember`'s `set_phone` takes the number's text, which the
 library parses, filling its international form, and
 `EranosPaymentAccountDetails`'s `create_iban` takes the IBAN's text and
 fills its country code, each refusing what the library refuses. The
-formatters of a date, a time, a percentage, and parts write any numbers
-and return nothing, and a `check` beside each refuses what the library
-refuses. The no-tip rule is `EranosTipRule`'s
-`none`, and the built-in category's identifier `EranosIdentifier`'s
-`uncategorised`. A date and a time of day are plain structs. Text crosses as
-bytes, which the bridge checks are UTF-8, reporting `InvalidText`
-otherwise, and text a call returns is written into a `DiplomatWrite`. An
+formatters of a date, a time, a percentage, parts, and a quantity
+(`EranosQuantity`, beside `parse`, `from_whole`, and `from_double`) write
+any numbers and return nothing, and a `check` beside each refuses what the
+library refuses. The no-tip rule is `EranosTipRule`'s `none`, and the
+built-in category's identifier `EranosIdentifier`'s `uncategorised`. A
+date and a time of day are plain structs. Text crosses as bytes, which the
+bridge checks are UTF-8, reporting `InvalidText` otherwise, and text a call
+returns is written into a `DiplomatWrite`. An
 error crosses as the binding core's `FlatError`: a kind, a failure, the
 message, and a field per value a failure holds, since Diplomat's enums
 hold no data; the bridge's C-like enums convert from the core's through
@@ -493,25 +504,31 @@ Design Guidelines:
   category reads back with them.
 - A value the library checks is a type that is valid once made: `CurrencyCode`,
   from the library's list, and `Money`, `ExchangeRate`, `Percentage`,
-  `Parts`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`, `IBAN`,
-  `Username`, and `Language`, each printing the library's text. A
+  `Parts`, `Quantity`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`,
+  `IBAN`, `Username`, and `Language`, each printing the library's text. A
   `CurrencyCode` holds the `CurrencyDetails` the core gives with an amount,
   as the group currency, and in a failure, and an amount crosses back with
   them, so the layer looks no currency up. A `PhoneNumber` holds its
   `e164` and `international` forms, the second also its `description`,
   and an `IBAN` its text and `countryCode`, as the core gives them, and
   each crosses back with them, so the layer derives neither form again.
-  `Percentage`, `Parts`, `CalendarDate`, and `TimeOfDay` check their
-  numbers through the core's checks when they are made and print through
-  its formatters, which cannot fail. `Money(amount:currency:)`,
-  `Percentage(_:)`, `Parts(_:)`, and `ExchangeRate(_:)` take a `Double` and
-  convert it through the core's `money_from_f64`, `percentage_from_f64`,
-  `parts_from_f64`, and `exchange_rate_from_f64`
+  `Percentage`, `Parts`, `Quantity`, `CalendarDate`, and `TimeOfDay` check
+  their numbers through the core's checks when they are made and print
+  through its formatters, which cannot fail; `Quantity(whole:)` makes a
+  quantity of whole units through `quantity_from_whole`.
+  `Money(amount:currency:)`, `Percentage(_:)`, `Parts(_:)`, `Quantity(_:)`,
+  and `ExchangeRate(_:)` take a `Double` and convert it through the core's
+  `money_from_f64`, `percentage_from_f64`, `parts_from_f64`,
+  `quantity_from_f64`, and `exchange_rate_from_f64`
   ([§ 2](#2-what-every-binding-shares)), so a double is the same value in
   Swift as in every other language.
+- An item's `quantity` defaults to `Quantity.one`, and
+  `ExpenseItem.lineTotal()` reads the line total from the core's
+  `expense_item_line_total`, so the layer never multiplies a unit price
+  itself.
 - Every call throws `EranosError` as a typed throw, with the core's case per
   module and a failure enum per module whose payloads are typed
-  (`ExpenseGroupFailure.memberInUse(expenses:member:transfers:)`); a failure the
+  (`ExpenseGroupFailure.memberInUse(member:expenses:transfers:)`); a failure the
   generated code reports that is not the library's, such as a defect in the
   bindings, is `unexpected`.
 - Every group call is one name overloaded by `async`: asynchronous code
@@ -556,14 +573,18 @@ its code. The layer follows the Kotlin library guidelines:
   are never `null`, to them. A value the library checks has
   an internal constructor and factories that check it (`CurrencyCode.of`,
   `Money.parse`, `CalendarDate.of`), and prints the library's text: a
-  date, a time, a percentage, and parts through the core's formatters,
-  which cannot fail. `Money.fromDouble(value, currency)` and the
-  `fromDouble` of `Percentage`, `Parts`, and `ExchangeRate`, in their
-  companions, convert a `Double` through the core's `money_from_f64` and
-  its siblings ([§ 2](#2-what-every-binding-shares)), so a double is the
-  same value in Kotlin as in every other language. A `PhoneNumber` and an
-  `Iban` keep the international form and the country code of the record
-  they cross with, and read them with no call into the library.
+  date, a time, a percentage, parts, and a quantity through the core's
+  formatters, which cannot fail. `Money.fromDouble(value, currency)` and
+  the `fromDouble` of `Percentage`, `Parts`, `Quantity`, and
+  `ExchangeRate`, in their companions, convert a `Double` through the
+  core's `money_from_f64` and its siblings
+  ([§ 2](#2-what-every-binding-shares)), so a double is the same value in
+  Kotlin as in every other language. An `ExpenseItem`'s `quantity` is a
+  `Quantity`, ten-thousandths in a `Long`, and defaults to `Quantity.ONE`,
+  one unit; its `lineTotal()` is the core's `expense_item_line_total`, so
+  no receipt multiplies in Kotlin. A `PhoneNumber` and an `Iban` keep the
+  international form and the country code of the record they cross with,
+  and read them with no call into the library.
 - A currency the library answers with, in an amount, as the group
   currency, and in a failure, is a `CurrencyCode` built from the
   `CurrencyDetails` it crosses with, never looked up by its code, so an
@@ -625,14 +646,19 @@ The layer follows Effective Java and Google Java Style:
   unsigned byte: uniffi-bindgen-java writes the `u8` of decimal places as
   a `byte`, which `CurrencyCode` reads with `Byte.toUnsignedInt`, and
   `decimalPlaces()` returns an `int`.
-- `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`, and
-  `Parts.ofHundredths` refuse a value through the core's check of it, and
-  `toString` writes it through the core's formatter, which cannot fail, so
-  it has no fallback text. `Money.fromDouble(value, currency)` and the
-  `fromDouble` of `Percentage`, `Parts`, and `ExchangeRate` convert a
-  double through the core's helpers
-  ([§ 2](#2-what-every-binding-shares)), and refuse NaN and the
-  infinities with `MoneyFailure.NotFinite`. A `PhoneNumber` holds its
+- `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`,
+  `Parts.ofHundredths`, and `Quantity.ofTenThousandths` refuse a value
+  through the core's check of it, and `toString` writes it through the
+  core's formatter, which cannot fail, so it has no fallback text.
+  `Money.fromDouble(value, currency)` and the `fromDouble` of
+  `Percentage`, `Parts`, `Quantity`, and `ExchangeRate` convert a double
+  through the core's helpers ([§ 2](#2-what-every-binding-shares)), and
+  refuse NaN and the infinities with `MoneyFailure.NotFinite`;
+  `Quantity.ofWhole` makes a quantity of whole units. An `ExpenseItem`'s
+  `quantity` is a `Quantity`, a `long` of ten-thousandths, which the
+  constructor without one starts at `Quantity.ONE`, and `lineTotal()`
+  reads the line total through the core's `expense_item_line_total`
+  rather than multiplying in Java. A `PhoneNumber` holds its
   E.164 and international forms, and an `Iban` its text and country code,
   as the records the library sends carry them: `international()` and
   `countryCode()` read the stored text, and both cross back as the
@@ -689,13 +715,19 @@ build. The layer follows the Google TypeScript Style Guide:
   one `CurrencyCode` per code, built on the code's first use, which
   `CurrencyCode.of`, `CurrencyCode.all`, amounts, failures, and the group
   all return, so currencies compare with `===`.
-- `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`, and
-  `Parts.ofHundredths` check their numbers with the core's checks, and the
-  four values print through the core's formatters, which cannot fail.
-  `Money.fromNumber(value, currency)` and the `fromNumber` of `Percentage`,
-  `Parts`, and `ExchangeRate` hand a number, which JavaScript holds as a
-  double, to the core's `money_from_f64` and its siblings, so the same
-  number is the same value as in every other language. A `PhoneNumber`
+- `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`,
+  `Parts.ofHundredths`, and `Quantity.ofTenThousandths` check their numbers
+  with the core's checks, and the five values print through the core's
+  formatters, which cannot fail. A `Quantity` holds its ten-thousandths as a
+  `bigint`, as an amount holds its minor units, and `Quantity.ofWhole`
+  takes a `bigint` of whole units, which the core's `quantity_from_whole`
+  turns into ten-thousandths. `Money.fromNumber(value, currency)` and the
+  `fromNumber` of `Percentage`, `Parts`, `Quantity`, and `ExchangeRate`
+  hand a number, which JavaScript holds as a double, to the core's
+  `money_from_f64` and its siblings, so the same number is the same value
+  as in every other language. `expenseItemLineTotal(item)` answers a line's
+  total from the core's `expense_item_line_total`, so an app shows the
+  total the library adds up rather than multiplying one. A `PhoneNumber`
   holds its `e164` and `international` forms, and an `Iban` its text and
   its `countryCode`, as the core's records carry them, so printing one
   calls nothing; the core refuses a record whose derived text is not the
@@ -711,17 +743,18 @@ build. The layer follows the Google TypeScript Style Guide:
   `ExpenseSplitInput`, which holds the items. An input type lets those
   fields be left out, and an entry's requires its identifier;
   `createMember` and `createExpense` take it without the identifier, and
-  `expenseTotal` and its siblings take it whole. The layer fills each of
-  those fields in one place: no accounts, `NO_TIP`, `UNCATEGORISED`, a
-  quantity of 1, and the proportional distribution. A replace fills them
-  as an add does, rather than keeping the values the group holds. Every
-  output type is assignable to its input type, so a record read back is
-  passed again as it is. The output keeps the record's name since an app
+  `expenseTotal`, `expenseItemLineTotal`, and their siblings take it whole.
+  The layer fills each of those fields in one place: no accounts, `NO_TIP`,
+  `UNCATEGORISED`, `Quantity.ONE`, and the proportional distribution. A
+  replace fills them as an add does, rather than keeping the values the
+  group holds. Every output type is assignable to its input type, so a
+  record read back is passed again as it is. The output keeps the record's name since an app
   reads records more often than it writes them. `Category` and
   `Transfer`, which have no field with a default, have one type each.
-  `NO_TIP` and `UNCATEGORISED` are literals, since a module constant is
-  evaluated before `init` loads the module, and a test holds them to the
-  core's `tip_rule_none` and `category_id_uncategorised`.
+  `NO_TIP`, `UNCATEGORISED`, and `Quantity.ONE` are literals, since a
+  module constant is evaluated before `init` loads the module, and a test
+  holds them to the core's `tip_rule_none`, `category_id_uncategorised`,
+  and `quantity_from_whole`.
 - A failure the library reports throws an `EranosError`, a subclass per
   module holding the module's failure, itself a union by `kind`. A call the
   program should not make throws `TypeError`: a read through a released
@@ -807,6 +840,13 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   `eranosIdentifierUncategorised` writes; its tip and category getters
   always give one, and setting these values is how a caller removes an
   expense's tip or moves it back to the built-in category.
+- An item's quantity is an `int64_t` of ten-thousandths that starts at one
+  unit, `ERANOS_QUANTITY_ONE`, a C23 `constexpr` 10 000;
+  `eranosQuantityParse(text, &tenThousandths)` and
+  `eranosQuantityFromWhole(units, &tenThousandths)` make others, and
+  `eranosExpenseItemLineTotal(item, &lineTotal)` gives the line total the
+  library computes, rounded half away from zero, so no port multiplies a
+  unit price itself.
 - Text goes in as UTF-8 ended by a NUL, nullptr reading as empty text, and
   comes back in an `EranosText`, which the call replaces and ends with a
   NUL; a buffer of Diplomat's grows or ends the program, as the library's
@@ -825,18 +865,20 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   `eranosMoneyCreateFromDouble(value, currency, &money)`, which takes the
   currency's details as `eranosMoneyCreate` does,
   `eranosPercentageFromDouble(value, &basisPoints)`,
-  `eranosPartsFromDouble(value, &hundredths)`, and
+  `eranosPartsFromDouble(value, &hundredths)`,
+  `eranosQuantityFromDouble(value, &tenThousandths)`, and
   `eranosExchangeRateFromDouble(value, text)`. Each refuses NaN and the
   infinities with `ERANOS_FAILURE_MONEY_NOT_FINITE`, and a rounded value
   that the type's parser refuses with the parser's failure.
-- A date and a time are plain structs, and a percentage and parts plain
-  integers, so they hold any numbers: their formatters
+- A date and a time are plain structs, and a percentage, parts, and a
+  quantity plain integers, so they hold any numbers: their formatters
   (`eranosCalendarDateFormat`, `eranosTimeOfDayFormat`,
-  `eranosPercentageFormat`, and `eranosPartsFormat`) write whatever they
-  hold, 30 February as "2026-02-30", and return nothing, and the check
-  beside each (`eranosCalendarDateCheck`, `eranosTimeOfDayCheck`,
-  `eranosPercentageCheck`, and `eranosPartsCheck`) returns the error the
-  library refuses the value with, or nullptr.
+  `eranosPercentageFormat`, `eranosPartsFormat`, and
+  `eranosQuantityFormat`) write whatever they hold, 30 February as
+  "2026-02-30", and return nothing, and the check beside each
+  (`eranosCalendarDateCheck`, `eranosTimeOfDayCheck`,
+  `eranosPercentageCheck`, `eranosPartsCheck`, and `eranosQuantityCheck`)
+  returns the error the library refuses the value with, or nullptr.
 - A phone number and an IBAN are objects that only the library makes:
   `EranosPhoneNumber`, from `eranosPhoneNumberParse` or a member's
   `eranosMemberPhone`, which gives nullptr for a member without one, and
@@ -879,23 +921,30 @@ of `eranos.hpp` and names it as the header to include. It follows the C++
 Core Guidelines with the naming rule above:
 
 - A value without an invariant is a struct with public fields (`Money`,
-  `Percentage`, `Parts`); a value the library checks is a class with a
-  private constructor and factories that check it (`CurrencyCode::of`,
-  `CalendarDate::of`, `Email::parse`), its fields in one private member;
-  every identifier is a class of its own over its text, with `std::hash`,
-  a `parse` that checks it, and a static `generate` that makes one.
+  `Percentage`, `Parts`, `Quantity`); a value the library checks is a
+  class with a private constructor and factories that check it
+  (`CurrencyCode::of`, `CalendarDate::of`, `Email::parse`), its fields in
+  one private member; every identifier is a class of its own over its
+  text, with `std::hash`, a `parse` that checks it, and a static
+  `generate` that makes one.
   `PhoneNumber` and `Iban` also hold the text the library derives from
   them, the international form and the country code, which
   `international()` and `countryCode()` read without a call, and only the
   library makes either, through `parse` or a record it answers with.
-  `Percentage::toString()` and `Parts::toString()` return a
-  `std::string`, written for any number as the library's formatters write
-  it, so a negative percentage, which a call refuses, prints as "-12.5%".
+  `Percentage::toString()`, `Parts::toString()`, and
+  `Quantity::toString()` return a `std::string`, written for any number as
+  the library's formatters write it, so a negative percentage, which a call
+  refuses, prints as "-12.5%".
   `Money::fromDouble(value, currency)`, `Percentage::fromDouble(value)`,
-  `Parts::fromDouble(value)`, and `ExchangeRate::fromDouble(value)` make a
-  value from a double through the library's conversion
-  ([§ 2](#2-what-every-binding-shares)), and refuse NaN and the
-  infinities with `Failure::MONEY_NOT_FINITE`.
+  `Parts::fromDouble(value)`, `Quantity::fromDouble(value)`, and
+  `ExchangeRate::fromDouble(value)` make a value from a double through the
+  library's conversion ([§ 2](#2-what-every-binding-shares)), and refuse
+  NaN and the infinities with `Failure::MONEY_NOT_FINITE`. A `Quantity`
+  holds `std::int64_t` ten-thousandths, which start at one unit, 10 000,
+  so an `ExpenseItem`'s `quantity` starts there; `Quantity::parse(text)`
+  and `Quantity::whole(units)` make others, and the free
+  `lineTotal(item)` returns the line total the library computes, so no
+  port multiplies a unit price itself.
   `CurrencyCode` also keeps, in a `std::shared_ptr`, the library's details
   it was read from, which an amount in it crosses with, so neither an
   amount nor its text looks the currency up; its `decimalPlaces()` is a
@@ -997,22 +1046,29 @@ reads its annotations without checking its code, and Ruff leaves it out:
   with the same derived text; one the core gives with a member is made
   from the text it carries, with no call, and crosses back with it
   ([§ 5](#5-the-text-a-binding-shows)). `CalendarDate`, `TimeOfDay`,
-  `Percentage`, and `Parts` check their numbers through the core's checks
-  and print through its formatters, which cannot fail. The classmethods
-  `Money.from_float(value, currency)`, `Percentage.from_float(value)`,
-  `Parts.from_float(value)`, and `ExchangeRate.from_float(value)` hand a
-  `float` to the core's `money_from_f64` and its siblings, which convert
-  it as the library does ([§ 2](#2-what-every-binding-shares)). Amounts,
-  entries, and totals are frozen dataclasses: an entry takes its fields by
-  keyword and is edited with `copy.replace`, which keeps its identifier,
-  and a variant is a union of frozen dataclasses (`EqualSplit`,
-  `LocalCost`), which a `match` takes apart.
+  `Percentage`, `Parts`, and `Quantity` check their numbers through the
+  core's checks and print through its formatters, which cannot fail. The
+  classmethods `Money.from_float(value, currency)`,
+  `Percentage.from_float(value)`, `Parts.from_float(value)`,
+  `Quantity.from_float(value)`, and `ExchangeRate.from_float(value)` hand
+  a `float` to the core's `money_from_f64` and its siblings, which convert
+  it as the library does ([§ 2](#2-what-every-binding-shares)), and
+  `Quantity.whole(units)` hands a whole number to `quantity_from_whole`.
+  Amounts, entries, and totals are frozen dataclasses: an entry takes its
+  fields by keyword and is edited with `copy.replace`, which keeps its
+  identifier, and a variant is a union of frozen dataclasses
+  (`EqualSplit`, `LocalCost`), which a `match` takes apart.
 - An expense's `tip` and `category` are never optional. `NO_TIP`, the
   no-tip rule, and `UNCATEGORISED`, the built-in category's identifier,
   are module constants that `eranos` exports, read once from the core's
   value helpers when the package loads; the dataclass and `Expense.create`
   default to them, and an expense without another tip or category reads
   back with them.
+- An item's `quantity` is a `Quantity`, which holds ten-thousandths and
+  defaults to `Quantity.ONE`, one unit, made by the core's
+  `quantity_from_whole` when the package loads. `ExpenseItem.line_total()`
+  answers with the core's `expense_item_line_total`, so the layer
+  multiplies no unit price itself.
 - A failure the library reports raises an `EranosError`, a subclass per
   module holding the module's failure, a dataclass nested in it
   (`ExpenseGroupError.MemberInUse`), with the library's message; a saved

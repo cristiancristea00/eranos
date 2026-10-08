@@ -714,6 +714,95 @@ static void ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem(C
     eranosTextDestroy(text);
 }
 
+/// A quantity read, converted, or written otherwise than the library does would bill a line for another amount than the library divides, a number
+/// too large for the layer's integers would wrap, and a check that took what the library refuses would let an app build an item that fails only
+/// when added.
+static void quantitiesParseConvertFormatAndCheckAsTheLibraryDoes(Check *const check) {
+    EranosText *const text = eranosTextCreate();
+    int64_t tenThousandths = 0;
+    checkSucceeded(check, eranosQuantityParse("0.452", &tenThousandths), "a quantity parses");
+    eranosQuantityFormat(tenThousandths, text);
+    checkThat(check, 4'520 == tenThousandths && isText(text, "0.452"), "0.452 is 4520 ten-thousandths");
+    checkThat(check,
+              isFailure(eranosQuantityParse("0.00005", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
+                  0 == tenThousandths,
+              "a quantity has at most four decimal places, and one with more gives none");
+    checkThat(check, isFailure(eranosQuantityParse("0", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
+              "no quantity is zero");
+    checkThat(check, isFailure(eranosQuantityParse("-1", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
+              "nor negative");
+    checkThat(check,
+              isFailure(eranosQuantityParse("1000000000000000", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
+              "nor one whose ten-thousandths do not fit 64 bits");
+    checkThat(check, isKind(eranosQuantityParse("\xff", &tenThousandths), ERANOS_ERROR_KIND_INVALID_TEXT), "a quantity's text is text");
+    checkSucceeded(check, eranosQuantityFromWhole(3, &tenThousandths), "whole units make a quantity");
+    checkThat(check, 30'000 == tenThousandths, "3 units are 30000 ten-thousandths");
+    checkThat(check,
+              isFailure(eranosQuantityFromWhole(0, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
+                  0 == tenThousandths &&
+                  isFailure(eranosQuantityFromWhole(-1, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
+              "no units and negative units are no quantity, and give none");
+    checkThat(check, isFailure(eranosQuantityFromWhole(INT64_MAX, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
+              "nor are units whose ten-thousandths do not fit 64 bits");
+    checkSucceeded(check, eranosQuantityFromDouble(0.45205, &tenThousandths), "a double converts");
+    checkThat(check, 4'521 == tenThousandths, "0.45205 rounds half away from zero to 4521 ten-thousandths");
+    checkThat(check,
+              isFailure(eranosQuantityFromDouble(0.00004, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
+                  0 == tenThousandths,
+              "0.00004 rounds to no quantity, and gives none");
+    checkThat(check, isFailure(eranosQuantityFromDouble(-1.0, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
+              "a negative double is no quantity");
+    checkThat(check, isFailure(eranosQuantityFromDouble(NAN, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
+              "nor is NaN");
+    checkThat(check, isFailure(eranosQuantityFromDouble(INFINITY, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
+              "nor an infinity");
+    checkSucceeded(check, eranosQuantityCheck(1), "a ten-thousandth of a unit is a quantity");
+    checkSucceeded(check, eranosQuantityCheck(ERANOS_QUANTITY_ONE), "and so is one unit");
+    checkThat(check,
+              isFailure(eranosQuantityCheck(0), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
+                  isFailure(eranosQuantityCheck(-1), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
+              "no quantity and a negative one are not");
+    eranosQuantityFormat(ERANOS_QUANTITY_ONE, text);
+    checkThat(check, isText(text, "1"), "one unit is written as a whole number");
+    eranosQuantityFormat(0, text);
+    checkThat(check, isText(text, "0"), "zero is written as any number");
+    eranosQuantityFormat(-4'520, text);
+    checkThat(check, isText(text, "-0.452"), "and so is a negative one");
+    eranosTextDestroy(text);
+}
+
+/// A line total the layer multiplied itself would round a fractional quantity otherwise than the library, which divides the line, and so show an
+/// app a receipt that does not add up to the shares.
+static void anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero(Check *const check) {
+    EranosMoney *const fortyTwo = euros(4'200);
+    EranosSplit *const ana = equally("ana", nullptr);
+    EranosExpenseItem *item = nullptr;
+    checkSucceeded(check, eranosExpenseItemCreate("Cheese", fortyTwo, ana, &item), "an item");
+    EranosMoney *lineTotal = nullptr;
+    checkSucceeded(check, eranosExpenseItemLineTotal(item, &lineTotal), "an item has a line total");
+    checkThat(check, isAmount(lineTotal, 4'200, "EUR"), "one unit, by default, costs the unit price");
+    eranosExpenseItemSetQuantity(item, 20'000);
+    checkSucceeded(check, eranosExpenseItemLineTotal(item, &lineTotal), "whole units have a line total");
+    checkThat(check, isAmount(lineTotal, 8'400, "EUR"), "2 at 42.00 EUR are 84.00 EUR, exactly");
+    eranosExpenseItemSetQuantity(item, 3'500);
+    checkSucceeded(check, eranosExpenseItemLineTotal(item, &lineTotal), "a fraction of a unit has a line total");
+    checkThat(check, isAmount(lineTotal, 1'470, "EUR"), "0.35 at 42.00 EUR is 14.70 EUR");
+    EranosMoney *const one = euros(100);
+    eranosExpenseItemSetUnitPrice(item, one);
+    eranosExpenseItemSetQuantity(item, 3'350);
+    checkSucceeded(check, eranosExpenseItemLineTotal(item, &lineTotal), "and so does one that rounds");
+    checkThat(check, isAmount(lineTotal, 34, "EUR"), "0.335 at 1.00 EUR is 33.5 cents, which rounds half away from zero to 0.34 EUR");
+    eranosExpenseItemSetQuantity(item, 0);
+    checkThat(check,
+              isFailure(eranosExpenseItemLineTotal(item, &lineTotal), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
+                  nullptr == lineTotal,
+              "an item of no quantity has no line total");
+    eranosMoneyDestroy(one);
+    eranosExpenseItemDestroy(item);
+    eranosSplitDestroy(ana);
+    eranosMoneyDestroy(fortyTwo);
+}
+
 /// A date or a time the calendar does not have, taken, would date an expense on a day that never was.
 static void datesAndTimesAreCheckedAndWritten(Check *const check) {
     EranosText *const text = eranosTextCreate();
@@ -975,8 +1064,8 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
     EranosSplit *const both = equally("ana", "bob");
     EranosExpenseItem *item = nullptr;
     checkSucceeded(check, eranosExpenseItemCreate("Pizza", twelve, both, &item), "an item");
-    checkThat(check, 1 == eranosExpenseItemQuantity(item), "one unit, by default");
-    eranosExpenseItemSetQuantity(item, 2);
+    checkThat(check, ERANOS_QUANTITY_ONE == eranosExpenseItemQuantity(item), "one unit, by default");
+    eranosExpenseItemSetQuantity(item, 20'000);
     checkSucceeded(check, eranosExpenseItemSetName(item, "Pizzas"), "a name is set");
     EranosSplit *const ana = equally("ana", nullptr);
     eranosExpenseItemSetSplit(item, ana);
@@ -985,7 +1074,7 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
     eranosExpenseItemName(item, text);
     EranosSplit *const itemSplit = eranosExpenseItemSplit(item);
     checkThat(check,
-              isText(text, "Pizzas") && 2 == eranosExpenseItemQuantity(item) && isAmount(eranosExpenseItemUnitPrice(item), 1'100, "EUR") &&
+              isText(text, "Pizzas") && 20'000 == eranosExpenseItemQuantity(item) && isAmount(eranosExpenseItemUnitPrice(item), 1'100, "EUR") &&
                   listsMembers(eranosSplitMembers(itemSplit), "ana", nullptr),
               "the item as set");
     checkThat(check, isKind(eranosExpenseItemSetName(item, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
@@ -2910,6 +2999,11 @@ int main(void) {
         {
             .body = ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem,
             .name = "ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem",
+        },
+        {.body = quantitiesParseConvertFormatAndCheckAsTheLibraryDoes, .name = "quantitiesParseConvertFormatAndCheckAsTheLibraryDoes"},
+        {
+            .body = anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero,
+            .name = "anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero",
         },
         {.body = datesAndTimesAreCheckedAndWritten, .name = "datesAndTimesAreCheckedAndWritten"},
         {.body = contactsAndAccountsAreCheckedAndMadeCanonical, .name = "contactsAndAccountsAreCheckedAndMadeCanonical"},

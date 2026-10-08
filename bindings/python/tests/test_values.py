@@ -1,4 +1,4 @@
-"""Check the values the library checks and writes: identifiers, currencies, amounts, ratios, dates, times, contacts, and accounts."""
+"""Check the values the library checks and writes: identifiers, currencies, amounts, ratios, quantities, dates, times, contacts, and accounts."""
 
 import functools
 import math
@@ -26,6 +26,7 @@ from eranos import (
     Parts,
     Percentage,
     PhoneNumber,
+    Quantity,
     SettledBalance,
     TimeOfDay,
     Username,
@@ -336,6 +337,53 @@ def test_percentages_parts_dates_and_times_are_refused_as_the_library_refuses_th
     assert calendar_failure(lambda: TimeOfDay(0, 60)) == CalendarError.InvalidTime()
     assert calendar_failure(lambda: TimeOfDay(-1, 0)) == CalendarError.InvalidTime()
     assert calendar_failure(lambda: TimeOfDay(0, 256)) == CalendarError.InvalidTime()
+
+
+def test_a_quantity_parses_and_prints_as_the_library_reads_and_writes_it() -> None:
+    """A quantity read or printed otherwise than the library reads and writes it would multiply a price by another number than a receipt shows."""
+    weight = Quantity.parse('0.452')
+    assert weight == Quantity(4520)
+    assert weight.ten_thousandths == 4520
+    assert str(weight) == '0.452'
+    assert Quantity.parse(' 1.5 ') == Quantity(15_000)
+    assert Quantity.parse('0.0001') == Quantity(1)
+    assert Quantity.whole(3) == Quantity(30_000)
+    assert str(Quantity.whole(3)) == '3'
+    assert Quantity(10_000) == Quantity.ONE
+    assert Quantity.whole(1) == Quantity.ONE
+    quantities = {1: '0.0001', 10: '0.001', 4520: '0.452', 10_000: '1', 15_000: '1.5', 30_000: '3', 2**63 - 1: '922337203685477.5807'}
+    for ten_thousandths, text in quantities.items():
+        assert str(Quantity(ten_thousandths)) == text, ten_thousandths
+        assert Quantity.parse(text) == Quantity(ten_thousandths), text
+
+
+def test_a_quantity_is_refused_as_the_library_refuses_it() -> None:
+    """A quantity the layer took and the library refuses would fail only when an item holds it; one it refused would keep an app from entering it."""
+    assert Quantity(1).ten_thousandths == 1
+    assert Quantity(2**63 - 1).ten_thousandths == 2**63 - 1
+    assert money_failure(lambda: Quantity(0)) == MoneyError.InvalidQuantity()
+    assert money_failure(lambda: Quantity(-1)) == MoneyError.InvalidQuantity()
+    assert money_failure(lambda: Quantity(-(2**63))) == MoneyError.InvalidQuantity()
+    assert money_failure(lambda: Quantity.whole(0)) == MoneyError.InvalidQuantity()
+    assert money_failure(lambda: Quantity.whole(-1)) == MoneyError.InvalidQuantity()
+    # Past 922 337 203 685 477 units, the ten-thousandths no longer fit in 64 bits.
+    assert Quantity.whole(922_337_203_685_477) == Quantity(9_223_372_036_854_770_000)
+    assert money_failure(lambda: Quantity.whole(922_337_203_685_478)) == MoneyError.InvalidQuantity()
+    for text in ('0', '0.0000', '0.00005', '-1', '+1', '1e3', 'half', '', '922337203685477.5808'):
+        assert money_failure(functools.partial(Quantity.parse, text)) == MoneyError.InvalidQuantity(), text
+
+
+def test_a_quantity_converts_from_a_float_as_the_library_converts_it() -> None:
+    """A quantity held as a float would round otherwise than the library rounds it, or come from NaN, an infinity, or a number that rounds to zero."""
+    assert Quantity.from_float(0.45205) == Quantity(4521)
+    assert str(Quantity.from_float(1.5)) == '1.5'
+    # A float parameter also takes an int, as PEP 484 allows.
+    assert Quantity.from_float(2) == Quantity.whole(2)
+    assert money_failure(lambda: Quantity.from_float(0.00004)) == MoneyError.InvalidQuantity()
+    assert money_failure(lambda: Quantity.from_float(-1.0)) == MoneyError.InvalidQuantity()
+    assert money_failure(lambda: Quantity.from_float(1e15)) == MoneyError.InvalidQuantity()
+    for value in (math.nan, math.inf, -math.inf):
+        assert money_failure(functools.partial(Quantity.from_float, value)) == MoneyError.NotFinite(), value
 
 
 def test_dates_and_times_are_checked_when_made() -> None:

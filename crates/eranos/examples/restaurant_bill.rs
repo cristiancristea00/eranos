@@ -9,7 +9,8 @@ use std::error::Error;
 
 use eranos::{
     CalendarDate, CurrencyCode, Expense, ExpenseGroup, ExpenseItem, ExpenseShares, Member,
-    MemberId, MemberParts, MemberShare, Money, Parts, Percentage, Split, TipDistribution, TipRule,
+    MemberId, MemberParts, MemberShare, Money, Parts, Percentage, Quantity, Split, TipDistribution,
+    TipRule,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -22,7 +23,7 @@ struct LineRow {
     #[tabled(rename = "Shared by")]
     participants: String,
     #[tabled(rename = "Quantity")]
-    quantity: u32,
+    quantity: Quantity,
     #[tabled(rename = "Unit price")]
     unit_price: Money,
     #[tabled(rename = "Line total")]
@@ -81,7 +82,7 @@ fn receipt(
     Ok(vec![
         ExpenseItem::builder("Ciorbă", eur("8.00")?, [ana]).build()?,
         ExpenseItem::builder("Sarmale", eur("14.00")?, [bob, carol])
-            .quantity(2)
+            .quantity(Quantity::from_whole(2)?)
             .build()?,
         ExpenseItem::builder_with_split(
             "Papanași",
@@ -93,7 +94,7 @@ fn receipt(
         )
         .build()?,
         ExpenseItem::builder("Lemonade", eur("3.00")?, [ana, bob, carol])
-            .quantity(3)
+            .quantity(Quantity::from_whole(3)?)
             .build()?,
     ])
 }

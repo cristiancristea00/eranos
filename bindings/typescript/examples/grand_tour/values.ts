@@ -1,5 +1,5 @@
-// Section 13 of the tour: currencies, amounts, percentages, parts, rates, dates, times, identifiers, and language tags,
-// on their own.
+// Section 13 of the tour: currencies, amounts, percentages, parts, rates, quantities, dates, times, identifiers, and language
+// tags, on their own.
 
 import assert from 'node:assert/strict';
 
@@ -11,9 +11,12 @@ import {
     IdError,
     Language,
     Money,
+    MoneyError,
     Parts,
     Percentage,
+    Quantity,
     TimeOfDay,
+    expenseItemLineTotal,
     parseMemberId,
 } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
@@ -127,6 +130,34 @@ function ratios(): void {
     assert.equal(parts.hundredths, 150);
 }
 
+function quantities(people: People): void {
+    const weight = Quantity.parse('0.452');
+    // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    const olives = expenseItemLineTotal({
+        name: 'Olives',
+        unitPrice: eur('1.00'),
+        split: { kind: 'equal', members: [people.ana] },
+        quantity: Quantity.parse('0.335'),
+    });
+    const fiveDecimals = refusal(() => Quantity.parse('0.00005'));
+    const zero = refusal(() => Quantity.parse('0'));
+    printLines('Quantities have four decimal places; line totals round half away from zero:');
+    printTable(
+        valueColumns,
+        [
+            { input: 'a quantity of 0.452', result: `${weight.toString()}, ${String(weight.tenThousandths)} ten-thousandths` },
+            { input: 'a quantity of 0.00005', result: message(fiveDecimals) },
+            { input: 'a quantity of 0', result: message(zero) },
+            { input: '0.335 at 1.00 EUR', result: olives.toString() },
+        ],
+        2,
+    );
+    assert.equal(weight.tenThousandths, 4_520n);
+    assert.ok(fiveDecimals instanceof MoneyError && 'invalidQuantity' === fiveDecimals.failure.kind);
+    assert.ok(zero instanceof MoneyError && 'invalidQuantity' === zero.failure.kind);
+    assert.ok(eur('0.34').equals(olives));
+}
+
 function datesAndIdentifiers(people: People): void {
     const date = CalendarDate.parse('2026-10-01');
     const time = TimeOfDay.parse('22:15');
@@ -172,5 +203,6 @@ export function values(people: People): void {
     currencies();
     amounts();
     ratios();
+    quantities(people);
     datesAndIdentifiers(people);
 }

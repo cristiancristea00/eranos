@@ -475,6 +475,68 @@ fn percentages_and_parts_check_as_the_library_does() {
     }
 }
 
+/// A quantity would be read, built, or converted from a double another way
+/// than the library's, or one the library refuses, or too large for the
+/// bindings' 64-bit integers, would come back as a number an item then
+/// carries.
+#[test]
+fn quantities_parse_and_convert_as_the_library_does() {
+    let invalid = money_failure(MoneyFailure::InvalidQuantity, MoneyError::InvalidQuantity);
+    assert_eq!(quantity_parse("0.452"), Ok(4_520));
+    assert_eq!(quantity_parse(" 3 "), Ok(30_000));
+    assert_eq!(quantity_parse("922337203685477.5807"), Ok(i64::MAX));
+    for text in ["0", "0.00005", "-1", "1e2", "half", "922337203685477.5808"] {
+        assert_eq!(quantity_parse(text), Err(invalid.clone()), "{text}");
+    }
+
+    assert_eq!(quantity_from_whole(1), Ok(10_000));
+    assert_eq!(quantity_from_whole(3), Ok(30_000));
+    assert_eq!(
+        quantity_from_whole(922_337_203_685_477),
+        Ok(9_223_372_036_854_770_000)
+    );
+    for units in [0, -1, i64::MIN, 922_337_203_685_478, i64::MAX] {
+        assert_eq!(quantity_from_whole(units), Err(invalid.clone()), "{units}");
+    }
+
+    assert_eq!(quantity_from_f64(0.45205), Ok(4_521));
+    assert_eq!(quantity_from_f64(1.5), Ok(15_000));
+    for value in [0.00004, -1.0, 1e21] {
+        assert_eq!(quantity_from_f64(value), Err(invalid.clone()), "{value}");
+    }
+    let not_finite = money_failure(MoneyFailure::NotFinite, MoneyError::NotFinite);
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(quantity_from_f64(value), Err(not_finite.clone()), "{value}");
+    }
+}
+
+/// A binding would show a quantity otherwise than the library writes it,
+/// or, holding a number the library refuses, would fail to show it or fall
+/// back to a text of its own; and a check before an item is built would let
+/// through a number the library refuses, or refuse one it holds.
+#[test]
+fn quantities_format_any_number_and_check_as_the_library_does() {
+    for number in [1, 10, 4_520, 10_000, 15_000, 20_500, i64::MAX] {
+        let unsigned = u64::try_from(number).unwrap();
+        assert_eq!(
+            quantity_format(number),
+            library::Quantity::from_ten_thousandths(unsigned)
+                .unwrap()
+                .to_string()
+        );
+        assert_eq!(quantity_check(number), Ok(()));
+    }
+    // Zero and negative numbers, which the library refuses, written the
+    // same way.
+    assert_eq!(quantity_format(0), "0");
+    assert_eq!(quantity_format(-4_520), "-0.452");
+    assert_eq!(quantity_format(i64::MIN), "-922337203685477.5808");
+    let invalid = money_failure(MoneyFailure::InvalidQuantity, MoneyError::InvalidQuantity);
+    for refused in [0, -1, i64::MIN] {
+        assert_eq!(quantity_check(refused), Err(invalid.clone()), "{refused}");
+    }
+}
+
 /// Dates, times, and language tags would be read or written another way
 /// than the library's, or one the library refuses would come back as a
 /// value.
@@ -914,6 +976,83 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
     ));
 }
 
+/// The line total the apps show for an item would differ from the one the
+/// library adds up against the expense's amount: rounded another way,
+/// multiplied as a double, or refused for a free line; and an item the
+/// library refuses would show a line total.
+#[test]
+fn an_item_derives_its_line_total_as_the_library_does() {
+    // 0.335 at 1.00 is 33.5 cents.
+    let olives = ExpenseItem {
+        name: "Olives".to_owned(),
+        unit_price: euros(100),
+        split: equal(&[member(1), member(2)]),
+        quantity: 3_350,
+    };
+    assert_eq!(expense_item_line_total(&olives), Ok(euros(34)));
+    let cheese = ExpenseItem {
+        unit_price: euros(4_200),
+        quantity: 3_500,
+        ..olives.clone()
+    };
+    assert_eq!(expense_item_line_total(&cheese), Ok(euros(1_470)));
+    let two = ExpenseItem {
+        quantity: 20_000,
+        ..olives.clone()
+    };
+    assert_eq!(expense_item_line_total(&two), Ok(euros(200)));
+
+    // A ten-thousandth of a cent rounds to zero: a free line.
+    let free = ExpenseItem {
+        quantity: 1,
+        ..olives.clone()
+    };
+    assert_eq!(expense_item_line_total(&free), Ok(euros(0)));
+
+    // No quantity, amounts that cannot add up to a free line's zero, and a
+    // line past the range.
+    assert_eq!(
+        expense_item_line_total(&ExpenseItem {
+            quantity: 0,
+            ..olives.clone()
+        }),
+        Err(money_failure(
+            MoneyFailure::InvalidQuantity,
+            MoneyError::InvalidQuantity
+        ))
+    );
+    assert_eq!(
+        expense_item_line_total(&ExpenseItem {
+            split: Split::Amounts {
+                shares: vec![MemberAmount {
+                    member: member(1),
+                    amount: euros(1),
+                }],
+            },
+            ..free
+        }),
+        Err(EranosError::from(
+            eranos::error::ExpenseError::AmountsDoNotAddUp {
+                expected: eranos::Money::from_minor_units(0, CurrencyCode::EUR),
+                actual: eranos::Money::from_minor_units(1, CurrencyCode::EUR),
+            }
+        ))
+    );
+    assert_eq!(
+        expense_item_line_total(&ExpenseItem {
+            unit_price: euros(i64::MAX),
+            ..two
+        }),
+        Err(EranosError::from(eranos::error::ExpenseError::Overflow))
+    );
+    assert!(is_unknown_currency(&expense_item_line_total(
+        &ExpenseItem {
+            unit_price: unknown_money(),
+            ..olives
+        }
+    )));
+}
+
 /// The members the apps list for an expense or a split would differ from
 /// the ones it involves, or come in another order than the library's.
 #[test]
@@ -926,7 +1065,7 @@ fn an_expense_and_a_split_list_their_members() {
                 name: "Soup".to_owned(),
                 unit_price: euros(3_000),
                 split: equal(&[member(3), member(2)]),
-                quantity: 1,
+                quantity: 10_000,
             }],
         },
         ..dinner()
@@ -974,8 +1113,8 @@ fn an_expense_and_a_split_list_their_members() {
     };
     assert!(matches!(
         expense_members(&bad_item),
-        Err(EranosError::Expense {
-            failure: ExpenseFailure::ZeroQuantity,
+        Err(EranosError::Money {
+            failure: MoneyFailure::InvalidQuantity,
             ..
         })
     ));

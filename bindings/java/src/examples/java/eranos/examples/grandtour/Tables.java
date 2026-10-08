@@ -18,6 +18,7 @@ import eranos.ExpenseShares;
 import eranos.Member;
 import eranos.MemberSummary;
 import eranos.Money;
+import eranos.Quantity;
 import eranos.Summary;
 import eranos.Transfer;
 import eranos.examples.Report.Row;
@@ -90,7 +91,8 @@ final class Tables {
     }
 
     /** A line of a receipt, a row of the items' table. */
-    record ItemRow(String name, String sharedBy, int quantity, Money unitPrice, Money lineTotal)
+    record ItemRow(
+            String name, String sharedBy, Quantity quantity, Money unitPrice, Money lineTotal)
             implements Row {
         static final List<String> HEADERS =
                 List.of("Item", "Shared by", "Quantity", "Unit price", "Line total");
@@ -100,7 +102,7 @@ final class Tables {
             return List.of(
                     name,
                     sharedBy,
-                    String.valueOf(quantity),
+                    quantity.toString(),
                     unitPrice.toString(),
                     lineTotal.toString());
         }

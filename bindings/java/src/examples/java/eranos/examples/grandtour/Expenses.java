@@ -25,6 +25,7 @@ import eranos.MemberShare;
 import eranos.Money;
 import eranos.Parts;
 import eranos.Percentage;
+import eranos.Quantity;
 import eranos.Split;
 import eranos.TimeOfDay;
 import eranos.TipDistribution;
@@ -102,17 +103,13 @@ final class Expenses {
         if (split.isPresent() && split.orElseThrow() instanceof ExpenseSplit.Itemised itemised) {
             List<ItemRow> rows = new ArrayList<>();
             for (ExpenseItem item : itemised.items()) {
-                Money total =
-                        new Money(
-                                item.unitPrice().minorUnits() * item.quantity(),
-                                item.unitPrice().currency());
                 rows.add(
                         new ItemRow(
                                 item.name(),
                                 names(group, item.split().members()),
                                 item.quantity(),
                                 item.unitPrice(),
-                                total));
+                                item.lineTotal()));
             }
             printTable(ItemRow.HEADERS, rows, 2);
         }
@@ -125,7 +122,7 @@ final class Expenses {
                         "Vinho verde",
                         eur("12.00"),
                         new Split.Equal(List.of(people.ana(), people.bob(), people.dan())),
-                        2),
+                        Quantity.ofWhole(2)),
                 new ExpenseItem("Bacalhau", eur("18.00"), new Split.Equal(List.of(people.carol()))),
                 new ExpenseItem(
                         "Custard tarts",
@@ -137,7 +134,7 @@ final class Expenses {
                                         new MemberParts(people.carol(), Parts.parse("1")),
                                         new MemberParts(people.dan(), Parts.parse("1")),
                                         new MemberParts(people.eva(), Parts.parse("2")))),
-                        6),
+                        Quantity.ofWhole(6)),
                 new ExpenseItem("Juice", eur("3.00"), new Split.Equal(List.of(people.eva()))));
     }
 

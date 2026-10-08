@@ -29,6 +29,7 @@ from eranos import (
     PartsSplit,
     Percentage,
     PercentageTip,
+    Quantity,
     TipRule,
     TipDistribution,
     generate_expense_id,
@@ -49,14 +50,14 @@ class LineRow(Row):
     participants: str
     """Who had it."""
 
-    quantity: int
+    quantity: Quantity
     """How many were ordered."""
 
     unit_price: Money
     """What one costs."""
 
     line_total: Money
-    """The unit price times the quantity."""
+    """The unit price times the quantity, as the library works it out."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -129,28 +130,12 @@ def receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[ExpenseItem,
     """
     return (
         ExpenseItem(name='Ciorbă', unit_price=euros('8.00'), split=EqualSplit((ana,))),
-        ExpenseItem(name='Sarmale', unit_price=euros('14.00'), split=EqualSplit((bob, carol)), quantity=2),
+        ExpenseItem(name='Sarmale', unit_price=euros('14.00'), split=EqualSplit((bob, carol)), quantity=Quantity.whole(2)),
         ExpenseItem(
             name='Papanași', unit_price=euros('9.00'), split=PartsSplit((MemberParts(ana, Parts.parse('1')), MemberParts(carol, Parts.parse('2'))))
         ),
-        ExpenseItem(name='Lemonade', unit_price=euros('3.00'), split=EqualSplit((ana, bob, carol)), quantity=3),
+        ExpenseItem(name='Lemonade', unit_price=euros('3.00'), split=EqualSplit((ana, bob, carol)), quantity=Quantity.whole(3)),
     )
-
-
-def line_total(item: ExpenseItem) -> Money:
-    """
-    Work out what a line of the receipt costs: its unit price times its quantity.
-
-    The layer's item has no line total, so the minor units of its unit price are multiplied by its quantity.
-
-    Args:
-        item: The line.
-
-    Returns:
-        The line's total.
-
-    """
-    return Money(item.unit_price.minor_units * item.quantity, item.unit_price.currency)
 
 
 def preview(group: ExpenseGroup, expense: Expense) -> ExpenseShares:
@@ -257,7 +242,7 @@ def main() -> None:
                 participants=names(group, item.split.members),
                 quantity=item.quantity,
                 unit_price=item.unit_price,
-                line_total=line_total(item),
+                line_total=item.line_total(),
             )
             for item in lines
         ],

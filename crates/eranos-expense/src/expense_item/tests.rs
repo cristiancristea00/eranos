@@ -1,10 +1,12 @@
 //! Itemised receipts divide each line among the members who shared it. These
-//! tests keep every line valid (a name, a positive price, at least one unit,
-//! a split that divides the line total), keep both constructors naming who
-//! shares a line, and keep the last split setter in force, on a new item and
-//! on one edited through `to_builder`.
+//! tests keep every line valid (a name, a positive price, a line total that
+//! is the price times the quantity rounded half away from zero, free when
+//! that rounds to zero, a split that divides it), keep both constructors
+//! naming who shares a line, and keep the last split setter in force, on a
+//! new item and on one edited through `to_builder`.
 
 use eranos_money::CurrencyCode;
+use proptest::prelude::*;
 
 use super::*;
 
@@ -26,10 +28,20 @@ fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
+/// `count` whole units.
+fn units(count: u64) -> Quantity {
+    Quantity::from_whole(count).unwrap()
+}
+
+/// The quantity written `text`.
+fn quantity(text: &str) -> Quantity {
+    Quantity::parse(text).unwrap()
+}
+
 /// Three beers at 4.50, shared by Ana and Bob.
 fn beers() -> ExpenseItem {
     ExpenseItem::builder("Beer", euros(450), [ana(), bob()])
-        .quantity(3)
+        .quantity(units(3))
         .build()
         .unwrap()
 }
@@ -41,7 +53,7 @@ fn the_quantity_defaults_to_one() {
     let pizza = ExpenseItem::builder_with_split("Pizza", euros(1_200), Split::equal([ana()]))
         .build()
         .unwrap();
-    assert_eq!(pizza.quantity(), 1);
+    assert_eq!(pizza.quantity(), Quantity::ONE);
     assert_eq!(pizza.line_total(), euros(1_200));
     // The other fields are kept as given.
     assert_eq!(pizza.name(), "Pizza");
@@ -55,7 +67,29 @@ fn the_quantity_defaults_to_one() {
 fn the_line_total_is_the_unit_price_times_the_quantity() {
     // 3 × 4.50.
     assert_eq!(beers().line_total(), euros(1_350));
-    assert_eq!(beers().quantity(), 3);
+    assert_eq!(beers().quantity(), units(3));
+}
+
+/// A line weighed or measured in fractions would be charged another amount
+/// than the receipt prints: rounded towards zero, to even, or to a whole
+/// unit.
+#[test]
+fn a_fractional_line_total_rounds_half_away_from_zero() {
+    let line = |unit_price, text| {
+        ExpenseItem::builder("Cheese", euros(unit_price), [ana()])
+            .quantity(quantity(text))
+            .build()
+            .map(|item| item.line_total())
+    };
+    // 0.35 kg at 42.00 is exact.
+    assert_eq!(line(4_200, "0.35"), Ok(euros(1_470)));
+    // 0.335 at 1.00 is 33.5 cents, which rounds up.
+    assert_eq!(line(100, "0.335"), Ok(euros(34)));
+    // 0.452 at 12.99 is 5.87148, which rounds down.
+    assert_eq!(line(1_299, "0.452"), Ok(euros(587)));
+    // 1.5 at 4.50, and the smallest quantity at the largest price.
+    assert_eq!(line(450, "1.5"), Ok(euros(675)));
+    assert_eq!(line(i64::MAX, "0.0001"), Ok(euros(922_337_203_685_478)));
 }
 
 /// Sharing a line equally would divide it differently from an explicit
@@ -65,7 +99,7 @@ fn shared_by_is_an_equal_split() {
     // Same item either way.
     let explicit =
         ExpenseItem::builder_with_split("Beer", euros(450), Split::equal([ana(), bob()]))
-            .quantity(3)
+            .quantity(units(3))
             .build()
             .unwrap();
     assert_eq!(beers(), explicit);
@@ -139,24 +173,45 @@ fn a_non_positive_unit_price_is_rejected() {
     );
 }
 
-/// A line with zero units would be accepted with a zero total.
+/// A line whose quantity is too small to cost a minor unit would be
+/// refused though the receipt lists it, or charged a cent it does not cost;
+/// and a split of amounts on it would charge its members for a line that
+/// costs nothing.
 #[test]
-fn a_zero_quantity_is_rejected() {
-    // With a split.
+fn a_line_that_rounds_to_zero_is_free() {
+    // 0.4 of a cent rounds to zero: a free line, shared as any other.
+    let free = ExpenseItem::builder("Mint", euros(1), [ana(), bob()])
+        .quantity(quantity("0.4"))
+        .build()
+        .unwrap();
+    assert_eq!(free.line_total(), euros(0));
+    assert_eq!(free.quantity(), quantity("0.4"));
+    // Half a cent rounds up to one.
     assert_eq!(
-        ExpenseItem::builder("Beer", euros(450), [ana()])
-            .quantity(0)
-            .build(),
-        Err(ExpenseError::ZeroQuantity)
+        ExpenseItem::builder("Mint", euros(1), [ana()])
+            .quantity(quantity("0.5"))
+            .build()
+            .map(|item| item.line_total()),
+        Ok(euros(1))
     );
-    // The quantity is checked before the split, which would not divide a
-    // line total of zero.
+    // Positive amounts never add up to a free line's total of zero, and a
+    // zero amount is refused as a share of any line.
     let one_cent = Split::amounts([MemberAmount::new(ana(), euros(1))]);
     assert_eq!(
-        ExpenseItem::builder_with_split("Beer", euros(450), one_cent)
-            .quantity(0)
+        ExpenseItem::builder_with_split("Mint", euros(1), one_cent)
+            .quantity(quantity("0.0001"))
             .build(),
-        Err(ExpenseError::ZeroQuantity)
+        Err(ExpenseError::AmountsDoNotAddUp {
+            expected: euros(0),
+            actual: euros(1)
+        })
+    );
+    let nothing = Split::amounts([MemberAmount::new(ana(), euros(0))]);
+    assert_eq!(
+        ExpenseItem::builder_with_split("Mint", euros(1), nothing)
+            .quantity(quantity("0.0001"))
+            .build(),
+        Err(ExpenseError::NonPositiveShare { member: ana() })
     );
 }
 
@@ -167,7 +222,14 @@ fn a_line_total_out_of_range_is_rejected() {
     // Two units of more than half the range.
     assert_eq!(
         ExpenseItem::builder("Yacht", euros(i64::MAX / 2 + 1), [ana()])
-            .quantity(2)
+            .quantity(units(2))
+            .build(),
+        Err(ExpenseError::Overflow)
+    );
+    // A ten-thousandth more than one unit of the largest price.
+    assert_eq!(
+        ExpenseItem::builder("Yacht", euros(i64::MAX), [ana()])
+            .quantity(quantity("1.0001"))
             .build(),
         Err(ExpenseError::Overflow)
     );
@@ -182,7 +244,7 @@ fn a_line_total_out_of_range_is_rejected() {
 /// more or less than the line costs.
 #[test]
 fn the_split_must_divide_the_line_total() {
-    let builder = || ExpenseItem::builder("Beer", euros(450), [ana()]).quantity(3);
+    let builder = || ExpenseItem::builder("Beer", euros(450), [ana()]).quantity(units(3));
     // Amounts that add up to 13.50.
     let split = Split::amounts([
         MemberAmount::new(ana(), euros(1_000)),
@@ -239,15 +301,24 @@ fn builder_setters_replace_each_field() {
         .to_builder()
         .name("Wine")
         .unit_price(euros(2_400))
-        .quantity(2)
+        .quantity(units(2))
         .build()
         .unwrap();
     assert_eq!(wine.name(), "Wine");
     assert_eq!(wine.unit_price(), euros(2_400));
-    assert_eq!(wine.quantity(), 2);
+    assert_eq!(wine.quantity(), units(2));
     assert_eq!(wine.line_total(), euros(4_800));
     // The split is kept.
     assert_eq!(wine.split(), beers().split());
+    // The last quantity wins, and the line total follows it.
+    let half = wine
+        .to_builder()
+        .quantity(units(3))
+        .quantity(quantity("0.5"))
+        .build()
+        .unwrap();
+    assert_eq!(half.quantity(), quantity("0.5"));
+    assert_eq!(half.line_total(), euros(1_200));
 }
 
 /// Saved receipts would fail to load, or an invalid line would load.
@@ -258,9 +329,55 @@ fn items_round_trip_through_serde() {
     let json = serde_json::to_string(&beers()).unwrap();
     assert_eq!(serde_json::from_str::<ExpenseItem>(&json).unwrap(), beers());
     // Loading validates like the builder.
-    let zero_quantity = json.replace(r#""quantity":3"#, r#""quantity":0"#);
+    let zero_quantity = json.replace(r#""quantity":"3""#, r#""quantity":"0""#);
     assert_ne!(zero_quantity, json);
     assert!(serde_json::from_str::<ExpenseItem>(&zero_quantity).is_err());
     // A record that is not an item's shape is refused before its checks.
     assert!(serde_json::from_str::<ExpenseItem>(r#"{"name":"Beer"}"#).is_err());
+}
+
+/// A saved quantity written as a number would lose its decimals in a
+/// reader that parses JSON numbers as doubles, a line total written beside
+/// it could disagree with it, and a quantity of one written on every line
+/// would lengthen every saved receipt.
+#[cfg(feature = "serde")]
+#[test]
+fn a_quantity_is_saved_as_text_and_left_out_at_one() {
+    let cheese = ExpenseItem::builder("Cheese", euros(4_200), [ana()])
+        .quantity(quantity("0.35"))
+        .build()
+        .unwrap();
+    let saved_cheese = serde_json::to_value(&cheese).unwrap();
+    assert_eq!(saved_cheese["quantity"], serde_json::json!("0.35"));
+    assert_eq!(saved_cheese.get("line_total"), None);
+    assert_eq!(
+        serde_json::from_value::<ExpenseItem>(saved_cheese).unwrap(),
+        cheese
+    );
+    // One unit is left out, and a record without a quantity reads as one.
+    let pizza = ExpenseItem::builder("Pizza", euros(1_200), [ana()])
+        .build()
+        .unwrap();
+    let saved_pizza = serde_json::to_value(&pizza).unwrap();
+    assert_eq!(saved_pizza.get("quantity"), None);
+    let loaded = serde_json::from_value::<ExpenseItem>(saved_pizza).unwrap();
+    assert_eq!(loaded.quantity(), Quantity::ONE);
+    assert_eq!(loaded.line_total(), euros(1_200));
+}
+
+proptest! {
+    /// A whole quantity whose line total differed from the unit price times
+    /// the count would change the totals, and the stored shares, of saved
+    /// itemised bills.
+    #[test]
+    fn a_whole_quantity_gives_the_exact_product(
+        unit_price in 1_i64..1_000_000_000,
+        count in 1_u64..10_000,
+    ) {
+        let item = ExpenseItem::builder("Beer", euros(unit_price), [ana()])
+            .quantity(units(count))
+            .build()
+            .unwrap();
+        prop_assert_eq!(item.line_total(), euros(unit_price * i64::try_from(count).unwrap()));
+    }
 }

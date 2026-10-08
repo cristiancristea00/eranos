@@ -1,10 +1,51 @@
 //! Every double an app hands the library becomes an amount, a percentage,
-//! parts, or a rate through `rounded`, so every binding gets the same cents
-//! from the same double. These tests pin the text it rounds, std's shortest
-//! decimal form, and the rule it rounds by, half away from zero on the
-//! digits of that text.
+//! parts, a quantity, or a rate through `rounded`, so every binding gets the
+//! same cents from the same double. These tests pin the text it rounds,
+//! std's shortest decimal form, and the rule it rounds by, half away from
+//! zero on the digits of that text, and the fixed-point text that
+//! percentages, parts, and quantities are read from and written in.
+
+use std::fmt;
 
 use super::*;
+
+/// `units` at `places`, as `write_fixed` writes it with no unit.
+fn written(units: i64, places: u8) -> String {
+    fmt::from_fn(|formatter| write_fixed(formatter, units, places, "")).to_string()
+}
+
+/// A fixed-point reader that padded a short fraction at the wrong end, or
+/// accepted a digit beyond its places, would read 1.5 parts as 1.05 or
+/// round a fifth decimal of a quantity away unseen.
+#[test]
+fn fixed_point_text_reads_as_units_of_its_places() {
+    assert_eq!(parse_fixed("1.5", 2), Some(150));
+    assert_eq!(parse_fixed("1.05", 2), Some(105));
+    assert_eq!(parse_fixed("0.452", 4), Some(4_520));
+    assert_eq!(parse_fixed("12", 4), Some(120_000));
+    assert_eq!(parse_fixed("007", 0), Some(7));
+    // More decimals than the places, and text that is not digits.
+    for text in ["1.234", "1.", ".5", ".", "", "-1", "+1", "1e2", " 1"] {
+        assert_eq!(parse_fixed(text, 2), None, "{text:?}");
+    }
+    // The largest value, and one more.
+    assert_eq!(parse_fixed("18446744073709551615", 0), Some(u64::MAX));
+    assert_eq!(parse_fixed("1844674407370955.1616", 4), None);
+}
+
+/// A writer that kept trailing zeros or dropped leading ones would show
+/// 1.50 parts or 0.5 for 0.05.
+#[test]
+fn fixed_point_text_is_written_without_trailing_zeros() {
+    assert_eq!(written(150, 2), "1.5");
+    assert_eq!(written(105, 2), "1.05");
+    assert_eq!(written(4_520, 4), "0.452");
+    assert_eq!(written(1, 4), "0.0001");
+    assert_eq!(written(30_000, 4), "3");
+    assert_eq!(written(-5, 2), "-0.05");
+    assert_eq!(written(0, 4), "0");
+    assert_eq!(written(i64::MIN, 4), "-922337203685477.5808");
+}
 
 /// Rounding the double instead of its shortest text would turn 1.005 and
 /// 2.675, whose nearest doubles lie below them, into 1.00 and 2.67: the

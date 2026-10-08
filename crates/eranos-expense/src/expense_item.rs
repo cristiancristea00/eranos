@@ -1,7 +1,8 @@
 //! Receipt lines of an itemised expense.
 
 use eranos_core::{MemberId, text};
-use eranos_money::Money;
+use eranos_money::allocation::apply_ten_thousandths;
+use eranos_money::{Money, Quantity};
 
 use crate::Split;
 use crate::error::ExpenseError;
@@ -9,6 +10,11 @@ use crate::error::ExpenseError;
 /// One line of an itemised expense: a unit price times a quantity, divided
 /// among its own members by its own [`Split`].
 ///
+/// The quantity is a whole number of units or a decimal with four places,
+/// such as 0.452 kg, and the line total is the unit price times the
+/// quantity, rounded half away from zero to the currency's minor unit, so a
+/// whole quantity gives the exact product. A line whose product is below
+/// half a minor unit is free: its total is zero, and it divides to zeros.
 /// The line totals of an expense's items must add up to exactly the
 /// expense's amount.
 ///
@@ -16,13 +22,19 @@ use crate::error::ExpenseError;
 ///
 /// ```
 /// use eranos::id::MemberId;
-/// use eranos::{CurrencyCode, ExpenseItem, MemberParts, Money, Parts, Split};
+/// use eranos::{CurrencyCode, ExpenseItem, MemberParts, Money, Parts, Quantity, Split};
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
 /// let beers = ExpenseItem::builder("Beer", Money::parse("4.50", CurrencyCode::EUR)?, [ana, bob])
-///     .quantity(3)
+///     .quantity(Quantity::from_whole(3)?)
 ///     .build()?;
 /// assert_eq!(beers.line_total(), Money::parse("13.50", CurrencyCode::EUR)?);
+///
+/// // 0.35 kg at 42.00 EUR a kilogram.
+/// let cheese = ExpenseItem::builder("Cheese", Money::parse("42.00", CurrencyCode::EUR)?, [ana])
+///     .quantity(Quantity::parse("0.35")?)
+///     .build()?;
+/// assert_eq!(cheese.line_total(), Money::parse("14.70", CurrencyCode::EUR)?);
 ///
 /// let split = Split::parts([
 ///     MemberParts::new(ana, Parts::from_whole(2)?),
@@ -30,7 +42,7 @@ use crate::error::ExpenseError;
 /// ]);
 /// let pizza = ExpenseItem::builder_with_split("Pizza", Money::parse("12.00", CurrencyCode::EUR)?, split)
 ///     .build()?;
-/// assert_eq!(pizza.quantity(), 1);
+/// assert_eq!(pizza.quantity(), Quantity::ONE);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,12 +51,17 @@ pub struct ExpenseItem {
     name: String,
     unit_price: Money,
     split: Split,
-    quantity: u32,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_one"))]
+    quantity: Quantity,
+    // Derived from the unit price and the quantity by `build`, so never
+    // serialised.
+    #[cfg_attr(feature = "serde", serde(skip))]
+    line_total: Money,
 }
 
 impl ExpenseItem {
     /// Starts an item whose line total `members` share equally; the
-    /// quantity defaults to 1.
+    /// quantity defaults to [`Quantity::ONE`].
     pub fn builder(
         name: impl Into<String>,
         unit_price: Money,
@@ -54,7 +71,7 @@ impl ExpenseItem {
     }
 
     /// Starts an item whose line total is divided by `split`; the quantity
-    /// defaults to 1.
+    /// defaults to [`Quantity::ONE`].
     pub fn builder_with_split(
         name: impl Into<String>,
         unit_price: Money,
@@ -64,7 +81,7 @@ impl ExpenseItem {
             name: name.into(),
             unit_price,
             split,
-            quantity: 1,
+            quantity: Quantity::ONE,
         }
     }
 
@@ -96,21 +113,18 @@ impl ExpenseItem {
         &self.split
     }
 
-    /// The number of units, at least 1.
+    /// The number of units: positive, with at most four decimal places.
     #[must_use]
-    pub const fn quantity(&self) -> u32 {
+    pub const fn quantity(&self) -> Quantity {
         self.quantity
     }
 
-    /// The unit price times the quantity.
+    /// The unit price times the quantity, rounded half away from zero to the
+    /// currency's minor unit, in the unit price's currency: zero for a free
+    /// line, positive otherwise.
     #[must_use]
-    pub fn line_total(&self) -> Money {
-        // `build` rejected any item whose line total overflows.
-        let total = self
-            .unit_price
-            .minor_units()
-            .saturating_mul(i64::from(self.quantity));
-        Money::from_minor_units(total, self.unit_price.currency())
+    pub const fn line_total(&self) -> Money {
+        self.line_total
     }
 }
 
@@ -122,7 +136,7 @@ pub struct ExpenseItemBuilder {
     name: String,
     unit_price: Money,
     split: Split,
-    quantity: u32,
+    quantity: Quantity,
 }
 
 impl ExpenseItemBuilder {
@@ -151,8 +165,8 @@ impl ExpenseItemBuilder {
         self
     }
 
-    /// Sets the number of units.
-    pub const fn quantity(mut self, quantity: u32) -> Self {
+    /// Replaces the number of units.
+    pub const fn quantity(mut self, quantity: Quantity) -> Self {
         self.quantity = quantity;
         self
     }
@@ -163,33 +177,48 @@ impl ExpenseItemBuilder {
     ///
     /// - [`ExpenseError::EmptyItemName`] when the name is blank.
     /// - [`ExpenseError::NonPositiveAmount`] when the unit price is not
-    ///   positive, and [`ExpenseError::ZeroQuantity`] for a quantity of 0.
+    ///   positive.
     /// - [`ExpenseError::Overflow`] when the line total does not fit.
-    /// - Any error of an invalid [`Split`] for the line total.
+    /// - Any error of an invalid [`Split`] for the line total, among them
+    ///   [`ExpenseError::AmountsDoNotAddUp`] for a split of amounts on a
+    ///   free line, whose total of zero no positive amounts add up to.
     pub fn build(self) -> Result<ExpenseItem, ExpenseError> {
         let name = text::required(self.name, ExpenseError::EmptyItemName)?;
         if !self.unit_price.is_positive() {
             return Err(ExpenseError::NonPositiveAmount);
         }
-        if 0 == self.quantity {
-            return Err(ExpenseError::ZeroQuantity);
-        }
-        let line_total = self
-            .unit_price
-            .minor_units()
-            .checked_mul(i64::from(self.quantity))
-            .ok_or(ExpenseError::Overflow)?;
-        self.split.validate(Money::from_minor_units(
-            line_total,
-            self.unit_price.currency(),
-        ))?;
+        let minor_units = apply_ten_thousandths(
+            self.unit_price.minor_units(),
+            self.quantity.ten_thousandths(),
+        )
+        .ok_or(ExpenseError::Overflow)?;
+        // A positive price times a positive quantity is never negative, but
+        // less than half a minor unit rounds to zero: a free line, which its
+        // split divides to zeros.
+        let line_total = Money::from_minor_units(minor_units, self.unit_price.currency());
+        self.split.validate(line_total)?;
         Ok(ExpenseItem {
             name,
             unit_price: self.unit_price,
             split: self.split,
             quantity: self.quantity,
+            line_total,
         })
     }
+}
+
+/// Whether `quantity` is [`Quantity::ONE`], which the serialised form leaves
+/// out.
+#[cfg(feature = "serde")]
+#[cfg_attr(
+    target_pointer_width = "64",
+    expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "serde's `skip_serializing_if` passes the field by reference; the lint fires where a reference is as wide as a quantity, on a 64-bit target"
+    )
+)]
+fn is_one(quantity: &Quantity) -> bool {
+    Quantity::ONE == *quantity
 }
 
 /// The serialised form of an [`ExpenseItem`], validated on the way in.
@@ -199,7 +228,8 @@ struct ExpenseItemRecord {
     name: String,
     unit_price: Money,
     split: Split,
-    quantity: u32,
+    #[serde(default)]
+    quantity: Quantity,
 }
 
 /// Builds the item `record` describes, through the checks of the builder.

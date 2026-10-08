@@ -174,6 +174,62 @@ func ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem() throws
     }
 }
 
+/// The refusal of a number, text, or double that is not a quantity.
+private let invalidQuantity = EranosError.money(.invalidQuantity, detail: "invalid quantity: expected a positive number with at most 4 decimal places")
+
+/// A quantity read or written another way than the library's, or one the library refuses let
+/// through, would multiply a line of a bill into another total than the group holds.
+@Test
+func quantitiesReadAndWriteAsTheLibraryDoes() throws {
+    let weight = try Quantity(parsing: "0.452")
+    #expect(4_520 == weight.tenThousandths)
+    #expect("0.452" == weight.description)
+    #expect(try Quantity(tenThousandths: 4_520) == weight)
+    #expect(try "0.0001" == Quantity(tenThousandths: 1).description)
+    #expect(try "1.5" == Quantity(parsing: "1.5000").description)
+    let three = try Quantity(whole: 3)
+    #expect(30_000 == three.tenThousandths)
+    #expect("3" == three.description)
+    #expect(10_000 == Quantity.one.tenThousandths)
+    #expect("1" == Quantity.one.description)
+    #expect(try Quantity.one == Quantity(whole: 1))
+    for tenThousandths: Int64 in [0, -4_520] {
+        #expect(throws: invalidQuantity) {
+            try Quantity(tenThousandths: tenThousandths)
+        }
+    }
+    // Above 922 337 203 685 477 whole units, the ten-thousandths no longer fit an `Int64`.
+    for units: Int64 in [0, -1, .max] {
+        #expect(throws: invalidQuantity) {
+            try Quantity(whole: units)
+        }
+    }
+    for text in ["0", "0.00005", "-1", "1e2", "half"] {
+        #expect(throws: invalidQuantity) {
+            try Quantity(parsing: text)
+        }
+    }
+}
+
+/// A quantity held as a double would become other ten-thousandths in Swift than in the library,
+/// a number too large for an `Int64` of ten-thousandths would wrap, or NaN, an infinity, or a value
+/// that rounds to zero would come back as a quantity.
+@Test
+func quantitiesConvertFromDoublesAsTheLibraryConvertsThem() throws {
+    #expect(try 4_521 == Quantity(0.45205).tenThousandths)
+    #expect(try "1.5" == Quantity(1.5).description)
+    for value in [0.00004, 0, -1, 1e15] {
+        #expect(throws: invalidQuantity) {
+            try Quantity(value)
+        }
+    }
+    for value in [Double.nan, .infinity, -.infinity] {
+        #expect(throws: EranosError.money(.notFinite, detail: "the number is not finite")) {
+            try Quantity(value)
+        }
+    }
+}
+
 /// A date or a time read or written another way than the library's, or one that does not exist,
 /// would put an entry on another day.
 @Test

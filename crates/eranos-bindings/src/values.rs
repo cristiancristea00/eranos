@@ -10,13 +10,17 @@ use eranos::member as members;
 use eranos::{CategoryId, Email, Language, MemberId, Username};
 use eranos::{calendar, money as library};
 use eranos_calendar::{format_calendar_date, format_time_of_day};
-use eranos_money::{format_basis_points, format_hundredths, format_minor_units};
+use eranos_money::{
+    format_basis_points, format_hundredths, format_minor_units, format_ten_thousandths,
+};
 
 use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::expense::{Expense, ExpenseSplit, Split, TipRule};
+use crate::expense::{Expense, ExpenseItem, ExpenseSplit, Split, TipRule};
 use crate::ledger::Balance;
 use crate::member::{Iban, PhoneNumber};
-use crate::money::{CurrencyDetails, Money, currency, exchange_rate, parts, percentage};
+use crate::money::{
+    CurrencyDetails, Money, currency, exchange_rate, parts, percentage, quantity, ten_thousandths,
+};
 use crate::{EranosError, identifier};
 
 // --- Identifiers -------------------------------------------------------------
@@ -303,6 +307,70 @@ fn hundredths(parts: library::Parts) -> Result<i32, EranosError> {
     Ok(i32::try_from(parts.hundredths()).map_err(|_| MoneyError::InvalidParts)?)
 }
 
+// --- Quantities --------------------------------------------------------------
+
+/// The quantity written `text`, in ten-thousandths: "0.452" is 4 520.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
+/// for text that is not a positive decimal with at most four decimal
+/// places, and for a quantity whose ten-thousandths do not fit an `i64`.
+pub fn quantity_parse(text: &str) -> Result<i64, EranosError> {
+    Ok(ten_thousandths(library::Quantity::parse(text)?))
+}
+
+/// The quantity of `units` whole units, in ten-thousandths: 3 is 30 000.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
+/// for a number that is not positive, and for one whose ten-thousandths do
+/// not fit an `i64`.
+pub fn quantity_from_whole(units: i64) -> Result<i64, EranosError> {
+    let units = u64::try_from(units).map_err(|_| MoneyError::InvalidQuantity)?;
+    Ok(ten_thousandths(library::Quantity::from_whole(units)?))
+}
+
+/// The quantity of the double `value`, in ten-thousandths: 0.45205 is
+/// 4 521.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to four decimal places, and parses it.
+///
+/// # Errors
+///
+/// [`MoneyFailure::NotFinite`](crate::MoneyFailure::NotFinite) for NaN and
+/// the infinities, and
+/// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
+/// for a value that rounds to zero or below and one whose ten-thousandths do
+/// not fit an `i64`.
+pub fn quantity_from_f64(value: f64) -> Result<i64, EranosError> {
+    Ok(ten_thousandths(library::Quantity::from_f64(value)?))
+}
+
+/// The quantity of `ten_thousandths`, as the library writes it: "0.452".
+///
+/// It writes the number through `eranos_money::format_ten_thousandths`,
+/// which the library's text form of a quantity writes with, so it cannot
+/// fail: zero and a negative number, which [`quantity_check`] refuses, are
+/// written the same way, "0" and "-0.452".
+#[must_use]
+pub fn quantity_format(ten_thousandths: i64) -> String {
+    format_ten_thousandths(ten_thousandths).to_string()
+}
+
+/// Checks that `ten_thousandths` is a quantity, as an item requires.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
+/// for a number that is not positive.
+pub fn quantity_check(ten_thousandths: i64) -> Result<(), EranosError> {
+    quantity(ten_thousandths)?;
+    Ok(())
+}
+
 // --- Dates and times ---------------------------------------------------------
 
 /// The date written `text` in ISO 8601: "2026-09-23".
@@ -506,6 +574,32 @@ pub fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
     ))
 }
 
+/// The line total of `item`, as the library computes it, so every binding
+/// shows the same line total.
+///
+/// It is the unit price times the quantity, rounded half away from zero to
+/// the currency's minor unit: zero for a free line, whose product is below
+/// half a minor unit.
+///
+/// # Errors
+///
+/// The errors of the item's conversion: those of its unit price and split,
+/// among them
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+/// for an amount whose currency details are not the library's for its
+/// code,
+/// [`MoneyFailure::InvalidQuantity`](crate::MoneyFailure::InvalidQuantity)
+/// for a quantity that is not positive, and the library's checks of an
+/// item, among them
+/// [`ExpenseFailure::AmountsDoNotAddUp`](crate::ExpenseFailure::AmountsDoNotAddUp)
+/// for a split of amounts that does not add up to the line total, a free
+/// line's included, and
+/// [`ExpenseFailure::Overflow`](crate::ExpenseFailure::Overflow) for a line
+/// total out of range.
+pub fn expense_item_line_total(item: &ExpenseItem) -> Result<Money, EranosError> {
+    Ok(Money::from_library(item.to_library()?.line_total()))
+}
+
 /// Every member `expense` involves, as a payer or a participant, as
 /// identifiers in identifier order.
 ///
@@ -521,7 +615,7 @@ pub fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
         ExpenseSplit::Itemised { items } => expenses::ExpenseSplit::Itemised(
             items
                 .iter()
-                .map(crate::expense::ExpenseItem::to_library)
+                .map(ExpenseItem::to_library)
                 .collect::<Result<Vec<_>, EranosError>>()?,
         ),
         ExpenseSplit::Whole { split } => expenses::ExpenseSplit::Whole(split.to_library()?),

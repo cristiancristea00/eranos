@@ -114,6 +114,10 @@ fn money_errors() -> Vec<Expected<MoneyError>> {
             message: "invalid percentage: expected a number with at most 2 decimal places",
         },
         Expected {
+            error: MoneyError::InvalidQuantity,
+            message: "invalid quantity: expected a positive number with at most 4 decimal places",
+        },
+        Expected {
             error: MoneyError::NotFinite,
             message: "the number is not finite",
         },
@@ -289,10 +293,6 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
                 total_basis_points: 9_999,
             },
             message: "the percentages add up to 9999 basis points instead of 10000 (100%)",
-        },
-        Expected {
-            error: ExpenseError::ZeroQuantity,
-            message: "an item quantity must be at least 1",
         },
     ]
 }

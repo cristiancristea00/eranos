@@ -240,6 +240,8 @@ pub enum FailureKind {
     MoneyInvalidParts,
     /// [`MoneyFailure::InvalidPercentage`].
     MoneyInvalidPercentage,
+    /// [`MoneyFailure::InvalidQuantity`].
+    MoneyInvalidQuantity,
     /// [`MoneyFailure::NotFinite`].
     MoneyNotFinite,
     /// [`MoneyFailure::Overflow`].
@@ -266,8 +268,6 @@ pub enum FailureKind {
     ExpenseNoItems,
     /// [`ExpenseFailure::EmptyItemName`].
     ExpenseEmptyItemName,
-    /// [`ExpenseFailure::ZeroQuantity`].
-    ExpenseZeroQuantity,
     /// [`ExpenseFailure::ItemsDoNotAddUp`].
     ExpenseItemsDoNotAddUp,
     /// [`ExpenseFailure::NegativeTip`].
@@ -513,7 +513,6 @@ fn expense(failure: &ExpenseFailure) -> FlatFailure {
         },
         ExpenseFailure::NoItems => FlatFailure::new(FailureKind::ExpenseNoItems),
         ExpenseFailure::EmptyItemName => FlatFailure::new(FailureKind::ExpenseEmptyItemName),
-        ExpenseFailure::ZeroQuantity => FlatFailure::new(FailureKind::ExpenseZeroQuantity),
         ExpenseFailure::ItemsDoNotAddUp { expected, actual } => FlatFailure {
             failure: FailureKind::ExpenseItemsDoNotAddUp,
             payload: Payload {
@@ -700,6 +699,7 @@ fn money(failure: &MoneyFailure) -> FlatFailure {
         }
         MoneyFailure::InvalidParts => FlatFailure::new(FailureKind::MoneyInvalidParts),
         MoneyFailure::InvalidPercentage => FlatFailure::new(FailureKind::MoneyInvalidPercentage),
+        MoneyFailure::InvalidQuantity => FlatFailure::new(FailureKind::MoneyInvalidQuantity),
         MoneyFailure::NotFinite => FlatFailure::new(FailureKind::MoneyNotFinite),
         MoneyFailure::Overflow => FlatFailure::new(FailureKind::MoneyOverflow),
     }

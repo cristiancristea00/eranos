@@ -20,8 +20,8 @@ use eranos::{
     CalendarDate, Category, CategoryId, CategoryTotal, CurrencyCode, Email, ExchangeRate, Expense,
     ExpenseGroup, ExpenseGroupId, ExpenseId, ExpenseItem, Iban, Language, Member, MemberAmount,
     MemberId, MemberParts, MemberPercentage, Money, Parts, PaymentAccount, Percentage, PhoneNumber,
-    SavedExpenseGroup, SettlementStrategy, Split, TimeOfDay, TipDistribution, TipRule, Transfer,
-    TransferId, Username,
+    Quantity, SavedExpenseGroup, SettlementStrategy, Split, TimeOfDay, TipDistribution, TipRule,
+    Transfer, TransferId, Username,
 };
 use serde_json::{Value, json};
 
@@ -80,15 +80,16 @@ fn trip() -> Trip {
             ExpenseItem::builder("Bacalhau", eur("12.00"), [ana])
                 .build()
                 .unwrap(),
+            // 1.5 l of wine at 6.00 a litre.
             ExpenseItem::builder_with_split(
                 "Wine",
-                eur("4.50"),
+                eur("6.00"),
                 Split::parts([
                     MemberParts::new(ana, Parts::ONE),
                     MemberParts::new(bob, Parts::parse("1.5").unwrap()),
                 ]),
             )
-            .quantity(2)
+            .quantity(Quantity::parse("1.5").unwrap())
             .build()
             .unwrap(),
         ],
@@ -214,6 +215,11 @@ fn the_json_shape_is_pinned() {
         bill["split"]["itemised"][1]["split"]["parts"][1][1],
         json!(150)
     );
+    // A quantity is its decimal text, left out at one; a line total is
+    // derived, so never written.
+    assert_eq!(bill["split"]["itemised"][1]["quantity"], json!("1.5"));
+    assert_eq!(bill["split"]["itemised"][0].get("quantity"), None);
+    assert_eq!(bill["split"]["itemised"][1].get("line_total"), None);
     assert_eq!(bill.get("total"), None);
     let tram = &value["expenses"][1];
     assert_eq!(tram["exchange_rate"], json!("0.2011"));

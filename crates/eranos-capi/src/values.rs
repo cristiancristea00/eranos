@@ -375,6 +375,62 @@ pub mod ffi {
         }
     }
 
+    /// The helpers of quantities, which cross in ten-thousandths. It holds nothing, and nothing
+    /// makes one.
+    #[diplomat::opaque]
+    #[derive(Debug, Clone, Copy)]
+    pub struct EranosQuantity;
+
+    impl EranosQuantity {
+        /// The quantity written `text`, in ten-thousandths: "0.452" is 4520.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for text that is not a positive decimal with at most
+        /// four decimal places, or a quantity out of range, and of the kind `InvalidText` for text
+        /// that is not UTF-8.
+        pub fn parse(text: &DiplomatStr) -> Result<i64, Box<EranosError>> {
+            eranos_bindings::quantity_parse(&crate::text(text)?).map_err(crate::failed)
+        }
+
+        /// The quantity of `units` whole units, in ten-thousandths: 3 is 30000.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a number that is not positive, or out of range.
+        pub fn from_whole(units: i64) -> Result<i64, Box<EranosError>> {
+            eranos_bindings::quantity_from_whole(units).map_err(crate::failed)
+        }
+
+        /// The quantity of the double `value`, in ten-thousandths: 0.45205 is 4521. The library
+        /// writes the double in its shortest decimal form, rounds it half away from zero to four
+        /// decimal places, and parses it.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a value that is NaN or infinite, rounds to zero
+        /// or below, or is out of range.
+        pub fn from_double(value: f64) -> Result<i64, Box<EranosError>> {
+            eranos_bindings::quantity_from_f64(value).map_err(crate::failed)
+        }
+
+        /// Writes the quantity of `ten_thousandths` ten-thousandths as the library does: "0.452".
+        /// It writes zero and a negative number, which `check` refuses, the same way: "0" and
+        /// "-0.452".
+        pub fn format(ten_thousandths: i64, write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::quantity_format(ten_thousandths));
+        }
+
+        /// Checks that `ten_thousandths` is a quantity, as an item requires.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a number that is not positive.
+        pub fn check(ten_thousandths: i64) -> Result<(), Box<EranosError>> {
+            eranos_bindings::quantity_check(ten_thousandths).map_err(crate::failed)
+        }
+    }
+
     /// The helpers of identifiers, whose rules every kind of identifier shares. It holds nothing,
     /// and nothing makes one.
     #[diplomat::opaque]

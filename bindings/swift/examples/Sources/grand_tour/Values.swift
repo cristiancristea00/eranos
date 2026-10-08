@@ -1,5 +1,5 @@
-// Section 13 of the tour: currencies, amounts, percentages, parts, rates, dates, times, identifiers, and language tags,
-// on their own.
+// Section 13 of the tour: currencies, amounts, percentages, parts, rates, quantities, dates, times, identifiers, and
+// language tags, on their own.
 
 import Eranos
 import Report
@@ -86,6 +86,33 @@ func ratios() throws(EranosError) {
     precondition(150 == parts.hundredths, "the parts in hundredths")
 }
 
+func quantities(_ people: People) throws(EranosError) {
+    let weight = try Quantity(parsing: "0.452")
+    // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    let olives = ExpenseItem(name: "Olives", unitPrice: try eur("1.00"), split: .equal([people.ana]), quantity: try Quantity(parsing: "0.335"))
+    let olivesTotal = try olives.lineTotal()
+    let fiveDecimals = Result { () throws(EranosError) in try Quantity(parsing: "0.00005") }
+    let zero = Result { () throws(EranosError) in try Quantity(parsing: "0") }
+    print("Quantities have four decimal places; line totals round half away from zero:")
+    printTable(
+        [
+            ValueRow(input: "a quantity of 0.452", result: "\(weight), \(weight.tenThousandths) ten-thousandths"),
+            ValueRow(input: "a quantity of 0.00005", result: message(fiveDecimals)),
+            ValueRow(input: "a quantity of 0", result: message(zero)),
+            ValueRow(input: "0.335 at 1.00 EUR", result: "\(olivesTotal)")
+        ],
+        numbersFrom: 2
+    )
+    precondition(4_520 == weight.tenThousandths, "the quantity in ten-thousandths")
+    guard case .failure(.money(.invalidQuantity, _)) = fiveDecimals else {
+        preconditionFailure("a quantity of five decimal places is refused")
+    }
+    guard case .failure(.money(.invalidQuantity, _)) = zero else {
+        preconditionFailure("a quantity of zero is refused")
+    }
+    expect(try eur("0.34"), olivesTotal, "the line total of 0.335 at 1.00 EUR")
+}
+
 func datesAndIdentifiers(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     let date = try CalendarDate(parsing: "2026-10-01")
     let time = try TimeOfDay(parsing: "22:15")
@@ -135,5 +162,6 @@ func values(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     try currencies()
     try amounts()
     try ratios()
+    try quantities(people)
     try datesAndIdentifiers(group, people)
 }

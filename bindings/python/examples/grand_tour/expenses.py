@@ -25,6 +25,7 @@ from eranos import (
     Percentage,
     PercentagesSplit,
     PercentageTip,
+    Quantity,
     Split,
     TimeOfDay,
     TipRule,
@@ -103,14 +104,14 @@ class ItemRow(Row):
     shared_by: str
     """Who had it."""
 
-    quantity: int
+    quantity: Quantity
     """How many were ordered."""
 
     unit_price: Money
     """What one costs."""
 
     line_total: Money
-    """The unit price times the quantity."""
+    """The unit price times the quantity, as the library works it out."""
 
     @override
     def cells(self) -> tuple[str, ...]:
@@ -247,20 +248,6 @@ def _print_shares(group: ExpenseGroup, expenses: Sequence[ExpenseId]) -> None:
     )
 
 
-def _line_total(item: ExpenseItem) -> Money:
-    """
-    Work out an item's line total, its unit price times its quantity, which the layer does not offer.
-
-    Args:
-        item: The line of the bill.
-
-    Returns:
-        The line total, in the expense's currency.
-
-    """
-    return Money(item.unit_price.minor_units * item.quantity, item.unit_price.currency)
-
-
 def _print_items(group: ExpenseGroup, expense: Expense) -> None:
     """
     Print the lines of an itemised expense, and nothing for another.
@@ -281,7 +268,7 @@ def _print_items(group: ExpenseGroup, expense: Expense) -> None:
                 shared_by=names(group, item.split.members),
                 quantity=item.quantity,
                 unit_price=item.unit_price,
-                line_total=_line_total(item),
+                line_total=item.line_total(),
             )
             for item in split.items
         ],
@@ -302,7 +289,7 @@ def _fado_items(people: People) -> tuple[ExpenseItem, ...]:
     """
     one = Parts.parse('1')
     return (
-        ExpenseItem(name='Vinho verde', unit_price=eur('12.00'), split=EqualSplit((people.ana, people.bob, people.dan)), quantity=2),
+        ExpenseItem(name='Vinho verde', unit_price=eur('12.00'), split=EqualSplit((people.ana, people.bob, people.dan)), quantity=Quantity.whole(2)),
         ExpenseItem(name='Bacalhau', unit_price=eur('18.00'), split=EqualSplit((people.carol,))),
         ExpenseItem(
             name='Custard tarts',
@@ -316,7 +303,7 @@ def _fado_items(people: People) -> tuple[ExpenseItem, ...]:
                     MemberParts(people.eva, Parts.parse('2')),
                 )
             ),
-            quantity=6,
+            quantity=Quantity.whole(6),
         ),
         ExpenseItem(name='Juice', unit_price=eur('3.00'), split=EqualSplit((people.eva,))),
     )

@@ -248,22 +248,7 @@ impl From<Parts> for u32 {
 /// Parses `digits[.d[d]]` into hundredths; `None` for anything else or when
 /// the value does not fit in a `u32`.
 fn parse_hundredths(text: &str) -> Option<u32> {
-    let (whole, fraction) = match text.split_once('.') {
-        Some((whole, fraction)) => (whole, fraction),
-        None => (text, "00"),
-    };
-    let is_digits = |part: &str| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit());
-    if !is_digits(whole) || !is_digits(fraction) || usize::from(PLACES) < fraction.len() {
-        return None;
-    }
-    let padding = if 1 == fraction.len() { "0" } else { "" };
-    whole
-        .bytes()
-        .chain(fraction.bytes())
-        .chain(padding.bytes())
-        .try_fold(0_u32, |value, digit| {
-            value.checked_mul(10)?.checked_add(u32::from(digit - b'0'))
-        })
+    decimal::parse_fixed(text, PLACES).and_then(|hundredths| u32::try_from(hundredths).ok())
 }
 
 /// Formats `basis_points` as a percentage: the number of per cent without
@@ -287,7 +272,7 @@ fn parse_hundredths(text: &str) -> Option<u32> {
 /// ```
 #[must_use]
 pub fn format_basis_points(basis_points: i64) -> impl fmt::Display {
-    fmt::from_fn(move |formatter| write_hundredths(formatter, basis_points, "%"))
+    fmt::from_fn(move |formatter| decimal::write_fixed(formatter, basis_points, PLACES, "%"))
 }
 
 /// Formats `hundredths` as a number of parts: a decimal without trailing
@@ -311,24 +296,7 @@ pub fn format_basis_points(basis_points: i64) -> impl fmt::Display {
 /// ```
 #[must_use]
 pub fn format_hundredths(hundredths: i64) -> impl fmt::Display {
-    fmt::from_fn(move |formatter| write_hundredths(formatter, hundredths, ""))
-}
-
-/// Writes hundredths as a decimal without trailing zeros, followed by
-/// `unit`: 1250 and `%` → `12.5%`, and -5 and `%` → `-0.05%`.
-fn write_hundredths(
-    formatter: &mut fmt::Formatter<'_>,
-    hundredths: i64,
-    unit: &str,
-) -> fmt::Result {
-    let sign = if 0 > hundredths { "-" } else { "" };
-    let magnitude = hundredths.unsigned_abs();
-    let (whole, fraction) = (magnitude / 100, magnitude % 100);
-    match fraction {
-        0 => write!(formatter, "{sign}{whole}{unit}"),
-        _ if 0 == fraction % 10 => write!(formatter, "{sign}{whole}.{}{unit}", fraction / 10),
-        _ => write!(formatter, "{sign}{whole}.{fraction:02}{unit}"),
-    }
+    fmt::from_fn(move |formatter| decimal::write_fixed(formatter, hundredths, PLACES, ""))
 }
 
 #[cfg(test)]

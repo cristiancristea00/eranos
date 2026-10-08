@@ -1,5 +1,5 @@
-// Section 13 of the tour: currencies, amounts, percentages, parts, rates, dates, times, identifiers, and language tags,
-// on their own.
+// Section 13 of the tour: currencies, amounts, percentages, parts, rates, quantities, dates, times, identifiers, and
+// language tags, on their own.
 package eranos.examples.grandtour
 
 import eranos.CalendarDate
@@ -8,12 +8,16 @@ import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.ExchangeRate
 import eranos.ExpenseGroup
+import eranos.ExpenseItem
 import eranos.IdFailure
 import eranos.Language
 import eranos.MemberId
 import eranos.Money
+import eranos.MoneyFailure
 import eranos.Parts
 import eranos.Percentage
+import eranos.Quantity
+import eranos.Split
 import eranos.TimeOfDay
 import eranos.examples.Row
 import eranos.examples.printTable
@@ -127,6 +131,31 @@ internal fun ratios() {
     check(150 == parts.hundredths)
 }
 
+internal fun quantities(people: People) {
+    val weight = Quantity.parse("0.452")
+    // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+    val olives = ExpenseItem("Olives", eur("1.00"), Split.Equal(listOf(people.ana)), Quantity.parse("0.335"))
+    val fiveDecimals = refusal { Quantity.parse("0.00005") }
+    val zero = refusal { Quantity.parse("0") }
+    println("Quantities have four decimal places; line totals round half away from zero:")
+    printTable(
+        ValueRow.HEADERS,
+        listOf(
+            ValueRow("a quantity of 0.452", "$weight, ${weight.tenThousandths} ten-thousandths"),
+            ValueRow("a quantity of 0.00005", message(fiveDecimals)),
+            ValueRow("a quantity of 0", message(zero)),
+            ValueRow("0.335 at 1.00 EUR", "${olives.lineTotal()}"),
+        ),
+        numbersFrom = 2,
+    )
+    check(4_520L == weight.tenThousandths)
+    check(
+        listOf(MoneyFailure.InvalidQuantity, MoneyFailure.InvalidQuantity) ==
+            listOf(fiveDecimals, zero).map { error -> (error as? EranosException.Money)?.failure },
+    )
+    check(eur("0.34") == olives.lineTotal())
+}
+
 internal fun datesAndIdentifiers(
     group: ExpenseGroup,
     people: People,
@@ -175,5 +204,6 @@ internal fun values(
     currencies()
     amounts()
     ratios()
+    quantities(people)
     datesAndIdentifiers(group, people)
 }

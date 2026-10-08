@@ -11,6 +11,7 @@ import eranos.MemberParts
 import eranos.MemberPercentage
 import eranos.Parts
 import eranos.Percentage
+import eranos.Quantity
 import eranos.Split
 import eranos.TimeOfDay
 import eranos.TipDistribution
@@ -114,7 +115,7 @@ internal fun museumWithTwoPayers(people: People): Expense =
 /** The receipt of the fado night: every line with its own split. */
 internal fun fadoItems(people: People): List<ExpenseItem> =
     listOf(
-        ExpenseItem("Vinho verde", eur("12.00"), Split.Equal(listOf(people.ana, people.bob, people.dan)), quantity = 2),
+        ExpenseItem("Vinho verde", eur("12.00"), Split.Equal(listOf(people.ana, people.bob, people.dan)), quantity = Quantity.ofWhole(2)),
         ExpenseItem("Bacalhau", eur("18.00"), Split.Equal(listOf(people.carol))),
         ExpenseItem(
             "Custard tarts",
@@ -128,7 +129,7 @@ internal fun fadoItems(people: People): List<ExpenseItem> =
                     MemberParts(people.eva, Parts.parse("2")),
                 ),
             ),
-            quantity = 6,
+            quantity = Quantity.ofWhole(6),
         ),
         ExpenseItem("Juice", eur("3.00"), Split.Equal(listOf(people.eva))),
     )

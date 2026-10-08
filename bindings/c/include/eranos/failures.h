@@ -66,7 +66,9 @@ static constexpr EranosFailure ERANOS_FAILURE_MONEY_INVALID_EXCHANGE_RATE = Eran
 static constexpr EranosFailure ERANOS_FAILURE_MONEY_INVALID_PARTS = EranosFailure_MoneyInvalidParts;
 /// A percentage that is not a decimal number with at most two decimal places.
 static constexpr EranosFailure ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE = EranosFailure_MoneyInvalidPercentage;
-/// A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is.
+/// A quantity that is not a positive decimal number with at most four decimal places, or whose ten-thousandths do not fit a 64-bit signed integer.
+static constexpr EranosFailure ERANOS_FAILURE_MONEY_INVALID_QUANTITY = EranosFailure_MoneyInvalidQuantity;
+/// A double that is NaN or infinite, which no amount, percentage, number of parts, quantity, or exchange rate is.
 static constexpr EranosFailure ERANOS_FAILURE_MONEY_NOT_FINITE = EranosFailure_MoneyNotFinite;
 /// A number or a result that does not fit its range.
 static constexpr EranosFailure ERANOS_FAILURE_MONEY_OVERFLOW = EranosFailure_MoneyOverflow;
@@ -92,8 +94,6 @@ static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_PERCENTAGES_DO_NOT_ADD_UP 
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_NO_ITEMS = EranosFailure_ExpenseNoItems;
 /// An item whose name is blank.
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_EMPTY_ITEM_NAME = EranosFailure_ExpenseEmptyItemName;
-/// An item quantity of zero.
-static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_ZERO_QUANTITY = EranosFailure_ExpenseZeroQuantity;
 /// The item line totals do not add up to the expense amount.
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_ITEMS_DO_NOT_ADD_UP = EranosFailure_ExpenseItemsDoNotAddUp;
 /// A fixed tip below zero.

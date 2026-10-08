@@ -385,17 +385,17 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The language written @p text, which the library wrote.
 [[nodiscard]] inline constexpr Language languageOf(std::string text) noexcept { return Language(std::move(text)); }
 
-/// The error kind of @p value. The two enumerations list their 17 values in one order, which the generator of both
+/// The error kind of @p value. The two enumerations list their values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
 [[nodiscard]] inline ErrorKind fromDetail(EranosErrorKind const value) noexcept { return static_cast<ErrorKind>(std::to_underlying(value.AsFFI())); }
 
-/// The failure of @p value. The two enumerations list their 58 values in one order, which the generator of both
+/// The failure of @p value. The two enumerations list their values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
 [[nodiscard]] inline Failure fromDetail(EranosFailure const value) noexcept { return static_cast<Failure>(std::to_underlying(value.AsFFI())); }
 
-/// The iban reason of @p value. The two enumerations list their 6 values in one order, which the generator of both
+/// The iban reason of @p value. The two enumerations list their values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
 [[nodiscard]] inline IbanReason fromDetail(EranosIbanReason const value) noexcept {
@@ -556,7 +556,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The record of @p value.
 [[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) noexcept {
     ExpenseItem result(value.name(), detail::fromDetail(*value.unit_price()), detail::fromDetail(*value.split()));
-    result.quantity = value.quantity();
+    result.quantity = Quantity{value.quantity()};
     return result;
 }
 
@@ -567,7 +567,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
             return expectedOf(EranosExpenseItem::create(value.name, *detail::toDetail(value.unitPrice), *split));
         })
         .transform([&value](std::unique_ptr<EranosExpenseItem> result) noexcept {
-            result->set_quantity(value.quantity);
+            result->set_quantity(value.quantity.tenThousandths);
             return result;
         });
 }

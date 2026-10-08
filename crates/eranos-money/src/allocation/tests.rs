@@ -1,7 +1,9 @@
 //! Tests for exact apportionment. Every split, tip, conversion, and debt in
 //! the library goes through `allocate`, so a part that does not add up here
 //! is money that appears or vanishes in every group; the rotation hash is
-//! pinned because synced devices must split the same entry identically.
+//! pinned because synced devices must split the same entry identically, and
+//! the rounding of percentages and quantities because a stored share must
+//! not change.
 
 use proptest::prelude::*;
 
@@ -51,6 +53,18 @@ proptest! {
             let floor = share.numerator / share.denominator;
             prop_assert!(i128::from(part) == floor || i128::from(part) == floor + 1);
         }
+    }
+
+    /// A whole quantity whose line total differed from the unit price times
+    /// the count would change the totals, and the stored shares, of saved
+    /// itemised bills.
+    #[test]
+    fn a_whole_quantity_multiplies_exactly(
+        amount in -1_000_000_000_000_i64..1_000_000_000_000,
+        units in 1_i64..1_000_000,
+    ) {
+        let ten_thousandths = u64::try_from(units * 10_000).unwrap();
+        prop_assert_eq!(apply_ten_thousandths(amount, ten_thousandths), Some(amount * units));
     }
 }
 
@@ -189,4 +203,24 @@ fn basis_points_round_half_away_from_zero() {
     assert_eq!(apply_basis_points(10, 1500), Some(2));
     // A result beyond i64 is refused instead of wrapped.
     assert_eq!(apply_basis_points(i64::MAX, 20_000), None);
+}
+
+/// A line of a fractional quantity must cost the unit price times the
+/// quantity rounded as the receipt rounds it, half a cent away from zero,
+/// or the line totals would not match the bill.
+#[test]
+fn ten_thousandths_round_half_away_from_zero() {
+    // 0.35 kg at 42.00 is exact: 14.70.
+    assert_eq!(apply_ten_thousandths(4_200, 3_500), Some(1_470));
+    // 0.335 at 1.00 is 33.5 cents, and -0.335 at 1.00 is -33.5.
+    assert_eq!(apply_ten_thousandths(100, 3_350), Some(34));
+    assert_eq!(apply_ten_thousandths(-100, 3_350), Some(-34));
+    // 0.452 at 12.99 is 5.87148.
+    assert_eq!(apply_ten_thousandths(1_299, 4_520), Some(587));
+    // A ten-thousandth of a cent rounds to nothing.
+    assert_eq!(apply_ten_thousandths(1, 1), Some(0));
+    // A result beyond i64 is refused instead of wrapped, at either end.
+    assert_eq!(apply_ten_thousandths(i64::MAX, 20_000), None);
+    assert_eq!(apply_ten_thousandths(i64::MIN, 20_000), None);
+    assert_eq!(apply_ten_thousandths(i64::MAX, 10_000), Some(i64::MAX));
 }

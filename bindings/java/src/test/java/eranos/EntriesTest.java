@@ -47,7 +47,7 @@ class EntriesTest {
                                                                 new MemberParts(
                                                                         flat.bob,
                                                                         Parts.ofHundredths(50)))),
-                                                2))),
+                                                Quantity.ofWhole(2)))),
                         flat.day)
                 .tip(new TipRule(new TipValue.Fixed(new Money(500, lei)), TipDistribution.EQUAL))
                 .time(TimeOfDay.of(9, 5))
@@ -193,6 +193,82 @@ class EntriesTest {
     }
 
     /**
+     * The line total an app shows for an item would differ from the one the library adds up against
+     * the expense's amount: rounded another way, multiplied as a double, or refused for a free
+     * line; an item the library refuses would show a line total; an item that converted or stored
+     * with another quantity would divide another line; and an item that took {@code null} for its
+     * quantity would fail only when its expense reached the group.
+     */
+    @Test
+    void anItemTellsItsLineTotalAsTheLibraryComputesIt() throws EranosException {
+        Flat flat = new Flat();
+        Split ana = new Split.Equal(List.of(flat.ana));
+        // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
+        ExpenseItem olives =
+                new ExpenseItem("Olives", flat.euros(100), ana, Quantity.parse("0.335"));
+        assertEquals(flat.euros(34), olives.lineTotal());
+        assertEquals(
+                flat.euros(1_470),
+                new ExpenseItem("Cheese", flat.euros(4_200), ana, Quantity.parse("0.35"))
+                        .lineTotal());
+        assertEquals(
+                flat.euros(200),
+                new ExpenseItem("Bread", flat.euros(100), ana, Quantity.ofWhole(2)).lineTotal());
+        // A ten-thousandth of a cent rounds to zero: a free line.
+        ExpenseItem free =
+                new ExpenseItem("Olives", flat.euros(100), ana, Quantity.ofTenThousandths(1));
+        assertEquals(flat.euros(0), free.lineTotal());
+        for (ExpenseItem item : List.of(olives, free)) {
+            assertEquals(item, ExpenseItem.converted(item.generated()));
+        }
+        Expense weighed =
+                Expense.builder(
+                                "Olives",
+                                new Cost.Local(flat.euros(34)),
+                                ana,
+                                new ExpenseSplit.Itemised(List.of(olives, free)),
+                                flat.day)
+                        .build();
+        assertEquals(weighed, flat.group.expense(flat.group.addExpense(weighed)).orElseThrow());
+
+        EranosException.Expense unpaid =
+                assertThrows(
+                        EranosException.Expense.class,
+                        () ->
+                                new ExpenseItem(
+                                                "Olives",
+                                                flat.euros(100),
+                                                new Split.Amounts(
+                                                        List.of(
+                                                                new MemberAmount(
+                                                                        flat.ana, flat.euros(1)))),
+                                                Quantity.ofTenThousandths(1))
+                                        .lineTotal());
+        assertEquals(
+                new ExpenseFailure.AmountsDoNotAddUp(flat.euros(0), flat.euros(1)),
+                unpaid.failure());
+        EranosException.Expense overflow =
+                assertThrows(
+                        EranosException.Expense.class,
+                        () ->
+                                new ExpenseItem(
+                                                "Olives",
+                                                flat.euros(Long.MAX_VALUE),
+                                                ana,
+                                                Quantity.ofWhole(2))
+                                        .lineTotal());
+        assertEquals(new ExpenseFailure.Overflow(), overflow.failure());
+        EranosException.Expense unnamed =
+                assertThrows(
+                        EranosException.Expense.class,
+                        () -> new ExpenseItem(" ", flat.euros(100), ana).lineTotal());
+        assertEquals(new ExpenseFailure.EmptyItemName(), unnamed.failure());
+        assertThrows(
+                NullPointerException.class,
+                () -> new ExpenseItem("Olives", flat.euros(100), ana, null));
+    }
+
+    /**
      * A split, a cost, or a tip that converted with a field changed would divide another amount.
      */
     @Test
@@ -233,7 +309,7 @@ class EntriesTest {
             assertEquals(value, Conversions.converted(Conversions.generated(value)));
         }
         assertEquals(
-                1,
+                Quantity.ONE,
                 new ExpenseItem("Bread", flat.euros(1), new Split.Equal(List.of(flat.bob)))
                         .quantity());
         assertEquals(

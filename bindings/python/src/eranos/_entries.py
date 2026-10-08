@@ -28,6 +28,7 @@ from eranos._identifiers import (
 )
 from eranos._internal import eranos as generated
 from eranos._money import Money, generated_money, money_of
+from eranos._quantity import Quantity
 from eranos._ratios import ExchangeRate, Parts, Percentage
 from eranos._crossing import variant
 
@@ -167,8 +168,23 @@ class ExpenseItem:
     split: Split
     """How the line's total divides."""
 
-    quantity: int = 1
-    """How many units, from 1."""
+    quantity: Quantity = Quantity.ONE
+    """How many units, ``Quantity.ONE`` unless given; a fractional quantity, such as 0.452 kg, has at most four decimal places."""
+
+    def line_total(self) -> Money:
+        """
+        Work out the line's total as the library does: the unit price times the quantity, rounded half away from zero.
+
+        A line whose product is below half a minor unit totals zero. The library refuses an item it cannot hold, with a blank
+        name, a unit price that is not positive, a split that does not divide the line total, or a line total out of range,
+        with an ``ExpenseError``, and one that names a member by text that is not an identifier with an ``IdError``.
+
+        Returns:
+            The line total, in the unit price's currency.
+
+        """
+        with library_errors():
+            return money_of(generated.expense_item_line_total(generated_item(self)))
 
 
 @final
@@ -715,7 +731,7 @@ def generated_item(item: ExpenseItem) -> generated.ExpenseItem:
 
     """
     return generated.ExpenseItem(
-        name=item.name, unit_price=generated_money(item.unit_price), split=generated_split(item.split), quantity=item.quantity
+        name=item.name, unit_price=generated_money(item.unit_price), split=generated_split(item.split), quantity=item.quantity.ten_thousandths
     )
 
 
@@ -730,7 +746,7 @@ def item_of(value: generated.ExpenseItem) -> ExpenseItem:
         The item.
 
     """
-    return ExpenseItem(name=value.name, unit_price=money_of(value.unit_price), split=split_of(value.split), quantity=value.quantity)
+    return ExpenseItem(name=value.name, unit_price=money_of(value.unit_price), split=split_of(value.split), quantity=Quantity(value.quantity))
 
 
 def generated_expense_split(split: ExpenseSplit) -> generated.ExpenseSplit:

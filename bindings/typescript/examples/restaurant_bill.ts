@@ -15,9 +15,11 @@ import {
     Money,
     Parts,
     Percentage,
+    Quantity,
     TipDistribution,
     createExpense,
     createMember,
+    expenseItemLineTotal,
     splitMembers,
 } from '../src/index.js';
 import { type Columns, load, names, printLines, printTable, refusal, section, title } from './report.js';
@@ -26,7 +28,7 @@ import { type Columns, load, names, printLines, printTable, refusal, section, ti
 interface LineRow {
     readonly name: string;
     readonly participants: string;
-    readonly quantity: number;
+    readonly quantity: Quantity;
     readonly unitPrice: Money;
     readonly lineTotal: Money;
 }
@@ -34,7 +36,7 @@ interface LineRow {
 const lineColumns: Columns<LineRow> = [
     { header: 'Item', text: (row) => row.name },
     { header: 'Shared by', text: (row) => row.participants },
-    { header: 'Quantity', text: (row) => String(row.quantity) },
+    { header: 'Quantity', text: (row) => row.quantity.toString() },
     { header: 'Unit price', text: (row) => row.unitPrice.toString() },
     { header: 'Line total', text: (row) => row.lineTotal.toString() },
 ];
@@ -67,7 +69,7 @@ function eur(text: string): Money {
 function receipt(ana: MemberId, bob: MemberId, carol: MemberId): ExpenseItemInput[] {
     return [
         { name: 'Ciorbă', unitPrice: eur('8.00'), split: { kind: 'equal', members: [ana] } },
-        { name: 'Sarmale', unitPrice: eur('14.00'), split: { kind: 'equal', members: [bob, carol] }, quantity: 2 },
+        { name: 'Sarmale', unitPrice: eur('14.00'), split: { kind: 'equal', members: [bob, carol] }, quantity: Quantity.ofWhole(2n) },
         {
             name: 'Papanași',
             unitPrice: eur('9.00'),
@@ -79,7 +81,7 @@ function receipt(ana: MemberId, bob: MemberId, carol: MemberId): ExpenseItemInpu
                 ],
             },
         },
-        { name: 'Lemonade', unitPrice: eur('3.00'), split: { kind: 'equal', members: [ana, bob, carol] }, quantity: 3 },
+        { name: 'Lemonade', unitPrice: eur('3.00'), split: { kind: 'equal', members: [ana, bob, carol] }, quantity: Quantity.ofWhole(3n) },
     ];
 }
 
@@ -113,16 +115,13 @@ printLines(
 section('1. The receipt');
 printTable(
     lineColumns,
-    receipt(ana, bob, carol).map((item) => {
-        const quantity = item.quantity ?? 1;
-        return {
-            name: item.name,
-            participants: names(group, splitMembers(item.split)),
-            quantity,
-            unitPrice: item.unitPrice,
-            lineTotal: new Money(item.unitPrice.minorUnits * BigInt(quantity), item.unitPrice.currency),
-        };
-    }),
+    receipt(ana, bob, carol).map((item) => ({
+        name: item.name,
+        participants: names(group, splitMembers(item.split)),
+        quantity: item.quantity ?? Quantity.ONE,
+        unitPrice: item.unitPrice,
+        lineTotal: expenseItemLineTotal(item),
+    })),
     2,
 );
 printLines(

@@ -69,7 +69,7 @@ struct ItemRow: TableRow {
 
     let name: String
     let sharedBy: String
-    let quantity: Int32
+    let quantity: Quantity
     let unitPrice: Money
     let lineTotal: Money
 

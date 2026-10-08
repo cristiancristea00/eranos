@@ -75,14 +75,16 @@ static void addTipRow(Table *const table, TipRow const *const row) {
 /// The amount @p text of euros.
 [[nodiscard]] static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
 
-/// Adds the line @p name of the receipt to @p items: @p quantity of @p unitPrice euros, which @p split shares; destroys
-/// @p split.
+/// Adds the line @p name of the receipt to @p items: @p units whole units of @p unitPrice euros, which @p split shares;
+/// destroys @p split.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the unit price, in the order the library's constructor reads them.
 static void addItem(EranosExpenseItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
-                    int32_t const quantity) {
+                    int64_t const units) {
     EranosMoney *const price = euros(unitPrice);
     EranosExpenseItem *item = nullptr;
     must(eranosExpenseItemCreate(name, price, split, &item));
+    int64_t quantity = 0;
+    must(eranosQuantityFromWhole(units, &quantity));
     eranosExpenseItemSetQuantity(item, quantity);
     eranosExpenseItemListPush(items, item);
     eranosExpenseItemDestroy(item);
@@ -195,15 +197,15 @@ static void printReceipt(EranosExpenseGroup const *const group, Friends const *c
         EranosSplit *const split = eranosExpenseItemSplit(item);
         Members const sharedBy = splitMembers(split);
         EranosMoney *const unitPrice = eranosExpenseItemUnitPrice(item);
-        int32_t const quantity = eranosExpenseItemQuantity(item);
-        EranosCurrencyDetails *const currency = eranosMoneyCurrency(unitPrice);
-        EranosMoney *const total = eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, currency);
-        eranosCurrencyDetailsDestroy(currency);
+        EranosMoney *total = nullptr;
+        must(eranosExpenseItemLineTotal(item, &total));
+        eranosQuantityFormat(eranosExpenseItemQuantity(item), text);
+        Line const quantity = textLine(text);
         eranosExpenseItemName(item, text);
         addLineRow(table, &(LineRow){
                               .name = textLine(text),
                               .participants = names(group, &sharedBy),
-                              .quantity = lineOf("%ld", (long)quantity),
+                              .quantity = quantity,
                               .unitPrice = moneyLine(unitPrice),
                               .lineTotal = moneyLine(total),
                           });

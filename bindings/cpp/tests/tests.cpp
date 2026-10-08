@@ -311,6 +311,39 @@ void ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem(Check &c
     check.that(isFailure(refusal(Parts::fromDouble(-INFINITE)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor an infinity");
 }
 
+/// A quantity read, converted, or written otherwise than the library does would bill a line for another amount than the library divides, and a
+/// number too large for the layer's integers would wrap.
+void quantitiesParseConvertAndFormatAsTheLibraryDoes(Check &check) noexcept {
+    constexpr double NOT_A_NUMBER = std::numeric_limits<double>::quiet_NaN();
+    constexpr double INFINITE = std::numeric_limits<double>::infinity();
+    auto const weight = Quantity::parse("0.452").value();
+    check.that(4'520 == weight.tenThousandths && "0.452" == weight.toString(), "0.452 is 4520 ten-thousandths");
+    checkValue(check, weight, Quantity{4'520}, Quantity{4'521}, "quantities compare by ten-thousandths");
+    check.that(isFailure(refusal(Quantity::parse("0.00005")), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY),
+               "a quantity has at most four decimal places");
+    check.that(isFailure(refusal(Quantity::parse("0")), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY), "no quantity is zero");
+    check.that(isFailure(refusal(Quantity::parse("-1")), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY), "nor negative");
+    check.that(isFailure(refusal(Quantity::parse("1000000000000000")), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY),
+               "nor one whose ten-thousandths do not fit 64 bits");
+    check.that(isFailure(refusal(Quantity::parse("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a quantity's text is text");
+    check.that(Quantity::whole(3) == Quantity{30'000}, "3 units are 30000 ten-thousandths");
+    check.that(isFailure(refusal(Quantity::whole(0)), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY) &&
+                   isFailure(refusal(Quantity::whole(-1)), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY),
+               "no units and negative units are no quantity");
+    check.that(isFailure(refusal(Quantity::whole(INT64_MAX)), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY),
+               "nor are units whose ten-thousandths do not fit 64 bits");
+    check.that(Quantity::fromDouble(0.45205) == Quantity{4'521}, "0.45205 rounds half away from zero to 4521 ten-thousandths");
+    check.that(isFailure(refusal(Quantity::fromDouble(0.00004)), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY), "0.00004 rounds to no quantity");
+    check.that(isFailure(refusal(Quantity::fromDouble(-1.0)), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY), "a negative double is no quantity");
+    check.that(isFailure(refusal(Quantity::fromDouble(NOT_A_NUMBER)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor is NaN");
+    check.that(isFailure(refusal(Quantity::fromDouble(INFINITE)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor an infinity");
+    check.that(Quantity::whole(1) == Quantity{} && "1" == Quantity{}.toString(), "a quantity starts at the library's one unit, a whole number");
+    check.that("0" == Quantity{0}.toString() && "-0.452" == Quantity{-4'520}.toString(),
+               "no quantity and a negative one, which a call refuses, are written too");
+}
+
+static_assert(10'000 == Quantity{}.tenThousandths, "a quantity of one unit is made at compile time");
+
 /// A date or a time the calendar does not have, taken, would date an expense on a day that never was.
 void datesAndTimesAreCheckedWhenMade(Check &check) noexcept {
     auto const date = CalendarDate::of(2026, 9, 23).value();
@@ -417,7 +450,7 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) n
                "amounts");
     ExpenseItem const pizza("Pizza", one, EqualSplit{{ana, bob}});
     auto twoPizzas = pizza;
-    twoPizzas.quantity = 2;
+    twoPizzas.quantity = Quantity{20'000};
     checkValue(check, pizza, ExpenseItem("Pizza", one, EqualSplit{{ana, bob}}), twoPizzas, "items compare by quantity too");
     checkValue(check, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{500}},
                "percentage tips");
@@ -499,7 +532,7 @@ void anExpenseReadsBackAsItWasAdded(Check &check) noexcept {
     check.that(flat.group.addExpense(lunch) == lunch.id && flat.group.expense(lunch.id) == lunch,
                "a converted expense with every detail reads back unchanged, under its identifier");
     ExpenseItem pizza("Pizza", flat.euros(1'200), EqualSplit{{flat.ana, flat.bob}});
-    pizza.quantity = 2;
+    pizza.quantity = Quantity{20'000};
     Expense receipt(
         "Receipt", LocalCost{flat.euros(3'000)}, AmountsSplit{{MemberAmount(flat.bob, flat.euros(3'300))}},
         ItemisedExpenseSplit{{pizza, ExpenseItem("Wine", flat.euros(600), PercentagesSplit{{MemberPercentage(flat.ana, Percentage{10'000})}})}},
@@ -704,6 +737,24 @@ void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) noexcept {
     check.that("gets back 12.00 EUR" == toString(Balance{GetsBackBalance{flat.euros(1'200)}}), "a balance owed to a member");
     auto const unknown = refusal(participants(Split{EqualSplit{{MemberId(" ana")}}}));
     check.that(isFailure(unknown, ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "an identifier that is not one");
+}
+
+/// A line total the layer multiplied itself would round a fractional quantity otherwise than the library, which divides the line, and so show an
+/// app a receipt that does not add up to the shares.
+void anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero(Check &check) noexcept {
+    auto const euro = CurrencyCode::of("EUR").value();
+    MemberId const ana("0199a000-0000-7000-8000-000000000001");
+    ExpenseItem cheese("Cheese", Money(4'200, euro), EqualSplit{{ana}});
+    check.that(Quantity{} == cheese.quantity && lineTotal(cheese) == Money(4'200, euro), "one unit, by default, costs the unit price");
+    cheese.quantity = Quantity{20'000};
+    check.that(lineTotal(cheese) == Money(8'400, euro), "2 at 42.00 EUR are 84.00 EUR, exactly");
+    cheese.quantity = Quantity{3'500};
+    check.that(lineTotal(cheese) == Money(1'470, euro), "0.35 at 42.00 EUR is 14.70 EUR");
+    ExpenseItem olives("Olives", Money(100, euro), EqualSplit{{ana}});
+    olives.quantity = Quantity{3'350};
+    check.that(lineTotal(olives) == Money(34, euro), "0.335 at 1.00 EUR is 33.5 cents, which rounds half away from zero to 0.34 EUR");
+    olives.quantity = Quantity{0};
+    check.that(isFailure(refusal(lineTotal(olives)), ErrorKind::MONEY, Failure::MONEY_INVALID_QUANTITY), "an item of no quantity has no line total");
 }
 
 // --- The group ---------------------------------------------------------------------------------------------------------
@@ -1099,6 +1150,7 @@ constexpr std::array TESTS = {
         .name = "ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem",
         .body = ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem,
     },
+    Test{.name = "quantitiesParseConvertAndFormatAsTheLibraryDoes", .body = quantitiesParseConvertAndFormatAsTheLibraryDoes},
     Test{.name = "datesAndTimesAreCheckedWhenMade", .body = datesAndTimesAreCheckedWhenMade},
     Test{.name = "contactsAndAccountsAreCheckedAndMadeCanonical", .body = contactsAndAccountsAreCheckedAndMadeCanonical},
     Test{.name = "everyIdentifierComparesAndHashesByItsText", .body = everyIdentifierComparesAndHashesByItsText},
@@ -1118,6 +1170,7 @@ constexpr std::array TESTS = {
     Test{.name = "aMemberInUseIsNotRemoved", .body = aMemberInUseIsNotRemoved},
     Test{.name = "anArchivedMemberJoinsNoNewExpense", .body = anArchivedMemberJoinsNoNewExpense},
     Test{.name = "theHelpersReadAnEntryAsTheLibraryDoes", .body = theHelpersReadAnEntryAsTheLibraryDoes},
+    Test{.name = "anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero", .body = anItemsLineTotalIsTheLibrarysProductRoundedHalfAwayFromZero},
     Test{.name = "aGroupHoldsItsDetailsAndChangesThem", .body = aGroupHoldsItsDetailsAndChangesThem},
     Test{.name = "theSummaryAndTheSharesAddUp", .body = theSummaryAndTheSharesAddUp},
     Test{.name = "eachStrategySettlesEveryBalance", .body = eachStrategySettlesEveryBalance},

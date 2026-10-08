@@ -7,6 +7,7 @@ import eranos.ExpenseId
 import eranos.ExpenseSplit
 import eranos.MemberId
 import eranos.Money
+import eranos.Quantity
 import eranos.Split
 import eranos.TipDistribution
 import eranos.TipValue
@@ -33,7 +34,7 @@ private data class ShareRow(
 private data class ItemRow(
     val name: String,
     val sharedBy: String,
-    val quantity: Int,
+    val quantity: Quantity,
     val unitPrice: Money,
     val lineTotal: Money,
 ) : Row {
@@ -125,7 +126,7 @@ internal fun printItems(
                     sharedBy = names(group, item.split.members),
                     quantity = item.quantity,
                     unitPrice = item.unitPrice,
-                    lineTotal = Money(item.unitPrice.minorUnits * item.quantity, item.unitPrice.currency),
+                    lineTotal = item.lineTotal(),
                 )
             },
             numbersFrom = 2,
