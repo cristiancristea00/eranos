@@ -723,7 +723,7 @@ amount of time, so it yields at the same points on every device.
 | Call                                          | Yields                                 | Between two yields                                                               |
 | --------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
 | `ExpenseGroup::settlement_async`              | while the exact solver fills its table | 2²¹ subsets times balances, about 0.7 ms; no yield for 16 open balances or fewer |
-| `ExpenseGroup::change_currency_async`         | after each re-resolved entry           | 1 024 entries, about 1 ms                                                        |
+| `ExpenseGroup::change_currency_async`         | after each re-resolved entry           | 1 024 entries, about 1.3 ms                                                      |
 | `SavedExpenseGroup::into_expense_group_async` | after each replayed step               | 1 024 members, categories, expenses, transfers, or archivings                    |
 
 Each returns a `Cooperative`, which an executor awaits like any future and
@@ -732,11 +732,12 @@ Each returns a `Cooperative`, which an executor awaits like any future and
 synchronous and asynchronous calls run the same code. The exact solver fills
 its table for `MinimumTransfers` and for `Adaptive` within its limit; the
 greedy and direct strategies, and `Adaptive` beyond its limit, never yield:
-their largest benchmarked cases take about 0.1 ms each. A call writes
-nothing before its last yield, so one dropped at a yield changes nothing: a
-currency change swaps in its new entries and ledger after its last yield, a
-load builds a group of its own, and a settlement enters the cache only once
-it is complete ([§ 6](#6-the-ledger-and-its-caches)).
+their largest benchmarked cases take about 0.15 ms (`Greedy`, 1 000 members)
+and 0.33 ms (`Direct`, 100 members). A call writes nothing before its last
+yield, so one dropped at a yield changes nothing: a currency change swaps in
+its new entries and ledger after its last yield, a load builds a group of
+its own, and a settlement enters the cache only once it is complete
+([§ 6](#6-the-ledger-and-its-caches)).
 
 Against the same computations without yield points, measured in
 alternating runs on the reference machine, the yield points cost the exact
@@ -831,13 +832,13 @@ Release build on an Apple M4 Pro (`cargo bench -p eranos --features serde --benc
 
 | Operation                                                      | Size                                            | Time                                     |
 | -------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| `Adaptive`                                                     | 18 / 20 / 21 / 100 open balances                | 1.6 ms / 7.2 ms / 1.1 µs / 4.6 µs        |
+| `Adaptive`                                                     | 18 / 20 / 21 / 100 open balances                | 1.6 ms / 7.3 ms / 1.7 µs / 8.6 µs        |
 | the exact solver in WebAssembly (Node 24), against native code | 16 / 18 / 20 open balances                      | 2.9 / 2.7 / 2.5 times as long            |
 | `Greedy` through the TypeScript package (Node 24)              | 100 members                                     | 0.12 ms, mostly crossing into JavaScript |
-| `MinimumTransfers`                                             | 12 / 16 / 20 / 24 open balances                 | 18 µs / 0.36 ms / 7.2 ms / 0.14 s        |
-| `Greedy`                                                       | 100 / 1 000 members                             | 4.6 µs / 66–103 µs                       |
-| `Direct`                                                       | 100 members sharing every expense (4 950 pairs) | 110 µs                                   |
-| add or remove an expense of six members                        | group of 10 000 expenses                        | ≈ 1 µs                                   |
-| read a member's totals                                         | any                                             | ≈ 3 ns                                   |
-| change the currency                                            | group of 10 000 expenses                        | 9.8 ms                                   |
-| load a saved group from JSON                                   | group of 10 000 expenses                        | 20 ms                                    |
+| `MinimumTransfers`                                             | 12 / 16 / 20 / 24 open balances                 | 19 µs / 0.36 ms / 7.2 ms / 0.14 s        |
+| `Greedy`                                                       | 100 / 1 000 members                             | 8.7 µs / 133–158 µs                      |
+| `Direct`                                                       | 100 members sharing every expense (4 950 pairs) | 0.33 ms                                  |
+| add or remove an expense of six members                        | group of 10 000 expenses                        | ≈ 3 µs                                   |
+| read a member's totals                                         | any                                             | ≈ 6 ns                                   |
+| change the currency                                            | group of 10 000 expenses                        | 14 ms                                    |
+| load a saved group from JSON                                   | group of 10 000 expenses                        | 33 ms                                    |
