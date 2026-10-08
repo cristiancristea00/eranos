@@ -4,10 +4,26 @@
  * @packageDocumentation
  */
 
-import { calling } from './converting.js';
+import { calling, checked32Bits, checked64Bits } from './converting.js';
 import type { CurrencyCode } from './currency_code.js';
+import { MoneyError } from './errors.js';
 import * as internal from './internal/eranos.js';
 import { Money } from './money.js';
+
+/** The library's refusal of a percentage, in its words, which a test holds to the core's. */
+function invalidPercentage(): MoneyError {
+    return new MoneyError({ kind: 'invalidPercentage' }, 'invalid percentage: expected a number with at most 2 decimal places');
+}
+
+/** The library's refusal of a number of parts, in its words, which a test holds to the core's. */
+function invalidParts(): MoneyError {
+    return new MoneyError({ kind: 'invalidParts' }, 'invalid parts: expected a positive number with at most 2 decimal places');
+}
+
+/** The library's refusal of a quantity, in its words, which a test holds to the core's. */
+function invalidQuantity(): MoneyError {
+    return new MoneyError({ kind: 'invalidQuantity' }, 'invalid quantity: expected a positive number with at most 4 decimal places');
+}
 
 /** The rate that converts an amount in one currency into another: a positive decimal. */
 export class ExchangeRate {
@@ -96,11 +112,12 @@ export class Percentage {
      *
      * @param basisPoints - The percentage in basis points: 1 250 for 12.5 %
      * @returns The percentage
-     * @throws {@link MoneyError} with the failure `invalidPercentage` for a negative number
+     * @throws {@link MoneyError} with the failure `invalidPercentage` for a number that is negative, is not an integer, or
+     *   does not fit a 32-bit integer
      */
     static ofBasisPoints(basisPoints: number): Percentage {
         calling(() => {
-            internal.percentageCheck(basisPoints);
+            internal.percentageCheck(checked32Bits(basisPoints, invalidPercentage));
         });
         return new Percentage(basisPoints);
     }
@@ -173,11 +190,12 @@ export class Parts {
      *
      * @param hundredths - The parts in hundredths: 50 for half a part
      * @returns The parts
-     * @throws {@link MoneyError} with the failure `invalidParts` for a number that is not positive
+     * @throws {@link MoneyError} with the failure `invalidParts` for a number that is not positive, is not an integer, or does
+     *   not fit a 32-bit integer
      */
     static ofHundredths(hundredths: number): Parts {
         calling(() => {
-            internal.partsCheck(hundredths);
+            internal.partsCheck(checked32Bits(hundredths, invalidParts));
         });
         return new Parts(hundredths);
     }
@@ -255,11 +273,12 @@ export class Quantity {
      *
      * @param tenThousandths - The quantity in ten-thousandths: 10 000 for one unit, 4 520 for 0.452
      * @returns The quantity
-     * @throws {@link MoneyError} with the failure `invalidQuantity` for a number that is not positive
+     * @throws {@link MoneyError} with the failure `invalidQuantity` for a number that is not positive or does not fit in 64
+     *   bits
      */
     static ofTenThousandths(tenThousandths: bigint): Quantity {
         calling(() => {
-            internal.quantityCheck(tenThousandths);
+            internal.quantityCheck(checked64Bits(tenThousandths, invalidQuantity));
         });
         return new Quantity(tenThousandths);
     }
@@ -273,7 +292,7 @@ export class Quantity {
      *   ten-thousandths do not fit in 64 bits
      */
     static ofWhole(units: bigint): Quantity {
-        return new Quantity(calling(() => internal.quantityFromWhole(units)));
+        return new Quantity(calling(() => internal.quantityFromWhole(checked64Bits(units, invalidQuantity))));
     }
 
     /**

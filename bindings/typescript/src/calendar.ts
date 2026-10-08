@@ -4,8 +4,19 @@
  * @packageDocumentation
  */
 
-import { calling } from './converting.js';
+import { calling, checked32Bits } from './converting.js';
+import { CalendarError } from './errors.js';
 import * as internal from './internal/eranos.js';
+
+/** The library's refusal of a date, in its words, which a test holds to the core's. */
+function invalidDate(): CalendarError {
+    return new CalendarError({ kind: 'invalidDate' }, 'invalid date: expected an existing ISO 8601 date between years 1 and 9999');
+}
+
+/** The library's refusal of a time of day, in its words, which a test holds to the core's. */
+function invalidTime(): CalendarError {
+    return new CalendarError({ kind: 'invalidTime' }, 'invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds');
+}
 
 /** A day of the calendar, without a time zone: the day an entry happened wherever it happened. */
 export class CalendarDate {
@@ -25,10 +36,11 @@ export class CalendarDate {
      * @param month - The month, from 1 for January
      * @param day - The day of the month, from 1
      * @returns The date
-     * @throws {@link CalendarError} with the failure `invalidDate` for a day that does not exist, such as 30 February
+     * @throws {@link CalendarError} with the failure `invalidDate` for a day that does not exist, such as 30 February, and for
+     *   a number that is not an integer
      */
     static of(year: number, month: number, day: number): CalendarDate {
-        const date = new CalendarDate(year, month, day);
+        const date = new CalendarDate(checked32Bits(year, invalidDate), checked32Bits(month, invalidDate), checked32Bits(day, invalidDate));
         calling(() => {
             internal.calendarDateCheck(date.generated());
         });
@@ -99,10 +111,11 @@ export class TimeOfDay {
      * @param hour - The hour, from 0 to 23
      * @param minute - The minute, from 0 to 59
      * @returns The time
-     * @throws {@link CalendarError} with the failure `invalidTime` for an hour or a minute out of range
+     * @throws {@link CalendarError} with the failure `invalidTime` for an hour or a minute that is out of range or is not an
+     *   integer
      */
     static of(hour: number, minute: number): TimeOfDay {
-        const time = new TimeOfDay(hour, minute);
+        const time = new TimeOfDay(checked32Bits(hour, invalidTime), checked32Bits(minute, invalidTime));
         calling(() => {
             internal.timeOfDayCheck(time.generated());
         });

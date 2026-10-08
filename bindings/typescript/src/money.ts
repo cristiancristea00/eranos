@@ -4,9 +4,15 @@
  * @packageDocumentation
  */
 
-import { calling } from './converting.js';
+import { calling, checked64Bits } from './converting.js';
 import { CurrencyCode } from './currency_code.js';
+import { MoneyError } from './errors.js';
 import * as internal from './internal/eranos.js';
+
+/** The library's refusal of an amount whose minor units do not fit in 64 bits, in its words, which a test holds to the core's. */
+function overflow(): MoneyError {
+    return new MoneyError({ kind: 'overflow' }, 'value out of range');
+}
 
 /**
  * An amount: a whole number of minor units of a currency, cents for the euro.
@@ -20,13 +26,16 @@ export class Money {
      *
      * @param minorUnits - The amount in minor units: cents for the euro, none for the yen
      * @param currency - The currency
+     * @throws {@link MoneyError} with the failure `overflow` for minor units that do not fit in 64 bits
      */
     constructor(
         /** The amount in minor units: cents for the euro, none for the yen. */
         readonly minorUnits: bigint,
         /** The currency. */
         readonly currency: CurrencyCode,
-    ) {}
+    ) {
+        checked64Bits(minorUnits, overflow);
+    }
 
     /**
      * The amount written `text` in `currency`: "12.50", "12.5", or "-3".

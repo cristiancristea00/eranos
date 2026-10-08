@@ -12,6 +12,7 @@ import {
     ContactError,
     CurrencyCode,
     Email,
+    EranosError,
     ExchangeRate,
     Iban,
     IdError,
@@ -60,6 +61,22 @@ function assertRefused(call: () => unknown, type: new (...parameters: never[]) =
         }
         return true;
     });
+}
+
+/** The error `call` throws, one of the library's. */
+function thrown(call: () => unknown): EranosError {
+    try {
+        call();
+    } catch (error: unknown) {
+        assert.ok(error instanceof EranosError);
+        return error;
+    }
+    return assert.fail('the call returned');
+}
+
+/** Asserts that `call` throws an error equal to `refusal`: of its class, with its failure and its message. */
+function assertRefusedAs(call: () => unknown, refusal: EranosError): void {
+    assert.deepEqual(thrown(call), refusal);
 }
 
 /** A currency of these details, built through the private constructor, which JavaScript, unlike TypeScript, lets a caller reach. */
@@ -349,6 +366,66 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
         );
         assertRefused(() => TimeOfDay.of(23, 60), CalendarError, { kind: 'invalidTime' });
         assertRefused(() => TimeOfDay.parse('25:00'), CalendarError);
+    });
+
+    /**
+     * The runtime wraps an integer outside its range into it, and drops a number's fraction, before the core sees it, so a
+     * value the layer let cross would be checked, kept, and printed by the library as another value than the app holds; a
+     * refusal other than the library's for the value would reach an app's handling of the library's failures as another one.
+     */
+    void it("refuses an integer outside its range before it crosses, with the library's error for the value", () => {
+        // What the runtime hands the core, which accepts each: 1 250 basis points for 2^32 + 1 250 and for 1 250.5, none
+        // for NaN, and one unit for 2^64 + 10 000 ten-thousandths.
+        assert.equal(internal.percentageFormat(2 ** 32 + 1_250), '12.5%');
+        assert.equal(internal.percentageFormat(1_250.5), '12.5%');
+        assert.equal(internal.percentageFormat(Number.NaN), '0%');
+        assert.equal(internal.quantityFormat(2n ** 64n + 10_000n), '1');
+
+        // Every amount from the smallest 64-bit integer to the largest crosses; one beyond either is refused as the library
+        // refuses a sum beyond them.
+        const euro = CurrencyCode.of('EUR');
+        const overflow = thrown(() => new Money(2n ** 63n - 1n, euro).plus(new Money(1n, euro)));
+        assert.equal(new Money(2n ** 63n - 1n, euro).toString(), '92233720368547758.07 EUR');
+        assert.equal(new Money(-(2n ** 63n), euro).toString(), '-92233720368547758.08 EUR');
+        for (const minorUnits of [2n ** 63n, -(2n ** 63n) - 1n, 2n ** 64n + 1_250n]) {
+            assertRefusedAs(() => new Money(minorUnits, euro), overflow);
+        }
+
+        // The smallest 32-bit integer crosses, and the core refuses it as it refuses any negative number.
+        const invalidPercentage = thrown(() => Percentage.ofBasisPoints(-1));
+        assert.equal(Percentage.ofBasisPoints(2 ** 31 - 1).toString(), '21474836.47%');
+        for (const basisPoints of [2 ** 31, -(2 ** 31), -(2 ** 31) - 1, 2 ** 32 + 1_250, 1_250.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+            assertRefusedAs(() => Percentage.ofBasisPoints(basisPoints), invalidPercentage);
+        }
+
+        const invalidParts = thrown(() => Parts.ofHundredths(0));
+        assert.equal(Parts.ofHundredths(2 ** 31 - 1).toString(), '21474836.47');
+        for (const hundredths of [2 ** 31, -(2 ** 31), -(2 ** 31) - 1, 2 ** 32 + 50, 50.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+            assertRefusedAs(() => Parts.ofHundredths(hundredths), invalidParts);
+        }
+
+        const invalidQuantity = thrown(() => Quantity.ofTenThousandths(0n));
+        assert.equal(Quantity.ofTenThousandths(2n ** 63n - 1n).toString(), '922337203685477.5807');
+        for (const tenThousandths of [2n ** 63n, -(2n ** 63n), -(2n ** 63n) - 1n, 2n ** 64n + 10_000n]) {
+            assertRefusedAs(() => Quantity.ofTenThousandths(tenThousandths), invalidQuantity);
+        }
+        // Whole units at either bound have ten-thousandths out of range, which the core refuses.
+        for (const units of [2n ** 63n - 1n, 2n ** 63n, -(2n ** 63n), -(2n ** 63n) - 1n, 2n ** 64n + 3n]) {
+            assertRefusedAs(() => Quantity.ofWhole(units), invalidQuantity);
+        }
+
+        // A field at either bound is outside the calendar, which the core refuses; 2^32 + 9 and 9.5 would cross as 9, a
+        // valid year, month, day, hour, and minute.
+        const fields = [2 ** 31 - 1, 2 ** 31, -(2 ** 31), -(2 ** 31) - 1, 2 ** 32 + 9, 9.5, Number.NaN, Number.POSITIVE_INFINITY];
+        const invalidDate = thrown(() => CalendarDate.of(2026, 2, 30));
+        const invalidTime = thrown(() => TimeOfDay.of(24, 0));
+        for (const field of fields) {
+            assertRefusedAs(() => CalendarDate.of(field, 9, 23), invalidDate);
+            assertRefusedAs(() => CalendarDate.of(2026, field, 23), invalidDate);
+            assertRefusedAs(() => CalendarDate.of(2026, 9, field), invalidDate);
+            assertRefusedAs(() => TimeOfDay.of(field, 30), invalidTime);
+            assertRefusedAs(() => TimeOfDay.of(18, field), invalidTime);
+        }
     });
 
     /** Contact and account details kept in another form than the library's, or refused ones let through, would reach the group unchecked. */

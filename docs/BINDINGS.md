@@ -750,10 +750,15 @@ build. The layer follows the Google TypeScript Style Guide:
 - `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`,
   `Parts.ofHundredths`, and `Quantity.ofTenThousandths` check their numbers
   with the core's checks, and the five values print through the core's
-  formatters, which cannot fail. A `Quantity` holds its ten-thousandths as a
-  `bigint`, as an amount holds its minor units, and `Quantity.ofWhole`
-  takes a `bigint` of whole units, which the core's `quantity_from_whole`
-  turns into ten-thousandths. `Money.fromNumber(value, currency)` and the
+  formatters, which cannot fail. The layer refuses an integer outside the
+  range of its field, an amount's minor units included, and a number that
+  is not an integer, before it crosses, with the library's failure and
+  message for the value, since the runtime would wrap it into the range or
+  drop its fraction, and the core would check another value. A `Quantity`
+  holds its ten-thousandths as a `bigint`, as an amount holds its minor
+  units, and `Quantity.ofWhole` takes a `bigint` of whole units, which the
+  core's `quantity_from_whole` turns into ten-thousandths.
+  `Money.fromNumber(value, currency)` and the
   `fromNumber` of `Percentage`, `Parts`, `Quantity`, and `ExchangeRate`
   hand a number, which JavaScript holds as a double, to the core's
   `money_from_f64` and its siblings, so the same number is the same value
