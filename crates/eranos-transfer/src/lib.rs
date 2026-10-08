@@ -42,7 +42,7 @@ pub use error::{FromTransferError, TransferError};
 /// let repayment = Transfer::builder(bob, ana, Money::parse("30.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 24)?)
 ///     .note("Dinner")
 ///     .build()?;
-/// assert_eq!(repayment.from(), bob);
+/// assert_eq!(repayment.sender(), bob);
 /// assert!(Transfer::builder(ana, ana, repayment.amount(), repayment.date()).build().is_err());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -50,8 +50,8 @@ pub use error::{FromTransferError, TransferError};
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Transfer {
     id: TransferId,
-    from: MemberId,
-    to: MemberId,
+    sender: MemberId,
+    receiver: MemberId,
     amount: Money,
     date: CalendarDate,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
@@ -63,22 +63,22 @@ pub struct Transfer {
 }
 
 impl Transfer {
-    /// Starts a transfer from `from` to `to` of `cost` on `date`, under an
+    /// Starts a transfer from `sender` to `receiver` of `cost` on `date`, under an
     /// identifier generated when it is called;
     /// [`builder_with_id`](Self::builder_with_id) takes one instead.
     ///
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
     pub fn builder(
-        from: MemberId,
-        to: MemberId,
+        sender: MemberId,
+        receiver: MemberId,
         cost: impl Into<Cost>,
         date: CalendarDate,
     ) -> TransferBuilder {
-        Self::builder_with_id(TransferId::generate(), from, to, cost, date)
+        Self::builder_with_id(TransferId::generate(), sender, receiver, cost, date)
     }
 
-    /// Starts a transfer from `from` to `to` of `cost` on `date`, under the
+    /// Starts a transfer from `sender` to `receiver` of `cost` on `date`, under the
     /// identifier `id`, such as the key an app's own store gives it;
     /// [`builder`](Self::builder) generates one instead.
     ///
@@ -96,15 +96,15 @@ impl Transfer {
     /// ```
     pub fn builder_with_id(
         id: TransferId,
-        from: MemberId,
-        to: MemberId,
+        sender: MemberId,
+        receiver: MemberId,
         cost: impl Into<Cost>,
         date: CalendarDate,
     ) -> TransferBuilder {
         TransferBuilder {
             id,
-            from,
-            to,
+            sender,
+            receiver,
             cost: cost.into(),
             date,
             time: None,
@@ -153,7 +153,13 @@ impl Transfer {
         payment: &Payment,
         date: CalendarDate,
     ) -> TransferBuilder {
-        Self::builder_with_id(id, payment.from(), payment.to(), payment.amount(), date)
+        Self::builder_with_id(
+            id,
+            payment.sender(),
+            payment.receiver(),
+            payment.amount(),
+            date,
+        )
     }
 
     /// Starts a builder holding a copy of this transfer, to edit it; the
@@ -161,8 +167,8 @@ impl Transfer {
     pub fn to_builder(&self) -> TransferBuilder {
         TransferBuilder {
             id: self.id,
-            from: self.from,
-            to: self.to,
+            sender: self.sender,
+            receiver: self.receiver,
             cost: self.cost(),
             date: self.date,
             time: self.time,
@@ -178,14 +184,14 @@ impl Transfer {
 
     /// The member who paid.
     #[must_use]
-    pub const fn from(&self) -> MemberId {
-        self.from
+    pub const fn sender(&self) -> MemberId {
+        self.sender
     }
 
     /// The member who received the money.
     #[must_use]
-    pub const fn to(&self) -> MemberId {
-        self.to
+    pub const fn receiver(&self) -> MemberId {
+        self.receiver
     }
 
     /// The amount, in the transfer's own currency.
@@ -257,8 +263,8 @@ impl Transfer {
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct TransferBuilder {
     id: TransferId,
-    from: MemberId,
-    to: MemberId,
+    sender: MemberId,
+    receiver: MemberId,
     cost: Cost,
     date: CalendarDate,
     time: Option<TimeOfDay>,
@@ -273,14 +279,14 @@ impl TransferBuilder {
     }
 
     /// Replaces the member who paid.
-    pub const fn from(mut self, from: MemberId) -> Self {
-        self.from = from;
+    pub const fn sender(mut self, sender: MemberId) -> Self {
+        self.sender = sender;
         self
     }
 
     /// Replaces the member who received the money.
-    pub const fn to(mut self, to: MemberId) -> Self {
-        self.to = to;
+    pub const fn receiver(mut self, receiver: MemberId) -> Self {
+        self.receiver = receiver;
         self
     }
 
@@ -328,7 +334,7 @@ impl TransferBuilder {
     /// - [`TransferError::NonPositiveAmount`] when the amount is not
     ///   positive.
     pub fn build(self) -> Result<Transfer, TransferError> {
-        if self.from == self.to {
+        if self.sender == self.receiver {
             return Err(TransferError::SameMember);
         }
         let amount = self.cost.amount();
@@ -337,8 +343,8 @@ impl TransferBuilder {
         }
         Ok(Transfer {
             id: self.id,
-            from: self.from,
-            to: self.to,
+            sender: self.sender,
+            receiver: self.receiver,
             amount,
             date: self.date,
             exchange_rate: self.cost.conversion(),
@@ -353,8 +359,8 @@ impl TransferBuilder {
 #[derive(serde::Deserialize)]
 struct TransferRecord {
     id: TransferId,
-    from: MemberId,
-    to: MemberId,
+    sender: MemberId,
+    receiver: MemberId,
     amount: Money,
     date: CalendarDate,
     #[serde(default)]
@@ -369,8 +375,9 @@ struct TransferRecord {
 #[cfg(feature = "serde")]
 fn from_record(record: TransferRecord) -> Result<Transfer, TransferError> {
     let cost = Cost::from_parts(record.amount, record.exchange_rate);
-    let builder = Transfer::builder_with_id(record.id, record.from, record.to, cost, record.date)
-        .time(record.time);
+    let builder =
+        Transfer::builder_with_id(record.id, record.sender, record.receiver, cost, record.date)
+            .time(record.time);
     match record.note {
         Some(note) => builder.note(note).build(),
         None => builder.build(),

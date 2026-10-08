@@ -995,12 +995,12 @@ void aSavedGroupLoadsAsItWasSaved(Check &check) noexcept {
     check.that(isFailure(broken, ErrorKind::INVALID_JSON, std::nullopt) && 1 == broken.value().line() && 1 == broken.value().column(),
                "where the text stops being JSON");
     auto tampered = json;
-    auto const format = tampered.find("\"format\": 3");
-    tampered.replace(format, std::string_view("\"format\": 3").size(), "\"format\": 4");
+    auto const format = tampered.find("\"format\": 4");
+    tampered.replace(format, std::string_view("\"format\": 4").size(), "\"format\": 5");
     auto const newer = refusal(ExpenseGroup::load(tampered));
-    check.that(isFailure(newer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT) && 4 == newer.value().format(),
+    check.that(isFailure(newer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT) && 5 == newer.value().format(),
                "a format this release cannot read");
-    check.that("unsupported group format 4: this version reads format 3" == newer.value().message(), "the format it reads");
+    check.that("unsupported group format 5: this version reads format 4" == newer.value().message(), "the format it reads");
 }
 
 /// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses it with

@@ -1154,8 +1154,6 @@ reads its annotations without checking its code, and Ruff leaves it out:
   it was, and raises `asyncio.CancelledError` in the task. `ExpenseGroup` and
   `ExpenseGroupReader` are context managers: leaving the block closes the group
   or releases the reader.
-- A transfer's and a payment's members are `sender` and `receiver`, since
-  `from` is a keyword; the generated module names the field `_from`.
 - The generated module attaches a data enum's cases to it only after it
   defines them, and nothing seals its classes, so the conversion from them
   is a table by class, which the conversion tests check against every

@@ -261,24 +261,24 @@ internal fun eranos.internal.SettlementPlan.converted(): SettlementPlan = Settle
 /** One payment of a settlement: one member pays another an amount. */
 public class Payment internal constructor(
     /** The member who pays. */
-    public val from: MemberId,
+    public val sender: MemberId,
     /** The member who is paid. */
-    public val to: MemberId,
+    public val receiver: MemberId,
     /** The amount, in the group currency. */
     public val amount: Money,
 ) {
-    /** Whether [other] is of the same class, with the same [from], [to], and [amount]. */
-    override fun equals(other: Any?): Boolean = other is Payment && from == other.from && to == other.to && amount == other.amount
+    /** Whether [other] is of the same class, with the same [sender], [receiver], and [amount]. */
+    override fun equals(other: Any?): Boolean = other is Payment && sender == other.sender && receiver == other.receiver && amount == other.amount
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(from, to, amount)
+    override fun hashCode(): Int = hashOf(sender, receiver, amount)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "Payment(from=$from, to=$to, amount=$amount)"
+    override fun toString(): String = "Payment(sender=$sender, receiver=$receiver, amount=$amount)"
 }
 
 /** The payment the generated code holds as [this]. */
-internal fun eranos.internal.Payment.converted(): Payment = Payment(MemberId(from), MemberId(to), amount.converted())
+internal fun eranos.internal.Payment.converted(): Payment = Payment(MemberId(sender), MemberId(receiver), amount.converted())
 
 /** How balances turn into payments. */
 public enum class SettlementStrategy {

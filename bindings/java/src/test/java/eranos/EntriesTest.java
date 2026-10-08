@@ -570,8 +570,8 @@ class EntriesTest {
         assertEquals(cash.id(), payment);
         Transfer storedCash = flat.group.transfer(payment).orElseThrow();
         assertEquals(payment, storedCash.id());
-        assertEquals(cash.from(), storedCash.from());
-        assertEquals(cash.to(), storedCash.to());
+        assertEquals(cash.sender(), storedCash.sender());
+        assertEquals(cash.receiver(), storedCash.receiver());
         assertEquals(cash.cost(), storedCash.cost());
         assertEquals(cash.date(), storedCash.date());
         assertEquals(Optional.of(TimeOfDay.of(10, 0)), storedCash.time());
@@ -583,14 +583,14 @@ class EntriesTest {
                 storedCash.toBuilder().note(null).build());
         Transfer back =
                 storedCash.toBuilder()
-                        .from(flat.ana)
-                        .to(flat.bob)
+                        .sender(flat.ana)
+                        .receiver(flat.bob)
                         .cost(new Cost.Local(flat.euros(5)))
                         .date(CalendarDate.of(2026, 9, 24))
                         .time(null)
                         .build();
-        assertEquals(flat.ana, back.from());
-        assertEquals(flat.bob, back.to());
+        assertEquals(flat.ana, back.sender());
+        assertEquals(flat.bob, back.receiver());
 
         Category travel = new Category("Travel");
         assertEquals(travel, Category.converted(travel.generated()));

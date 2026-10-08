@@ -22,17 +22,18 @@ typedef struct EranosTransfer EranosTransfer;
 ///
 /// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
 ///   text
-/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param sender The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param receiver The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param cost What was paid
 /// @param date The day it was paid
 /// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosTransferCreateWithId(char const *const id, char const *const from, char const *const to,
+[[nodiscard]] static inline EranosError *eranosTransferCreateWithId(char const *const id, char const *const sender, char const *const receiver,
                                                                     EranosCost const *const cost, EranosCalendarDate const date,
                                                                     EranosTransfer **const transfer) {
-    EranosTransfer_create_result const result = EranosTransfer_create(eranosDetailView(id), eranosDetailView(from), eranosDetailView(to), cost, date);
+    EranosTransfer_create_result const result =
+        EranosTransfer_create(eranosDetailView(id), eranosDetailView(sender), eranosDetailView(receiver), cost, date);
     *transfer = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -40,18 +41,18 @@ typedef struct EranosTransfer EranosTransfer;
 /// A new transfer of its required fields under an identifier generated when it is called, which eranosTransferCreateWithId() takes instead; every
 /// other field starts absent, empty, or at its default.
 ///
-/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param sender The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param receiver The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param cost What was paid
 /// @param date The day it was paid
 /// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosTransferCreate(char const *const from, char const *const to, EranosCost const *const cost,
+[[nodiscard]] static inline EranosError *eranosTransferCreate(char const *const sender, char const *const receiver, EranosCost const *const cost,
                                                               EranosCalendarDate const date, EranosTransfer **const transfer) {
     EranosText *const id = eranosTextCreate();
     eranosIdentifierGenerate(id);
-    EranosError *const error = eranosTransferCreateWithId(eranosTextData(id), from, to, cost, date, transfer);
+    EranosError *const error = eranosTransferCreateWithId(eranosTextData(id), sender, receiver, cost, date, transfer);
     eranosTextDestroy(id);
     return error;
 }
@@ -80,42 +81,42 @@ static inline void eranosTransferId(EranosTransfer const *const transfer, Eranos
 /// The identifier of the member who paid.
 ///
 /// @param transfer The transfer
-/// @param from Receives the identifier of the member who paid, replacing what it held
-static inline void eranosTransferFrom(EranosTransfer const *const transfer, EranosText *const from) {
-    eranosDetailClear(from);
-    EranosTransfer_from(transfer, from);
-    eranosDetailFinish(from);
+/// @param sender Receives the identifier of the member who paid, replacing what it held
+static inline void eranosTransferSender(EranosTransfer const *const transfer, EranosText *const sender) {
+    eranosDetailClear(sender);
+    EranosTransfer_sender(transfer, sender);
+    eranosDetailFinish(sender);
 }
 
 /// Sets the identifier of the member who paid.
 ///
 /// @param transfer The transfer
-/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param sender The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosTransferSetFrom(EranosTransfer *const transfer, char const *const from) {
-    EranosTransfer_set_from_result const result = EranosTransfer_set_from(transfer, eranosDetailView(from));
+[[nodiscard]] static inline EranosError *eranosTransferSetSender(EranosTransfer *const transfer, char const *const sender) {
+    EranosTransfer_set_sender_result const result = EranosTransfer_set_sender(transfer, eranosDetailView(sender));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
 /// The identifier of the member who was paid.
 ///
 /// @param transfer The transfer
-/// @param to Receives the identifier of the member who was paid, replacing what it held
-static inline void eranosTransferTo(EranosTransfer const *const transfer, EranosText *const to) {
-    eranosDetailClear(to);
-    EranosTransfer_to(transfer, to);
-    eranosDetailFinish(to);
+/// @param receiver Receives the identifier of the member who was paid, replacing what it held
+static inline void eranosTransferReceiver(EranosTransfer const *const transfer, EranosText *const receiver) {
+    eranosDetailClear(receiver);
+    EranosTransfer_receiver(transfer, receiver);
+    eranosDetailFinish(receiver);
 }
 
 /// Sets the identifier of the member who was paid.
 ///
 /// @param transfer The transfer
-/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param receiver The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosTransferSetTo(EranosTransfer *const transfer, char const *const to) {
-    EranosTransfer_set_to_result const result = EranosTransfer_set_to(transfer, eranosDetailView(to));
+[[nodiscard]] static inline EranosError *eranosTransferSetReceiver(EranosTransfer *const transfer, char const *const receiver) {
+    EranosTransfer_set_receiver_result const result = EranosTransfer_set_receiver(transfer, eranosDetailView(receiver));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

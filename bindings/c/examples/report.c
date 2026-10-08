@@ -255,9 +255,9 @@ EranosError *expenseRefusal(EranosExpenseGroup *const group, EranosExpense *cons
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the sender, then the receiver, in the order the library's constructor reads them.
-EranosTransfer *transferOf(Id const from, Id const to, EranosCost *const cost, EranosCalendarDate const date) {
+EranosTransfer *transferOf(Id const sender, Id const receiver, EranosCost *const cost, EranosCalendarDate const date) {
     EranosTransfer *transfer = nullptr;
-    must(eranosTransferCreate(from.text, to.text, cost, date, &transfer));
+    must(eranosTransferCreate(sender.text, receiver.text, cost, date, &transfer));
     eranosCostDestroy(cost);
     return transfer;
 }

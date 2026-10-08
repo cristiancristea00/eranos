@@ -46,7 +46,7 @@ func savingAndLoading(_ group: ExpenseGroup, _ people: People, _ categories: Cat
         loading it with into_expense_group reports a refusal as a typed error, not as text:
         """)
     let tampered = [
-        Tampering(change: "\"format\": 4", text: saved.replacing("\"format\": 3", with: "\"format\": 4", maxReplacements: 1)),
+        Tampering(change: "\"format\": 5", text: saved.replacing("\"format\": 4", with: "\"format\": 5", maxReplacements: 1)),
         Tampering(change: "a blank group name", text: saved.replacing("\"name\": \"Lisbon and Porto\"", with: "\"name\": \" \"", maxReplacements: 1)),
         Tampering(change: "Lodging renamed FOOD", text: saved.replacing("\"name\": \"Lodging\"", with: "\"name\": \"FOOD\"", maxReplacements: 1))
     ]
@@ -65,5 +65,5 @@ func savingAndLoading(_ group: ExpenseGroup, _ people: People, _ categories: Cat
 
     expect(saved, try loaded.save(), "the loaded group saves as the saved one")
     expect(try group.summary(), try loaded.summary(), "the loaded group's totals")
-    precondition([.unsupportedFormat(format: 4), .emptyName, .duplicateCategoryName(categories.food)] == failures, "the replay refuses every change")
+    precondition([.unsupportedFormat(format: 5), .emptyName, .duplicateCategoryName(categories.food)] == failures, "the replay refuses every change")
 }

@@ -202,12 +202,12 @@ export function settlingUp(group: ExpenseGroup): void {
     printLines('The group follows the minimum plan:');
     printTable(
         paymentColumns,
-        plan.payments.map((payment) => ({ from: name(group, payment.from), to: name(group, payment.to), amount: payment.amount })),
+        plan.payments.map((payment) => ({ sender: name(group, payment.sender), receiver: name(group, payment.receiver), amount: payment.amount })),
         2,
     );
     for (const payment of plan.payments) {
         group.addTransferSync(
-            createTransfer({ from: payment.from, to: payment.to, cost: { kind: 'local', amount: payment.amount }, date: october(7) }),
+            createTransfer({ sender: payment.sender, receiver: payment.receiver, cost: { kind: 'local', amount: payment.amount }, date: october(7) }),
         );
     }
     printLines('Each payment, once made, is recorded as a transfer, and every balance is settled:');

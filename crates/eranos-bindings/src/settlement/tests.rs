@@ -54,8 +54,8 @@ fn a_settlement_keeps_every_payment() {
         SettlementPlan::from_library(settlement),
         SettlementPlan {
             payments: vec![Payment {
-                from: ana.to_string(),
-                to: bob.to_string(),
+                sender: ana.to_string(),
+                receiver: bob.to_string(),
                 amount: crate::Money {
                     minor_units: 2_000,
                     currency: CurrencyDetails::from_library(CurrencyCode::EUR),

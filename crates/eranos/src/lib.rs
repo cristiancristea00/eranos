@@ -40,7 +40,7 @@
 //! let settlement = group.settlement(SettlementStrategy::MinimumTransfers)?;
 //! assert_eq!(settlement.len(), 2);
 //! for payment in settlement.payments() {
-//!     assert_eq!(payment.to(), ana);
+//!     assert_eq!(payment.receiver(), ana);
 //! }
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -114,7 +114,7 @@
 //! block_on(other.add_expense(rent))?;
 //!
 //! let settlement = block_on(shared.settlement(SettlementStrategy::MinimumTransfers))?;
-//! assert_eq!(settlement.payments()[0].from(), bob);
+//! assert_eq!(settlement.payments()[0].sender(), bob);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!

@@ -62,7 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Bob and Carol each pay Ana back 33.00.
     let settlement = group.settlement(SettlementStrategy::MinimumTransfers)?;
     for payment in settlement.payments() {
-        println!("{} pays {}", payment.from(), payment.amount());
+        println!("{} pays {}", payment.sender(), payment.amount());
     }
     Ok(())
 }

@@ -251,16 +251,17 @@ struct ExpenseShares final {
 struct Payment final {
     /// The record of its fields.
     ///
-    /// @param from The identifier of the member who pays.
-    /// @param to The identifier of the member who is paid.
+    /// @param sender The identifier of the member who pays.
+    /// @param receiver The identifier of the member who is paid.
     /// @param amount What is paid.
-    inline Payment(MemberId from, MemberId to, Money amount) noexcept : from(std::move(from)), to(std::move(to)), amount(std::move(amount)) {}
+    inline Payment(MemberId sender, MemberId receiver, Money amount) noexcept
+        : sender(std::move(sender)), receiver(std::move(receiver)), amount(std::move(amount)) {}
 
     /// The identifier of the member who pays.
-    MemberId from;
+    MemberId sender;
 
     /// The identifier of the member who is paid.
-    MemberId to;
+    MemberId receiver;
 
     /// What is paid.
     Money amount;

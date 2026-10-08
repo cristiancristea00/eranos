@@ -45,8 +45,8 @@ fn date() -> CalendarDate {
 fn repayment() -> Transfer {
     Transfer {
         id: identifier_generate(),
-        from: bob(),
-        to: ana(),
+        sender: bob(),
+        receiver: ana(),
         cost: Cost::Converted {
             amount: Money {
                 minor_units: 10_000,
@@ -64,8 +64,8 @@ fn repayment() -> Transfer {
 fn payment() -> Transfer {
     Transfer {
         id: identifier_generate(),
-        from: ana(),
-        to: bob(),
+        sender: ana(),
+        receiver: bob(),
         cost: Cost::Local {
             amount: Money {
                 minor_units: 1_500,
@@ -128,14 +128,14 @@ fn refused_transfers() -> [Refusal; 6] {
         },
         Refusal {
             record: Transfer {
-                from: " nobody".to_owned(),
+                sender: " nobody".to_owned(),
                 ..payment()
             },
             is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Transfer {
-                to: " nobody".to_owned(),
+                receiver: " nobody".to_owned(),
                 ..payment()
             },
             is_expected: surrounding_whitespace,
@@ -160,7 +160,7 @@ fn refused_transfers() -> [Refusal; 6] {
         },
         Refusal {
             record: Transfer {
-                to: bob(),
+                receiver: bob(),
                 ..repayment()
             },
             is_expected: |error| {

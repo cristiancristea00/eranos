@@ -171,12 +171,12 @@ struct StrategyRow: TableRow {
 struct PaymentRow: TableRow {
     static let headers = ["From", "To", "Amount"]
 
-    let from: String
-    let to: String
+    let sender: String
+    let receiver: String
     let amount: Money
 
     var cells: [String] {
-        [from, to, "\(amount)"]
+        [sender, receiver, "\(amount)"]
     }
 }
 

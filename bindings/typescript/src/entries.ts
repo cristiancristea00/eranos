@@ -979,9 +979,9 @@ export interface Transfer {
     /** The identifier, which the app gives: its own, or one that {@link generateTransferId} makes. */
     readonly id: TransferId;
     /** The member who paid. */
-    readonly from: MemberId;
+    readonly sender: MemberId;
     /** The member who was paid. */
-    readonly to: MemberId;
+    readonly receiver: MemberId;
     /** What was paid. */
     readonly cost: Cost;
     /** The day it was paid. */
@@ -1002,8 +1002,8 @@ export interface Transfer {
 export function createTransfer(fields: Omit<Transfer, 'id'>): Transfer {
     return {
         id: generateTransferId(),
-        from: fields.from,
-        to: fields.to,
+        sender: fields.sender,
+        receiver: fields.receiver,
         cost: fields.cost,
         date: fields.date,
         ...(undefined === fields.time ? {} : { time: fields.time }),
@@ -1019,8 +1019,8 @@ export function createTransfer(fields: Omit<Transfer, 'id'>): Transfer {
 export function convertedTransfer(transfer: internal.Transfer): Transfer {
     return {
         id: transferId(transfer.id),
-        from: memberId(transfer.from),
-        to: memberId(transfer.to),
+        sender: memberId(transfer.sender),
+        receiver: memberId(transfer.receiver),
         cost: convertedCost(transfer.cost),
         date: CalendarDate.converted(transfer.date),
         ...(undefined === transfer.time ? {} : { time: TimeOfDay.converted(transfer.time) }),
@@ -1036,8 +1036,8 @@ export function convertedTransfer(transfer: internal.Transfer): Transfer {
 export function generatedTransfer(transfer: Transfer): internal.Transfer {
     return internal.Transfer.create({
         id: transfer.id,
-        from: transfer.from,
-        to: transfer.to,
+        sender: transfer.sender,
+        receiver: transfer.receiver,
         cost: generatedCost(transfer.cost),
         date: transfer.date.generated(),
         ...(undefined === transfer.time ? {} : { time: transfer.time.generated() }),

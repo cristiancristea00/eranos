@@ -37,11 +37,10 @@ use eranos_money::{Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money};
 use eranos_settlement::{SettlementError, SettlementPlan, SettlementStrategy, Settlements};
 use eranos_transfer::{Transfer, resolve_transfer, resolve_transfer_at};
 
-/// The version of the saved form. Format 3 writes identifiers as text of up
-/// to 64 bytes, of which UUIDs are one kind. Every other version is refused:
-/// a newer one would be read with fields silently dropped, and no earlier
-/// one is read.
-pub(crate) const FORMAT: u32 = 3;
+/// The version of the saved form. Format 4 names a transfer's members
+/// `sender` and `receiver`. Every other version is refused: a newer one
+/// would be read with fields silently dropped, and no earlier one is read.
+pub(crate) const FORMAT: u32 = 4;
 
 /// The entries a currency change re-resolves, or a load replays, between
 /// two yields.
@@ -533,7 +532,9 @@ impl ExpenseGroup {
         let transfers: Vec<TransferId> = self
             .transfers
             .iter()
-            .filter(|(_, record)| record.transfer.from() == id || record.transfer.to() == id)
+            .filter(|(_, record)| {
+                record.transfer.sender() == id || record.transfer.receiver() == id
+            })
             .map(|(&id, _)| id)
             .collect();
         if !expenses.is_empty() || !transfers.is_empty() {
@@ -928,7 +929,7 @@ impl ExpenseGroup {
     ///
     /// // Awaited like any future; `block_on` runs it on this thread.
     /// let settlement = block_on(group.settlement_async(SettlementStrategy::MinimumTransfers))?;
-    /// assert_eq!(settlement.payments()[0].from(), ana);
+    /// assert_eq!(settlement.payments()[0].sender(), ana);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn settlement_async(
@@ -984,7 +985,7 @@ impl ExpenseGroup {
 
     /// Checks the members and the cost of `transfer`.
     fn check_transfer(&self, transfer: &Transfer) -> Result<(), ExpenseGroupError> {
-        for member in [transfer.from(), transfer.to()] {
+        for member in [transfer.sender(), transfer.receiver()] {
             if !self.members.contains_key(&member) {
                 return Err(ExpenseGroupError::UnknownMember(member));
             }
@@ -1026,8 +1027,8 @@ impl Eq for ExpenseGroup {}
 /// The sender and the recipient of `transfer`, as the ledger keys them.
 const fn pair(transfer: &Transfer) -> MemberPair {
     MemberPair {
-        from: transfer.from(),
-        to: transfer.to(),
+        from: transfer.sender(),
+        to: transfer.receiver(),
     }
 }
 

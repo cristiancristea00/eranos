@@ -348,8 +348,8 @@ impl ExpenseRecipe {
 #[derive(Debug, Clone, Copy)]
 struct TransferRecipe {
     id: Option<usize>,
-    from: usize,
-    to: usize,
+    sender: usize,
+    receiver: usize,
     amount: i64,
 }
 
@@ -369,10 +369,10 @@ fn group_recipe() -> impl Strategy<Value = ExpenseGroupRecipe> {
                 0..MEMBERS,
                 1_i64..100_000,
             )
-                .prop_map(|(id, from, to, amount)| TransferRecipe {
+                .prop_map(|(id, sender, receiver, amount)| TransferRecipe {
                     id,
-                    from,
-                    to,
+                    sender,
+                    receiver,
                     amount,
                 }),
             0..6,
@@ -416,15 +416,15 @@ fn entries(recipe: &ExpenseGroupRecipe) -> Entries {
         .transfers
         .iter()
         .enumerate()
-        .filter(|(_, transfer)| transfer.from != transfer.to)
+        .filter(|(_, transfer)| transfer.sender != transfer.receiver)
         .map(|(position, transfer)| {
             let id = transfer
                 .id
                 .map_or_else(TransferId::generate, |start| given(start, position));
             Transfer::builder_with_id(
                 id,
-                ids[transfer.from],
-                ids[transfer.to],
+                ids[transfer.sender],
+                ids[transfer.receiver],
                 Money::from_minor_units(transfer.amount, CurrencyCode::EUR),
                 day(),
             )

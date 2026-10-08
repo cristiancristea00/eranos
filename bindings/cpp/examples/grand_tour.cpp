@@ -330,16 +330,16 @@ struct PaymentRow final {
     static inline constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
     /// Who pays.
-    std::string from;
+    std::string sender;
     /// Who is paid.
-    std::string to;
+    std::string receiver;
     /// How much is paid.
     std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {from, to, amount}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {sender, receiver, amount}; }
 };
 
 /// A row of the table of loads: a change to a saved group, and the message its load is refused with.
@@ -497,8 +497,8 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
         if (shown(amountOf(transfer.cost).currency)) {
             auto const converted = must(group.transferAmount(transfer.id));
             rows.push_back({
-                .name = std::format("Transfer to {}", firstName(group, transfer.to)),
-                .payer = firstName(group, transfer.from),
+                .name = std::format("Transfer to {}", firstName(group, transfer.receiver)),
+                .payer = firstName(group, transfer.sender),
                 .original = amountOf(transfer.cost).toString(),
                 .rate = rateOf(transfer.cost).toString(),
                 .converted = converted.has_value() ? converted->toString() : zero,
@@ -1259,11 +1259,12 @@ void settlingUp(ExpenseGroup &group) noexcept {
     std::vector<PaymentRow> payments;
     payments.reserve(plan.payments.size());
     for (auto const &payment : plan.payments) {
-        payments.push_back({.from = firstName(group, payment.from), .to = firstName(group, payment.to), .amount = payment.amount.toString()});
+        payments.push_back(
+            {.sender = firstName(group, payment.sender), .receiver = firstName(group, payment.receiver), .amount = payment.amount.toString()});
     }
     printTable(payments, 2);
     for (auto const &payment : plan.payments) {
-        static_cast<void>(must(group.addTransfer(Transfer(payment.from, payment.to, LocalCost{payment.amount}, october(7)))));
+        static_cast<void>(must(group.addTransfer(Transfer(payment.sender, payment.receiver, LocalCost{payment.amount}, october(7)))));
     }
     printLine("Each payment, once made, is recorded as a transfer, and every balance is settled:");
     printBalances(group);
@@ -1311,12 +1312,12 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
         check(refusedLoad.has_value() && ErrorKind::EXPENSE_GROUP == refusedLoad->kind(), "the changed file is refused");
         return refusedLoad.value();
     };
-    auto const format = refused(R"("format": 3)", R"("format": 4)");
+    auto const format = refused(R"("format": 4)", R"("format": 5)");
     auto const blank = refused(R"("name": "Lisbon and Porto")", R"("name": " ")");
     auto const homonym = refused(R"("name": "Lodging")", R"("name": "FOOD")");
     printTable<LoadRow>(
         {
-            {.change = "\"format\": 4", .message = format.message()},
+            {.change = "\"format\": 5", .message = format.message()},
             {.change = "a blank group name", .message = blank.message()},
             {.change = "Lodging renamed FOOD", .message = homonym.message()},
         },
@@ -1324,7 +1325,7 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
 
     check(saved == loaded.save(), "the loaded group saves as the group did");
     check(group.summary() == loaded.summary(), "the loaded group has the group's totals");
-    check(Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT == format.failure() && std::optional<std::int64_t>(4) == format.format(),
+    check(Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT == format.failure() && std::optional<std::int64_t>(5) == format.format(),
           "a later format is refused");
     check(Failure::EXPENSE_GROUP_EMPTY_NAME == blank.failure(), "a blank name is refused");
     check(Failure::EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME == homonym.failure() && categories.food == homonym.existing(),
@@ -1517,8 +1518,8 @@ void sharing(ExpenseGroup &group, People const &people) noexcept {
         rows.reserve(plan.payments.size());
         for (auto const &payment : plan.payments) {
             rows.push_back({
-                .from = must(reader.member(payment.from)).value().firstName,
-                .to = must(reader.member(payment.to)).value().firstName,
+                .sender = must(reader.member(payment.sender)).value().firstName,
+                .receiver = must(reader.member(payment.receiver)).value().firstName,
                 .amount = payment.amount.toString(),
             });
         }
@@ -1547,7 +1548,7 @@ void sharing(ExpenseGroup &group, People const &people) noexcept {
 
     check(4 == plan.payments.size(), "four payments settle the coffee");
     check(std::ranges::all_of(plan.payments,
-                              [&](Payment const &payment) noexcept { return people.bob == payment.to && ron("15.00") == payment.amount; }),
+                              [&](Payment const &payment) noexcept { return people.bob == payment.receiver && ron("15.00") == payment.amount; }),
           "everyone pays Bob 15.00 RON");
     check(cancelled.has_value() && ErrorKind::CANCELLED == cancelled->kind(), "the change is cancelled");
     check(before == after, "the cancelled change leaves the group as it was");

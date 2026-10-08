@@ -809,7 +809,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline Transfer fromDetail(EranosTransfer const &value) noexcept {
-    Transfer result(TransferId(value.id()), MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.cost()),
+    Transfer result(TransferId(value.id()), MemberId(value.sender()), MemberId(value.receiver()), detail::fromDetail(*value.cost()),
                     detail::calendarDateOf(value.date()));
     result.time = detail::optionalTime(value.time());
     result.note = value.note();
@@ -818,7 +818,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosTransfer>, Error> toDetail(Transfer const &value) noexcept {
-    return expectedOf(EranosTransfer::create(value.id.value(), value.from.value(), value.to.value(), *detail::toDetail(value.cost),
+    return expectedOf(EranosTransfer::create(value.id.value(), value.sender.value(), value.receiver.value(), *detail::toDetail(value.cost),
                                              detail::toDetail(value.date)))
         .and_then([&value](std::unique_ptr<EranosTransfer> result) noexcept {
             if (value.time) {
@@ -1020,7 +1020,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline Payment fromDetail(EranosPayment const &value) noexcept {
-    return {MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.amount())};
+    return {MemberId(value.sender()), MemberId(value.receiver()), detail::fromDetail(*value.amount())};
 }
 
 /// The record of @p value.

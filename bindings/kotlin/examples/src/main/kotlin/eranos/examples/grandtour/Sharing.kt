@@ -47,8 +47,8 @@ internal suspend fun sharing(
             group.read().use { reader ->
                 plan.payments.map { payment ->
                     PaymentRow(
-                        from = reader.member(payment.from)?.firstName ?: "?",
-                        to = reader.member(payment.to)?.firstName ?: "?",
+                        sender = reader.member(payment.sender)?.firstName ?: "?",
+                        receiver = reader.member(payment.receiver)?.firstName ?: "?",
                         amount = payment.amount,
                     )
                 }
@@ -79,7 +79,7 @@ internal suspend fun sharing(
         println("With the other handle gone, the app takes the group back: ${group.expenses().size} expenses.")
 
         check(4 == plan.payments.size)
-        check(plan.payments.all { payment -> people.bob == payment.to && ron("15.00") == payment.amount })
+        check(plan.payments.all { payment -> people.bob == payment.receiver && ron("15.00") == payment.amount })
         check(change.isCancelled)
         check(before == after)
         check(reported == after.totalSpent)

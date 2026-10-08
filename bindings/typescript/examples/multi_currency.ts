@@ -75,8 +75,8 @@ function printEntries(group: ExpenseGroup): void {
         converted: group.expenseSharesSync(expense.id)?.total ?? zero,
     }));
     const transfers = group.transfersSync().map((transfer): EntryRow => ({
-        name: `Transfer to ${names(group, [transfer.to])}`,
-        payer: names(group, [transfer.from]),
+        name: `Transfer to ${names(group, [transfer.receiver])}`,
+        payer: names(group, [transfer.sender]),
         original: transfer.cost.amount,
         rate: rate(transfer.cost),
         converted: group.transferAmountSync(transfer.id) ?? zero,
@@ -148,8 +148,8 @@ function repayment(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
     section('3. A repayment in cash, in another currency');
     group.addTransferSync(
         createTransfer({
-            from: ana,
-            to: bob,
+            sender: ana,
+            receiver: bob,
             cost: { kind: 'converted', amount: Money.parse('100.00', CurrencyCode.of('RON')), rate: ExchangeRate.parse('0.2') },
             date: CalendarDate.of(2026, 8, 4),
             note: 'Cash at the border',

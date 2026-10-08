@@ -74,7 +74,7 @@ async def sharing(group: ExpenseGroup, people: People) -> None:
         print_table(
             PaymentRow,
             [
-                PaymentRow(from_=_first_name(reader, payment.sender), to=_first_name(reader, payment.receiver), amount=payment.amount)
+                PaymentRow(sender=_first_name(reader, payment.sender), receiver=_first_name(reader, payment.receiver), amount=payment.amount)
                 for payment in plan.payments
             ],
             2,

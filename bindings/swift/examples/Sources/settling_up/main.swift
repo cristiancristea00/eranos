@@ -33,12 +33,12 @@ struct BalanceRow: TableRow {
 struct PaymentRow: TableRow {
     static let headers = ["From", "To", "Amount"]
 
-    let from: String
-    let to: String
+    let sender: String
+    let receiver: String
     let amount: Money
 
     var cells: [String] {
-        [from, to, "\(amount)"]
+        [sender, receiver, "\(amount)"]
     }
 }
 
@@ -107,7 +107,7 @@ func printBalances(_ group: ExpenseGroup) throws(EranosError) {
 func printPayments(_ group: ExpenseGroup, _ settlement: SettlementPlan) throws(EranosError) {
     printTable(
         try settlement.payments.map { payment throws(EranosError) in
-            PaymentRow(from: try names(group, [payment.from]), to: try names(group, [payment.to]), amount: payment.amount)
+            PaymentRow(sender: try names(group, [payment.sender]), receiver: try names(group, [payment.receiver]), amount: payment.amount)
         },
         numbersFrom: 2
     )
@@ -250,7 +250,7 @@ func main() throws(EranosError) {
     section("9. Settling up for real")
     let plan = try group.settlement(by: .minimumTransfers)
     for payment in plan.payments {
-        _ = try group.add(Transfer(from: payment.from, to: payment.to, cost: .local(payment.amount), date: try CalendarDate(year: 2026, month: 9, day: 27)))
+        _ = try group.add(Transfer(sender: payment.sender, receiver: payment.receiver, cost: .local(payment.amount), date: try CalendarDate(year: 2026, month: 9, day: 27)))
     }
     print("""
         Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards

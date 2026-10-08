@@ -27,31 +27,31 @@ struct Transfer final {
     /// or at their default. Transfer(MemberId, MemberId, Cost, CalendarDate) generates the identifier instead.
     ///
     /// @param id The identifier, which the app gives: its own, or one TransferId::generate() makes.
-    /// @param from The identifier of the member who paid.
-    /// @param to The identifier of the member who was paid.
+    /// @param sender The identifier of the member who paid.
+    /// @param receiver The identifier of the member who was paid.
     /// @param cost What was paid.
     /// @param date The day it was paid.
-    inline Transfer(TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate const date) noexcept
-        : id(std::move(id)), from(std::move(from)), to(std::move(to)), cost(std::move(cost)), date(date) {}
+    inline Transfer(TransferId id, MemberId sender, MemberId receiver, Cost cost, CalendarDate const date) noexcept
+        : id(std::move(id)), sender(std::move(sender)), receiver(std::move(receiver)), cost(std::move(cost)), date(date) {}
 
     /// The record of its required fields under an identifier generated when it is called, which
     /// Transfer(TransferId, MemberId, MemberId, Cost, CalendarDate) takes instead; the others start absent, empty, or at their default.
     ///
-    /// @param from The identifier of the member who paid.
-    /// @param to The identifier of the member who was paid.
+    /// @param sender The identifier of the member who paid.
+    /// @param receiver The identifier of the member who was paid.
     /// @param cost What was paid.
     /// @param date The day it was paid.
-    inline Transfer(MemberId from, MemberId to, Cost cost, CalendarDate const date) noexcept
-        : Transfer(TransferId::generate(), std::move(from), std::move(to), std::move(cost), date) {}
+    inline Transfer(MemberId sender, MemberId receiver, Cost cost, CalendarDate const date) noexcept
+        : Transfer(TransferId::generate(), std::move(sender), std::move(receiver), std::move(cost), date) {}
 
     /// The identifier, which the app gives: its own, or one TransferId::generate() makes.
     TransferId id;
 
     /// The identifier of the member who paid.
-    MemberId from;
+    MemberId sender;
 
     /// The identifier of the member who was paid.
-    MemberId to;
+    MemberId receiver;
 
     /// What was paid.
     Cost cost;

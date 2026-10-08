@@ -64,7 +64,7 @@ internal fun savingAndLoading(
         )
         val tampered =
             listOf(
-                Tampering(change = "\"format\": 4", text = saved.replaceFirst("\"format\": 3", "\"format\": 4")),
+                Tampering(change = "\"format\": 5", text = saved.replaceFirst("\"format\": 4", "\"format\": 5")),
                 Tampering(change = "a blank group name", text = saved.replaceFirst("\"name\": \"Lisbon and Porto\"", "\"name\": \" \"")),
                 Tampering(change = "Lodging renamed FOOD", text = saved.replaceFirst("\"name\": \"Lodging\"", "\"name\": \"FOOD\"")),
             )
@@ -82,7 +82,7 @@ internal fun savingAndLoading(
         check(group.summaryBlocking() == loaded.summaryBlocking())
         check(
             listOf(
-                ExpenseGroupFailure.UnsupportedFormat(4),
+                ExpenseGroupFailure.UnsupportedFormat(5),
                 ExpenseGroupFailure.EmptyName,
                 ExpenseGroupFailure.DuplicateCategoryName(categories.food),
             ) ==

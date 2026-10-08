@@ -142,11 +142,11 @@ func settlingUp(_ group: ExpenseGroup) throws(EranosError) {
     let plan = try group.settlement(by: .minimumTransfers)
     print("The group follows the minimum plan:")
     printTable(
-        try plan.payments.map { payment throws(EranosError) in PaymentRow(from: try name(group, payment.from), to: try name(group, payment.to), amount: payment.amount) },
+        try plan.payments.map { payment throws(EranosError) in PaymentRow(sender: try name(group, payment.sender), receiver: try name(group, payment.receiver), amount: payment.amount) },
         numbersFrom: 2
     )
     for payment in plan.payments {
-        _ = try group.add(Transfer(from: payment.from, to: payment.to, cost: .local(payment.amount), date: try october(7)))
+        _ = try group.add(Transfer(sender: payment.sender, receiver: payment.receiver, cost: .local(payment.amount), date: try october(7)))
     }
     print("Each payment, once made, is recorded as a transfer, and every balance is settled:")
     try printBalances(group)

@@ -15,9 +15,9 @@ pub struct Transfer {
     /// [`identifier_generate`](crate::identifier_generate) returns.
     pub id: String,
     /// The member who paid, as their identifier.
-    pub from: String,
+    pub sender: String,
     /// The member who was paid, as their identifier.
-    pub to: String,
+    pub receiver: String,
     /// What was paid.
     pub cost: Cost,
     /// The day it was paid.
@@ -33,8 +33,8 @@ impl Transfer {
     pub(crate) fn from_library(transfer: &library::Transfer) -> Self {
         Self {
             id: transfer.id().to_string(),
-            from: transfer.from().to_string(),
-            to: transfer.to().to_string(),
+            sender: transfer.sender().to_string(),
+            receiver: transfer.receiver().to_string(),
             cost: Cost::from_cost(transfer.cost()),
             date: CalendarDate::from_library(transfer.date()),
             time: transfer.time().map(TimeOfDay::from_library),
@@ -53,8 +53,8 @@ impl Transfer {
     pub(crate) fn to_new(&self) -> Result<library::Transfer, EranosError> {
         let builder = library::Transfer::builder_with_id(
             identifier(&self.id)?,
-            identifier(&self.from)?,
-            identifier(&self.to)?,
+            identifier(&self.sender)?,
+            identifier(&self.receiver)?,
             self.cost.to_library()?,
             self.date.to_library()?,
         );
@@ -74,8 +74,8 @@ impl Transfer {
     ) -> Result<library::Transfer, EranosError> {
         let builder = existing
             .to_builder()
-            .from(identifier(&self.from)?)
-            .to(identifier(&self.to)?)
+            .sender(identifier(&self.sender)?)
+            .receiver(identifier(&self.receiver)?)
             .cost(self.cost.to_library()?)
             .date(self.date.to_library()?);
         Ok(self.with_optional_fields(builder)?.build()?)

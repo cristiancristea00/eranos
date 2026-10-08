@@ -65,8 +65,10 @@ final class Sharing {
             for (Payment payment : plan.payments()) {
                 rows.add(
                         new PaymentRow(
-                                reader.member(payment.from()).map(Member::firstName).orElse("?"),
-                                reader.member(payment.to()).map(Member::firstName).orElse("?"),
+                                reader.member(payment.sender()).map(Member::firstName).orElse("?"),
+                                reader.member(payment.receiver())
+                                        .map(Member::firstName)
+                                        .orElse("?"),
                                 payment.amount()));
             }
         }
@@ -99,7 +101,7 @@ final class Sharing {
 
         check(4 == plan.payments().size());
         for (Payment payment : plan.payments()) {
-            check(people.bob().equals(payment.to()) && ron("15.00").equals(payment.amount()));
+            check(people.bob().equals(payment.receiver()) && ron("15.00").equals(payment.amount()));
         }
         check(change.isCancelled());
         check(before.equals(after));

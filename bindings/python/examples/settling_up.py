@@ -83,10 +83,10 @@ class PaymentRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('From', 'To', 'Amount')
 
-    from_: str
+    sender: str
     """Who pays."""
 
-    to: str
+    receiver: str
     """Who is paid."""
 
     amount: Money
@@ -94,7 +94,7 @@ class PaymentRow(Row):
 
     @override
     def cells(self) -> tuple[str, ...]:
-        return self.from_, self.to, str(self.amount)
+        return self.sender, self.receiver, str(self.amount)
 
 
 @final
@@ -218,7 +218,7 @@ def print_payments(group: ExpenseGroup, settlement: SettlementPlan) -> None:
     print_table(
         PaymentRow,
         [
-            PaymentRow(from_=names(group, (payment.sender,)), to=names(group, (payment.receiver,)), amount=payment.amount)
+            PaymentRow(sender=names(group, (payment.sender,)), receiver=names(group, (payment.receiver,)), amount=payment.amount)
             for payment in settlement.payments
         ],
         2,

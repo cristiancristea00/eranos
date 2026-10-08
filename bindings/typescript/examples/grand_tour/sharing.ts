@@ -33,8 +33,8 @@ export async function sharing(group: ExpenseGroup, people: People): Promise<void
         printTable(
             paymentColumns,
             plan.payments.map((payment) => ({
-                from: reader.member(payment.from)?.firstName ?? '?',
-                to: reader.member(payment.to)?.firstName ?? '?',
+                sender: reader.member(payment.sender)?.firstName ?? '?',
+                receiver: reader.member(payment.receiver)?.firstName ?? '?',
                 amount: payment.amount,
             })),
             2,
@@ -67,7 +67,7 @@ export async function sharing(group: ExpenseGroup, people: People): Promise<void
 
     assert.equal(plan.payments.length, 4);
     for (const payment of plan.payments) {
-        assert.ok(people.bob === payment.to && ron('15.00').equals(payment.amount));
+        assert.ok(people.bob === payment.receiver && ron('15.00').equals(payment.amount));
     }
     assert.ok(cancelled);
     assert.deepEqual(after, before);

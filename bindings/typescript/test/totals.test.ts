@@ -40,7 +40,9 @@ void describe('the summary, the balances, the shares of an expense, and the sett
         assert.equal(formatBalance({ kind: 'settled' }), 'settled');
         assert.equal(formatBalance({ kind: 'getsBack', amount: flat.euros(1_200n) }), 'gets back 12.00 EUR');
         const group = flat.group;
-        group.addTransferSync(createTransfer({ from: flat.bob, to: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day }));
+        group.addTransferSync(
+            createTransfer({ sender: flat.bob, receiver: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day }),
+        );
         assert.deepEqual(
             group.summarySync().members.map((member) => formatBalance(member.balance)),
             ['settled', 'settled'],
@@ -62,7 +64,7 @@ void describe('the summary, the balances, the shares of an expense, and the sett
             const settlement = flat.group.settlementSync(strategy);
             // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
             assert.equal(settlement.strategy, SettlementStrategy.ADAPTIVE === strategy ? SettlementStrategy.MINIMUM_TRANSFERS : strategy);
-            assert.deepEqual(settlement.payments, [{ from: flat.bob, to: flat.ana, amount: flat.euros(500n) }]);
+            assert.deepEqual(settlement.payments, [{ sender: flat.bob, receiver: flat.ana, amount: flat.euros(500n) }]);
         }
     });
 

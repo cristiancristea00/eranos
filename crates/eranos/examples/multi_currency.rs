@@ -84,8 +84,8 @@ fn print_entries(group: &ExpenseGroup) {
             .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
     });
     let transfers = group.transfers().map(|transfer| EntryRow {
-        name: format!("Transfer to {}", name(group, transfer.to())),
-        payer: name(group, transfer.from()),
+        name: format!("Transfer to {}", name(group, transfer.receiver())),
+        payer: name(group, transfer.sender()),
         original: transfer.amount(),
         rate: transfer.exchange_rate(),
         converted: group

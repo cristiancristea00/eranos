@@ -185,7 +185,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(group.removeExpenseSync(lunch).name, 'Brunch');
 
         const cash = group.addTransferSync(
-            createTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day }),
+            createTransfer({ sender: flat.ana, receiver: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day }),
         );
         const storedCash = group.transferSync(cash);
         assert.ok(undefined !== storedCash);
@@ -237,14 +237,14 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal((await group.removeExpense(lunch)).name, 'Brunch');
 
         const cash = await group.addTransfer(
-            createTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day }),
+            createTransfer({ sender: flat.ana, receiver: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day }),
         );
         assert.equal(
             (
                 await group.replaceTransfer({
                     id: cash,
-                    from: flat.ana,
-                    to: flat.bob,
+                    sender: flat.ana,
+                    receiver: flat.bob,
                     cost: { kind: 'local', amount: flat.euros(100n) },
                     date: flat.day,
                     note: 'Cash',

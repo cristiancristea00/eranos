@@ -97,8 +97,8 @@ void printEntries(ExpenseGroup const &group) noexcept {
     for (auto const &transfer : group.transfers()) {
         auto const converted = must(group.transferAmount(transfer.id));
         rows.push_back({
-            .name = std::format("Transfer to {}", firstName(group, transfer.to)),
-            .payer = firstName(group, transfer.from),
+            .name = std::format("Transfer to {}", firstName(group, transfer.receiver)),
+            .payer = firstName(group, transfer.sender),
             .original = amountOf(transfer.cost).toString(),
             .rate = rateOf(transfer.cost).toString(),
             .converted = converted.has_value() ? converted->toString() : zero.toString(),

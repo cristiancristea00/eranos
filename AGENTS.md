@@ -336,7 +336,7 @@ test in `crates/xtask` checks every root.
   currency. Otherwise the required fields come in the order a sentence
   describing the value names them: what it is, how much, who, how, and
   when (`Expense::builder(name, cost, payer, split, date)`,
-  `Transfer::builder(from, to, cost, date)`). A concept takes the same
+  `Transfer::builder(sender, receiver, cost, date)`). A concept takes the same
   place in every type that holds it, and a derived field, such as an
   expense's total, comes directly after the field it is derived from. The
   optional fields follow the required ones, in the same order among

@@ -66,8 +66,8 @@ fn shared(amount: &str, payer: MemberId, participants: &[MemberId]) -> Expense {
     .unwrap()
 }
 
-fn transfer(from: MemberId, to: MemberId, amount: &str) -> Transfer {
-    Transfer::builder(from, to, eur(amount), day())
+fn transfer(sender: MemberId, receiver: MemberId, amount: &str) -> Transfer {
+    Transfer::builder(sender, receiver, eur(amount), day())
         .build()
         .unwrap()
 }
@@ -788,14 +788,14 @@ fn transfers_move_balances_exactly() {
         eranos_ledger::Balance::Settled
     );
     assert_eq!(group.transfer_amount(repayment), Some(eur("10.00")));
-    assert_eq!(group.transfer(repayment).map(Transfer::from), Some(bob));
+    assert_eq!(group.transfer(repayment).map(Transfer::sender), Some(bob));
 
     // A cash repayment in another currency converts with its rate.
     let lei = Money::parse("50.00", CurrencyCode::RON).unwrap();
     let cash = edited_transfer(&group, repayment, |builder| {
         builder
             .cost(lei.at(ExchangeRate::parse("0.2").unwrap()))
-            .from(carol)
+            .sender(carol)
     });
     let previous = group.replace_transfer(cash).unwrap();
     assert_eq!(previous.amount(), eur("10.00"));
@@ -877,7 +877,7 @@ fn settlements_are_cached_until_a_balance_changes() {
     );
     for strategy in SettlementStrategy::all() {
         assert_eq!(
-            group.settlement(strategy).unwrap().payments()[0].from(),
+            group.settlement(strategy).unwrap().payments()[0].sender(),
             carol
         );
     }
@@ -1229,8 +1229,10 @@ fn paid_for(amount: Money, payer: MemberId, participant: MemberId) -> Expense {
         .unwrap()
 }
 
-fn sent(from: MemberId, to: MemberId, amount: Money) -> Transfer {
-    Transfer::builder(from, to, amount, day()).build().unwrap()
+fn sent(sender: MemberId, receiver: MemberId, amount: Money) -> Transfer {
+    Transfer::builder(sender, receiver, amount, day())
+        .build()
+        .unwrap()
 }
 
 /// `HUGE` in lei: out of range once converted at two euros per leu.
@@ -1427,7 +1429,9 @@ fn a_transfer_out_of_range_is_refused() {
 
     let repayment = group.add_transfer(sent(bob, ana, cents(EXTRA))).unwrap();
     // The other way round, Ana would be owed 1e19.
-    let reversed = edited_transfer(&group, repayment, |builder| builder.from(ana).to(bob));
+    let reversed = edited_transfer(&group, repayment, |builder| {
+        builder.sender(ana).receiver(bob)
+    });
     assert_unchanged(&mut group, &ExpenseGroupError::Overflow, |group| {
         group.replace_transfer(reversed)
     });
@@ -1436,7 +1440,7 @@ fn a_transfer_out_of_range_is_refused() {
         group.replace_transfer(converted)
     });
     let stranger = MemberId::new("stranger").unwrap();
-    let from_a_stranger = edited_transfer(&group, repayment, |builder| builder.from(stranger));
+    let from_a_stranger = edited_transfer(&group, repayment, |builder| builder.sender(stranger));
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::UnknownMember(stranger),
@@ -1486,8 +1490,8 @@ enum Operation {
     },
     AddTransfer {
         id: Option<usize>,
-        from: usize,
-        to: usize,
+        sender: usize,
+        receiver: usize,
         amount: i64,
     },
     RemoveTransfer {
@@ -1507,7 +1511,7 @@ fn operation() -> impl Strategy<Value = Operation> {
         2 => (0_usize..8, 1_i64..100_000, 0_usize..5)
             .prop_map(|(position, amount, payer)| Operation::ReplaceExpense { position, amount, payer }),
         1 => (0_usize..8).prop_map(|position| Operation::RemoveExpense { position }),
-        2 => (proptest::option::of(0..GIVEN.len()), 0_usize..5, 0_usize..5, 1_i64..50_000).prop_map(|(id, from, to, amount)| Operation::AddTransfer { id, from, to, amount }),
+        2 => (proptest::option::of(0..GIVEN.len()), 0_usize..5, 0_usize..5, 1_i64..50_000).prop_map(|(id, sender, receiver, amount)| Operation::AddTransfer { id, sender, receiver, amount }),
         1 => (0_usize..8).prop_map(|position| Operation::RemoveTransfer { position }),
         1 => (0_usize..5).prop_map(|member| Operation::Archive { member }),
         1 => (0_usize..5).prop_map(|member| Operation::Unarchive { member }),
@@ -1592,17 +1596,21 @@ fn apply(
         }
         Operation::AddTransfer {
             id,
-            from,
-            to,
+            sender,
+            receiver,
             amount,
         } => {
             let id = id.map_or_else(TransferId::generate, |index| {
                 TransferId::new(GIVEN[index]).unwrap()
             });
-            let Ok(transfer) =
-                Transfer::builder_with_id(id, members[from], members[to], money(amount), day())
-                    .build()
-            else {
+            let Ok(transfer) = Transfer::builder_with_id(
+                id,
+                members[sender],
+                members[receiver],
+                money(amount),
+                day(),
+            )
+            .build() else {
                 return false;
             };
             group.add_transfer(transfer).is_ok()

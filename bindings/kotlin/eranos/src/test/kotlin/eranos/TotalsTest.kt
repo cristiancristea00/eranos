@@ -90,8 +90,8 @@ class TotalsTest {
             assertEquals(if (SettlementStrategy.ADAPTIVE == strategy) SettlementStrategy.MINIMUM_TRANSFERS else strategy, settlement.strategy)
             assertEquals(strategy, strategy.generated.converted())
             val (payment) = settlement.payments
-            assertEquals(flat.bob, payment.from)
-            assertEquals(flat.ana, payment.to)
+            assertEquals(flat.bob, payment.sender)
+            assertEquals(flat.ana, payment.receiver)
             assertEquals(flat.euros(500), payment.amount)
             assertValue(settlement, flat.group.settlementBlocking(strategy), SettlementPlan(emptyList(), settlement.strategy))
             assertValue(payment, Payment(flat.bob, flat.ana, flat.euros(500)), Payment(flat.ana, flat.bob, flat.euros(500)))

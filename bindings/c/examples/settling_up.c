@@ -71,9 +71,9 @@ static void addBalanceRow(Table *const table, BalanceRow const *const row) {
 /// A row of the table of payments: who pays whom, and how much.
 typedef struct PaymentRow {
     /// Who pays.
-    Line from;
+    Line sender;
     /// Who is paid.
-    Line to;
+    Line receiver;
     /// How much is paid.
     Line amount;
 } PaymentRow;
@@ -84,7 +84,9 @@ typedef struct PaymentRow {
 }
 
 /// Adds @p row to @p table, a table of payments, its cells in the order of the table's headers.
-static void addPaymentRow(Table *const table, PaymentRow const *const row) { tableAdd(table, (Line const[]){row->from, row->to, row->amount}); }
+static void addPaymentRow(Table *const table, PaymentRow const *const row) {
+    tableAdd(table, (Line const[]){row->sender, row->receiver, row->amount});
+}
 
 /// A row of the table of strategies: what a strategy guarantees, what it costs, and how many payments it plans here.
 typedef struct StrategyRow {
@@ -113,9 +115,9 @@ typedef struct Payment {
     /// How much is paid, in minor units of the group's currency.
     int64_t amount;
     /// Who pays.
-    Id from;
+    Id sender;
     /// Who is paid.
-    Id to;
+    Id receiver;
 } Payment;
 
 /// The name of @p strategy as the apps show it.
@@ -197,21 +199,21 @@ static void printBalances(EranosExpenseGroup const *const group) {
 /// Prints @p payments: who pays whom, and how much.
 static void printPayments(EranosExpenseGroup const *const group, EranosPaymentList const *const payments) {
     Table *const table = paymentTable(2);
-    EranosText *const from = eranosTextCreate();
-    EranosText *const to = eranosTextCreate();
+    EranosText *const sender = eranosTextCreate();
+    EranosText *const receiver = eranosTextCreate();
     for (size_t index = 0; eranosPaymentListLength(payments) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(payments, index);
-        eranosPaymentFrom(payment, from);
-        eranosPaymentTo(payment, to);
+        eranosPaymentSender(payment, sender);
+        eranosPaymentReceiver(payment, receiver);
         addPaymentRow(table, &(PaymentRow){
-                                 .from = firstName(group, eranosTextData(from)),
-                                 .to = firstName(group, eranosTextData(to)),
+                                 .sender = firstName(group, eranosTextData(sender)),
+                                 .receiver = firstName(group, eranosTextData(receiver)),
                                  .amount = moneyLine(eranosPaymentAmount(payment)),
                              });
         eranosPaymentDestroy(payment);
     }
-    eranosTextDestroy(to);
-    eranosTextDestroy(from);
+    eranosTextDestroy(receiver);
+    eranosTextDestroy(sender);
     tablePrint(table);
 }
 
@@ -233,12 +235,12 @@ static void printPayments(EranosExpenseGroup const *const group, EranosPaymentLi
 /// The values of @p payment; destroys @p payment.
 [[nodiscard]] static Payment paymentOf(EranosPayment *const payment) {
     EranosText *const text = eranosTextCreate();
-    eranosPaymentFrom(payment, text);
-    Id const from = idOf(text);
-    eranosPaymentTo(payment, text);
-    Id const to = idOf(text);
+    eranosPaymentSender(payment, text);
+    Id const sender = idOf(text);
+    eranosPaymentReceiver(payment, text);
+    Id const receiver = idOf(text);
     EranosMoney *const amount = eranosPaymentAmount(payment);
-    Payment const values = {.amount = eranosMoneyMinorUnits(amount), .from = from, .to = to};
+    Payment const values = {.amount = eranosMoneyMinorUnits(amount), .sender = sender, .receiver = receiver};
     eranosMoneyDestroy(amount);
     eranosTextDestroy(text);
     eranosPaymentDestroy(payment);
@@ -251,8 +253,8 @@ static void printPayments(EranosExpenseGroup const *const group, EranosPaymentLi
     for (size_t index = 0; same && eranosPaymentListLength(left) > index; ++index) {
         Payment const leftPayment = paymentOf(eranosPaymentListGet(left, index));
         Payment const rightPayment = paymentOf(eranosPaymentListGet(right, index));
-        same = leftPayment.amount == rightPayment.amount && 0 == strcmp(leftPayment.from.text, rightPayment.from.text) &&
-               0 == strcmp(leftPayment.to.text, rightPayment.to.text);
+        same = leftPayment.amount == rightPayment.amount && 0 == strcmp(leftPayment.sender.text, rightPayment.sender.text) &&
+               0 == strcmp(leftPayment.receiver.text, rightPayment.receiver.text);
     }
     return same;
 }
@@ -405,11 +407,11 @@ static void settle(EranosExpenseGroup *const group) {
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosPaymentListLength(plan) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(plan, index);
-        eranosPaymentFrom(payment, text);
-        Id const from = idOf(text);
-        eranosPaymentTo(payment, text);
-        Id const to = idOf(text);
-        (void)addTransfer(group, transferOf(from, to, localCost(eranosPaymentAmount(payment)), DATE));
+        eranosPaymentSender(payment, text);
+        Id const sender = idOf(text);
+        eranosPaymentReceiver(payment, text);
+        Id const receiver = idOf(text);
+        (void)addTransfer(group, transferOf(sender, receiver, localCost(eranosPaymentAmount(payment)), DATE));
         eranosPaymentDestroy(payment);
     }
     eranosTextDestroy(text);

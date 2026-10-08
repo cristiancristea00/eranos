@@ -52,12 +52,12 @@ private data class BalanceRow(
 }
 
 private data class PaymentRow(
-    val from: String,
-    val to: String,
+    val sender: String,
+    val receiver: String,
     val amount: Money,
 ) : Row {
     override val cells: List<String>
-        get() = listOf(from, to, "$amount")
+        get() = listOf(sender, receiver, "$amount")
 
     companion object {
         val HEADERS = listOf("From", "To", "Amount")
@@ -134,7 +134,7 @@ private fun printPayments(
     printTable(
         PaymentRow.HEADERS,
         settlement.payments.map { payment ->
-            PaymentRow(from = names(group, listOf(payment.from)), to = names(group, listOf(payment.to)), amount = payment.amount)
+            PaymentRow(sender = names(group, listOf(payment.sender)), receiver = names(group, listOf(payment.receiver)), amount = payment.amount)
         },
         numbersFrom = 2,
     )
@@ -304,7 +304,9 @@ fun main() {
         section("9. Settling up for real")
         val plan = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
         for (payment in plan.payments) {
-            group.addBlocking(Transfer(payment.from, payment.to, Cost.Local(payment.amount), CalendarDate.of(year = 2026, month = 9, day = 27)))
+            group.addBlocking(
+                Transfer(payment.sender, payment.receiver, Cost.Local(payment.amount), CalendarDate.of(year = 2026, month = 9, day = 27)),
+            )
         }
         println(
             """

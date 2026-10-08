@@ -624,7 +624,7 @@ never the derived totals:
 
 ```text
 {
-  "format": 3,
+  "format": 4,
   "id": "…",
   "name": "Lisbon",
   "currency": "EUR",
@@ -638,7 +638,7 @@ never the derived totals:
                   "split": {"whole": {"percentages": [["…", 5000], …]}},
                   "date": "2026-09-23",
                   "tip": {"value": {"percentage": 1000}, "distribution": "proportional"}}],
-  "transfers":  [{"id": "…", "from": "…", "to": "…", "amount": …, "date": "…"}]
+  "transfers":  [{"id": "…", "sender": "…", "receiver": "…", "amount": …, "date": "…"}]
 }
 ```
 
@@ -677,10 +677,13 @@ never the derived totals:
   starts it again ([§ 12](#12-async-and-concurrency)).
 - `format` is checked: a newer one is refused rather than read with fields
   silently dropped (`ExpenseGroupError::UnsupportedFormat`), and so is an
-  older one. Format 3 writes an identifier as any text of up to 64 bytes,
-  which a reader of format 2, whose identifiers were UUIDs, would refuse;
-  0.7.0 reads format 3 only. New optional fields get `#[serde(default)]`,
-  so files of the same format written by older releases keep loading.
+  older one, and the reader stops at the `format` key of a file this
+  version cannot read, wherever the key stands, so a newer file reports
+  its format whatever its shape. Format 4 names a transfer's members
+  `sender` and `receiver`, which a reader of format 3, whose keys were
+  `from` and `to`, would miss; 0.8.0 reads format 4 only. New optional
+  fields get `#[serde(default)]`, so files of the same format written by
+  older releases keep loading.
 - The saved form is JSON. Identifiers serialise as text in every serde
   format, where the 16 bytes of a UUID were written in binary ones, so data
   a binary format wrote before format 3 does not read back.

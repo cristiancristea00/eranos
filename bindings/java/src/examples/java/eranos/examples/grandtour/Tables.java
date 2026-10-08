@@ -201,12 +201,12 @@ final class Tables {
     }
 
     /** A payment of a plan, a row of the payments' table. */
-    record PaymentRow(String from, String to, Money amount) implements Row {
+    record PaymentRow(String sender, String receiver, Money amount) implements Row {
         static final List<String> HEADERS = List.of("From", "To", "Amount");
 
         @Override
         public List<String> cells() {
-            return List.of(from, to, amount.toString());
+            return List.of(sender, receiver, amount.toString());
         }
     }
 
@@ -313,8 +313,8 @@ final class Tables {
                 Optional<Money> amount = group.transferAmount(transfer.id());
                 rows.add(
                         new EntryRow(
-                                "Transfer to " + name(group, transfer.to()),
-                                name(group, transfer.from()),
+                                "Transfer to " + name(group, transfer.receiver()),
+                                name(group, transfer.sender()),
                                 transfer.cost().amount(),
                                 rate(transfer.cost()),
                                 amount.orElse(zero)));

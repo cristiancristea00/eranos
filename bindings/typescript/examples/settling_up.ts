@@ -53,14 +53,14 @@ const balanceColumns: Columns<BalanceRow> = [
 
 /** A payment of a plan, as the table of payments prints it. */
 interface PaymentRow {
-    readonly from: string;
-    readonly to: string;
+    readonly sender: string;
+    readonly receiver: string;
     readonly amount: Money;
 }
 
 const paymentColumns: Columns<PaymentRow> = [
-    { header: 'From', text: (row) => row.from },
-    { header: 'To', text: (row) => row.to },
+    { header: 'From', text: (row) => row.sender },
+    { header: 'To', text: (row) => row.receiver },
     { header: 'Amount', text: (row) => row.amount.toString() },
 ];
 
@@ -129,7 +129,11 @@ function printBalances(group: ExpenseGroup): void {
 function printPayments(group: ExpenseGroup, settlement: SettlementPlan): void {
     printTable(
         paymentColumns,
-        settlement.payments.map((payment) => ({ from: names(group, [payment.from]), to: names(group, [payment.to]), amount: payment.amount })),
+        settlement.payments.map((payment) => ({
+            sender: names(group, [payment.sender]),
+            receiver: names(group, [payment.receiver]),
+            amount: payment.amount,
+        })),
         2,
     );
 }
@@ -284,8 +288,8 @@ const plan = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 for (const payment of plan.payments) {
     group.addTransferSync(
         createTransfer({
-            from: payment.from,
-            to: payment.to,
+            sender: payment.sender,
+            receiver: payment.receiver,
             cost: { kind: 'local', amount: payment.amount },
             date: CalendarDate.of(2026, 9, 27),
         }),

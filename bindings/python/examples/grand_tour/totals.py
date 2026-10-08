@@ -334,7 +334,7 @@ def settling_up(group: ExpenseGroup) -> None:
     print_lines('The group follows the minimum plan:')
     print_table(
         PaymentRow,
-        [PaymentRow(from_=name(group, payment.sender), to=name(group, payment.receiver), amount=payment.amount) for payment in plan.payments],
+        [PaymentRow(sender=name(group, payment.sender), receiver=name(group, payment.receiver), amount=payment.amount) for payment in plan.payments],
         2,
     )
     for payment in plan.payments:

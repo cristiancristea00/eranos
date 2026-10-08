@@ -3,8 +3,8 @@ internal import EranosGenerated
 /// Money one member paid another, such as a repayment.
 ///
 /// A transfer has an identifier from the moment it is made: the app's own, which
-/// ``init(id:from:to:cost:date:time:note:)`` takes, or one that
-/// ``init(from:to:cost:date:time:note:)`` generates.
+/// ``init(id:sender:receiver:cost:date:time:note:)`` takes, or one that
+/// ``init(sender:receiver:cost:date:time:note:)`` generates.
 public struct Transfer: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a transfer.
@@ -14,10 +14,10 @@ public struct Transfer: Hashable, Sendable {
     public var id: ID
 
     /// The member who paid.
-    public var from: Member.ID
+    public var sender: Member.ID
 
     /// The member who was paid.
-    public var to: Member.ID
+    public var receiver: Member.ID
 
     /// What was paid.
     public var cost: Cost
@@ -34,8 +34,8 @@ public struct Transfer: Hashable, Sendable {
     var generated: EranosGenerated.Transfer {
         .init(
             id: id.rawValue,
-            from: from.rawValue,
-            to: to.rawValue,
+            sender: sender.rawValue,
+            receiver: receiver.rawValue,
             cost: cost.generated,
             date: date.generated,
             time: time?.generated,
@@ -44,20 +44,20 @@ public struct Transfer: Hashable, Sendable {
     }
 
     /// A transfer from one member to another, of `cost` on `date`, under `id`, which the app gives:
-    /// its own, or one ``Identifier/generate()`` makes; ``init(from:to:cost:date:time:note:)``
-    /// generates it.
+    /// its own, or one ``Identifier/generate()`` makes;
+    /// ``init(sender:receiver:cost:date:time:note:)`` generates it.
     public init(
         id: ID,
-        from: Member.ID,
-        to: Member.ID,
+        sender: Member.ID,
+        receiver: Member.ID,
         cost: Cost,
         date: CalendarDate,
         time: TimeOfDay? = nil,
         note: String? = nil
     ) {
         self.id = id
-        self.from = from
-        self.to = to
+        self.sender = sender
+        self.receiver = receiver
         self.cost = cost
         self.date = date
         self.time = time
@@ -66,23 +66,23 @@ public struct Transfer: Hashable, Sendable {
 
     /// A transfer from one member to another, of `cost` on `date`, under an identifier
     /// ``Identifier/generate()`` makes when this is called;
-    /// ``init(id:from:to:cost:date:time:note:)`` takes the app's own.
+    /// ``init(id:sender:receiver:cost:date:time:note:)`` takes the app's own.
     public init(
-        from: Member.ID,
-        to: Member.ID,
+        sender: Member.ID,
+        receiver: Member.ID,
         cost: Cost,
         date: CalendarDate,
         time: TimeOfDay? = nil,
         note: String? = nil
     ) {
-        self.init(id: .generate(), from: from, to: to, cost: cost, date: date, time: time, note: note)
+        self.init(id: .generate(), sender: sender, receiver: receiver, cost: cost, date: date, time: time, note: note)
     }
 
     init(_ transfer: EranosGenerated.Transfer) {
         self.init(
             id: ID(rawValue: transfer.id),
-            from: Member.ID(rawValue: transfer.from),
-            to: Member.ID(rawValue: transfer.to),
+            sender: Member.ID(rawValue: transfer.sender),
+            receiver: Member.ID(rawValue: transfer.receiver),
             cost: Cost(transfer.cost),
             date: CalendarDate(transfer.date),
             time: transfer.time.map(TimeOfDay.init),

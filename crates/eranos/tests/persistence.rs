@@ -165,7 +165,7 @@ fn a_group_round_trips_through_json() {
 fn the_json_shape_is_pinned() {
     let Trip { group, ana, carol } = trip();
     let value = json_of(&group);
-    assert_eq!(value["format"], json!(3));
+    assert_eq!(value["format"], json!(4));
     assert_eq!(value["id"], json!(group.id().to_string()));
     assert_eq!(value["name"], json!("Lisbon"));
     assert_eq!(value["currency"], json!("EUR"));
@@ -174,7 +174,7 @@ fn the_json_shape_is_pinned() {
     // and what it holds; every entry starts with its own identifier.
     let text = serde_json::to_string(&group).unwrap();
     let start = format!(
-        r#"{{"format":3,"id":"{}","name":"Lisbon","currency":"EUR","description":"Autumn trip","language":"pt-PT","members":[{{"id":"#,
+        r#"{{"format":4,"id":"{}","name":"Lisbon","currency":"EUR","description":"Autumn trip","language":"pt-PT","members":[{{"id":"#,
         group.id()
     );
     assert!(text.starts_with(&start), "{text}");
@@ -347,14 +347,14 @@ fn a_tampered_file_is_refused() {
     // A newer format is refused instead of read with fields dropped, and an
     // older one because no earlier shape is read.
     let newer = tamper(&|value| {
-        value["format"] = json!(4);
+        value["format"] = json!(5);
     });
-    assert!(newer.contains("unsupported group format 4"), "{newer}");
+    assert!(newer.contains("unsupported group format 5"), "{newer}");
     let older = tamper(&|value| {
         value["format"] = json!(2);
     });
     assert!(
-        older.contains("unsupported group format 2: this version reads format 3"),
+        older.contains("unsupported group format 2: this version reads format 4"),
         "{older}"
     );
 }
@@ -388,7 +388,7 @@ fn an_inconsistent_file_is_refused() {
     assert!(homonyms.contains("already has this name"), "{homonyms}");
     // A transfer from someone who is not a member.
     let stranger = "stranger";
-    let unknown_sender = tamper(&|value| value["transfers"][0]["from"] = json!(stranger));
+    let unknown_sender = tamper(&|value| value["transfers"][0]["sender"] = json!(stranger));
     assert!(
         unknown_sender.contains("unknown member"),
         "{unknown_sender}"
@@ -432,12 +432,59 @@ fn a_saved_group_names_why_the_group_refuses_it() {
     assert_eq!(load(&|_| ()), Ok(json_of(&group)));
     // A newer format and an older one, each named in the error.
     assert_eq!(
-        load(&|value| value["format"] = json!(4)),
-        Err(ExpenseGroupError::UnsupportedFormat { format: 4 })
+        load(&|value| value["format"] = json!(5)),
+        Err(ExpenseGroupError::UnsupportedFormat { format: 5 })
     );
     assert_eq!(
         load(&|value| value["format"] = json!(2)),
         Err(ExpenseGroupError::UnsupportedFormat { format: 2 })
+    );
+    // A newer file of a shape this version does not know still names its
+    // format: the reader stops at the key, wherever it stands, and reads
+    // nothing else.
+    let unknown_shape = serde_json::from_value::<SavedExpenseGroup>(json!({
+        "entries": {"shape": "of a later release"},
+        "format": 5,
+        "members": "none of this is read",
+    }))
+    .unwrap()
+    .into_expense_group();
+    assert_eq!(
+        unknown_shape.map(|loaded| json_of(&loaded)),
+        Err(ExpenseGroupError::UnsupportedFormat { format: 5 })
+    );
+    // A key this version does not know is skipped, so a file of this format
+    // written by a later release loads.
+    assert_eq!(
+        load(&|value| value["future"] = json!({"any": "shape"})),
+        Ok(json_of(&group))
+    );
+    // A key the file repeats, or a key it lacks, is a damaged file.
+    let read = |text: &str| {
+        serde_json::from_str::<SavedExpenseGroup>(text)
+            .map(|_| ())
+            .unwrap_err()
+            .to_string()
+    };
+    let text = serde_json::to_string(&group).unwrap();
+    let repeated = read(&text.replacen(r#""format":4,"#, r#""format":4,"format":4,"#, 1));
+    assert!(repeated.contains("duplicate field `format`"), "{repeated}");
+    let without_format = read(&text.replacen(r#""format":4,"#, "", 1));
+    assert!(
+        without_format.contains("missing field `format`"),
+        "{without_format}"
+    );
+    let without_id = read(&text.replacen(&format!(r#""id":"{}","#, group.id()), "", 1));
+    assert!(without_id.contains("missing field `id`"), "{without_id}");
+    let without_name = read(&text.replacen(r#""name":"Lisbon","#, "", 1));
+    assert!(
+        without_name.contains("missing field `name`"),
+        "{without_name}"
+    );
+    let without_currency = read(&text.replacen(r#""currency":"EUR","#, "", 1));
+    assert!(
+        without_currency.contains("missing field `currency`"),
+        "{without_currency}"
     );
     // A blank group name, and two members with one ID.
     assert_eq!(

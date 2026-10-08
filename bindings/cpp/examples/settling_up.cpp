@@ -80,16 +80,16 @@ struct PaymentRow final {
     static inline constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
     /// Who pays.
-    std::string from;
+    std::string sender;
     /// Who is paid.
-    std::string to;
+    std::string receiver;
     /// How much is paid.
     std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {from, to, amount}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {sender, receiver, amount}; }
 };
 
 /// A row of the table of strategies: what a strategy guarantees, what it costs, and how many payments it plans here.
@@ -156,7 +156,8 @@ void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) 
     std::vector<PaymentRow> rows;
     rows.reserve(settlement.payments.size());
     for (auto const &payment : settlement.payments) {
-        rows.push_back({.from = firstName(group, payment.from), .to = firstName(group, payment.to), .amount = payment.amount.toString()});
+        rows.push_back(
+            {.sender = firstName(group, payment.sender), .receiver = firstName(group, payment.receiver), .amount = payment.amount.toString()});
     }
     printTable(rows, 2);
 }
@@ -312,7 +313,7 @@ void run() noexcept {
     section("9. Settling up for real");
     for (auto const &payment : must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS)).payments) {
         static_cast<void>(
-            must(group.addTransfer(Transfer(payment.from, payment.to, LocalCost{payment.amount}, must(CalendarDate::of(2026, 9, 27))))));
+            must(group.addTransfer(Transfer(payment.sender, payment.receiver, LocalCost{payment.amount}, must(CalendarDate::of(2026, 9, 27))))));
     }
     printLine("Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n"
               "every balance is zero and a new settlement has nothing left to pay:");

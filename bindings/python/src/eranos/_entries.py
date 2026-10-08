@@ -979,8 +979,8 @@ def generated_transfer(transfer: Transfer) -> generated.Transfer:
     """
     return generated.Transfer(
         id=transfer.id,
-        _from=transfer.sender,
-        to=transfer.receiver,
+        sender=transfer.sender,
+        receiver=transfer.receiver,
         cost=generated_cost(transfer.cost),
         date=generated_date(transfer.date),
         time=None if transfer.time is None else generated_time(transfer.time),
@@ -1001,9 +1001,8 @@ def transfer_of(value: generated.Transfer) -> Transfer:
     """
     return Transfer(
         id=TransferId(value.id),
-        # The generator names the field after the keyword it would otherwise be.
-        sender=MemberId(value._from),  # ruff: ignore[private-member-access]
-        receiver=MemberId(value.to),
+        sender=MemberId(value.sender),
+        receiver=MemberId(value.receiver),
         cost=cost_of(value.cost),
         date=date_of(value.date),
         time=None if value.time is None else time_of(value.time),

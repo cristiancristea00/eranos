@@ -14,8 +14,8 @@ import java.util.Optional;
  */
 public final class Transfer {
     private final TransferId id;
-    private final MemberId from;
-    private final MemberId to;
+    private final MemberId sender;
+    private final MemberId receiver;
     private final Cost cost;
     private final CalendarDate date;
     private final TimeOfDay time;
@@ -23,8 +23,8 @@ public final class Transfer {
 
     private Transfer(Builder builder) {
         id = builder.id;
-        from = builder.from;
-        to = builder.to;
+        sender = builder.sender;
+        receiver = builder.receiver;
         cost = builder.cost;
         date = builder.date;
         time = builder.time;
@@ -36,14 +36,15 @@ public final class Transfer {
      * under an identifier generated when it is called; {@link #builder(TransferId, MemberId,
      * MemberId, Cost, CalendarDate)} takes one instead.
      *
-     * @param from the member who paid
-     * @param to the member who was paid
+     * @param sender the member who paid
+     * @param receiver the member who was paid
      * @param cost what was paid
      * @param date the day it was paid
      * @return the builder
      */
-    public static Builder builder(MemberId from, MemberId to, Cost cost, CalendarDate date) {
-        return builder(TransferId.generate(), from, to, cost, date);
+    public static Builder builder(
+            MemberId sender, MemberId receiver, Cost cost, CalendarDate date) {
+        return builder(TransferId.generate(), sender, receiver, cost, date);
     }
 
     /**
@@ -52,15 +53,15 @@ public final class Transfer {
      * #builder(MemberId, MemberId, Cost, CalendarDate)} generates one instead.
      *
      * @param id the identifier
-     * @param from the member who paid
-     * @param to the member who was paid
+     * @param sender the member who paid
+     * @param receiver the member who was paid
      * @param cost what was paid
      * @param date the day it was paid
      * @return the builder
      */
     public static Builder builder(
-            TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate date) {
-        return new Builder(id, from, to, cost, date);
+            TransferId id, MemberId sender, MemberId receiver, Cost cost, CalendarDate date) {
+        return new Builder(id, sender, receiver, cost, date);
     }
 
     /**
@@ -70,7 +71,7 @@ public final class Transfer {
      * @return the builder
      */
     public Builder toBuilder() {
-        return new Builder(id, from, to, cost, date).time(time).note(note);
+        return new Builder(id, sender, receiver, cost, date).time(time).note(note);
     }
 
     /**
@@ -82,8 +83,8 @@ public final class Transfer {
     static Transfer converted(eranos.internal.Transfer transfer) {
         return new Builder(
                         new TransferId(transfer.id()),
-                        new MemberId(transfer.from()),
-                        new MemberId(transfer.to()),
+                        new MemberId(transfer.sender()),
+                        new MemberId(transfer.receiver()),
                         Conversions.converted(transfer.cost()),
                         CalendarDate.converted(transfer.date()))
                 .time(null == transfer.time() ? null : TimeOfDay.converted(transfer.time()))
@@ -99,8 +100,8 @@ public final class Transfer {
     eranos.internal.Transfer generated() {
         return new eranos.internal.Transfer(
                 id.value(),
-                from.value(),
-                to.value(),
+                sender.value(),
+                receiver.value(),
                 Conversions.generated(cost),
                 date.generated(),
                 null == time ? null : time.generated(),
@@ -121,8 +122,8 @@ public final class Transfer {
      *
      * @return the member
      */
-    public MemberId from() {
-        return from;
+    public MemberId sender() {
+        return sender;
     }
 
     /**
@@ -130,8 +131,8 @@ public final class Transfer {
      *
      * @return the member
      */
-    public MemberId to() {
-        return to;
+    public MemberId receiver() {
+        return receiver;
     }
 
     /**
@@ -174,8 +175,8 @@ public final class Transfer {
     public boolean equals(Object other) {
         return other instanceof Transfer transfer
                 && id.equals(transfer.id)
-                && from.equals(transfer.from)
-                && to.equals(transfer.to)
+                && sender.equals(transfer.sender)
+                && receiver.equals(transfer.receiver)
                 && cost.equals(transfer.cost)
                 && date.equals(transfer.date)
                 && Objects.equals(time, transfer.time)
@@ -184,17 +185,17 @@ public final class Transfer {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, from, to, cost, date, time, note);
+        return Objects.hash(id, sender, receiver, cost, date, time, note);
     }
 
     @Override
     public String toString() {
         return "Transfer[id="
                 + id
-                + ", from="
-                + from
-                + ", to="
-                + to
+                + ", sender="
+                + sender
+                + ", receiver="
+                + receiver
                 + ", cost="
                 + cost
                 + ", date="
@@ -209,15 +210,16 @@ public final class Transfer {
     /** A builder of a transfer, whose every setter replaces what was set before. */
     public static final class Builder {
         private TransferId id;
-        private MemberId from;
-        private MemberId to;
+        private MemberId sender;
+        private MemberId receiver;
         private Cost cost;
         private CalendarDate date;
         private TimeOfDay time;
         private String note;
 
-        private Builder(TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate date) {
-            id(id).from(from).to(to).cost(cost).date(date);
+        private Builder(
+                TransferId id, MemberId sender, MemberId receiver, Cost cost, CalendarDate date) {
+            id(id).sender(sender).receiver(receiver).cost(cost).date(date);
         }
 
         /**
@@ -234,22 +236,22 @@ public final class Transfer {
         /**
          * Sets the member who paid.
          *
-         * @param from the member
+         * @param sender the member
          * @return this builder
          */
-        public Builder from(MemberId from) {
-            this.from = Objects.requireNonNull(from, "from");
+        public Builder sender(MemberId sender) {
+            this.sender = Objects.requireNonNull(sender, "sender");
             return this;
         }
 
         /**
          * Sets the member who was paid.
          *
-         * @param to the member
+         * @param receiver the member
          * @return this builder
          */
-        public Builder to(MemberId to) {
-            this.to = Objects.requireNonNull(to, "to");
+        public Builder receiver(MemberId receiver) {
+            this.receiver = Objects.requireNonNull(receiver, "receiver");
             return this;
         }
 

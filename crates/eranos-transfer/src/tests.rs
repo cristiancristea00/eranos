@@ -58,8 +58,8 @@ fn full_repayment() -> Transfer {
 fn a_transfer_keeps_its_fields_and_defaults() {
     let transfer = repayment().build().unwrap();
     // Required fields; a plain amount is a local cost, at a rate of 1.
-    assert_eq!(transfer.from(), bob());
-    assert_eq!(transfer.to(), ana());
+    assert_eq!(transfer.sender(), bob());
+    assert_eq!(transfer.receiver(), ana());
     assert_eq!(transfer.amount(), euros(3_000));
     assert_eq!(transfer.cost(), Cost::from(euros(3_000)));
     assert_eq!(transfer.date(), september_24());
@@ -181,21 +181,21 @@ fn builder_setters_replace_each_field() {
     let september_25 = CalendarDate::new(2026, 9, 25).unwrap();
     let transfer = full_repayment()
         .to_builder()
-        .from(carol())
-        .to(bob())
+        .sender(carol())
+        .receiver(bob())
         .cost(euros(1_000))
         .date(september_25)
         .build()
         .unwrap();
-    assert_eq!(transfer.from(), carol());
-    assert_eq!(transfer.to(), bob());
+    assert_eq!(transfer.sender(), carol());
+    assert_eq!(transfer.receiver(), bob());
     assert_eq!(transfer.amount(), euros(1_000));
     assert_eq!(transfer.date(), september_25);
     // The other fields are kept.
     assert_eq!(transfer.note(), Some("Dinner"));
     // Replaced fields are validated again.
     assert_eq!(
-        full_repayment().to_builder().to(bob()).build(),
+        full_repayment().to_builder().receiver(bob()).build(),
         Err(TransferError::SameMember)
     );
 }

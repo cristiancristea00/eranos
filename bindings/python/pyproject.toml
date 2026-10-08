@@ -6,7 +6,7 @@
 
 [project]
 name = "eranos"
-version = "0.7.0"
+version = "0.8.0"
 description = "Split and settle shared expenses: the eranos library for Python"
 requires-python = ">=3.14"
 dependencies = []

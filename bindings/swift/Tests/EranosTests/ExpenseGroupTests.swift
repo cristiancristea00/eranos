@@ -149,7 +149,7 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     #expect(try "Lunch" == group.replace(lateLunch).name)
     #expect(try "Late lunch" == group.remove(lunch).name)
 
-    let payment = try group.add(Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(500)), date: flat.day))
+    let payment = try group.add(Transfer(sender: flat.ana, receiver: flat.bob, cost: .local(flat.euros(500)), date: flat.day))
     var larger = try #require(try group.transfer(withID: payment))
     larger.cost = .local(flat.euros(700))
     #expect(try group.replace(larger).cost == .local(flat.euros(500)))
@@ -202,7 +202,7 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     #expect(try await "Lunch" == group.replace(lateLunch).name)
     #expect(try await "Late lunch" == group.remove(lunch).name)
 
-    let payment = try await group.add(Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(500)), date: flat.day))
+    let payment = try await group.add(Transfer(sender: flat.ana, receiver: flat.bob, cost: .local(flat.euros(500)), date: flat.day))
     var larger = try #require(try await group.transfer(withID: payment))
     larger.cost = .local(flat.euros(700))
     #expect(try await group.replace(larger).cost == .local(flat.euros(500)))

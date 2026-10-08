@@ -21,8 +21,8 @@ func sharing(_ group: ExpenseGroup, _ people: People) async throws(EranosError) 
     let rows = try await group.withRead { reader async throws(EranosError) in
         try plan.payments.map { payment throws(EranosError) in
             PaymentRow(
-                from: try reader.member(withID: payment.from)?.firstName ?? "?",
-                to: try reader.member(withID: payment.to)?.firstName ?? "?",
+                sender: try reader.member(withID: payment.sender)?.firstName ?? "?",
+                receiver: try reader.member(withID: payment.receiver)?.firstName ?? "?",
                 amount: payment.amount
             )
         }
@@ -53,7 +53,7 @@ func sharing(_ group: ExpenseGroup, _ people: People) async throws(EranosError) 
     precondition(4 == plan.payments.count, "the airport coffee needs four payments")
     let share = try ron("15.00")
     for payment in plan.payments {
-        precondition(people.bob == payment.to && share == payment.amount, "everyone pays Bob their share")
+        precondition(people.bob == payment.receiver && share == payment.amount, "everyone pays Bob their share")
     }
     guard case let .failure(error) = outcome, case .cancelled? = error as? EranosError else {
         preconditionFailure("the waiting change is cancelled")

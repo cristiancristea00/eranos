@@ -329,9 +329,8 @@ def settlement_of(value: generated.SettlementPlan) -> SettlementPlan:
     return SettlementPlan(
         tuple(
             Payment(
-                # The generator names the field after the keyword it would otherwise be.
-                sender=MemberId(payment._from),  # ruff: ignore[private-member-access]
-                receiver=MemberId(payment.to),
+                sender=MemberId(payment.sender),
+                receiver=MemberId(payment.receiver),
                 amount=money_of(payment.amount),
             )
             for payment in value.payments

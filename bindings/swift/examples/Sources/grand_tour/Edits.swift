@@ -19,8 +19,8 @@ func anotherCurrency(_ group: ExpenseGroup, _ people: People, _ categories: Cate
     )
     let cash = try group.add(
         Transfer(
-            from: people.bob,
-            to: people.ana,
+            sender: people.bob,
+            receiver: people.ana,
             cost: .converted(try ron("100.00"), rate: rate),
             date: try october(6),
             time: try TimeOfDay(hour: 7, minute: 40),
@@ -77,7 +77,7 @@ func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Cat
     let copy = try group.add(coffee())
     let removed = try group.remove(copy)
     // Dan's part of the apartment was 120.00, not 100.00.
-    let first = try group.add(Transfer(from: people.dan, to: people.ana, cost: .local(try eur("100.00")), date: try october(5)))
+    let first = try group.add(Transfer(sender: people.dan, receiver: people.ana, cost: .local(try eur("100.00")), date: try october(5)))
     guard var fixed = try group.transfer(withID: first) else {
         preconditionFailure("the transfer was added")
     }
@@ -85,7 +85,7 @@ func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Cat
     fixed.note = "Apartment"
     let replaced = try group.replace(fixed)
     // Carol sent 10.00 to the wrong member.
-    let mistake = try group.add(Transfer(from: people.carol, to: people.bob, cost: .local(try eur("10.00")), date: try october(5)))
+    let mistake = try group.add(Transfer(sender: people.carol, receiver: people.bob, cost: .local(try eur("10.00")), date: try october(5)))
     let undone = try group.remove(mistake)
 
     expect(try eur("90.00"), previous.cost.amount, "the dinner's first amount")
@@ -134,7 +134,7 @@ func edits(_ group: ExpenseGroup, _ people: People, _ categories: Categories, _ 
     )
     let unbalanced = Result { () throws(EranosError) in try group.add(taxi) }
     let toHerself = Result { () throws(EranosError) in
-        try group.add(Transfer(from: people.ana, to: people.ana, cost: .local(try eur("5.00")), date: try october(6)))
+        try group.add(Transfer(sender: people.ana, receiver: people.ana, cost: .local(try eur("5.00")), date: try october(6)))
     }
     let souvenirs = Expense(name: "Souvenirs", cost: .local(try ron("40.00")), payers: .equal([people.ana]), split: .whole(.equal([people.ana])), date: try october(6))
     let unrated = Result { () throws(EranosError) in try group.add(souvenirs) }

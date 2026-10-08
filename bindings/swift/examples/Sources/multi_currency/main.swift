@@ -57,8 +57,8 @@ func printEntries(_ group: ExpenseGroup) throws(EranosError) {
     }
     let transfers = try group.transfers().map { transfer throws(EranosError) in
         EntryRow(
-            name: "Transfer to \(try name(group, transfer.to))",
-            payer: try name(group, transfer.from),
+            name: "Transfer to \(try name(group, transfer.receiver))",
+            payer: try name(group, transfer.sender),
             original: transfer.cost.amount,
             rate: try rate(of: transfer.cost),
             converted: try group.amount(of: transfer.id) ?? zero
@@ -137,8 +137,8 @@ func repayment(_ group: ExpenseGroup, _ ana: Member.ID, _ bob: Member.ID) throws
     section("3. A repayment in cash, in another currency")
     _ = try group.add(
         Transfer(
-            from: ana,
-            to: bob,
+            sender: ana,
+            receiver: bob,
             cost: .converted(try Money(parsing: "100.00", in: leu), rate: try ExchangeRate(parsing: "0.2")),
             date: try CalendarDate(year: 2026, month: 8, day: 4),
             note: "Cash at the border"

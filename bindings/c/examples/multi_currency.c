@@ -121,12 +121,12 @@ static void addTransfers(EranosExpenseGroup const *const group, Table *const tab
         eranosTransferId(transfer, text);
         EranosMoney *converted = nullptr;
         must(eranosExpenseGroupTransferAmount(group, eranosTextData(text), &converted));
-        eranosTransferTo(transfer, text);
-        Line const to = firstName(group, eranosTextData(text));
-        eranosTransferFrom(transfer, text);
+        eranosTransferReceiver(transfer, text);
+        Line const receiver = firstName(group, eranosTextData(text));
+        eranosTransferSender(transfer, text);
         EranosCost *const cost = eranosTransferCost(transfer);
         addEntryRow(table, &(EntryRow){
-                               .name = lineOf("Transfer to %s", to.text),
+                               .name = lineOf("Transfer to %s", receiver.text),
                                .payer = firstName(group, eranosTextData(text)),
                                .original = moneyLine(eranosCostAmount(cost)),
                                .rate = rateLine(eranosTransferCost(transfer)),

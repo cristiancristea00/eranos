@@ -553,8 +553,8 @@ void describe('the expenses, members, categories, and transfers', () => {
 
         const lei = CurrencyCode.of('RON');
         const cash = createTransfer({
-            from: flat.bob,
-            to: flat.ana,
+            sender: flat.bob,
+            receiver: flat.ana,
             cost: { kind: 'converted', amount: new Money(1_000n, lei), rate: ExchangeRate.parse('0.2') },
             date: flat.day,
             time: TimeOfDay.of(10, 0),
@@ -604,7 +604,7 @@ void describe('the expenses, members, categories, and transfers', () => {
             assert.deepEqual(group.expenseSync(added.id), { ...lunch, id: added.id });
         }
 
-        const cash = createTransfer({ from: flat.bob, to: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day });
+        const cash = createTransfer({ sender: flat.bob, receiver: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day });
         group.addTransferSync({ ...cash, note: ' Cash\n' });
         assert.deepEqual(group.transferSync(cash.id), { ...cash, note: 'Cash' });
         for (const transfer of [cash, { ...cash, note: ' ' }]) {
@@ -667,7 +667,7 @@ void describe('the expenses, members, categories, and transfers', () => {
         const zoe = createMember({ firstName: 'Zoe' });
         const trips = createCategory({ name: 'Trips' });
         const taxi = flat.expense('Taxi', flat.ana, [flat.ana]);
-        const cash = createTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day });
+        const cash = createTransfer({ sender: flat.ana, receiver: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day });
         const unknowns = [
             { replace: () => group.replaceMemberSync(zoe), failure: { kind: 'unknownMember', member: zoe.id } },
             { replace: () => group.replaceCategorySync(trips), failure: { kind: 'unknownCategory', category: trips.id } },
@@ -719,7 +719,13 @@ void describe('the expenses, members, categories, and transfers', () => {
         assert.equal(group.expenseSync(flight)?.category, travel);
 
         const repayment = parseTransferId('zz');
-        const cash = { id: repayment, from: flat.ana, to: carol, cost: { kind: 'local', amount: flat.euros(1_500n) }, date: flat.day } as const;
+        const cash = {
+            id: repayment,
+            sender: flat.ana,
+            receiver: carol,
+            cost: { kind: 'local', amount: flat.euros(1_500n) },
+            date: flat.day,
+        } as const;
         assert.equal(group.addTransferSync(cash), repayment);
         assert.deepEqual(group.transferSync(repayment), cash);
 

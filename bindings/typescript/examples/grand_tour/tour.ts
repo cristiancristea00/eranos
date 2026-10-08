@@ -47,14 +47,14 @@ export const refusalColumns: Columns<RefusalRow> = [
 
 /** A payment of a plan, as the tables of payments print it. */
 export interface PaymentRow {
-    readonly from: string;
-    readonly to: string;
+    readonly sender: string;
+    readonly receiver: string;
     readonly amount: Money;
 }
 
 export const paymentColumns: Columns<PaymentRow> = [
-    { header: 'From', text: (row) => row.from },
-    { header: 'To', text: (row) => row.to },
+    { header: 'From', text: (row) => row.sender },
+    { header: 'To', text: (row) => row.receiver },
     { header: 'Amount', text: (row) => row.amount.toString() },
 ];
 
@@ -201,8 +201,8 @@ export function printEntries(group: ExpenseGroup, shown: (currency: CurrencyCode
         .transfersSync()
         .filter((transfer) => shown(transfer.cost.amount.currency))
         .map((transfer): EntryRow => ({
-            name: `Transfer to ${name(group, transfer.to)}`,
-            payer: name(group, transfer.from),
+            name: `Transfer to ${name(group, transfer.receiver)}`,
+            payer: name(group, transfer.sender),
             original: transfer.cost.amount,
             rate: rate(transfer.cost),
             converted: group.transferAmountSync(transfer.id) ?? zero,

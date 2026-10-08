@@ -62,8 +62,8 @@ export class Flat {
     );
     readonly repayment: TransferId = this.group.addTransferSync(
         createTransfer({
-            from: this.bob,
-            to: this.ana,
+            sender: this.bob,
+            receiver: this.ana,
             cost: { kind: 'local', amount: this.euros(1_000n) },
             date: this.day,
         }),

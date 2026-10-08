@@ -157,10 +157,10 @@ class PaymentRow(Row):
 
     HEADERS: ClassVar[tuple[str, ...]] = ('From', 'To', 'Amount')
 
-    from_: str
+    sender: str
     """Who pays."""
 
-    to: str
+    receiver: str
     """Who is paid."""
 
     amount: Money
@@ -168,7 +168,7 @@ class PaymentRow(Row):
 
     @override
     def cells(self) -> tuple[str, ...]:
-        return self.from_, self.to, str(self.amount)
+        return self.sender, self.receiver, str(self.amount)
 
 
 def eur(text: str) -> Money:

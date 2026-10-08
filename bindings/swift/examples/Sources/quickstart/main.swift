@@ -33,12 +33,12 @@ struct MemberRow: TableRow {
 struct PaymentRow: TableRow {
     static let headers = ["From", "To", "Amount"]
 
-    let from: String
-    let to: String
+    let sender: String
+    let receiver: String
     let amount: Money
 
     var cells: [String] {
-        [from, to, "\(amount)"]
+        [sender, receiver, "\(amount)"]
     }
 }
 
@@ -100,7 +100,7 @@ func main() throws(EranosError) {
     print("The fewest payments that bring every balance to zero (\(settlement.payments.count) in total):")
     printTable(
         try settlement.payments.map { payment throws(EranosError) in
-            PaymentRow(from: try names(group, [payment.from]), to: try names(group, [payment.to]), amount: payment.amount)
+            PaymentRow(sender: try names(group, [payment.sender]), receiver: try names(group, [payment.receiver]), amount: payment.amount)
         },
         numbersFrom: 2
     )

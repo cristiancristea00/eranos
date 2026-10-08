@@ -62,8 +62,8 @@ export function anotherCurrency(group: ExpenseGroup, people: People, categories:
     );
     const cash = group.addTransferSync(
         createTransfer({
-            from: people.bob,
-            to: people.ana,
+            sender: people.bob,
+            receiver: people.ana,
             cost: { kind: 'converted', amount: ron('100.00'), rate },
             date: october(6),
             time: TimeOfDay.of(7, 40),
@@ -112,14 +112,14 @@ function replaceAndRemove(group: ExpenseGroup, people: People, categories: Categ
     const removed = group.removeExpenseSync(copy);
     // Dan's part of the apartment was 120.00, not 100.00.
     const first = group.addTransferSync(
-        createTransfer({ from: people.dan, to: people.ana, cost: { kind: 'local', amount: eur('100.00') }, date: october(5) }),
+        createTransfer({ sender: people.dan, receiver: people.ana, cost: { kind: 'local', amount: eur('100.00') }, date: october(5) }),
     );
     const stored = group.transferSync(first);
     assert.ok(undefined !== stored, 'the transfer was added');
     const replaced = group.replaceTransferSync({ ...stored, cost: { kind: 'local', amount: eur('120.00') }, note: 'Apartment' });
     // Carol sent 10.00 to the wrong member.
     const mistake = group.addTransferSync(
-        createTransfer({ from: people.carol, to: people.bob, cost: { kind: 'local', amount: eur('10.00') }, date: october(5) }),
+        createTransfer({ sender: people.carol, receiver: people.bob, cost: { kind: 'local', amount: eur('10.00') }, date: october(5) }),
     );
     const undone = group.removeTransferSync(mistake);
 
@@ -180,7 +180,9 @@ export function edits(group: ExpenseGroup, people: People, categories: Categorie
         ),
     );
     const toHerself = refusal(() =>
-        group.addTransferSync(createTransfer({ from: people.ana, to: people.ana, cost: { kind: 'local', amount: eur('5.00') }, date: october(6) })),
+        group.addTransferSync(
+            createTransfer({ sender: people.ana, receiver: people.ana, cost: { kind: 'local', amount: eur('5.00') }, date: october(6) }),
+        ),
     );
     const unrated = refusal(() =>
         group.addExpenseSync(

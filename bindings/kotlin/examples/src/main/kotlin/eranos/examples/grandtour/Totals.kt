@@ -203,11 +203,13 @@ internal fun settlingUp(group: ExpenseGroup) {
     println("The group follows the minimum plan:")
     printTable(
         PaymentRow.HEADERS,
-        plan.payments.map { payment -> PaymentRow(from = name(group, payment.from), to = name(group, payment.to), amount = payment.amount) },
+        plan.payments.map { payment ->
+            PaymentRow(sender = name(group, payment.sender), receiver = name(group, payment.receiver), amount = payment.amount)
+        },
         numbersFrom = 2,
     )
     for (payment in plan.payments) {
-        group.addBlocking(Transfer(payment.from, payment.to, Cost.Local(payment.amount), october(7)))
+        group.addBlocking(Transfer(payment.sender, payment.receiver, Cost.Local(payment.amount), october(7)))
     }
     println("Each payment, once made, is recorded as a transfer, and every balance is settled:")
     printBalances(group)

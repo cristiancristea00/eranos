@@ -34,10 +34,10 @@ func theSummaryAndTheSettlementKeepEveryNumber() throws {
     }
     let settlement = try flat.group.settlement(by: .minimumTransfers)
     let payment = try #require(settlement.payments.first)
-    #expect(payment.from == flat.bob)
-    #expect(payment.to == flat.ana)
+    #expect(payment.sender == flat.bob)
+    #expect(payment.receiver == flat.ana)
     #expect(payment.amount == flat.euros(500))
-    try flat.group.add(Transfer(from: payment.from, to: payment.to, cost: .local(payment.amount), date: flat.day))
+    try flat.group.add(Transfer(sender: payment.sender, receiver: payment.receiver, cost: .local(payment.amount), date: flat.day))
     let settled = try flat.group.summary()
     #expect(settled.members.map(\.balance) == [.settled, .settled])
     #expect("settled" == Balance.settled.description)

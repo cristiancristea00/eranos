@@ -194,12 +194,12 @@ static constexpr EranosCalendarDate DAY = {.year = 2026, .month = 9, .day = 23};
     return expense;
 }
 
-/// A transfer from @p from to @p to of @p cents euro cents.
-[[nodiscard]] static EranosTransfer *transferOf(char const *const from, char const *const to, int64_t const cents) {
+/// A transfer from @p sender to @p receiver of @p cents euro cents.
+[[nodiscard]] static EranosTransfer *transferOf(char const *const sender, char const *const receiver, int64_t const cents) {
     EranosMoney *const amount = euros(cents);
     EranosCost *const cost = eranosCostCreateLocal(amount);
     EranosTransfer *transfer = nullptr;
-    eranosErrorDestroy(eranosTransferCreate(from, to, cost, DAY, &transfer));
+    eranosErrorDestroy(eranosTransferCreate(sender, receiver, cost, DAY, &transfer));
     eranosCostDestroy(cost);
     eranosMoneyDestroy(amount);
     return transfer;
@@ -1580,8 +1580,8 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
     checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new transfer has a generated identifier");
     checkThat(check, !eranosTransferNote(transfer, text) && !eranosTransferTime(transfer, &time), "and no note or time");
     checkSucceeded(check, eranosTransferSetId(transfer, "0199a000-0000-7000-8000-000000000003"), "an identifier is set");
-    checkSucceeded(check, eranosTransferSetFrom(transfer, "ana"), "who paid");
-    checkSucceeded(check, eranosTransferSetTo(transfer, "bob"), "who was paid");
+    checkSucceeded(check, eranosTransferSetSender(transfer, "ana"), "who paid");
+    checkSucceeded(check, eranosTransferSetReceiver(transfer, "bob"), "who was paid");
     checkSucceeded(check, eranosTransferSetNote(transfer, "Cash"), "a note");
     constexpr EranosTimeOfDay MORNING = {.hour = 9, .minute = 5};
     eranosTransferSetTime(transfer, MORNING);
@@ -1592,9 +1592,9 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
     eranosTransferSetCost(transfer, cost);
     eranosTransferId(transfer, text);
     checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000003"), "the identifier");
-    eranosTransferFrom(transfer, text);
+    eranosTransferSender(transfer, text);
     checkThat(check, isText(text, "ana"), "who paid");
-    eranosTransferTo(transfer, text);
+    eranosTransferReceiver(transfer, text);
     checkThat(check, isText(text, "bob"), "who was paid");
     checkThat(check, eranosTransferNote(transfer, text) && isText(text, "Cash") && eranosTransferTime(transfer, &time) && 9 == time.hour,
               "the note and time");
@@ -1603,8 +1603,8 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
     checkThat(check, 24 == date.day && isAmount(eranosCostAmount(readCost), 500, "EUR"), "the date and the cost");
     checkThat(check,
               isKind(eranosTransferSetId(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosTransferSetFrom(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosTransferSetTo(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  isKind(eranosTransferSetSender(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  isKind(eranosTransferSetReceiver(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosTransferSetNote(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "every text field is text");
     eranosTransferClearNote(transfer);
@@ -2556,9 +2556,9 @@ static void eachStrategySettlesEveryBalance(Check *const check) {
                   eranosSettlementPlanStrategy(settlement) == computedBy && 1 == eranosPaymentListLength(payments) &&
                       !eranosPaymentListIsEmpty(payments) && nullptr == eranosPaymentListGet(payments, 1),
                   "one payment, by the strategy whose plan it is");
-        eranosPaymentFrom(payment, text);
+        eranosPaymentSender(payment, text);
         checkThat(check, isText(text, eranosTextData(flat.bob)), "from Bob");
-        eranosPaymentTo(payment, text);
+        eranosPaymentReceiver(payment, text);
         checkThat(check, isText(text, eranosTextData(flat.ana)) && isAmount(eranosPaymentAmount(payment), 500, "EUR"), "to Ana, of 5.00 EUR");
         eranosPaymentDestroy(payment);
         eranosPaymentListDestroy(payments);
@@ -2788,17 +2788,17 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     EranosText *const json = eranosTextCreate();
     eranosExpenseGroupSave(flat.group, json);
     char tampered[8192] = {};
-    char const *const format = strstr(eranosTextData(json), "\"format\": 3");
+    char const *const format = strstr(eranosTextData(json), "\"format\": 4");
     int const before = nullptr == format ? 0 : (int)(format - eranosTextData(json)) + (int)strlen("\"format\": ");
-    (void)snprintf(tampered, sizeof tampered, "%.*s4%s", before, eranosTextData(json), eranosTextData(json) + before + 1);
+    (void)snprintf(tampered, sizeof tampered, "%.*s5%s", before, eranosTextData(json), eranosTextData(json) + before + 1);
     EranosExpenseGroup *newer = nullptr;
     EranosError *const unsupported = eranosExpenseGroupLoad(tampered, &newer);
     checkThat(check,
               holdsFailure(unsupported, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT) &&
-                  eranosErrorFormat(unsupported, &number) && 4 == number,
+                  eranosErrorFormat(unsupported, &number) && 5 == number,
               "a format this release cannot read");
     eranosErrorMessage(unsupported, text);
-    checkThat(check, isText(text, "unsupported group format 4: this version reads format 3"), "the format it reads");
+    checkThat(check, isText(text, "unsupported group format 5: this version reads format 4"), "the format it reads");
     eranosErrorDestroy(unsupported);
     eranosTextDestroy(json);
     EranosCategory *noCategory = nullptr;

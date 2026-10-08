@@ -57,12 +57,12 @@ private data class EntryRow(
 }
 
 internal data class PaymentRow(
-    val from: String,
-    val to: String,
+    val sender: String,
+    val receiver: String,
     val amount: Money,
 ) : Row {
     override val cells: List<String>
-        get() = listOf(from, to, "$amount")
+        get() = listOf(sender, receiver, "$amount")
 
     companion object {
         val HEADERS = listOf("From", "To", "Amount")
@@ -140,8 +140,8 @@ internal fun printEntries(
     val transfers =
         group.transfersBlocking().filter { transfer -> shown(transfer.cost.amount.currency) }.map { transfer ->
             EntryRow(
-                name = "Transfer to ${name(group, transfer.to)}",
-                payer = name(group, transfer.from),
+                name = "Transfer to ${name(group, transfer.receiver)}",
+                payer = name(group, transfer.sender),
                 original = transfer.cost.amount,
                 rate = rate(transfer.cost),
                 converted = group.transferAmountBlocking(transfer.id) ?: zero,

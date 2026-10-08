@@ -460,21 +460,21 @@ typedef struct EranosPayment EranosPayment;
 /// The identifier of the member who pays.
 ///
 /// @param payment The payment
-/// @param from Receives the identifier of the member who pays, replacing what it held
-static inline void eranosPaymentFrom(EranosPayment const *const payment, EranosText *const from) {
-    eranosDetailClear(from);
-    EranosPayment_from(payment, from);
-    eranosDetailFinish(from);
+/// @param sender Receives the identifier of the member who pays, replacing what it held
+static inline void eranosPaymentSender(EranosPayment const *const payment, EranosText *const sender) {
+    eranosDetailClear(sender);
+    EranosPayment_sender(payment, sender);
+    eranosDetailFinish(sender);
 }
 
 /// The identifier of the member who is paid.
 ///
 /// @param payment The payment
-/// @param to Receives the identifier of the member who is paid, replacing what it held
-static inline void eranosPaymentTo(EranosPayment const *const payment, EranosText *const to) {
-    eranosDetailClear(to);
-    EranosPayment_to(payment, to);
-    eranosDetailFinish(to);
+/// @param receiver Receives the identifier of the member who is paid, replacing what it held
+static inline void eranosPaymentReceiver(EranosPayment const *const payment, EranosText *const receiver) {
+    eranosDetailClear(receiver);
+    EranosPayment_receiver(payment, receiver);
+    eranosDetailFinish(receiver);
 }
 
 /// What is paid.

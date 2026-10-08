@@ -54,9 +54,9 @@ static void addMemberRow(Table *const table, MemberRow const *const row) {
 /// A row of the table of payments: who pays whom, and how much.
 typedef struct PaymentRow {
     /// Who pays.
-    Line from;
+    Line sender;
     /// Who is paid.
-    Line to;
+    Line receiver;
     /// How much is paid.
     Line amount;
 } PaymentRow;
@@ -67,7 +67,9 @@ typedef struct PaymentRow {
 }
 
 /// Adds @p row to @p table, a table of payments, its cells in the order of the table's headers.
-static void addPaymentRow(Table *const table, PaymentRow const *const row) { tableAdd(table, (Line const[]){row->from, row->to, row->amount}); }
+static void addPaymentRow(Table *const table, PaymentRow const *const row) {
+    tableAdd(table, (Line const[]){row->sender, row->receiver, row->amount});
+}
 
 /// The amount @p text of euros.
 [[nodiscard]] static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
@@ -127,21 +129,21 @@ static void printMembers(EranosExpenseGroup const *const group, EranosSummary co
 /// Prints @p payments: who pays whom, and how much.
 static void printPayments(EranosExpenseGroup const *const group, EranosPaymentList const *const payments) {
     Table *const table = paymentTable(2);
-    EranosText *const from = eranosTextCreate();
-    EranosText *const to = eranosTextCreate();
+    EranosText *const sender = eranosTextCreate();
+    EranosText *const receiver = eranosTextCreate();
     for (size_t index = 0; eranosPaymentListLength(payments) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(payments, index);
-        eranosPaymentFrom(payment, from);
-        eranosPaymentTo(payment, to);
+        eranosPaymentSender(payment, sender);
+        eranosPaymentReceiver(payment, receiver);
         addPaymentRow(table, &(PaymentRow){
-                                 .from = firstName(group, eranosTextData(from)),
-                                 .to = firstName(group, eranosTextData(to)),
+                                 .sender = firstName(group, eranosTextData(sender)),
+                                 .receiver = firstName(group, eranosTextData(receiver)),
                                  .amount = moneyLine(eranosPaymentAmount(payment)),
                              });
         eranosPaymentDestroy(payment);
     }
-    eranosTextDestroy(to);
-    eranosTextDestroy(from);
+    eranosTextDestroy(receiver);
+    eranosTextDestroy(sender);
     tablePrint(table);
 }
 

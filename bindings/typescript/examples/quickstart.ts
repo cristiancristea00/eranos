@@ -51,14 +51,14 @@ const memberColumns: Columns<MemberRow> = [
 
 /** A payment of the plan, as the table of payments prints it. */
 interface PaymentRow {
-    readonly from: string;
-    readonly to: string;
+    readonly sender: string;
+    readonly receiver: string;
     readonly amount: Money;
 }
 
 const paymentColumns: Columns<PaymentRow> = [
-    { header: 'From', text: (row) => row.from },
-    { header: 'To', text: (row) => row.to },
+    { header: 'From', text: (row) => row.sender },
+    { header: 'To', text: (row) => row.receiver },
     { header: 'Amount', text: (row) => row.amount.toString() },
 ];
 
@@ -134,7 +134,11 @@ const settlement = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 printLines(`The fewest payments that bring every balance to zero (${String(settlement.payments.length)} in total):`);
 printTable(
     paymentColumns,
-    settlement.payments.map((payment) => ({ from: names(group, [payment.from]), to: names(group, [payment.to]), amount: payment.amount })),
+    settlement.payments.map((payment) => ({
+        sender: names(group, [payment.sender]),
+        receiver: names(group, [payment.receiver]),
+        amount: payment.amount,
+    })),
     2,
 );
 printLines('Once these payments are made, nobody owes anything.');

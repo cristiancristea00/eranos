@@ -41,9 +41,9 @@ struct MemberRow {
 #[derive(Tabled)]
 struct PaymentRow {
     #[tabled(rename = "From")]
-    from: String,
+    sender: String,
     #[tabled(rename = "To")]
-    to: String,
+    receiver: String,
     #[tabled(rename = "Amount")]
     amount: Money,
 }
@@ -148,8 +148,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     print_table(
         settlement.payments().iter().map(|payment| PaymentRow {
-            from: names(&group, [payment.from()]),
-            to: names(&group, [payment.to()]),
+            sender: names(&group, [payment.sender()]),
+            receiver: names(&group, [payment.receiver()]),
             amount: payment.amount(),
         }),
         2,

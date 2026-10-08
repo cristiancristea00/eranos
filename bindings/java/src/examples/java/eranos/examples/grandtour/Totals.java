@@ -236,16 +236,16 @@ final class Totals {
         for (Payment payment : plan.payments()) {
             rows.add(
                     new PaymentRow(
-                            name(group, payment.from()),
-                            name(group, payment.to()),
+                            name(group, payment.sender()),
+                            name(group, payment.receiver()),
                             payment.amount()));
         }
         printTable(PaymentRow.HEADERS, rows, 2);
         for (Payment payment : plan.payments()) {
             group.addTransfer(
                     Transfer.builder(
-                                    payment.from(),
-                                    payment.to(),
+                                    payment.sender(),
+                                    payment.receiver(),
                                     new Cost.Local(payment.amount()),
                                     october(7))
                             .build());

@@ -412,8 +412,8 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
             message: "unknown transfer 44444444-4444-4444-4444-444444444444",
         },
         Expected {
-            error: ExpenseGroupError::UnsupportedFormat { format: 4 },
-            message: "unsupported group format 4: this version reads format 3",
+            error: ExpenseGroupError::UnsupportedFormat { format: 5 },
+            message: "unsupported group format 5: this version reads format 4",
         },
     ]
 }

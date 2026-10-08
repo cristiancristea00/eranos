@@ -55,7 +55,7 @@ pub use error::{FromSettlementError, SettlementError};
 /// for strategy in SettlementStrategy::all() {
 ///     let settlement = group.settlement(strategy)?;
 ///     assert_eq!(settlement.payments().len(), 1);
-///     assert_eq!(settlement.payments()[0].from(), ana);
+///     assert_eq!(settlement.payments()[0].sender(), ana);
 /// }
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -192,7 +192,7 @@ impl SettlementPlan {
     }
 }
 
-/// One payment of a [`SettlementPlan`]: `from` pays `amount` to `to`.
+/// One payment of a [`SettlementPlan`]: `sender` pays `amount` to `receiver`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Payment {
     members: MemberPair,
@@ -202,13 +202,13 @@ pub struct Payment {
 impl Payment {
     /// The member who pays.
     #[must_use]
-    pub const fn from(&self) -> MemberId {
+    pub const fn sender(&self) -> MemberId {
         self.members.from
     }
 
     /// The member who is paid.
     #[must_use]
-    pub const fn to(&self) -> MemberId {
+    pub const fn receiver(&self) -> MemberId {
         self.members.to
     }
 

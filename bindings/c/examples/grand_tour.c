@@ -317,9 +317,9 @@ static void addStrategyRow(Table *const table, StrategyRow const *const row) {
 /// A row of the table of payments: who pays whom, and how much.
 typedef struct PaymentRow {
     /// Who pays.
-    Line from;
+    Line sender;
     /// Who is paid.
-    Line to;
+    Line receiver;
     /// How much is paid.
     Line amount;
 } PaymentRow;
@@ -330,7 +330,9 @@ typedef struct PaymentRow {
 }
 
 /// Adds @p row to @p table, a table of payments, its cells in the order of the table's headers.
-static void addPaymentRow(Table *const table, PaymentRow const *const row) { tableAdd(table, (Line const[]){row->from, row->to, row->amount}); }
+static void addPaymentRow(Table *const table, PaymentRow const *const row) {
+    tableAdd(table, (Line const[]){row->sender, row->receiver, row->amount});
+}
 
 /// A row of the table of loads: a change to a saved group, and the message its load is refused with.
 typedef struct LoadRow {
@@ -703,11 +705,11 @@ static void addTransferEntries(EranosExpenseGroup const *const group, char const
             EranosMoney *amount = nullptr;
             must(eranosExpenseGroupTransferAmount(group, eranosTextData(text), &amount));
             Line const converted = nullptr == amount ? zero : moneyLine(amount);
-            eranosTransferTo(transfer, text);
-            Line const to = firstName(group, eranosTextData(text));
-            eranosTransferFrom(transfer, text);
+            eranosTransferReceiver(transfer, text);
+            Line const receiver = firstName(group, eranosTextData(text));
+            eranosTransferSender(transfer, text);
             addEntryRow(table, &(EntryRow){
-                                   .name = lineOf("Transfer to %s", to.text),
+                                   .name = lineOf("Transfer to %s", receiver.text),
                                    .payer = firstName(group, eranosTextData(text)),
                                    .original = costAmount(eranosTransferCost(transfer)),
                                    .rate = rateLine(eranosTransferCost(transfer)),
@@ -2147,15 +2149,15 @@ static void settlingUp(EranosExpenseGroup *const group) {
     EranosPaymentList *const plan = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);
     printLine("The group follows the minimum plan:");
     Table *const table = paymentTable(2);
-    EranosText *const from = eranosTextCreate();
-    EranosText *const to = eranosTextCreate();
+    EranosText *const sender = eranosTextCreate();
+    EranosText *const receiver = eranosTextCreate();
     for (size_t index = 0; eranosPaymentListLength(plan) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(plan, index);
-        eranosPaymentFrom(payment, from);
-        eranosPaymentTo(payment, to);
+        eranosPaymentSender(payment, sender);
+        eranosPaymentReceiver(payment, receiver);
         addPaymentRow(table, &(PaymentRow){
-                                 .from = firstName(group, eranosTextData(from)),
-                                 .to = firstName(group, eranosTextData(to)),
+                                 .sender = firstName(group, eranosTextData(sender)),
+                                 .receiver = firstName(group, eranosTextData(receiver)),
                                  .amount = moneyLine(eranosPaymentAmount(payment)),
                              });
         eranosPaymentDestroy(payment);
@@ -2163,9 +2165,9 @@ static void settlingUp(EranosExpenseGroup *const group) {
     tablePrint(table);
     for (size_t index = 0; eranosPaymentListLength(plan) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(plan, index);
-        eranosPaymentFrom(payment, from);
-        eranosPaymentTo(payment, to);
-        (void)addTransfer(group, transferOf(idOf(from), idOf(to), localCost(eranosPaymentAmount(payment)), october(7)));
+        eranosPaymentSender(payment, sender);
+        eranosPaymentReceiver(payment, receiver);
+        (void)addTransfer(group, transferOf(idOf(sender), idOf(receiver), localCost(eranosPaymentAmount(payment)), october(7)));
         eranosPaymentDestroy(payment);
     }
     printLine("Each payment, once made, is recorded as a transfer, and every balance is settled:");
@@ -2176,8 +2178,8 @@ static void settlingUp(EranosExpenseGroup *const group) {
     check(4 == eranosPaymentListLength(plan), "the minimum plan takes four payments");
     check(everyoneSettled(group), "every balance is settled");
     eranosPaymentListDestroy(remaining);
-    eranosTextDestroy(to);
-    eranosTextDestroy(from);
+    eranosTextDestroy(receiver);
+    eranosTextDestroy(sender);
     eranosPaymentListDestroy(plan);
 }
 
@@ -2240,17 +2242,17 @@ static void savingAndLoading(EranosExpenseGroup const *const group, People const
     printLine("Loading replays every entry through the same checks as adding it and rebuilds the\n"
               "totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and\n"
               "loading it with into_expense_group reports a refusal as a typed error, not as text:");
-    EranosError *const format = changedRefusal(eranosTextData(saved), "\"format\": 3", "\"format\": 4");
+    EranosError *const format = changedRefusal(eranosTextData(saved), "\"format\": 4", "\"format\": 5");
     EranosError *const blank = changedRefusal(eranosTextData(saved), "\"name\": \"Lisbon and Porto\"", "\"name\": \" \"");
     EranosError *const homonym = changedRefusal(eranosTextData(saved), "\"name\": \"Lodging\"", "\"name\": \"FOOD\"");
-    check(isFailure(format, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT) && namesFormat(format, 4),
+    check(isFailure(format, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT) && namesFormat(format, 5),
           "a later format is refused");
     check(isFailure(blank, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME), "a blank name is refused");
     check(isFailure(homonym, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME) &&
               namesExisting(homonym, categories->food),
           "a caseless homonym is refused");
     Table *const table = loadTable(2);
-    addLoadRow(table, &(LoadRow){.change = lineOf("\"format\": 4"), .message = messageLine(format)});
+    addLoadRow(table, &(LoadRow){.change = lineOf("\"format\": 5"), .message = messageLine(format)});
     addLoadRow(table, &(LoadRow){.change = lineOf("a blank group name"), .message = messageLine(blank)});
     addLoadRow(table, &(LoadRow){.change = lineOf("Lodging renamed FOOD"), .message = messageLine(homonym)});
     tablePrint(table);
@@ -2702,18 +2704,18 @@ static void settleCoffee(EranosExpenseGroup *const other, EranosExpenseGroup con
               "handle, and the plan that settles it comes through the first:");
     EranosExpenseGroupReader *const reader = readAsync(group);
     Table *const table = paymentTable(2);
-    EranosText *const from = eranosTextCreate();
-    EranosText *const to = eranosTextCreate();
+    EranosText *const sender = eranosTextCreate();
+    EranosText *const receiver = eranosTextCreate();
     bool toBob = true;
     for (size_t index = 0; eranosPaymentListLength(payments) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(payments, index);
-        eranosPaymentFrom(payment, from);
-        eranosPaymentTo(payment, to);
+        eranosPaymentSender(payment, sender);
+        eranosPaymentReceiver(payment, receiver);
         EranosMoney *const amount = eranosPaymentAmount(payment);
-        toBob = toBob && 0 == strcmp(eranosTextData(to), people->bob.text) && 1'500 == eranosMoneyMinorUnits(amount);
+        toBob = toBob && 0 == strcmp(eranosTextData(receiver), people->bob.text) && 1'500 == eranosMoneyMinorUnits(amount);
         addPaymentRow(table, &(PaymentRow){
-                                 .from = readerName(reader, eranosTextData(from)),
-                                 .to = readerName(reader, eranosTextData(to)),
+                                 .sender = readerName(reader, eranosTextData(sender)),
+                                 .receiver = readerName(reader, eranosTextData(receiver)),
                                  .amount = moneyLine(amount),
                              });
         eranosPaymentDestroy(payment);
@@ -2721,8 +2723,8 @@ static void settleCoffee(EranosExpenseGroup *const other, EranosExpenseGroup con
     tablePrint(table);
     eranosExpenseGroupReaderRelease(reader);
     check(4 == eranosPaymentListLength(payments) && toBob, "everyone pays Bob 15.00 RON");
-    eranosTextDestroy(to);
-    eranosTextDestroy(from);
+    eranosTextDestroy(receiver);
+    eranosTextDestroy(sender);
     eranosExpenseGroupReaderDestroy(reader);
     eranosPaymentListDestroy(payments);
     eranosSettlementPlanDestroy(plan);

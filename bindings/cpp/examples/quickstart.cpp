@@ -61,16 +61,16 @@ struct PaymentRow final {
     static inline constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
     /// Who pays.
-    std::string from;
+    std::string sender;
     /// Who is paid.
-    std::string to;
+    std::string receiver;
     /// How much is paid.
     std::string amount;
 
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {from, to, amount}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {sender, receiver, amount}; }
 };
 
 /// The amount @p text of euros.
@@ -136,7 +136,8 @@ void run() noexcept {
     std::vector<PaymentRow> payments;
     payments.reserve(settlement.payments.size());
     for (auto const &payment : settlement.payments) {
-        payments.push_back({.from = firstName(group, payment.from), .to = firstName(group, payment.to), .amount = payment.amount.toString()});
+        payments.push_back(
+            {.sender = firstName(group, payment.sender), .receiver = firstName(group, payment.receiver), .amount = payment.amount.toString()});
     }
     printTable(payments, 2);
     printLine("Once these payments are made, nobody owes anything.");

@@ -213,14 +213,14 @@ typedef struct Share {
 /// @return The refusal, which the caller destroys, or nullptr
 [[nodiscard]] EranosError *expenseRefusal(EranosExpenseGroup *group, EranosExpense *expense);
 
-/// A transfer from @p from to @p to of @p cost; destroys @p cost.
+/// A transfer from @p sender to @p receiver of @p cost; destroys @p cost.
 ///
-/// @param from Who sent it
-/// @param to Who received it
+/// @param sender Who sent it
+/// @param receiver Who received it
 /// @param cost What was sent
 /// @param date The day it was sent
 /// @return The transfer, which the caller destroys
-[[nodiscard]] EranosTransfer *transferOf(Id from, Id to, EranosCost *cost, EranosCalendarDate date);
+[[nodiscard]] EranosTransfer *transferOf(Id sender, Id receiver, EranosCost *cost, EranosCalendarDate date);
 
 /// Adds @p transfer to @p group, and destroys it.
 ///

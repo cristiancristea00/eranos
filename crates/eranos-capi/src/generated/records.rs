@@ -1803,20 +1803,20 @@ pub mod ffi {
         }
     }
 
-    /// One payment of a settlement: `from` pays `amount` to `to`.
+    /// One payment of a settlement: `sender` pays `amount` to `receiver`.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosPayment(pub(crate) eranos_bindings::Payment);
 
     impl EranosPayment {
         /// The member who pays, as their identifier.
-        pub fn from(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.from);
+        pub fn sender(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.sender);
         }
 
         /// The member who is paid, as their identifier.
-        pub fn to(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.to);
+        pub fn receiver(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.receiver);
         }
 
         /// The amount, in the group currency.
@@ -2389,15 +2389,15 @@ pub mod ffi {
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
             id: &DiplomatStr,
-            from: &DiplomatStr,
-            to: &DiplomatStr,
+            sender: &DiplomatStr,
+            receiver: &DiplomatStr,
             cost: &EranosCost,
             date: EranosCalendarDate,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Transfer {
                 id: crate::text(id)?,
-                from: crate::text(from)?,
-                to: crate::text(to)?,
+                sender: crate::text(sender)?,
+                receiver: crate::text(receiver)?,
                 cost: cost.0.clone(),
                 date: date.into(),
                 time: None,
@@ -2421,8 +2421,8 @@ pub mod ffi {
         }
 
         /// The member who paid, as their identifier.
-        pub fn from(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.from);
+        pub fn sender(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.sender);
         }
 
         /// Sets the member who paid, as their identifier.
@@ -2430,14 +2430,14 @@ pub mod ffi {
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_from(&mut self, from: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.from = crate::text(from)?;
+        pub fn set_sender(&mut self, sender: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.sender = crate::text(sender)?;
             Ok(())
         }
 
         /// The member who was paid, as their identifier.
-        pub fn to(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.to);
+        pub fn receiver(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.receiver);
         }
 
         /// Sets the member who was paid, as their identifier.
@@ -2445,8 +2445,8 @@ pub mod ffi {
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_to(&mut self, to: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.to = crate::text(to)?;
+        pub fn set_receiver(&mut self, receiver: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.receiver = crate::text(receiver)?;
             Ok(())
         }
 

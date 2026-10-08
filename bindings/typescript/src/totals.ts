@@ -111,9 +111,9 @@ export enum SettlementStrategy {
 /** One payment of a settlement: one member pays another an amount. */
 export interface Payment {
     /** The member who pays. */
-    readonly from: MemberId;
+    readonly sender: MemberId;
     /** The member who is paid. */
-    readonly to: MemberId;
+    readonly receiver: MemberId;
     /** The amount, in the group currency. */
     readonly amount: Money;
 }
@@ -251,8 +251,8 @@ export function convertedStrategy(strategy: internal.SettlementStrategy): Settle
 export function convertedSettlementPlan(settlement: internal.SettlementPlan): SettlementPlan {
     return {
         payments: settlement.payments.map((payment) => ({
-            from: memberId(payment.from),
-            to: memberId(payment.to),
+            sender: memberId(payment.sender),
+            receiver: memberId(payment.receiver),
             amount: Money.converted(payment.amount),
         })),
         strategy: convertedStrategy(settlement.strategy),

@@ -288,8 +288,8 @@ func membersAndTransfersConvertAndStoreWhole() throws {
 
     let lei = try CurrencyCode(code: "RON")
     let cash = try Transfer(
-        from: flat.bob,
-        to: flat.ana,
+        sender: flat.bob,
+        receiver: flat.ana,
         cost: .converted(Money(minorUnits: 1_000, currency: lei), rate: ExchangeRate(parsing: "0.2")),
         date: flat.day,
         time: TimeOfDay(hour: 10, minute: 0),
@@ -322,7 +322,7 @@ func absentOrBlankTextReadsBackAbsent() throws {
         var carol = Member(firstName: "Carol", lastName: " Popa\n")
         var lunch = flat.expense("Lunch", paidBy: flat.ana, sharedBy: [flat.ana, flat.bob])
         lunch.description = " For the team\n"
-        var cash = Transfer(from: flat.bob, to: flat.ana, cost: .local(flat.euros(100)), date: flat.day, note: " Cash\n")
+        var cash = Transfer(sender: flat.bob, receiver: flat.ana, cost: .local(flat.euros(100)), date: flat.day, note: " Cash\n")
         #expect(try "Popa" == group.member(withID: group.add(carol))?.lastName)
         #expect(try "For the team" == group.expense(withID: group.add(lunch))?.description)
         #expect(try "Cash" == group.transfer(withID: group.add(cash))?.note)
@@ -341,7 +341,7 @@ func absentOrBlankTextReadsBackAbsent() throws {
         var dinner = flat.expense("Dinner", paidBy: flat.bob, sharedBy: [flat.ana, flat.bob])
         dinner.description = text
         #expect(try nil == group.expense(withID: group.add(dinner))?.description)
-        let refund = Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(100)), date: flat.day, note: text)
+        let refund = Transfer(sender: flat.ana, receiver: flat.bob, cost: .local(flat.euros(100)), date: flat.day, note: text)
         #expect(try nil == group.transfer(withID: group.add(refund))?.note)
     }
 }
@@ -364,7 +364,7 @@ func onlyAnEntryTheGroupHoldsIsReplaced() throws {
     #expect(throws: EranosError.expenseGroup(.unknownExpense(expense.id), detail: "unknown expense \(expense.id)")) {
         try group.replace(expense)
     }
-    let transfer = Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(100)), date: flat.day)
+    let transfer = Transfer(sender: flat.ana, receiver: flat.bob, cost: .local(flat.euros(100)), date: flat.day)
     #expect(throws: EranosError.expenseGroup(.unknownTransfer(transfer.id), detail: "unknown transfer \(transfer.id)")) {
         try group.replace(transfer)
     }
@@ -415,7 +415,7 @@ func everyEntryKeepsTheIdentifierTheAppGivesIt() throws {
     }
 
     let repaid = try Transfer.ID("zz")
-    let transfer = Transfer(id: repaid, from: flat.ana, to: carol, cost: .local(flat.euros(600)), date: flat.day)
+    let transfer = Transfer(id: repaid, sender: flat.ana, receiver: carol, cost: .local(flat.euros(600)), date: flat.day)
     #expect(try group.add(transfer) == repaid)
     #expect(try group.transfer(withID: repaid) == transfer)
     #expect(throws: EranosError.expenseGroup(.duplicateTransfer(repaid), detail: "transfer zz already exists")) {

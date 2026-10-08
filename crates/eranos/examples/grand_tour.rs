@@ -218,9 +218,9 @@ struct StrategyRow {
 #[derive(Tabled)]
 struct PaymentRow {
     #[tabled(rename = "From")]
-    from: String,
+    sender: String,
     #[tabled(rename = "To")]
-    to: String,
+    receiver: String,
     #[tabled(rename = "Amount")]
     amount: Money,
 }
@@ -392,8 +392,8 @@ fn print_entries(group: &ExpenseGroup, shown: impl Fn(CurrencyCode) -> bool) {
         .transfers()
         .filter(|transfer| shown(transfer.amount().currency()))
         .map(|transfer| EntryRow {
-            name: format!("Transfer to {}", name(group, transfer.to())),
-            payer: name(group, transfer.from()),
+            name: format!("Transfer to {}", name(group, transfer.receiver())),
+            payer: name(group, transfer.sender()),
             original: transfer.amount(),
             rate: transfer.exchange_rate(),
             converted: group
@@ -1460,8 +1460,8 @@ fn settling_up(group: &mut ExpenseGroup) -> Result<(), Box<dyn Error>> {
     println!("The group follows the minimum plan:");
     print_table(
         plan.payments().iter().map(|payment| PaymentRow {
-            from: name(group, payment.from()),
-            to: name(group, payment.to()),
+            sender: name(group, payment.sender()),
+            receiver: name(group, payment.receiver()),
             amount: payment.amount(),
         }),
         2,
@@ -1524,8 +1524,8 @@ fn saving_and_loading(
     );
     let tampered = [
         Tampering {
-            change: "\"format\": 4",
-            text: saved.replacen("\"format\": 3", "\"format\": 4", 1),
+            change: "\"format\": 5",
+            text: saved.replacen("\"format\": 4", "\"format\": 5", 1),
         },
         Tampering {
             change: "a blank group name",
@@ -1558,7 +1558,7 @@ fn saving_and_loading(
     assert_eq!(
         errors,
         [
-            ExpenseGroupError::UnsupportedFormat { format: 4 },
+            ExpenseGroupError::UnsupportedFormat { format: 5 },
             ExpenseGroupError::EmptyName,
             ExpenseGroupError::DuplicateCategoryName {
                 existing: categories.food
@@ -1874,8 +1874,8 @@ fn sharing(group: ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
         let reading = block_on(shared.read());
         print_table(
             plan.payments().iter().map(|payment| PaymentRow {
-                from: name(&reading, payment.from()),
-                to: name(&reading, payment.to()),
+                sender: name(&reading, payment.sender()),
+                receiver: name(&reading, payment.receiver()),
                 amount: payment.amount(),
             }),
             2,
@@ -1917,7 +1917,7 @@ fn sharing(group: ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
 
     assert_eq!(plan.len(), 4);
     for payment in plan.payments() {
-        assert_eq!(payment.to(), people.bob);
+        assert_eq!(payment.receiver(), people.bob);
         assert_eq!(payment.amount(), ron("15.00")?);
     }
     assert!(waited);

@@ -50,12 +50,12 @@ private data class MemberRow(
 }
 
 private data class PaymentRow(
-    val from: String,
-    val to: String,
+    val sender: String,
+    val receiver: String,
     val amount: Money,
 ) : Row {
     override val cells: List<String>
-        get() = listOf(from, to, "$amount")
+        get() = listOf(sender, receiver, "$amount")
 
     companion object {
         val HEADERS = listOf("From", "To", "Amount")
@@ -134,7 +134,7 @@ fun main() {
         printTable(
             PaymentRow.HEADERS,
             settlement.payments.map { payment ->
-                PaymentRow(from = names(group, listOf(payment.from)), to = names(group, listOf(payment.to)), amount = payment.amount)
+                PaymentRow(sender = names(group, listOf(payment.sender)), receiver = names(group, listOf(payment.receiver)), amount = payment.amount)
             },
             numbersFrom = 2,
         )

@@ -178,17 +178,17 @@ public struct SettlementPlan: Hashable, Sendable {
 /// One payment of a settlement: one member pays another an amount.
 public struct Payment: Hashable, Sendable {
     /// The member who pays.
-    public let from: Member.ID
+    public let sender: Member.ID
 
     /// The member who is paid.
-    public let to: Member.ID
+    public let receiver: Member.ID
 
     /// The amount, in the group currency.
     public let amount: Money
 
     init(_ payment: EranosGenerated.Payment) {
-        from = Member.ID(rawValue: payment.from)
-        to = Member.ID(rawValue: payment.to)
+        sender = Member.ID(rawValue: payment.sender)
+        receiver = Member.ID(rawValue: payment.receiver)
         amount = Money(payment.amount)
     }
 }

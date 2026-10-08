@@ -136,8 +136,8 @@ func printEntries(_ group: ExpenseGroup, _ shown: (CurrencyCode) -> Bool) throws
     }
     let transfers = try group.transfers().filter { transfer in shown(transfer.cost.amount.currency) }.map { transfer throws(EranosError) in
         EntryRow(
-            name: "Transfer to \(try name(group, transfer.to))",
-            payer: try name(group, transfer.from),
+            name: "Transfer to \(try name(group, transfer.receiver))",
+            payer: try name(group, transfer.sender),
             original: transfer.cost.amount,
             rate: try rate(of: transfer.cost),
             converted: try group.amount(of: transfer.id) ?? zero

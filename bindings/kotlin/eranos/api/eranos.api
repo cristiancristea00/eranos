@@ -1119,8 +1119,8 @@ public final class eranos/Parts$Companion {
 public final class eranos/Payment {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAmount ()Leranos/Money;
-	public final fun getFrom-FHfRuUo ()Ljava/lang/String;
-	public final fun getTo-FHfRuUo ()Ljava/lang/String;
+	public final fun getReceiver-FHfRuUo ()Ljava/lang/String;
+	public final fun getSender-FHfRuUo ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -1365,11 +1365,11 @@ public final class eranos/Transfer {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCost ()Leranos/Cost;
 	public final fun getDate ()Leranos/CalendarDate;
-	public final fun getFrom-FHfRuUo ()Ljava/lang/String;
 	public final fun getId-3NAYOEo ()Ljava/lang/String;
 	public final fun getNote ()Ljava/lang/String;
+	public final fun getReceiver-FHfRuUo ()Ljava/lang/String;
+	public final fun getSender-FHfRuUo ()Ljava/lang/String;
 	public final fun getTime ()Leranos/TimeOfDay;
-	public final fun getTo-FHfRuUo ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

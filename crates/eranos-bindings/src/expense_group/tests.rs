@@ -124,11 +124,11 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
     }
 }
 
-fn new_transfer(from: &str, to: &str, minor_units: i64) -> Transfer {
+fn new_transfer(sender: &str, receiver: &str, minor_units: i64) -> Transfer {
     Transfer {
         id: identifier_generate(),
-        from: from.to_owned(),
-        to: to.to_owned(),
+        sender: sender.to_owned(),
+        receiver: receiver.to_owned(),
         cost: Cost::Local {
             amount: euros(minor_units),
         },

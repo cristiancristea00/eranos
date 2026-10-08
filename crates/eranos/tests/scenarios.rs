@@ -34,8 +34,8 @@ fn member(name: &str) -> Member {
 /// settlement's payments are compared through their getters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ExpectedPayment {
-    from: MemberId,
-    to: MemberId,
+    sender: MemberId,
+    receiver: MemberId,
     amount: Money,
 }
 
@@ -47,8 +47,8 @@ fn payments(group: &ExpenseGroup, strategy: SettlementStrategy) -> Vec<ExpectedP
         .payments()
         .iter()
         .map(|payment| ExpectedPayment {
-            from: payment.from(),
-            to: payment.to(),
+            sender: payment.sender(),
+            receiver: payment.receiver(),
             amount: payment.amount(),
         })
         .collect()
@@ -58,9 +58,9 @@ fn payments(group: &ExpenseGroup, strategy: SettlementStrategy) -> Vec<ExpectedP
 /// by recipient.
 fn sorted(mut payments: Vec<ExpectedPayment>) -> Vec<ExpectedPayment> {
     payments.sort_by(|left, right| {
-        left.from
-            .cmp(&right.from)
-            .then_with(|| left.to.cmp(&right.to))
+        left.sender
+            .cmp(&right.sender)
+            .then_with(|| left.receiver.cmp(&right.receiver))
     });
     payments
 }
@@ -216,18 +216,18 @@ fn every_strategy_settles_the_weekend_its_own_way() {
     // One creditor: the simplified strategies pay Ana directly.
     let direct_to_ana = sorted(vec![
         ExpectedPayment {
-            from: bob,
-            to: ana,
+            sender: bob,
+            receiver: ana,
             amount: eur("72.00"),
         },
         ExpectedPayment {
-            from: carol,
-            to: ana,
+            sender: carol,
+            receiver: ana,
             amount: eur("102.00"),
         },
         ExpectedPayment {
-            from: dan,
-            to: ana,
+            sender: dan,
+            receiver: ana,
             amount: eur("42.00"),
         },
     ]);
@@ -247,33 +247,33 @@ fn every_strategy_settles_the_weekend_its_own_way() {
         payments(&group, SettlementStrategy::Direct),
         sorted(vec![
             ExpectedPayment {
-                from: bob,
-                to: ana,
+                sender: bob,
+                receiver: ana,
                 amount: eur("70.00"),
             },
             ExpectedPayment {
-                from: carol,
-                to: ana,
+                sender: carol,
+                receiver: ana,
                 amount: eur("90.00"),
             },
             ExpectedPayment {
-                from: dan,
-                to: ana,
+                sender: dan,
+                receiver: ana,
                 amount: eur("56.00"),
             },
             ExpectedPayment {
-                from: carol,
-                to: bob,
+                sender: carol,
+                receiver: bob,
                 amount: eur("20.00"),
             },
             ExpectedPayment {
-                from: bob,
-                to: dan,
+                sender: bob,
+                receiver: dan,
                 amount: eur("22.00"),
             },
             ExpectedPayment {
-                from: dan,
-                to: carol,
+                sender: dan,
+                receiver: carol,
                 amount: eur("8.00"),
             },
         ])

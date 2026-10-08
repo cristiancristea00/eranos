@@ -88,8 +88,8 @@ public final class Main {
             Optional<Money> amount = group.transferAmount(transfer.id());
             rows.add(
                     new EntryRow(
-                            "Transfer to " + names(group, List.of(transfer.to())),
-                            names(group, List.of(transfer.from())),
+                            "Transfer to " + names(group, List.of(transfer.receiver())),
+                            names(group, List.of(transfer.sender())),
                             transfer.cost().amount(),
                             rate(transfer.cost()),
                             amount.orElse(zero)));

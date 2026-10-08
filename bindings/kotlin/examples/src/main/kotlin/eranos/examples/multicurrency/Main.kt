@@ -75,8 +75,8 @@ private fun printEntries(group: ExpenseGroup) {
     val transfers =
         group.transfersBlocking().map { transfer ->
             EntryRow(
-                name = "Transfer to ${name(group, transfer.to)}",
-                payer = name(group, transfer.from),
+                name = "Transfer to ${name(group, transfer.receiver)}",
+                payer = name(group, transfer.sender),
                 original = transfer.cost.amount,
                 rate = rate(transfer.cost),
                 converted = group.transferAmountBlocking(transfer.id) ?: zero,

@@ -65,8 +65,8 @@ final class Saving {
             List<Tampering> tampered =
                     List.of(
                             new Tampering(
-                                    "\"format\": 4",
-                                    replaceFirst(saved, "\"format\": 3", "\"format\": 4")),
+                                    "\"format\": 5",
+                                    replaceFirst(saved, "\"format\": 4", "\"format\": 5")),
                             new Tampering(
                                     "a blank group name",
                                     replaceFirst(
@@ -93,7 +93,7 @@ final class Saving {
             check(group.summary().equals(loaded.summary()));
             check(
                     List.of(
-                                    Optional.of(new ExpenseGroupFailure.UnsupportedFormat(4)),
+                                    Optional.of(new ExpenseGroupFailure.UnsupportedFormat(5)),
                                     Optional.of(new ExpenseGroupFailure.EmptyName()),
                                     Optional.of(
                                             new ExpenseGroupFailure.DuplicateCategoryName(

@@ -31,7 +31,7 @@ struct Flat {
                 category: food
             )
         )
-        repayment = try group.add(Transfer(from: bob, to: ana, cost: .local(Money(minorUnits: 1_000, currency: euro)), date: day))
+        repayment = try group.add(Transfer(sender: bob, receiver: ana, cost: .local(Money(minorUnits: 1_000, currency: euro)), date: day))
     }
 
     /// `minorUnits` cents.

@@ -379,8 +379,8 @@ class EntriesTest {
         val lei = CurrencyCode.of("RON")
         val cash =
             Transfer(
-                from = flat.bob,
-                to = flat.ana,
+                sender = flat.bob,
+                receiver = flat.ana,
                 cost = Cost.Converted(Money(1_000, lei), ExchangeRate.parse("0.2")),
                 date = flat.day,
                 time = TimeOfDay.of(10, 0),

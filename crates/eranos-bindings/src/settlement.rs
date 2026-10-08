@@ -52,14 +52,14 @@ impl FromSettlementStrategy for SettlementStrategy {
     }
 }
 
-/// One payment of a settlement: `from` pays `amount` to `to`.
+/// One payment of a settlement: `sender` pays `amount` to `receiver`.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Payment {
     /// The member who pays, as their identifier.
-    pub from: String,
+    pub sender: String,
     /// The member who is paid, as their identifier.
-    pub to: String,
+    pub receiver: String,
     /// The amount, in the group currency.
     pub amount: Money,
 }
@@ -83,8 +83,8 @@ impl SettlementPlan {
                 .payments()
                 .iter()
                 .map(|payment| Payment {
-                    from: payment.from().to_string(),
-                    to: payment.to().to_string(),
+                    sender: payment.sender().to_string(),
+                    receiver: payment.receiver().to_string(),
                     amount: Money::from_library(payment.amount()),
                 })
                 .collect(),

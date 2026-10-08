@@ -61,12 +61,12 @@ public final class Main {
     }
 
     /** A payment of the plan, a row of the payments' table. */
-    private record PaymentRow(String from, String to, Money amount) implements Row {
+    private record PaymentRow(String sender, String receiver, Money amount) implements Row {
         static final List<String> HEADERS = List.of("From", "To", "Amount");
 
         @Override
         public List<String> cells() {
-            return List.of(from, to, amount.toString());
+            return List.of(sender, receiver, amount.toString());
         }
     }
 
@@ -166,8 +166,8 @@ public final class Main {
             for (Payment payment : settlement.payments()) {
                 payments.add(
                         new PaymentRow(
-                                names(group, List.of(payment.from())),
-                                names(group, List.of(payment.to())),
+                                names(group, List.of(payment.sender())),
+                                names(group, List.of(payment.receiver())),
                                 payment.amount()));
             }
             printTable(PaymentRow.HEADERS, payments, 2);
