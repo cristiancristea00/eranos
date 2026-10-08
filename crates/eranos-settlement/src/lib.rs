@@ -260,13 +260,14 @@ struct OpenBalance {
 /// time and clears it whenever a balance changes, as the group does. A plan
 /// is kept once it is computed, never while it is: no request waits for
 /// another's computation, and one dropped before it completes keeps
-/// nothing.
+/// nothing. A refusal is never kept: the exact solver's table, which the
+/// allocator refused, may fit on a later request.
 #[derive(Debug, Clone, Default)]
 pub struct Settlements {
-    adaptive: OnceLock<Result<SettlementPlan, SettlementError>>,
-    minimum_transfers: OnceLock<Result<SettlementPlan, SettlementError>>,
-    greedy: OnceLock<Result<SettlementPlan, SettlementError>>,
-    direct: OnceLock<Result<SettlementPlan, SettlementError>>,
+    adaptive: OnceLock<SettlementPlan>,
+    minimum_transfers: OnceLock<SettlementPlan>,
+    greedy: OnceLock<SettlementPlan>,
+    direct: OnceLock<SettlementPlan>,
 }
 
 impl Settlements {
@@ -275,7 +276,7 @@ impl Settlements {
     ///
     /// # Errors
     ///
-    /// As for [`settle`], computed once and kept like a plan.
+    /// As for [`settle`], computed on every request that fails.
     pub fn get(
         &self,
         strategy: SettlementStrategy,
@@ -289,7 +290,7 @@ impl Settlements {
     ///
     /// # Errors
     ///
-    /// As for [`settle`], computed once and kept like a plan.
+    /// As for [`settle`], computed on every request that fails.
     pub fn get_async(
         &self,
         strategy: SettlementStrategy,
@@ -297,15 +298,13 @@ impl Settlements {
     ) -> Cooperative<impl Future<Output = Result<&SettlementPlan, SettlementError>> + Send> {
         let slot = self.slot(strategy);
         Cooperative::new(async move {
-            let kept = if let Some(kept) = slot.get() {
-                kept
-            } else {
-                let computed = settle_async(strategy, ledger).await;
-                // Of two requests computing at once, the first to complete
-                // keeps its plan, which equals the other's.
-                slot.get_or_init(|| computed)
-            };
-            kept.as_ref().map_err(|&error| error)
+            if let Some(kept) = slot.get() {
+                return Ok(kept);
+            }
+            let computed = settle_async(strategy, ledger).await?;
+            // Of two requests computing at once, the first to complete
+            // keeps its plan, which equals the other's.
+            Ok(slot.get_or_init(|| computed))
         })
     }
 
@@ -317,10 +316,7 @@ impl Settlements {
         self.direct.take();
     }
 
-    const fn slot(
-        &self,
-        strategy: SettlementStrategy,
-    ) -> &OnceLock<Result<SettlementPlan, SettlementError>> {
+    const fn slot(&self, strategy: SettlementStrategy) -> &OnceLock<SettlementPlan> {
         match strategy {
             SettlementStrategy::Adaptive => &self.adaptive,
             SettlementStrategy::MinimumTransfers => &self.minimum_transfers,

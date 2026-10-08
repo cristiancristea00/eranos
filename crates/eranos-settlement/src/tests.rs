@@ -207,6 +207,27 @@ fn an_exact_plan_too_large_to_compute_is_an_error() {
     }
 }
 
+/// A refusal kept in the cache would refuse every later request until a
+/// balance changed, where the exact solver's table, which the allocator
+/// refused once, may fit on the next request: only a plan is kept.
+#[test]
+fn a_refused_settlement_is_not_kept() {
+    let settlements = Settlements::default();
+    let ledger = owed_by_a_hub(63);
+    assert_eq!(
+        settlements.get(SettlementStrategy::MinimumTransfers, &ledger),
+        Err(SettlementError::OutOfMemory { balances: 64 })
+    );
+    assert!(settlements.minimum_transfers.get().is_none());
+    assert_eq!(
+        settlements
+            .get(SettlementStrategy::Greedy, &ledger)
+            .map(SettlementPlan::len),
+        Ok(63)
+    );
+    assert!(settlements.greedy.get().is_some());
+}
+
 /// The adaptive strategy settles a group too large for the exact solver
 /// greedily, and says so, instead of failing as the fewest payments do.
 #[test]
