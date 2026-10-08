@@ -13,7 +13,7 @@ from collections.abc import Callable
 from typing import Any, Final, Self, assert_never, final
 
 from eranos._calendar import CalendarDate, TimeOfDay, date_of, generated_date, generated_time, time_of
-from eranos._contact import Email, Iban, PhoneNumber, Username
+from eranos._contact import Email, Iban, PhoneNumber, Username, generated_phone_number, iban_of, phone_number_of
 from eranos._errors import library_errors
 from eranos._identifiers import (
     UNCATEGORISED,
@@ -868,7 +868,7 @@ def generated_account(account: PaymentAccount) -> generated.PaymentAccount:
     """
     match account.details:
         case IbanPaymentAccountDetails(iban=iban):
-            details = variant(generated.PaymentAccountDetails, generated.PaymentAccountDetails.IBAN(str(iban)))
+            details = variant(generated.PaymentAccountDetails, generated.PaymentAccountDetails.IBAN(str(iban), iban.country_code))
         case UsernamePaymentAccountDetails(username=username):
             details = variant(generated.PaymentAccountDetails, generated.PaymentAccountDetails.USERNAME(str(username)))
         case _:
@@ -877,7 +877,7 @@ def generated_account(account: PaymentAccount) -> generated.PaymentAccount:
 
 
 _PAYMENT_ACCOUNT_DETAILS: dict[type[object], Callable[[Any], PaymentAccountDetails]] = {
-    generated.PaymentAccountDetails.IBAN: lambda value: IbanPaymentAccountDetails(Iban(value.iban)),
+    generated.PaymentAccountDetails.IBAN: lambda value: IbanPaymentAccountDetails(iban_of(value.iban, value.country_code)),
     generated.PaymentAccountDetails.USERNAME: lambda value: UsernamePaymentAccountDetails(Username(value.username)),
 }
 """The account details of each case of the generated account details, by its class."""
@@ -899,7 +899,7 @@ def generated_member(member: Member) -> generated.Member:
         first_name=member.first_name,
         last_name=member.last_name,
         email=None if member.email is None else str(member.email),
-        phone=None if member.phone is None else str(member.phone),
+        phone=None if member.phone is None else generated_phone_number(member.phone),
         accounts=[generated_account(account) for account in member.accounts],
     )
 
@@ -920,7 +920,7 @@ def member_of(value: generated.Member) -> Member:
         first_name=value.first_name,
         last_name=value.last_name,
         email=None if value.email is None else Email(value.email),
-        phone=None if value.phone is None else PhoneNumber(value.phone),
+        phone=None if value.phone is None else phone_number_of(value.phone),
         accounts=tuple(PaymentAccount(account.name, _PAYMENT_ACCOUNT_DETAILS[type(account.details)](account.details)) for account in value.accounts),
     )
 

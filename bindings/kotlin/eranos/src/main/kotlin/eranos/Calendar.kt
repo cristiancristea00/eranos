@@ -1,7 +1,9 @@
 package eranos
 
+import eranos.internal.calendarDateCheck
 import eranos.internal.calendarDateFormat
 import eranos.internal.calendarDateParse
+import eranos.internal.timeOfDayCheck
 import eranos.internal.timeOfDayFormat
 import eranos.internal.timeOfDayParse
 
@@ -25,12 +27,7 @@ public class CalendarDate internal constructor(
     override fun hashCode(): Int = hashOf(year, month, day)
 
     /** The date as the library writes it, in ISO 8601: "2026-09-23". */
-    override fun toString(): String =
-        try {
-            calendarDateFormat(generated)
-        } catch (_: eranos.internal.EranosException) {
-            "$year/$month/$day"
-        }
+    override fun toString(): String = calendarDateFormat(generated)
 
     /** The date of a year, a month, and a day, and the parsing of one from its text. */
     public companion object {
@@ -48,7 +45,7 @@ public class CalendarDate internal constructor(
         ): CalendarDate =
             converting {
                 val date = CalendarDate(year, month, day)
-                calendarDateFormat(date.generated)
+                calendarDateCheck(date.generated)
                 date
             }
 
@@ -83,12 +80,7 @@ public class TimeOfDay internal constructor(
     override fun hashCode(): Int = hashOf(hour, minute)
 
     /** The time as the library writes it, in ISO 8601: "18:30". */
-    override fun toString(): String =
-        try {
-            timeOfDayFormat(generated)
-        } catch (_: eranos.internal.EranosException) {
-            "${hour}h$minute"
-        }
+    override fun toString(): String = timeOfDayFormat(generated)
 
     /** The time of an hour and a minute, and the parsing of one from its text. */
     public companion object {
@@ -104,7 +96,7 @@ public class TimeOfDay internal constructor(
         ): TimeOfDay =
             converting {
                 val time = TimeOfDay(hour, minute)
-                timeOfDayFormat(time.generated)
+                timeOfDayCheck(time.generated)
                 time
             }
 

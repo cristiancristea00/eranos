@@ -34,7 +34,7 @@ public struct Member: Hashable, Sendable {
             firstName: firstName,
             lastName: lastName,
             email: email?.description,
-            phone: phone?.e164,
+            phone: phone?.generated,
             accounts: accounts.map(\.generated)
         )
     }
@@ -83,7 +83,7 @@ public struct Member: Hashable, Sendable {
             firstName: member.firstName,
             lastName: member.lastName,
             email: member.email.map { Email(known: $0) },
-            phone: member.phone.map { PhoneNumber(known: $0) },
+            phone: member.phone.map { PhoneNumber($0) },
             accounts: member.accounts.map(PaymentAccount.init)
         )
     }
@@ -123,7 +123,7 @@ public enum PaymentAccountDetails: Hashable, Sendable {
     var generated: EranosGenerated.PaymentAccountDetails {
         switch self {
         case let .iban(iban):
-            .iban(iban: iban.description)
+            .iban(iban: iban.description, countryCode: iban.countryCode)
         case let .username(username):
             .username(username: username.description)
         }
@@ -131,8 +131,8 @@ public enum PaymentAccountDetails: Hashable, Sendable {
 
     init(_ details: EranosGenerated.PaymentAccountDetails) {
         switch details {
-        case let .iban(iban):
-            self = .iban(IBAN(known: iban))
+        case let .iban(iban, countryCode):
+            self = .iban(IBAN(EranosGenerated.Iban(iban: iban, countryCode: countryCode)))
         case let .username(username):
             self = .username(Username(known: username))
         }

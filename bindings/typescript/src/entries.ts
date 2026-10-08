@@ -636,7 +636,7 @@ export interface PaymentAccount {
 function convertedPaymentAccountDetails(details: internal.PaymentAccountDetails): PaymentAccountDetails {
     switch (details.tag) {
         case internal.PaymentAccountDetails_Tags.Iban:
-            return { kind: 'iban', iban: Iban.known(details.inner.iban) };
+            return { kind: 'iban', iban: Iban.converted(details.inner) };
         case internal.PaymentAccountDetails_Tags.Username:
             return { kind: 'username', username: Username.known(details.inner.username) };
     }
@@ -646,7 +646,7 @@ function convertedPaymentAccountDetails(details: internal.PaymentAccountDetails)
 function generatedPaymentAccountDetails(details: PaymentAccountDetails): internal.PaymentAccountDetails {
     switch (details.kind) {
         case 'iban':
-            return new internal.PaymentAccountDetails.Iban({ iban: details.iban.toString() });
+            return new internal.PaymentAccountDetails.Iban(details.iban.generated());
         case 'username':
             return new internal.PaymentAccountDetails.Username({ username: details.username.toString() });
     }
@@ -730,7 +730,7 @@ export function convertedMember(member: internal.Member): Member {
         firstName: member.firstName,
         ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
         ...(undefined === member.email ? {} : { email: Email.known(member.email) }),
-        ...(undefined === member.phone ? {} : { phone: PhoneNumber.known(member.phone) }),
+        ...(undefined === member.phone ? {} : { phone: PhoneNumber.converted(member.phone) }),
         accounts: member.accounts.map((account) => ({ name: account.name, details: convertedPaymentAccountDetails(account.details) })),
     };
 }
@@ -746,7 +746,7 @@ export function generatedMember(member: Member): internal.Member {
         firstName: member.firstName,
         ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
         ...(undefined === member.email ? {} : { email: member.email.toString() }),
-        ...(undefined === member.phone ? {} : { phone: member.phone.e164 }),
+        ...(undefined === member.phone ? {} : { phone: member.phone.generated() }),
         accounts: member.accounts.map((account) =>
             internal.PaymentAccount.create({ name: account.name, details: generatedPaymentAccountDetails(account.details) }),
         ),

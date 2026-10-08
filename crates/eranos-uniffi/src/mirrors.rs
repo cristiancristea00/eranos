@@ -6,10 +6,10 @@
 use eranos_bindings::{
     Balance, CalendarDate, CalendarFailure, Category, CategoryFailure, CategoryTotal,
     ContactFailure, Cost, CurrencyDetails, CurrencyRate, EranosError, Expense, ExpenseFailure,
-    ExpenseGroupFailure, ExpenseItem, ExpenseShares, ExpenseSplit, IbanReason, IdFailure,
+    ExpenseGroupFailure, ExpenseItem, ExpenseShares, ExpenseSplit, Iban, IbanReason, IdFailure,
     LanguageFailure, Member, MemberAmount, MemberCategoryTotals, MemberFailure, MemberParts,
     MemberPercentage, MemberShare, MemberSummary, Money, MoneyFailure, NewExpenseGroup, Payment,
-    PaymentAccount, PaymentAccountDetails, PaymentAccountFailure, SettlementFailure,
+    PaymentAccount, PaymentAccountDetails, PaymentAccountFailure, PhoneNumber, SettlementFailure,
     SettlementPlan, SettlementStrategy, Split, Summary, TimeOfDay, TipDistribution, TipRule,
     TipValue, Transfer, TransferFailure,
 };

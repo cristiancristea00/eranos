@@ -165,7 +165,7 @@ def _print_members(group: ExpenseGroup) -> None:
             MemberRow(
                 name=' '.join(part for part in (member.first_name, member.last_name) if part is not None),
                 email='' if member.email is None else str(member.email),
-                phone='' if member.phone is None else member.phone.international(),
+                phone='' if member.phone is None else member.phone.international,
                 accounts=cell(_describe(account) for account in member.accounts),
             )
             for member in group.members()
@@ -204,7 +204,7 @@ def _iban(text: str) -> CheckRow:
         The row of the check.
 
     """
-    return CheckRow(input=f'"{text}"', kind='IBAN', result=_outcome(lambda: Iban(text), lambda iban: f'{iban}, country {iban.country_code()}'))
+    return CheckRow(input=f'"{text}"', kind='IBAN', result=_outcome(lambda: Iban(text), lambda iban: f'{iban}, country {iban.country_code}'))
 
 
 def _phone(text: str) -> CheckRow:
@@ -219,7 +219,7 @@ def _phone(text: str) -> CheckRow:
 
     """
     return CheckRow(
-        input=f'"{text}"', kind='phone', result=_outcome(lambda: PhoneNumber(text), lambda phone: f'{phone.international()}, stored as {phone}')
+        input=f'"{text}"', kind='phone', result=_outcome(lambda: PhoneNumber(text), lambda phone: f'{phone.international}, stored as {phone}')
     )
 
 

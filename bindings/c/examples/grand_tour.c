@@ -828,15 +828,15 @@ static void printEntries(EranosExpenseGroup const *const group, char const *cons
 
 /// The phone number of @p member, grouped for reading, or nothing when there is none.
 [[nodiscard]] static Line phoneOf(EranosMember const *const member) {
-    EranosText *const text = eranosTextCreate();
+    EranosPhoneNumber *const phone = eranosMemberPhone(member);
     Line line = {};
-    if (eranosMemberPhone(member, text)) {
+    if (nullptr != phone) {
         EranosText *const international = eranosTextCreate();
-        must(eranosPhoneNumberInternational(eranosTextData(text), international));
+        eranosPhoneNumberInternational(phone, international);
         line = textLine(international);
         eranosTextDestroy(international);
     }
-    eranosTextDestroy(text);
+    eranosPhoneNumberDestroy(phone);
     return line;
 }
 
@@ -867,32 +867,38 @@ static void printMembers(EranosExpenseGroup const *const group) {
 
 /// Adds the row of the IBAN @p input to @p table: its electronic form and its country, or its refusal.
 static void addIban(Table *const table, char const *const input) {
-    EranosText *const iban = eranosTextCreate();
-    EranosText *const country = eranosTextCreate();
-    EranosError *const refused = eranosIbanParse(input, iban);
+    EranosIban *iban = nullptr;
+    EranosError *const refused = eranosIbanParse(input, &iban);
     Line value = {};
-    if (nullptr == refused) {
-        must(eranosIbanCountryCode(input, country));
-        value = lineOf("%s, country %s", eranosTextData(iban), eranosTextData(country));
+    if (nullptr != iban) {
+        EranosText *const text = eranosTextCreate();
+        EranosText *const country = eranosTextCreate();
+        eranosIbanIban(iban, text);
+        eranosIbanCountryCode(iban, country);
+        value = lineOf("%s, country %s", eranosTextData(text), eranosTextData(country));
+        eranosTextDestroy(country);
+        eranosTextDestroy(text);
     }
     addCheckRow(table, &(CheckRow){.input = lineOf("\"%s\"", input), .kind = lineOf("IBAN"), .result = outcomeOf(refused, value.text)});
-    eranosTextDestroy(country);
-    eranosTextDestroy(iban);
+    eranosIbanDestroy(iban);
 }
 
 /// Adds the row of the phone number @p input to @p table: its form for reading and its stored form, or its refusal.
 static void addPhone(Table *const table, char const *const input) {
-    EranosText *const international = eranosTextCreate();
-    EranosText *const stored = eranosTextCreate();
-    EranosError *const refused = eranosPhoneNumberInternational(input, international);
+    EranosPhoneNumber *phone = nullptr;
+    EranosError *const refused = eranosPhoneNumberParse(input, &phone);
     Line value = {};
-    if (nullptr == refused) {
-        must(eranosPhoneNumberParse(input, stored));
+    if (nullptr != phone) {
+        EranosText *const international = eranosTextCreate();
+        EranosText *const stored = eranosTextCreate();
+        eranosPhoneNumberInternational(phone, international);
+        eranosPhoneNumberE164(phone, stored);
         value = lineOf("%s, stored as %s", eranosTextData(international), eranosTextData(stored));
+        eranosTextDestroy(stored);
+        eranosTextDestroy(international);
     }
     addCheckRow(table, &(CheckRow){.input = lineOf("\"%s\"", input), .kind = lineOf("phone"), .result = outcomeOf(refused, value.text)});
-    eranosTextDestroy(stored);
-    eranosTextDestroy(international);
+    eranosPhoneNumberDestroy(phone);
 }
 
 /// Prints what validation makes of IBANs, an email, phone numbers, and blank required text.
@@ -1149,7 +1155,7 @@ static void validation(EranosExpenseGroup *const group) {
         int32_t basisPoints = 0;
         if (eranosTipValueBasisPoints(value, &basisPoints)) {
             EranosText *const text = eranosTextCreate();
-            must(eranosPercentageFormat(basisPoints, text));
+            eranosPercentageFormat(basisPoints, text);
             line = lineOf(", %s tip", eranosTextData(text));
             eranosTextDestroy(text);
         } else {
@@ -1444,10 +1450,10 @@ static void printFado(EranosExpenseGroup const *const group, Id const id) {
     EranosTimeOfDay time = {.hour = 0, .minute = 0};
     Line when = {};
     if (eranosExpenseTime(fado, &time)) {
-        must(eranosTimeOfDayFormat(time, text));
+        eranosTimeOfDayFormat(time, text);
         when = textLine(text);
     }
-    must(eranosCalendarDateFormat(eranosExpenseDate(fado), text));
+    eranosCalendarDateFormat(eranosExpenseDate(fado), text);
     Line const date = textLine(text);
     Line const place = eranosExpenseDescription(fado, text) ? textLine(text) : lineOf("%s", "");
     EranosTipRule *const tip = eranosExpenseTip(fado);
@@ -1455,7 +1461,7 @@ static void printFado(EranosExpenseGroup const *const group, Id const id) {
     int32_t basisPoints = 0;
     Line rule = {};
     if (eranosTipValueBasisPoints(value, &basisPoints)) {
-        must(eranosPercentageFormat(basisPoints, text));
+        eranosPercentageFormat(basisPoints, text);
         rule = textLine(text);
     } else {
         rule = moneyLine(eranosTipValueAmount(value));
@@ -1557,7 +1563,7 @@ static void anotherCurrency(EranosExpenseGroup *const group, People const *const
     EranosTimeOfDay time = {.hour = 0, .minute = 0};
     Line when = {};
     if (eranosTransferTime(transfer, &time)) {
-        must(eranosTimeOfDayFormat(time, text));
+        eranosTimeOfDayFormat(time, text);
         when = textLine(text);
     }
     Line const note = eranosTransferNote(transfer, text) ? textLine(text) : lineOf("%s", "");
@@ -2377,7 +2383,7 @@ static void amounts(void) {
 /// The text of the percentage of @p basisPoints.
 [[nodiscard]] static Line percentageLine(int32_t const basisPoints) {
     EranosText *const text = eranosTextCreate();
-    must(eranosPercentageFormat(basisPoints, text));
+    eranosPercentageFormat(basisPoints, text);
     Line const line = textLine(text);
     eranosTextDestroy(text);
     return line;
@@ -2386,7 +2392,7 @@ static void amounts(void) {
 /// The text of @p hundredths hundredths of a part.
 [[nodiscard]] static Line partsLine(int32_t const hundredths) {
     EranosText *const text = eranosTextCreate();
-    must(eranosPartsFormat(hundredths, text));
+    eranosPartsFormat(hundredths, text);
     Line const line = textLine(text);
     eranosTextDestroy(text);
     return line;
@@ -2437,14 +2443,14 @@ static void datesAndIdentifiers(EranosExpenseGroup const *const group, People co
     EranosText *const text = eranosTextCreate();
     EranosCalendarDate date = {.year = 0, .month = 0, .day = 0};
     must(eranosCalendarDateParse("2026-10-01", &date));
-    must(eranosCalendarDateFormat(date, text));
+    eranosCalendarDateFormat(date, text);
     Line const dateLine = lineOf("%s: day %ld, month %ld, year %ld", eranosTextData(text), (long)date.day, (long)date.month, (long)date.year);
-    Line const leapDay = messageLine(eranosCalendarDateFormat((EranosCalendarDate){.year = 2027, .month = 2, .day = 29}, text));
+    Line const leapDay = messageLine(eranosCalendarDateCheck((EranosCalendarDate){.year = 2027, .month = 2, .day = 29}));
     EranosTimeOfDay time = {.hour = 0, .minute = 0};
     must(eranosTimeOfDayParse("22:15", &time));
-    must(eranosTimeOfDayFormat(time, text));
+    eranosTimeOfDayFormat(time, text);
     Line const timeLine = lineOf("%s: hour %ld, minute %ld", eranosTextData(text), (long)time.hour, (long)time.minute);
-    Line const midnight = messageLine(eranosTimeOfDayFormat((EranosTimeOfDay){.hour = 24, .minute = 0}, text));
+    Line const midnight = messageLine(eranosTimeOfDayCheck((EranosTimeOfDay){.hour = 24, .minute = 0}));
     EranosMember *member = nullptr;
     must(eranosExpenseGroupMember(group, people->ana.text, &member));
     check(nullptr != member, "Ana is a member");

@@ -602,8 +602,8 @@ static void anAmountFormatsWithItsCurrencysDecimalPlaces(Check *const check) {
 }
 
 /// A rate, a percentage, or a number of parts read otherwise than the library reads it would divide or convert otherwise
-/// than an app shows.
-static void ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes(Check *const check) {
+/// than an app shows, and a check that took what the library refuses would let an app build a split that fails only when added.
+static void ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes(Check *const check) {
     EranosText *const text = eranosTextCreate();
     checkSucceeded(check, eranosExchangeRateParse("4.970", text), "a rate parses");
     checkThat(check, isText(text, "4.97"), "and is written without trailing zeros");
@@ -616,20 +616,32 @@ static void ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes(Check *const 
     checkThat(check, isKind(eranosExchangeRateConvert("0.25", lei, "\xff", &converted), ERANOS_ERROR_KIND_INVALID_TEXT), "a currency's code is text");
     int32_t basisPoints = 0;
     checkSucceeded(check, eranosPercentageParse("12.5 %", &basisPoints), "a percentage parses");
-    checkSucceeded(check, eranosPercentageFormat(basisPoints, text), "and formats");
+    eranosPercentageFormat(basisPoints, text);
     checkThat(check, 1'250 == basisPoints && isText(text, "12.5%"), "12.5 % is 1250 basis points");
     checkThat(check,
               isFailure(eranosPercentageParse("half", &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE) &&
                   0 == basisPoints,
               "a word is no percentage, and gives none");
-    checkThat(check, isFailure(eranosPercentageFormat(-1, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE), "a negative one");
+    checkSucceeded(check, eranosPercentageCheck(0), "0 % is a percentage");
+    checkSucceeded(check, eranosPercentageCheck(1'250), "and so is 12.5 %");
+    checkThat(check, isFailure(eranosPercentageCheck(-1), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE), "a negative one is not");
+    eranosPercentageFormat(-1'250, text);
+    checkThat(check, isText(text, "-12.5%"), "but is written as any other, after a minus sign");
     int32_t hundredths = 0;
     checkSucceeded(check, eranosPartsParse("0.5", &hundredths), "parts parse");
-    checkSucceeded(check, eranosPartsFormat(hundredths, text), "and format");
+    eranosPartsFormat(hundredths, text);
     checkThat(check, 50 == hundredths && isText(text, "0.5"), "half a part is 50 hundredths");
     checkThat(check, isFailure(eranosPartsParse("half", &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS),
               "a word is no parts");
-    checkThat(check, isFailure(eranosPartsFormat(-1, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS), "negative parts");
+    checkSucceeded(check, eranosPartsCheck(1), "a hundredth of a part is a number of parts");
+    checkThat(check,
+              isFailure(eranosPartsCheck(0), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS) &&
+                  isFailure(eranosPartsCheck(-1), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS),
+              "no parts and negative parts are not");
+    eranosPartsFormat(0, text);
+    checkThat(check, isText(text, "0"), "but zero is written as any number");
+    eranosPartsFormat(-50, text);
+    checkThat(check, isText(text, "-0.5"), "and so is a negative one");
     eranosMoneyDestroy(lei);
     eranosTextDestroy(text);
 }
@@ -640,21 +652,34 @@ static void datesAndTimesAreCheckedAndWritten(Check *const check) {
     EranosCalendarDate date = {.year = 0, .month = 0, .day = 0};
     checkSucceeded(check, eranosCalendarDateParse("2026-09-23", &date), "a date parses");
     checkThat(check, 2026 == date.year && 9 == date.month && 23 == date.day, "into its year, month, and day");
-    checkSucceeded(check, eranosCalendarDateFormat(date, text), "and formats");
-    checkThat(check, isText(text, "2026-09-23"), "as the library writes it");
+    eranosCalendarDateFormat(date, text);
+    checkThat(check, isText(text, "2026-09-23"), "and formats as the library writes it");
+    checkSucceeded(check, eranosCalendarDateCheck(date), "a day of the calendar passes the check");
     constexpr EranosCalendarDate LEAP = {.year = 2026, .month = 2, .day = 30};
-    checkThat(check, isFailure(eranosCalendarDateFormat(LEAP, text), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE),
-              "30 February");
+    checkThat(check, isFailure(eranosCalendarDateCheck(LEAP), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE),
+              "30 February does not");
+    constexpr EranosCalendarDate FAR = {.year = 10'000, .month = 1, .day = 1};
+    checkThat(check, isFailure(eranosCalendarDateCheck(FAR), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE),
+              "nor does year 10000");
+    eranosCalendarDateFormat(LEAP, text);
+    checkThat(check, isText(text, "2026-02-30"), "but a day the calendar does not have is written as any other");
     checkThat(check,
               isFailure(eranosCalendarDateParse("2026-02-30", &date), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE) &&
                   0 == date.day,
               "parsed, it gives no date");
     EranosTimeOfDay time = {.hour = 1, .minute = 1};
     checkSucceeded(check, eranosTimeOfDayParse("18:30", &time), "a time parses");
-    checkSucceeded(check, eranosTimeOfDayFormat(time, text), "and formats");
-    checkThat(check, 18 == time.hour && 30 == time.minute && isText(text, "18:30"), "into its hour and minute");
-    constexpr EranosTimeOfDay LATE = {.hour = 25, .minute = 0};
-    checkThat(check, isFailure(eranosTimeOfDayFormat(LATE, text), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME), "hour 25");
+    eranosTimeOfDayFormat(time, text);
+    checkThat(check, 18 == time.hour && 30 == time.minute && isText(text, "18:30"), "into its hour and minute, and formats");
+    checkSucceeded(check, eranosTimeOfDayCheck(time), "a time of day passes the check");
+    constexpr EranosTimeOfDay MIDNIGHT = {.hour = 24, .minute = 0};
+    constexpr EranosTimeOfDay LATE = {.hour = 23, .minute = 60};
+    checkThat(check,
+              isFailure(eranosTimeOfDayCheck(MIDNIGHT), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME) &&
+                  isFailure(eranosTimeOfDayCheck(LATE), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME),
+              "hour 24 and minute 60 do not");
+    eranosTimeOfDayFormat(MIDNIGHT, text);
+    checkThat(check, isText(text, "24:00"), "but a time the day does not have is written as any other");
     checkThat(check, isFailure(eranosTimeOfDayParse("25:00", &time), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME), "parsed");
     eranosTextDestroy(text);
 }
@@ -666,35 +691,41 @@ static void contactsAndAccountsAreCheckedAndMadeCanonical(Check *const check) {
     checkThat(check, isText(text, "ana@example.com"), "trimmed");
     checkThat(check, isFailure(eranosEmailParse("ana", text), ERANOS_ERROR_KIND_CONTACT, ERANOS_FAILURE_CONTACT_INVALID_EMAIL),
               "an email has a domain");
-    checkSucceeded(check, eranosPhoneNumberParse("+40 712 345 678", text), "a phone number parses");
+    EranosPhoneNumber *phone = nullptr;
+    checkSucceeded(check, eranosPhoneNumberParse("+40 712 345 678", &phone), "a phone number parses");
+    eranosPhoneNumberE164(phone, text);
     checkThat(check, isText(text, "+40712345678"), "into its E.164 form");
-    checkSucceeded(check, eranosPhoneNumberInternational("+40712345678", text), "and writes its international form");
-    checkThat(check, isText(text, "+40 712 345 678"), "with spaces");
-    checkThat(check, isFailure(eranosPhoneNumberParse("0712345678", text), ERANOS_ERROR_KIND_CONTACT, ERANOS_FAILURE_CONTACT_INVALID_PHONE_NUMBER),
-              "a phone number has a country code");
-    checkThat(check, isFailure(eranosPhoneNumberInternational("0712", text), ERANOS_ERROR_KIND_CONTACT, ERANOS_FAILURE_CONTACT_INVALID_PHONE_NUMBER),
-              "in either form");
-    checkSucceeded(check, eranosIbanParse("ro49 aaaa 1b31 0075 9384 0000", text), "an IBAN parses");
+    eranosPhoneNumberInternational(phone, text);
+    checkThat(check, isText(text, "+40 712 345 678"), "and its international form, with spaces");
+    eranosPhoneNumberDestroy(phone);
+    checkThat(check,
+              isFailure(eranosPhoneNumberParse("0712345678", &phone), ERANOS_ERROR_KIND_CONTACT, ERANOS_FAILURE_CONTACT_INVALID_PHONE_NUMBER) &&
+                  nullptr == phone,
+              "a phone number has a country code, and none is made without one");
+    checkThat(check, isKind(eranosPhoneNumberParse("\xff", &phone), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == phone, "a phone number is text");
+    EranosIban *iban = nullptr;
+    checkSucceeded(check, eranosIbanParse("ro49 aaaa 1b31 0075 9384 0000", &iban), "an IBAN parses");
+    eranosIbanIban(iban, text);
     checkThat(check, isText(text, "RO49AAAA1B31007593840000"), "into its electronic form");
-    checkSucceeded(check, eranosIbanCountryCode("RO49AAAA1B31007593840000", text), "and names its country");
-    checkThat(check, isText(text, "RO"), "Romania");
-    EranosError *const checksum = eranosIbanParse("RO49AAAA1B31007593840001", text);
+    eranosIbanCountryCode(iban, text);
+    checkThat(check, isText(text, "RO"), "and names its country, Romania");
+    eranosIbanDestroy(iban);
+    EranosError *const checksum = eranosIbanParse("RO49AAAA1B31007593840001", &iban);
     EranosIbanReason reason = ERANOS_IBAN_REASON_INVALID_FORMAT;
     checkThat(check,
               holdsFailure(checksum, ERANOS_ERROR_KIND_PAYMENT_ACCOUNT, ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN) &&
-                  eranosErrorReason(checksum, &reason) && ERANOS_IBAN_REASON_INVALID_CHECKSUM == reason,
-              "an IBAN whose check digits do not match");
+                  eranosErrorReason(checksum, &reason) && ERANOS_IBAN_REASON_INVALID_CHECKSUM == reason && nullptr == iban,
+              "an IBAN whose check digits do not match, and none is made");
     eranosErrorMessage(checksum, text);
     checkThat(check, isText(text, "invalid IBAN: the check digits do not match"), "the message names the failure, not the text");
     eranosErrorDestroy(checksum);
-    EranosError *const length = eranosIbanParse("RO49AAAA1B3100759384000", text);
+    EranosError *const length = eranosIbanParse("RO49AAAA1B3100759384000", &iban);
     int64_t expected = 0;
     int64_t found = 0;
     checkThat(check, eranosErrorExpectedLength(length, &expected) && 24 == expected && eranosErrorFoundLength(length, &found) && 23 == found,
               "an IBAN one character short holds both lengths");
     eranosErrorDestroy(length);
-    checkThat(check, isFailure(eranosIbanCountryCode("X", text), ERANOS_ERROR_KIND_PAYMENT_ACCOUNT, ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN),
-              "a country code");
+    checkThat(check, isKind(eranosIbanParse("\xff", &iban), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == iban, "an IBAN is text");
     checkSucceeded(check, eranosUsernameParse(" ana.pays ", text), "a username parses");
     checkThat(check, isText(text, "ana.pays"), "trimmed");
     checkThat(check, isFailure(eranosUsernameParse(" ", text), ERANOS_ERROR_KIND_PAYMENT_ACCOUNT, ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_USERNAME),
@@ -1137,18 +1168,27 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
 static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     EranosText *const text = eranosTextCreate();
     EranosPaymentAccountDetails *bank = nullptr;
-    checkSucceeded(check, eranosPaymentAccountDetailsCreateIban("RO49AAAA1B31007593840000", &bank), "an account's IBAN");
+    checkSucceeded(check, eranosPaymentAccountDetailsCreateIban("ro49 aaaa 1b31 0075 9384 0000", &bank), "an account's IBAN");
     EranosPaymentAccountDetails *app = nullptr;
     checkSucceeded(check, eranosPaymentAccountDetailsCreateUsername("ana.pays", &app), "an account's username");
     checkThat(check,
               ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_IBAN == eranosPaymentAccountDetailsKind(bank) && eranosPaymentAccountDetailsIban(bank, text) &&
                   isText(text, "RO49AAAA1B31007593840000") && !eranosPaymentAccountDetailsUsername(bank, text),
-              "an IBAN account holds its IBAN");
+              "an IBAN account holds its IBAN, parsed into its electronic form");
+    checkThat(check, eranosPaymentAccountDetailsCountryCode(bank, text) && isText(text, "RO"), "and the country code the library derives from it");
     checkThat(check,
               ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_USERNAME == eranosPaymentAccountDetailsKind(app) &&
-                  eranosPaymentAccountDetailsUsername(app, text) && isText(text, "ana.pays") && !eranosPaymentAccountDetailsIban(app, text),
-              "a username account holds its username");
+                  eranosPaymentAccountDetailsUsername(app, text) && isText(text, "ana.pays") && !eranosPaymentAccountDetailsIban(app, text) &&
+                  !eranosPaymentAccountDetailsCountryCode(app, text),
+              "a username account holds its username, and no IBAN or country code");
     EranosPaymentAccountDetails *none = nullptr;
+    EranosError *const checksum = eranosPaymentAccountDetailsCreateIban("RO49AAAA1B31007593840001", &none);
+    EranosIbanReason reason = ERANOS_IBAN_REASON_INVALID_FORMAT;
+    checkThat(check,
+              holdsFailure(checksum, ERANOS_ERROR_KIND_PAYMENT_ACCOUNT, ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN) &&
+                  eranosErrorReason(checksum, &reason) && ERANOS_IBAN_REASON_INVALID_CHECKSUM == reason && nullptr == none,
+              "an account's IBAN is parsed, and one whose check digits do not match gives no details");
+    eranosErrorDestroy(checksum);
     checkThat(check,
               isKind(eranosPaymentAccountDetailsCreateIban("\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosPaymentAccountDetailsCreateUsername("\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT),
@@ -1172,15 +1212,16 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     EranosPaymentAccountList *const noAccounts = eranosMemberAccounts(member);
     eranosMemberId(member, text);
     checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new member has a generated identifier");
+    EranosPhoneNumber *const noPhone = eranosMemberPhone(member);
     checkThat(check,
-              !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) && !eranosMemberPhone(member, text) &&
+              !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) && nullptr == noPhone &&
                   eranosPaymentAccountListIsEmpty(noAccounts),
               "and a first name only");
     checkSucceeded(check, eranosMemberSetId(member, "0199a000-0000-7000-8000-000000000004"), "an identifier is set");
     checkSucceeded(check, eranosMemberSetFirstName(member, "Carla Maria"), "a first name");
     checkSucceeded(check, eranosMemberSetEmail(member, "carla@example.com"), "an email");
     checkSucceeded(check, eranosMemberSetLastName(member, "Pop"), "a last name");
-    checkSucceeded(check, eranosMemberSetPhone(member, "+40712345678"), "a phone number");
+    checkSucceeded(check, eranosMemberSetPhone(member, "+40 712 345 678"), "a phone number");
     eranosMemberSetAccounts(member, accounts);
     EranosPaymentAccountList *const readAccounts = eranosMemberAccounts(member);
     EranosPaymentAccount *const firstAccount = eranosPaymentAccountListGet(readAccounts, 0);
@@ -1192,9 +1233,20 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     eranosMemberId(member, text);
     checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000004"), "the identifier");
     checkThat(check,
-              eranosMemberEmail(member, text) && isText(text, "carla@example.com") && eranosMemberLastName(member, text) && isText(text, "Pop") &&
-                  eranosMemberPhone(member, text) && isText(text, "+40712345678"),
+              eranosMemberEmail(member, text) && isText(text, "carla@example.com") && eranosMemberLastName(member, text) && isText(text, "Pop"),
               "every detail as set");
+    EranosPhoneNumber *const phone = eranosMemberPhone(member);
+    checkThat(check, nullptr != phone, "the phone number too");
+    eranosPhoneNumberE164(phone, text);
+    checkThat(check, isText(text, "+40712345678"), "parsed into its E.164 form");
+    eranosPhoneNumberInternational(phone, text);
+    checkThat(check, isText(text, "+40 712 345 678"), "with the international form the library derives from it");
+    EranosError *const local = eranosMemberSetPhone(member, "0712");
+    checkThat(check, isFailure(local, ERANOS_ERROR_KIND_CONTACT, ERANOS_FAILURE_CONTACT_INVALID_PHONE_NUMBER),
+              "a phone number set is parsed, and one without a country code refused");
+    EranosPhoneNumber *const kept = eranosMemberPhone(member);
+    eranosPhoneNumberE164(kept, text);
+    checkThat(check, isText(text, "+40712345678"), "and one refused leaves the number as it was");
     checkThat(check,
               isKind(eranosMemberSetId(member, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosMemberSetFirstName(member, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
@@ -1205,7 +1257,8 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     eranosMemberClearEmail(member);
     eranosMemberClearLastName(member);
     eranosMemberClearPhone(member);
-    checkThat(check, !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) && !eranosMemberPhone(member, text), "and clears");
+    EranosPhoneNumber *const cleared = eranosMemberPhone(member);
+    checkThat(check, !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) && nullptr == cleared, "and clears");
     EranosMember *carla = nullptr;
     checkSucceeded(check, eranosMemberCreateWithId("carla", "Carla", &carla), "a member under the app's identifier");
     eranosMemberId(carla, text);
@@ -1215,6 +1268,10 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     checkThat(check, isKind(eranosMemberCreateWithId("\xff", "Carla", &noMember), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == noMember,
               "an identifier is text");
     eranosMemberDestroy(carla);
+    eranosPhoneNumberDestroy(cleared);
+    eranosPhoneNumberDestroy(kept);
+    eranosPhoneNumberDestroy(phone);
+    eranosPhoneNumberDestroy(noPhone);
     eranosPaymentAccountDestroy(firstAccount);
     eranosPaymentAccountListDestroy(readAccounts);
     eranosPaymentAccountListDestroy(noAccounts);
@@ -1307,6 +1364,8 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosPaymentAccountDestroy(nullptr);
     eranosPaymentAccountDetailsDestroy(nullptr);
     eranosPaymentAccountListDestroy(nullptr);
+    eranosPhoneNumberDestroy(nullptr);
+    eranosIbanDestroy(nullptr);
     eranosMemberDestroy(nullptr);
     eranosMemberListDestroy(nullptr);
     eranosMoneyDestroy(nullptr);
@@ -1672,6 +1731,48 @@ static void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check *const che
     eranosMemberDestroy(member);
     eranosMemberDestroy(carla);
     eranosTextDestroy(named);
+    eranosTextDestroy(text);
+    flatDestroy(flat);
+}
+
+/// A phone number or an IBAN that lost on its way through the group the text the library derives from it would show an app a
+/// number it could not group for reading, or an account without its country.
+static void aPhoneNumberAndAnIbanComeBackFromTheGroupWithTheTextTheLibraryDerives(Check *const check) {
+    Flat const flat = flatOf();
+    EranosText *const text = eranosTextCreate();
+    EranosMember *carla = nullptr;
+    eranosErrorDestroy(eranosMemberCreate("Carla", &carla));
+    checkSucceeded(check, eranosMemberSetPhone(carla, "+351912345678"), "a phone number");
+    EranosPaymentAccountDetails *details = nullptr;
+    checkSucceeded(check, eranosPaymentAccountDetailsCreateIban("GB82WEST12345698765432", &details), "an IBAN");
+    EranosPaymentAccount *bank = nullptr;
+    eranosErrorDestroy(eranosPaymentAccountCreate("Bank", details, &bank));
+    EranosPaymentAccountList *const accounts = eranosPaymentAccountListCreate();
+    eranosPaymentAccountListPush(accounts, bank);
+    eranosMemberSetAccounts(carla, accounts);
+    checkSucceeded(check, eranosExpenseGroupAddMember(flat.group, carla, text), "join the group with a member");
+    EranosMember *member = nullptr;
+    checkSucceeded(check, eranosExpenseGroupMember(flat.group, eranosTextData(text), &member), "who is found");
+    EranosPhoneNumber *const phone = eranosMemberPhone(member);
+    checkThat(check, nullptr != phone, "with the phone number");
+    eranosPhoneNumberE164(phone, text);
+    checkThat(check, isText(text, "+351912345678"), "in E.164 form");
+    eranosPhoneNumberInternational(phone, text);
+    checkThat(check, isText(text, "+351 912 345 678"), "and in the international form the library derives from it");
+    EranosPaymentAccountList *const readAccounts = eranosMemberAccounts(member);
+    EranosPaymentAccount *const account = eranosPaymentAccountListGet(readAccounts, 0);
+    EranosPaymentAccountDetails *const readDetails = eranosPaymentAccountDetails(account);
+    checkThat(check, eranosPaymentAccountDetailsIban(readDetails, text) && isText(text, "GB82WEST12345698765432"), "and the IBAN");
+    checkThat(check, eranosPaymentAccountDetailsCountryCode(readDetails, text) && isText(text, "GB"), "with the country code it derives");
+    eranosPaymentAccountDetailsDestroy(readDetails);
+    eranosPaymentAccountDestroy(account);
+    eranosPaymentAccountListDestroy(readAccounts);
+    eranosPhoneNumberDestroy(phone);
+    eranosMemberDestroy(member);
+    eranosPaymentAccountListDestroy(accounts);
+    eranosPaymentAccountDestroy(bank);
+    eranosPaymentAccountDetailsDestroy(details);
+    eranosMemberDestroy(carla);
     eranosTextDestroy(text);
     flatDestroy(flat);
 }
@@ -2736,7 +2837,7 @@ int main(void) {
         {.body = anAmountParsesFormatsAndAdds, .name = "anAmountParsesFormatsAndAdds"},
         {.body = anAmountAndAFailureCarryTheirCurrencysDetails, .name = "anAmountAndAFailureCarryTheirCurrencysDetails"},
         {.body = anAmountFormatsWithItsCurrencysDecimalPlaces, .name = "anAmountFormatsWithItsCurrencysDecimalPlaces"},
-        {.body = ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes, .name = "ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes"},
+        {.body = ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes, .name = "ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes"},
         {.body = datesAndTimesAreCheckedAndWritten, .name = "datesAndTimesAreCheckedAndWritten"},
         {.body = contactsAndAccountsAreCheckedAndMadeCanonical, .name = "contactsAndAccountsAreCheckedAndMadeCanonical"},
         {.body = anIdentifierIsCheckedAndKeptAsItIsWritten, .name = "anIdentifierIsCheckedAndKeptAsItIsWritten"},
@@ -2757,6 +2858,10 @@ int main(void) {
             .name = "anExpenseWithoutACategoryOrATipReadsBackInTheBuiltInOneWithTheNoTipRule",
         },
         {.body = anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt, .name = "anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt"},
+        {
+            .body = aPhoneNumberAndAnIbanComeBackFromTheGroupWithTheTextTheLibraryDerives,
+            .name = "aPhoneNumberAndAnIbanComeBackFromTheGroupWithTheTextTheLibraryDerives",
+        },
         {.body = anIdentifierThatIsNotOneIsRefusedByEveryLookup, .name = "anIdentifierThatIsNotOneIsRefusedByEveryLookup"},
         {
             .body = aLookupOfAnIdentifierNothingHasReportsNoErrorAndNoObject,

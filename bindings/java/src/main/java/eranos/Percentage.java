@@ -19,11 +19,8 @@ public final class Percentage {
      *     number
      */
     public static Percentage ofBasisPoints(int basisPoints) throws EranosException {
-        return Converting.call(
-                () -> {
-                    Eranos.percentageFormat(basisPoints);
-                    return new Percentage(basisPoints);
-                });
+        Converting.run(() -> Eranos.percentageCheck(basisPoints));
+        return new Percentage(basisPoints);
     }
 
     /**
@@ -74,10 +71,6 @@ public final class Percentage {
      */
     @Override
     public String toString() {
-        try {
-            return Eranos.percentageFormat(basisPoints);
-        } catch (eranos.internal.EranosException exception) {
-            return basisPoints + " bp";
-        }
+        return Eranos.percentageFormat(basisPoints);
     }
 }

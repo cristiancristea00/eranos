@@ -53,16 +53,24 @@
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Writes the parts of `hundredths` hundredths as the library does: "0.5".
+/// Writes the parts of `hundredths` hundredths as the library does: "0.5". It writes zero and a negative number, which eranosPartsCheck() refuses,
+/// the same way: "0" and "-0.5".
 ///
 /// @param hundredths The hundredths
 /// @param text Receives the text, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for parts out
-///   of range
-[[nodiscard]] static inline EranosError *eranosPartsFormat(int32_t const hundredths, EranosText *const text) {
+static inline void eranosPartsFormat(int32_t const hundredths, EranosText *const text) {
     eranosDetailClear(text);
-    EranosParts_format_result const result = EranosParts_format(hundredths, text);
+    EranosParts_format(hundredths, text);
     eranosDetailFinish(text);
+}
+
+/// Checks that `hundredths` is a number of parts, as a split of parts requires.
+///
+/// @param hundredths The hundredths
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a number
+///   that is not positive
+[[nodiscard]] static inline EranosError *eranosPartsCheck(int32_t const hundredths) {
+    EranosParts_check_result const result = EranosParts_check(hundredths);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -78,16 +86,24 @@
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Writes the percentage of `basisPoints` basis points as the library does: "12.5%".
+/// Writes the percentage of `basisPoints` basis points as the library does: "12.5%". It writes a negative number, which eranosPercentageCheck()
+/// refuses, the same way after a minus sign: "-12.5%".
 ///
 /// @param basisPoints The basis points
 /// @param text Receives the text, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a
-///   percentage out of range
-[[nodiscard]] static inline EranosError *eranosPercentageFormat(int32_t const basisPoints, EranosText *const text) {
+static inline void eranosPercentageFormat(int32_t const basisPoints, EranosText *const text) {
     eranosDetailClear(text);
-    EranosPercentage_format_result const result = EranosPercentage_format(basisPoints, text);
+    EranosPercentage_format(basisPoints, text);
     eranosDetailFinish(text);
+}
+
+/// Checks that `basisPoints` is a percentage, as an entry that holds one requires.
+///
+/// @param basisPoints The basis points
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a
+///   negative number
+[[nodiscard]] static inline EranosError *eranosPercentageCheck(int32_t const basisPoints) {
+    EranosPercentage_check_result const result = EranosPercentage_check(basisPoints);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

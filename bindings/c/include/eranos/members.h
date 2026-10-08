@@ -10,6 +10,7 @@
 #include "EranosPaymentAccountDetails.h"
 #include "EranosPaymentAccountDetailsKind.h"
 #include "EranosPaymentAccountList.h"
+#include "eranos/contact.h"
 #include "eranos/detail.h"
 #include "eranos/identifiers.h"
 #include "eranos/text.h"
@@ -90,12 +91,12 @@ static inline void eranosPaymentAccountDestroy(EranosPaymentAccount *const accou
 /// Where an account is: a bank account or a username in a payment app.
 typedef struct EranosPaymentAccountDetails EranosPaymentAccountDetails;
 
-/// A bank account.
+/// A bank account. The library parses the IBAN, which it writes without spaces and in capitals, and fills its country code.
 ///
 /// @param iban The account's IBAN, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param accountDetails Receives the account details on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
-///   text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT for
+///   text that is not an IBAN, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosPaymentAccountDetailsCreateIban(char const *const iban,
                                                                                EranosPaymentAccountDetails **const accountDetails) {
     EranosPaymentAccountDetails_create_iban_result const result = EranosPaymentAccountDetails_create_iban(eranosDetailView(iban));
@@ -124,7 +125,8 @@ typedef struct EranosPaymentAccountDetails EranosPaymentAccountDetails;
     return EranosPaymentAccountDetails_kind(accountDetails);
 }
 
-/// The account's IBAN. Present in the kind ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_IBAN alone. Writes it, if present; absent otherwise.
+/// The account's IBAN, without spaces, in capitals: "RO49AAAA1B31007593840000". Present in the kind ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_IBAN alone.
+/// Writes it, if present; absent otherwise.
 ///
 /// @param accountDetails The account details
 /// @param iban Receives the account's IBAN, replacing what it held
@@ -133,6 +135,20 @@ typedef struct EranosPaymentAccountDetails EranosPaymentAccountDetails;
     eranosDetailClear(iban);
     bool const present = EranosPaymentAccountDetails_iban(accountDetails, iban).is_ok;
     eranosDetailFinish(iban);
+    return present;
+}
+
+/// The two-letter code of the IBAN's country: "RO". Present in the kind ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_IBAN alone. Writes it, if present; absent
+/// otherwise.
+///
+/// @param accountDetails The account details
+/// @param countryCode Receives the country code, replacing what it held
+/// @return Whether there is one
+[[nodiscard]] static inline bool eranosPaymentAccountDetailsCountryCode(EranosPaymentAccountDetails const *const accountDetails,
+                                                                        EranosText *const countryCode) {
+    eranosDetailClear(countryCode);
+    bool const present = EranosPaymentAccountDetails_country_code(accountDetails, countryCode).is_ok;
+    eranosDetailFinish(countryCode);
     return present;
 }
 
@@ -339,24 +355,18 @@ static inline void eranosMemberClearLastName(EranosMember *const member) { Erano
 /// @param member The member
 static inline void eranosMemberClearEmail(EranosMember *const member) { EranosMember_clear_email(member); }
 
-/// The phone number. Writes it, if present; absent otherwise.
+/// The phone number, in E.164 form and in international form.
 ///
 /// @param member The member
-/// @param phone Receives the phone number, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosMemberPhone(EranosMember const *const member, EranosText *const phone) {
-    eranosDetailClear(phone);
-    bool const present = EranosMember_phone(member, phone).is_ok;
-    eranosDetailFinish(phone);
-    return present;
-}
+/// @return A copy of the value, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosPhoneNumber *eranosMemberPhone(EranosMember const *const member) { return EranosMember_phone(member); }
 
-/// Sets the phone number.
+/// Sets the phone number. The library parses the number, which it writes in E.164 form, and fills its international form.
 ///
 /// @param member The member
 /// @param phone The phone number, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
-///   text that is not UTF-8
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_CONTACT for text
+///   that is not a phone number, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosMemberSetPhone(EranosMember *const member, char const *const phone) {
     EranosMember_set_phone_result const result = EranosMember_set_phone(member, eranosDetailView(phone));
     return eranosDetailErrorOf(result.is_ok, &result.err);

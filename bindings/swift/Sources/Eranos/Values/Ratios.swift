@@ -38,7 +38,7 @@ public struct Percentage: Hashable, Sendable, CustomStringConvertible {
 
     /// The percentage as the library writes it: "12.5%".
     public var description: String {
-        (try? EranosGenerated.percentageFormat(basisPoints: basisPoints)) ?? "\(basisPoints) bp"
+        EranosGenerated.percentageFormat(basisPoints: basisPoints)
     }
 
     /// The percentage of `basisPoints` hundredths of a per cent.
@@ -46,7 +46,7 @@ public struct Percentage: Hashable, Sendable, CustomStringConvertible {
     /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/invalidPercentage`` for a
     ///   negative number.
     public init(basisPoints: Int32) throws(EranosError) {
-        _ = try converting { try EranosGenerated.percentageFormat(basisPoints: basisPoints) }
+        try converting { try EranosGenerated.percentageCheck(basisPoints: basisPoints) }
         self.basisPoints = basisPoints
     }
 
@@ -72,7 +72,7 @@ public struct Parts: Hashable, Sendable, CustomStringConvertible {
 
     /// The parts as the library writes them: "0.5".
     public var description: String {
-        (try? EranosGenerated.partsFormat(hundredths: hundredths)) ?? "\(hundredths)/100"
+        EranosGenerated.partsFormat(hundredths: hundredths)
     }
 
     /// The parts of `hundredths` hundredths.
@@ -80,7 +80,7 @@ public struct Parts: Hashable, Sendable, CustomStringConvertible {
     /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/invalidParts`` for a number
     ///   that is not positive.
     public init(hundredths: Int32) throws(EranosError) {
-        _ = try converting { try EranosGenerated.partsFormat(hundredths: hundredths) }
+        try converting { try EranosGenerated.partsCheck(hundredths: hundredths) }
         self.hundredths = hundredths
     }
 

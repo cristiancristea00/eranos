@@ -84,7 +84,9 @@ export class Percentage {
      * @throws {@link MoneyError} with the failure `invalidPercentage` for a negative number
      */
     static ofBasisPoints(basisPoints: number): Percentage {
-        calling(() => internal.percentageFormat(basisPoints));
+        calling(() => {
+            internal.percentageCheck(basisPoints);
+        });
         return new Percentage(basisPoints);
     }
 
@@ -125,11 +127,7 @@ export class Percentage {
      * @returns The text: "12.5%"
      */
     toString(): string {
-        try {
-            return internal.percentageFormat(this.basisPoints);
-        } catch {
-            return `${this.basisPoints.toString()} bp`;
-        }
+        return internal.percentageFormat(this.basisPoints);
     }
 }
 
@@ -148,7 +146,9 @@ export class Parts {
      * @throws {@link MoneyError} with the failure `invalidParts` for a number that is not positive
      */
     static ofHundredths(hundredths: number): Parts {
-        calling(() => internal.partsFormat(hundredths));
+        calling(() => {
+            internal.partsCheck(hundredths);
+        });
         return new Parts(hundredths);
     }
 
@@ -189,10 +189,6 @@ export class Parts {
      * @returns The text: "0.5"
      */
     toString(): string {
-        try {
-            return internal.partsFormat(this.hundredths);
-        } catch {
-            return `${this.hundredths.toString()}/100`;
-        }
+        return internal.partsFormat(this.hundredths);
     }
 }

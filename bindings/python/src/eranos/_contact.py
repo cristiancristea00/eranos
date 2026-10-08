@@ -1,6 +1,6 @@
 """Hold the ways to reach and pay a member, and the language a group is shown in, which the library checks."""
 
-from typing import final
+from typing import final, override
 
 from eranos._checked import CheckedText
 from eranos._errors import library_errors
@@ -30,9 +30,14 @@ class Email(CheckedText):
 
 @final
 class PhoneNumber(CheckedText):
-    """A phone number, valid in its country's numbering plan, kept in E.164 form, such as ``"+40712345678"``."""
+    """
+    A phone number, valid in its country's numbering plan, kept in E.164 form, such as ``"+40712345678"``.
 
-    __slots__ = ()
+    It holds its international form as the library wrote it, when it checked the number or gave it with a member, so reading
+    the form calls nothing. Two numbers are equal when both their forms are.
+    """
+
+    __slots__ = ('_international',)
 
     def __init__(self, text: str) -> None:
         """
@@ -46,30 +51,75 @@ class PhoneNumber(CheckedText):
 
         """
         with library_errors():
-            super().__init__(generated.phone_number_parse(text))
+            number = generated.phone_number_parse(text)
+        super().__init__(number.e164)
+        self._international = number.international
 
-    def international(self) -> str:
+    @classmethod
+    def _of(cls, e164: str, international: str) -> PhoneNumber:
         """
-        Write the number in its international form, grouped as its country writes it.
+        Make the number the library gave in its two forms, without parsing it.
+
+        Args:
+            e164: The number in E.164 form.
+            international: The number in international form.
 
         Returns:
-            The text, such as ``"+40 712 345 678"``.
+            The number.
 
         """
-        return generated.phone_number_international(str(self))
+        phone: PhoneNumber = object.__new__(cls)
+        phone._text = e164
+        phone._international = international
+        return phone
+
+    @property
+    def international(self) -> str:
+        """The number in its international form, grouped as its country groups it, as the library wrote it, such as ``"+40 712 345 678"``."""
+        return self._international
+
+    @override
+    def __eq__(self, other: object) -> bool:
+        """
+        Tell whether other is a phone number of the same E.164 form and the same international form.
+
+        Args:
+            other: The object to compare.
+
+        Returns:
+            Whether the two are equal.
+
+        """
+        return isinstance(other, PhoneNumber) and str(other) == str(self) and other.international == self._international
+
+    @override
+    def __hash__(self) -> int:
+        """
+        Hash the kind and both forms.
+
+        Returns:
+            The hash.
+
+        """
+        return hash((PhoneNumber, str(self), self._international))
 
 
 @final
 class Iban(CheckedText):
-    """An IBAN, checked against the SWIFT registry and kept in its electronic form, such as ``"RO49AAAA1B31007593840000"``."""
+    """
+    An IBAN, checked against the SWIFT registry and kept in its electronic form, such as ``"RO49AAAA1B31007593840000"``.
 
-    __slots__ = ()
+    It holds its country code as the library read it, when it checked the IBAN or gave it with an account, so reading the
+    code calls nothing. Two IBANs are equal when their text and their country code are.
+    """
+
+    __slots__ = ('_country_code',)
 
     def __init__(self, text: str) -> None:
         """
         Check the IBAN written text, with or without its spaces.
 
-        The library refuses an IBAN that fails a check with ``PaymentAccountError.InvalidIban``, whose reason names the check, in an
+        The library refuses an IBAN that fails a check with ``PaymentAccountError.InvalidIban``, whose reason names the check, in a
         ``PaymentAccountError``.
 
         Args:
@@ -77,17 +127,57 @@ class Iban(CheckedText):
 
         """
         with library_errors():
-            super().__init__(generated.iban_parse(text))
+            iban = generated.iban_parse(text)
+        super().__init__(iban.iban)
+        self._country_code = iban.country_code
 
-    def country_code(self) -> str:
+    @classmethod
+    def _of(cls, iban: str, country_code: str) -> Iban:
         """
-        Read the IBAN's country code.
+        Make the IBAN the library gave with its country code, without parsing it.
+
+        Args:
+            iban: The IBAN in its electronic form.
+            country_code: Its country code.
 
         Returns:
-            The two letters, such as ``"RO"``.
+            The IBAN.
 
         """
-        return generated.iban_country_code(str(self))
+        account: Iban = object.__new__(cls)
+        account._text = iban
+        account._country_code = country_code
+        return account
+
+    @property
+    def country_code(self) -> str:
+        """The two letters of the IBAN's country, as the library read them, such as ``"RO"``."""
+        return self._country_code
+
+    @override
+    def __eq__(self, other: object) -> bool:
+        """
+        Tell whether other is an IBAN of the same text and the same country code.
+
+        Args:
+            other: The object to compare.
+
+        Returns:
+            Whether the two are equal.
+
+        """
+        return isinstance(other, Iban) and str(other) == str(self) and other.country_code == self._country_code
+
+    @override
+    def __hash__(self) -> int:
+        """
+        Hash the kind, the text, and the country code.
+
+        Returns:
+            The hash.
+
+        """
+        return hash((Iban, str(self), self._country_code))
 
 
 @final
@@ -128,3 +218,48 @@ class Language(CheckedText):
         """
         with library_errors():
             super().__init__(generated.language_parse(text))
+
+
+def phone_number_of(number: generated.PhoneNumber) -> PhoneNumber:
+    """
+    Convert the phone number the generated module holds as number, without parsing it.
+
+    Args:
+        number: The generated number.
+
+    Returns:
+        The number.
+
+    """
+    # The class's own constructor parses text, for an app's input; the library's answers already carry both forms.
+    return PhoneNumber._of(number.e164, number.international)  # ruff: ignore[private-member-access]
+
+
+def generated_phone_number(phone: PhoneNumber) -> generated.PhoneNumber:
+    """
+    Convert phone into the phone number the generated module holds.
+
+    Args:
+        phone: The number.
+
+    Returns:
+        The generated number.
+
+    """
+    return generated.PhoneNumber(e164=str(phone), international=phone.international)
+
+
+def iban_of(iban: str, country_code: str) -> Iban:
+    """
+    Convert the IBAN and the country code the generated module holds, without parsing the IBAN.
+
+    Args:
+        iban: The IBAN in its electronic form.
+        country_code: Its country code.
+
+    Returns:
+        The IBAN.
+
+    """
+    # The class's own constructor parses text, for an app's input; the library's answers already carry the country code.
+    return Iban._of(iban, country_code)  # ruff: ignore[private-member-access]

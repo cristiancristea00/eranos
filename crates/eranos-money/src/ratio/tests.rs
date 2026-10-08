@@ -108,6 +108,34 @@ fn percentage_display_drops_trailing_zeros() {
     );
 }
 
+/// The bindings, which write a percentage from the basis points of their
+/// record, would show a valid one otherwise than the library does, or fail
+/// on a negative one rather than show it.
+#[test]
+fn the_percentage_writer_writes_any_basis_points_as_the_text_form_does() {
+    // As the text form writes every percentage.
+    for basis_points in [0, 5, 10, 105, 1_200, 1_250, 3_333, 10_000, u32::MAX] {
+        assert_eq!(
+            format_basis_points(i64::from(basis_points)).to_string(),
+            Percentage::from_basis_points(basis_points).to_string()
+        );
+    }
+    // A negative number, which no percentage holds, after a minus sign.
+    assert_eq!(format_basis_points(-1).to_string(), "-0.01%");
+    assert_eq!(format_basis_points(-10).to_string(), "-0.1%");
+    assert_eq!(format_basis_points(-1_250).to_string(), "-12.5%");
+    assert_eq!(format_basis_points(-10_000).to_string(), "-100%");
+    // The bounds of an `i64`.
+    assert_eq!(
+        format_basis_points(i64::MIN).to_string(),
+        "-92233720368547758.08%"
+    );
+    assert_eq!(
+        format_basis_points(i64::MAX).to_string(),
+        "92233720368547758.07%"
+    );
+}
+
 /// Percentage splits would be checked against the wrong total.
 #[test]
 fn percentage_constants_are_zero_and_one_hundred() {
@@ -204,6 +232,34 @@ fn parts_display_drops_trailing_zeros() {
     assert_eq!(parts("0.01").to_string(), "0.01");
 }
 
+/// The bindings, which write parts from the hundredths of their record,
+/// would show valid ones otherwise than the library does, or fail on zero or
+/// a negative number rather than show it.
+#[test]
+fn the_parts_writer_writes_any_hundredths_as_the_text_form_does() {
+    // As the text form writes every number of parts.
+    for hundredths in [1, 25, 100, 150, 205, 200, u32::MAX] {
+        assert_eq!(
+            format_hundredths(i64::from(hundredths)).to_string(),
+            Parts::from_hundredths(hundredths).unwrap().to_string()
+        );
+    }
+    // Zero and a negative number, which no parts hold.
+    assert_eq!(format_hundredths(0).to_string(), "0");
+    assert_eq!(format_hundredths(-5).to_string(), "-0.05");
+    assert_eq!(format_hundredths(-150).to_string(), "-1.5");
+    assert_eq!(format_hundredths(-200).to_string(), "-2");
+    // The bounds of an `i64`.
+    assert_eq!(
+        format_hundredths(i64::MIN).to_string(),
+        "-92233720368547758.08"
+    );
+    assert_eq!(
+        format_hundredths(i64::MAX).to_string(),
+        "92233720368547758.07"
+    );
+}
+
 /// Stored parts would load as a zero share or lose their value.
 #[test]
 fn parts_convert_to_and_from_hundredths() {
@@ -238,6 +294,25 @@ proptest! {
     fn percentage_display_then_parse_round_trips(basis_points in any::<u32>()) {
         let ratio = Percentage::from_basis_points(basis_points);
         prop_assert_eq!(Percentage::parse(&ratio.to_string()), Ok(ratio));
+    }
+
+    /// The bindings would write a valid percentage otherwise than the
+    /// library does.
+    #[test]
+    fn the_percentage_writer_writes_every_percentage_as_its_text_form(basis_points in any::<u32>()) {
+        prop_assert_eq!(
+            format_basis_points(i64::from(basis_points)).to_string(),
+            Percentage::from_basis_points(basis_points).to_string()
+        );
+    }
+
+    /// The bindings would write valid parts otherwise than the library does.
+    #[test]
+    fn the_parts_writer_writes_all_parts_as_their_text_form(hundredths in 1..=u32::MAX) {
+        prop_assert_eq!(
+            format_hundredths(i64::from(hundredths)).to_string(),
+            Parts::from_hundredths(hundredths).unwrap().to_string()
+        );
     }
 
     /// Saved or shown parts would read back as different parts.

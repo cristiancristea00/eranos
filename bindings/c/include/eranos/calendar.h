@@ -1,5 +1,5 @@
 /// @file eranos/calendar.h
-/// Days of the calendar and times of day, which the library checks when they are made.
+/// Days of the calendar and times of day: plain structs, which the library checks when a call carries one.
 
 #ifndef ERANOS_CALENDAR_H
 #define ERANOS_CALENDAR_H
@@ -26,16 +26,24 @@ typedef struct EranosCalendarDate EranosCalendarDate;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Writes the date as the library does: "2026-09-23".
+/// Writes the date as the library does: "2026-09-23". It writes the fields of a day the calendar does not have, which eranosCalendarDateCheck()
+/// refuses, the same way: "2026-02-30".
 ///
 /// @param calendarDate The calendar date
 /// @param text Receives the text, replacing what it held
+static inline void eranosCalendarDateFormat(EranosCalendarDate const calendarDate, EranosText *const text) {
+    eranosDetailClear(text);
+    EranosCalendarDate_format(calendarDate, text);
+    eranosDetailFinish(text);
+}
+
+/// Checks that the date is a day of the calendar, between years 1 and 9999, as an entry's date must be.
+///
+/// @param calendarDate The calendar date
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_CALENDAR for a day
 ///   the calendar does not have
-[[nodiscard]] static inline EranosError *eranosCalendarDateFormat(EranosCalendarDate const calendarDate, EranosText *const text) {
-    eranosDetailClear(text);
-    EranosCalendarDate_format_result const result = EranosCalendarDate_format(calendarDate, text);
-    eranosDetailFinish(text);
+[[nodiscard]] static inline EranosError *eranosCalendarDateCheck(EranosCalendarDate const calendarDate) {
+    EranosCalendarDate_check_result const result = EranosCalendarDate_check(calendarDate);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -51,16 +59,24 @@ typedef struct EranosCalendarDate EranosCalendarDate;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Writes the time as the library does: "18:30".
+/// Writes the time as the library does: "18:30". It writes the fields of a time the day does not have, which eranosTimeOfDayCheck() refuses, the
+/// same way: "24:00".
 ///
 /// @param timeOfDay The time of day
 /// @param text Receives the text, replacing what it held
+static inline void eranosTimeOfDayFormat(EranosTimeOfDay const timeOfDay, EranosText *const text) {
+    eranosDetailClear(text);
+    EranosTimeOfDay_format(timeOfDay, text);
+    eranosDetailFinish(text);
+}
+
+/// Checks that the time is a time of day, from 00:00 to 23:59, as an entry's time must be.
+///
+/// @param timeOfDay The time of day
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_CALENDAR for a time
 ///   the day does not have
-[[nodiscard]] static inline EranosError *eranosTimeOfDayFormat(EranosTimeOfDay const timeOfDay, EranosText *const text) {
-    eranosDetailClear(text);
-    EranosTimeOfDay_format_result const result = EranosTimeOfDay_format(timeOfDay, text);
-    eranosDetailFinish(text);
+[[nodiscard]] static inline EranosError *eranosTimeOfDayCheck(EranosTimeOfDay const timeOfDay) {
+    EranosTimeOfDay_check_result const result = EranosTimeOfDay_check(timeOfDay);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

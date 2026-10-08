@@ -19,7 +19,7 @@ final class Conversions {
     static PaymentAccountDetails converted(eranos.internal.PaymentAccountDetails details) {
         return switch (details) {
             case eranos.internal.PaymentAccountDetails.Iban iban ->
-                    new PaymentAccountDetails.Iban(Iban.known(iban.iban()));
+                    new PaymentAccountDetails.Iban(Iban.known(iban.iban(), iban.countryCode()));
             case eranos.internal.PaymentAccountDetails.Username username ->
                     new PaymentAccountDetails.Username(Username.known(username.username()));
         };
@@ -34,7 +34,8 @@ final class Conversions {
     static eranos.internal.PaymentAccountDetails generated(PaymentAccountDetails details) {
         return switch (details) {
             case PaymentAccountDetails.Iban iban ->
-                    new eranos.internal.PaymentAccountDetails.Iban(iban.iban().toString());
+                    new eranos.internal.PaymentAccountDetails.Iban(
+                            iban.iban().toString(), iban.iban().countryCode());
             case PaymentAccountDetails.Username username ->
                     new eranos.internal.PaymentAccountDetails.Username(
                             username.username().toString());

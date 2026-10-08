@@ -13,13 +13,20 @@
 //! currency a caller names on its own as its ISO 4217 code, and one the
 //! library answers with, in an amount or as the group currency, as its
 //! [`CurrencyDetails`], exchange rates as decimals, amounts as 64-bit minor
-//! units with their currency's details, percentages in basis points, and
-//! parts in hundredths. Every value is checked by the library's own rules on
-//! its way in, so a bad one is a typed [`EranosError`]: an amount whose
-//! currency details are not the library's for its code is refused with
-//! [`MoneyFailure::UnknownCurrency`]. Every entry and every new group carries
-//! the identifier the app gives it: its own, or one [`identifier_generate`]
-//! returns.
+//! units with their currency's details, percentages in basis points, parts
+//! in hundredths, a phone number in E.164 form with its international form,
+//! and an IBAN with its country code. Every value is checked by the
+//! library's own rules on its way in, so a bad one is a typed
+//! [`EranosError`]: an amount whose currency details are not the library's
+//! for its code is refused with [`MoneyFailure::UnknownCurrency`], a phone
+//! number whose international form is not the library's with
+//! [`ContactFailure::InvalidPhoneNumber`], and an IBAN whose country code is
+//! not its own with [`PaymentAccountFailure::InvalidIban`]. The text the
+//! library derives comes from the library alone, so the helpers that write
+//! a value from its record cannot fail, and each value an entry holds as
+//! numbers has a helper that checks it beside the one that writes it. Every
+//! entry and every new group carries the identifier the app gives it: its
+//! own, or one [`identifier_generate`] returns.
 //!
 //! The types stay within what `uniffi` 0.29 can mirror: records, enums with
 //! data, one error enum, and objects; no methods on records, and no
@@ -65,18 +72,18 @@ pub use ledger::{
     Balance, CategoryTotal, ExpenseShares, MemberCategoryTotals, MemberShare, MemberSummary,
     Summary,
 };
-pub use member::{Category, Member, PaymentAccount, PaymentAccountDetails};
+pub use member::{Category, Iban, Member, PaymentAccount, PaymentAccountDetails, PhoneNumber};
 pub use money::{Cost, CurrencyDetails, CurrencyRate, Money};
 pub use reader::ExpenseGroupReader;
 pub use settlement::{Payment, SettlementPlan, SettlementStrategy};
 pub use transfer::Transfer;
 pub use values::{
-    balance_format, calendar_date_format, calendar_date_parse, category_id_uncategorised,
-    currencies, currency_details, email_parse, exchange_rate_convert, exchange_rate_parse,
-    expense_members, expense_tip_amount, expense_total, iban_country_code, iban_parse,
+    balance_format, calendar_date_check, calendar_date_format, calendar_date_parse,
+    category_id_uncategorised, currencies, currency_details, email_parse, exchange_rate_convert,
+    exchange_rate_parse, expense_members, expense_tip_amount, expense_total, iban_parse,
     identifier_generate, identifier_parse, language_parse, money_add, money_format, money_parse,
-    money_subtract, parts_format, parts_parse, percentage_format, percentage_parse,
-    phone_number_international, phone_number_parse, split_members, time_of_day_format,
+    money_subtract, parts_check, parts_format, parts_parse, percentage_check, percentage_format,
+    percentage_parse, phone_number_parse, split_members, time_of_day_check, time_of_day_format,
     time_of_day_parse, tip_rule_none, username_parse,
 };
 

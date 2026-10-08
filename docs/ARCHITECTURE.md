@@ -217,8 +217,8 @@ flowchart TD
 | `eranos-payment-account` | `PaymentAccount`, `PaymentAccountDetails`, `PaymentAccountKind`, `Iban`, `Username`, `PaymentAccountError`, `IbanError`                                                                                                                  | core                                                                                                                   |
 | `eranos-contact`         | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                                   | core; icu_properties, rlibphonenumber                                                                                  |
 | `eranos-ledger`          | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                                       | core, money                                                                                                            |
-| `eranos-calendar`        | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                                                                                             | core; jiff                                                                                                             |
-| `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`, `format_minor_units`                                                                                                 | core; iso4217-static                                                                                                   |
+| `eranos-calendar`        | `CalendarDate`, `TimeOfDay`, `CalendarError`; `format_calendar_date`, `format_time_of_day`                                                                                                                                               | core; jiff                                                                                                             |
+| `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`, `format_minor_units`, `format_basis_points`, `format_hundredths`                                                     | core; iso4217-static                                                                                                   |
 | `eranos-core`            | the five identifiers, `CategoryKey`, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                    | uuid                                                                                                                   |
 | `eranos-glue-macros`     | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                                          | eranos-glue; syn                                                                                                       |
 | `eranos-glue`            | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge                | proc-macro2, quote, syn                                                                                                |
@@ -326,7 +326,12 @@ cannot be removed.
   an entry is added: `MissingExchangeRate` for a local cost in another
   currency, `UnexpectedExchangeRate` for a converted one in its own.
 - `Percentage` is basis points (33.33 % = 3 333) and `Parts` hundredths
-  (1.5 = 150): both exact integers.
+  (1.5 = 150): both exact integers. Their text forms write through
+  `format_basis_points` and `format_hundredths`, which take any `i64`, and
+  so does the binding core for the numbers its records hold, as the text
+  forms of `CalendarDate` and `TimeOfDay` write through eranos-calendar's
+  `format_calendar_date` and `format_time_of_day`, which take any `i32`
+  ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)).
 - **Allocation.** Every division is `allocate(total, weights, rotation)`:
   each part is `total × weight / Σ weights` rounded down, and the leftover
   units go one each to the largest remainders (the Hamilton method), so the

@@ -728,8 +728,8 @@ void validation(ExpenseGroup &group) noexcept {
     std::string tip;
     if (0 != must(tipAmount(expense)).minorUnits) {
         auto const *const fixed = std::get_if<FixedTipValue>(&expense.tip.value);
-        tip = std::format(
-            ", {} tip", (nullptr == fixed ? must(std::get<PercentageTipValue>(expense.tip.value).percentage.toString()) : fixed->amount.toString()));
+        tip = std::format(", {} tip",
+                          (nullptr == fixed ? std::get<PercentageTipValue>(expense.tip.value).percentage.toString() : fixed->amount.toString()));
     }
     return split + payers + tip;
 }
@@ -882,7 +882,7 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) noexcept {
 void printFado(ExpenseGroup const &group, Expense const &fado) noexcept {
     auto const &tip = fado.tip;
     auto const *const fixed = std::get_if<FixedTipValue>(&tip.value);
-    auto const rule = nullptr == fixed ? must(std::get<PercentageTipValue>(tip.value).percentage.toString()) : fixed->amount.toString();
+    auto const rule = nullptr == fixed ? std::get<PercentageTipValue>(tip.value).percentage.toString() : fixed->amount.toString();
     auto const *const shared = TipDistribution::EQUAL == tip.distribution ? "equally" : "in proportion to what each member ordered";
     std::println("The groceries' 10.00 EUR did not divide into thirds, so one member consumed the\n"
                  "leftover cent; the expense's identifier picks which, so it moves from expense to\n"
@@ -1396,12 +1396,12 @@ void ratios() noexcept {
     printLine("Percentages, parts, and rates are exact decimals:");
     printTable<ValueRow>(
         {
-            {.input = "12.5%", .result = std::format("{}, {} basis points", must(percentage.toString()), percentage.basisPoints)},
-            {.input = "333 basis points", .result = must(Percentage{333}.toString())},
+            {.input = "12.5%", .result = std::format("{}, {} basis points", percentage.toString(), percentage.basisPoints)},
+            {.input = "333 basis points", .result = Percentage{333}.toString()},
             {.input = "33.333%", .result = message(refusal(Percentage::parse("33.333")))},
-            {.input = "1.5 parts", .result = std::format("{}, {} hundredths", must(parts.toString()), parts.hundredths)},
-            {.input = "3 whole parts", .result = must(Parts{300}.toString())},
-            {.input = "25 hundredths of a part", .result = must(Parts{25}.toString())},
+            {.input = "1.5 parts", .result = std::format("{}, {} hundredths", parts.toString(), parts.hundredths)},
+            {.input = "3 whole parts", .result = Parts{300}.toString()},
+            {.input = "25 hundredths of a part", .result = Parts{25}.toString()},
             {.input = "0 parts", .result = message(refusal(Parts::parse("0")))},
             {.input = "a rate of 4.97650", .result = exchange.toString()},
             {.input = "a rate of 0", .result = message(refusal(ExchangeRate::parse("0")))},

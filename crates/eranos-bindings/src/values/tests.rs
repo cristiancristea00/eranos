@@ -274,7 +274,7 @@ fn rates_parse_and_convert_as_the_library_does() {
 #[test]
 fn percentages_and_parts_parse_and_format_as_the_library_does() {
     assert_eq!(percentage_parse("12.5 %"), Ok(1_250));
-    assert_eq!(percentage_format(1_250).as_deref(), Ok("12.5%"));
+    assert_eq!(percentage_format(1_250), "12.5%");
     // Above 21 474 836.47 %, the basis points no longer fit an i32.
     for refused in [percentage_parse("half"), percentage_parse("30000000")] {
         assert!(
@@ -288,16 +288,9 @@ fn percentages_and_parts_parse_and_format_as_the_library_does() {
             "{refused:?}"
         );
     }
-    assert!(matches!(
-        percentage_format(-1),
-        Err(EranosError::Money {
-            failure: MoneyFailure::InvalidPercentage,
-            ..
-        })
-    ));
 
     assert_eq!(parts_parse("0.5"), Ok(50));
-    assert_eq!(parts_format(50).as_deref(), Ok("0.5"));
+    assert_eq!(parts_format(50), "0.5");
     for refused in [parts_parse("half"), parts_parse("30000000")] {
         assert!(
             matches!(
@@ -310,16 +303,85 @@ fn percentages_and_parts_parse_and_format_as_the_library_does() {
             "{refused:?}"
         );
     }
-    for refused in [parts_format(-1), parts_format(0)] {
+}
+
+/// A binding would show a percentage or parts otherwise than the library
+/// writes them, or, holding a number the library refuses, would fail to show
+/// it, or fall back to a text of its own.
+#[test]
+fn percentages_and_parts_format_any_number_as_the_library_writes_them() {
+    // Every number the library holds, as its text form writes it, up to the
+    // largest an i32 holds.
+    for number in [
+        0,
+        1,
+        5,
+        10,
+        50,
+        100,
+        105,
+        150,
+        1_250,
+        3_333,
+        10_000,
+        i32::MAX,
+    ] {
+        let unsigned = u32::try_from(number).unwrap();
+        assert_eq!(
+            percentage_format(number),
+            library::Percentage::from_basis_points(unsigned).to_string()
+        );
+        if 0 < number {
+            assert_eq!(
+                parts_format(number),
+                library::Parts::from_hundredths(unsigned)
+                    .unwrap()
+                    .to_string()
+            );
+        }
+    }
+    // Zero parts and negative numbers, which the library refuses, written
+    // the same way.
+    assert_eq!(parts_format(0), "0");
+    assert_eq!(percentage_format(-1), "-0.01%");
+    assert_eq!(percentage_format(-1_250), "-12.5%");
+    assert_eq!(percentage_format(i32::MIN), "-21474836.48%");
+    assert_eq!(parts_format(-50), "-0.5");
+    assert_eq!(parts_format(i32::MIN), "-21474836.48");
+}
+
+/// A binding that checks a percentage or parts before it builds a split
+/// would let through a number the library refuses, or refuse one it holds.
+#[test]
+fn percentages_and_parts_check_as_the_library_does() {
+    for accepted in [0, 1, 1_250, i32::MAX] {
+        assert_eq!(percentage_check(accepted), Ok(()));
+    }
+    for refused in [-1, i32::MIN] {
         assert!(
             matches!(
-                refused,
+                percentage_check(refused),
+                Err(EranosError::Money {
+                    failure: MoneyFailure::InvalidPercentage,
+                    ..
+                })
+            ),
+            "{refused}"
+        );
+    }
+    for accepted in [1, 50, i32::MAX] {
+        assert_eq!(parts_check(accepted), Ok(()));
+    }
+    for refused in [0, -1, i32::MIN] {
+        assert!(
+            matches!(
+                parts_check(refused),
                 Err(EranosError::Money {
                     failure: MoneyFailure::InvalidParts,
                     ..
                 })
             ),
-            "{refused:?}"
+            "{refused}"
         );
     }
 }
@@ -335,20 +397,9 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
         day: 23,
     };
     assert_eq!(calendar_date_parse("2026-09-23"), Ok(date));
-    assert_eq!(calendar_date_format(date).as_deref(), Ok("2026-09-23"));
+    assert_eq!(calendar_date_format(date), "2026-09-23");
     assert!(matches!(
         calendar_date_parse("2026-02-30"),
-        Err(EranosError::Calendar {
-            failure: CalendarFailure::InvalidDate,
-            ..
-        })
-    ));
-    assert!(matches!(
-        calendar_date_format(CalendarDate {
-            month: 2,
-            day: 30,
-            ..date
-        }),
         Err(EranosError::Calendar {
             failure: CalendarFailure::InvalidDate,
             ..
@@ -360,16 +411,9 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
         minute: 30,
     };
     assert_eq!(time_of_day_parse("18:30"), Ok(time));
-    assert_eq!(time_of_day_format(time).as_deref(), Ok("18:30"));
+    assert_eq!(time_of_day_format(time), "18:30");
     assert!(matches!(
         time_of_day_parse("25:00"),
-        Err(EranosError::Calendar {
-            failure: CalendarFailure::InvalidTime,
-            ..
-        })
-    ));
-    assert!(matches!(
-        time_of_day_format(TimeOfDay { hour: 25, ..time }),
         Err(EranosError::Calendar {
             failure: CalendarFailure::InvalidTime,
             ..
@@ -384,6 +428,179 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
             ..
         })
     ));
+}
+
+/// A binding would show a date or a time otherwise than the library writes
+/// it, or, holding fields the library refuses, would fail to show them, or
+/// fall back to a text of its own.
+#[test]
+fn dates_and_times_format_any_fields_as_the_library_writes_them() {
+    // Every day of a leap year, and the bounds, as the library writes them.
+    let days = (1..=12)
+        .flat_map(|month| (1..=31).map(move |day| calendar::CalendarDate::new(2028, month, day)))
+        .filter_map(Result::ok)
+        .chain([
+            calendar::CalendarDate::new(1, 1, 1).unwrap(),
+            calendar::CalendarDate::new(9999, 12, 31).unwrap(),
+        ]);
+    for day in days {
+        assert_eq!(
+            calendar_date_format(CalendarDate::from_library(day)),
+            day.to_string()
+        );
+    }
+    // Every minute of the day, as the library writes it.
+    for hour in 0..=23 {
+        for minute in 0..=59 {
+            let time = calendar::TimeOfDay::new(hour, minute).unwrap();
+            assert_eq!(
+                time_of_day_format(TimeOfDay::from_library(time)),
+                time.to_string()
+            );
+        }
+    }
+    // Fields the library refuses, written the same way.
+    assert_eq!(
+        calendar_date_format(CalendarDate {
+            year: 2026,
+            month: 2,
+            day: 30,
+        }),
+        "2026-02-30"
+    );
+    assert_eq!(
+        calendar_date_format(CalendarDate {
+            year: 0,
+            month: 13,
+            day: 0,
+        }),
+        "0000-13-00"
+    );
+    assert_eq!(
+        calendar_date_format(CalendarDate {
+            year: -1,
+            month: 100,
+            day: -5,
+        }),
+        "-001-100--5"
+    );
+    assert_eq!(
+        time_of_day_format(TimeOfDay {
+            hour: 24,
+            minute: 60,
+        }),
+        "24:60"
+    );
+    assert_eq!(
+        time_of_day_format(TimeOfDay {
+            hour: -1,
+            minute: i32::MAX,
+        }),
+        "-1:2147483647"
+    );
+}
+
+/// A binding that checks a date or a time before it builds an entry would
+/// let through one the library refuses, or refuse one it holds.
+#[test]
+fn dates_and_times_check_as_the_library_does() {
+    for accepted in [
+        CalendarDate {
+            year: 2028,
+            month: 2,
+            day: 29,
+        },
+        CalendarDate {
+            year: 1,
+            month: 1,
+            day: 1,
+        },
+        CalendarDate {
+            year: 9999,
+            month: 12,
+            day: 31,
+        },
+    ] {
+        assert_eq!(calendar_date_check(accepted), Ok(()));
+    }
+    // A day the month lacks, a year outside 1 to 9999, and numbers too large
+    // for the library's fields.
+    for refused in [
+        CalendarDate {
+            year: 2026,
+            month: 2,
+            day: 29,
+        },
+        CalendarDate {
+            year: 0,
+            month: 1,
+            day: 1,
+        },
+        CalendarDate {
+            year: 10_000,
+            month: 1,
+            day: 1,
+        },
+        CalendarDate {
+            year: 2026,
+            month: 256,
+            day: 1,
+        },
+        CalendarDate {
+            year: -1,
+            month: 1,
+            day: 1,
+        },
+    ] {
+        assert!(
+            matches!(
+                calendar_date_check(refused),
+                Err(EranosError::Calendar {
+                    failure: CalendarFailure::InvalidDate,
+                    ..
+                })
+            ),
+            "{refused:?}"
+        );
+    }
+    for accepted in [
+        TimeOfDay { hour: 0, minute: 0 },
+        TimeOfDay {
+            hour: 23,
+            minute: 59,
+        },
+    ] {
+        assert_eq!(time_of_day_check(accepted), Ok(()));
+    }
+    for refused in [
+        TimeOfDay {
+            hour: 24,
+            minute: 0,
+        },
+        TimeOfDay {
+            hour: 0,
+            minute: 60,
+        },
+        TimeOfDay {
+            hour: -1,
+            minute: 0,
+        },
+        TimeOfDay {
+            hour: 0,
+            minute: 256,
+        },
+    ] {
+        assert!(
+            matches!(
+                time_of_day_check(refused),
+                Err(EranosError::Calendar {
+                    failure: CalendarFailure::InvalidTime,
+                    ..
+                })
+            ),
+            "{refused:?}"
+        );
+    }
 }
 
 /// A balance would be written another way than the library's, and the
@@ -478,40 +695,27 @@ fn contact_and_account_details_parse_as_the_library_does() {
         })
     ));
     assert_eq!(
-        phone_number_parse("+40 712 345 678").as_deref(),
-        Ok("+40712345678")
+        phone_number_parse("+40 712 345 678"),
+        Ok(PhoneNumber {
+            e164: "+40712345678".to_owned(),
+            international: "+40 712 345 678".to_owned(),
+        })
     );
-    assert_eq!(
-        phone_number_international("+40712345678").as_deref(),
-        Ok("+40 712 345 678")
-    );
-    for refused in [
+    assert!(matches!(
         phone_number_parse("0712345678"),
-        phone_number_international("0712345678"),
-    ] {
-        assert!(
-            matches!(
-                refused,
-                Err(EranosError::Contact {
-                    failure: ContactFailure::InvalidPhoneNumber,
-                    ..
-                })
-            ),
-            "{refused:?}"
-        );
-    }
+        Err(EranosError::Contact {
+            failure: ContactFailure::InvalidPhoneNumber,
+            ..
+        })
+    ));
     assert_eq!(
-        iban_parse("ro49 aaaa 1b31 0075 9384 0000").as_deref(),
-        Ok("RO49AAAA1B31007593840000")
+        iban_parse("ro49 aaaa 1b31 0075 9384 0000"),
+        Ok(Iban {
+            iban: "RO49AAAA1B31007593840000".to_owned(),
+            country_code: "RO".to_owned(),
+        })
     );
-    assert_eq!(
-        iban_country_code("RO49AAAA1B31007593840000").as_deref(),
-        Ok("RO")
-    );
-    for refused in [
-        iban_parse("RO49AAAA1B31007593840001"),
-        iban_country_code("RO49"),
-    ] {
+    for refused in [iban_parse("RO49AAAA1B31007593840001"), iban_parse("RO49")] {
         assert!(
             matches!(
                 refused,

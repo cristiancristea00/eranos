@@ -22,11 +22,8 @@ public final class Parts {
      *     positive
      */
     public static Parts ofHundredths(int hundredths) throws EranosException {
-        return Converting.call(
-                () -> {
-                    Eranos.partsFormat(hundredths);
-                    return new Parts(hundredths);
-                });
+        Converting.run(() -> Eranos.partsCheck(hundredths));
+        return new Parts(hundredths);
     }
 
     /**
@@ -77,10 +74,6 @@ public final class Parts {
      */
     @Override
     public String toString() {
-        try {
-            return Eranos.partsFormat(hundredths);
-        } catch (eranos.internal.EranosException exception) {
-            return hundredths + "/100";
-        }
+        return Eranos.partsFormat(hundredths);
     }
 }

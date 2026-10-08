@@ -39,7 +39,9 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<Cost>();
         assert_send_and_sync::<CurrencyDetails>();
         assert_send_and_sync::<CurrencyRate>();
+        assert_send_and_sync::<Iban>();
         assert_send_and_sync::<Money>();
+        assert_send_and_sync::<PhoneNumber>();
         assert_send_and_sync::<TimeOfDay>();
         // Entries and how they divide.
         assert_send_and_sync::<PaymentAccount>();

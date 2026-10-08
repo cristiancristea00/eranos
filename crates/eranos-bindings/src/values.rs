@@ -6,13 +6,16 @@ use std::collections::BTreeSet;
 
 use eranos::error::MoneyError;
 use eranos::expense as expenses;
-use eranos::{CategoryId, Email, Iban, Language, MemberId, PhoneNumber, Username};
+use eranos::member as members;
+use eranos::{CategoryId, Email, Language, MemberId, Username};
 use eranos::{calendar, money as library};
-use eranos_money::format_minor_units;
+use eranos_calendar::{format_calendar_date, format_time_of_day};
+use eranos_money::{format_basis_points, format_hundredths, format_minor_units};
 
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::expense::{Expense, ExpenseSplit, Split, TipRule};
 use crate::ledger::Balance;
+use crate::member::{Iban, PhoneNumber};
 use crate::money::{CurrencyDetails, Money, currency, exchange_rate, parts, percentage};
 use crate::{EranosError, identifier};
 
@@ -154,12 +157,25 @@ pub fn percentage_parse(text: &str) -> Result<i32, EranosError> {
 
 /// The percentage of `basis_points`, as the library writes it: "12.5%".
 ///
+/// It writes the number through `eranos_money::format_basis_points`, which
+/// the library's text form of a percentage writes with, so it cannot fail:
+/// a negative number, which [`percentage_check`] refuses, is written the
+/// same way after a minus sign, "-12.5%".
+#[must_use]
+pub fn percentage_format(basis_points: i32) -> String {
+    format_basis_points(i64::from(basis_points)).to_string()
+}
+
+/// Checks that `basis_points` is a percentage, as an entry that holds one
+/// requires.
+///
 /// # Errors
 ///
 /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
 /// for a negative number.
-pub fn percentage_format(basis_points: i32) -> Result<String, EranosError> {
-    Ok(percentage(basis_points)?.to_string())
+pub fn percentage_check(basis_points: i32) -> Result<(), EranosError> {
+    percentage(basis_points)?;
+    Ok(())
 }
 
 /// The parts written `text`, in hundredths: "0.5" is 50.
@@ -174,12 +190,25 @@ pub fn parts_parse(text: &str) -> Result<i32, EranosError> {
 
 /// The parts of `hundredths`, as the library writes them: "0.5".
 ///
+/// It writes the number through `eranos_money::format_hundredths`, which the
+/// library's text form of parts writes with, so it cannot fail: zero and a
+/// negative number, which [`parts_check`] refuses, are written the same way,
+/// "0" and "-0.5".
+#[must_use]
+pub fn parts_format(hundredths: i32) -> String {
+    format_hundredths(i64::from(hundredths)).to_string()
+}
+
+/// Checks that `hundredths` is a number of parts, as a split of parts
+/// requires.
+///
 /// # Errors
 ///
 /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for a
 /// number that is not positive.
-pub fn parts_format(hundredths: i32) -> Result<String, EranosError> {
-    Ok(parts(hundredths)?.to_string())
+pub fn parts_check(hundredths: i32) -> Result<(), EranosError> {
+    parts(hundredths)?;
+    Ok(())
 }
 
 // --- Dates and times ---------------------------------------------------------
@@ -197,11 +226,26 @@ pub fn calendar_date_parse(text: &str) -> Result<CalendarDate, EranosError> {
 
 /// The date as the library writes it: "2026-09-23".
 ///
+/// It writes the record's fields through
+/// `eranos_calendar::format_calendar_date`, which the library's text form
+/// of a date writes with, so it cannot fail: the fields of a day the
+/// calendar does not have, which [`calendar_date_check`] refuses, are
+/// written the same way, "2026-02-30".
+#[must_use]
+pub fn calendar_date_format(date: CalendarDate) -> String {
+    let CalendarDate { year, month, day } = date;
+    format_calendar_date(year, month, day).to_string()
+}
+
+/// Checks that `date` is a day of the calendar, between years 1 and 9999,
+/// as an entry's date must be.
+///
 /// # Errors
 ///
 /// [`CalendarFailure::InvalidDate`](crate::CalendarFailure::InvalidDate).
-pub fn calendar_date_format(date: CalendarDate) -> Result<String, EranosError> {
-    Ok(date.to_library()?.to_string())
+pub fn calendar_date_check(date: CalendarDate) -> Result<(), EranosError> {
+    date.to_library()?;
+    Ok(())
 }
 
 /// The time of day written `text` in ISO 8601: "18:30".
@@ -215,11 +259,26 @@ pub fn time_of_day_parse(text: &str) -> Result<TimeOfDay, EranosError> {
 
 /// The time of day as the library writes it: "18:30".
 ///
+/// It writes the record's fields through
+/// `eranos_calendar::format_time_of_day`, which the library's text form of
+/// a time writes with, so it cannot fail: the fields of a time the day does
+/// not have, which [`time_of_day_check`] refuses, are written the same way,
+/// "24:00".
+#[must_use]
+pub fn time_of_day_format(time: TimeOfDay) -> String {
+    let TimeOfDay { hour, minute } = time;
+    format_time_of_day(hour, minute).to_string()
+}
+
+/// Checks that `time` is a time of day, from 00:00 to 23:59, as an entry's
+/// time must be.
+///
 /// # Errors
 ///
 /// [`CalendarFailure::InvalidTime`](crate::CalendarFailure::InvalidTime).
-pub fn time_of_day_format(time: TimeOfDay) -> Result<String, EranosError> {
-    Ok(time.to_library()?.to_string())
+pub fn time_of_day_check(time: TimeOfDay) -> Result<(), EranosError> {
+    time.to_library()?;
+    Ok(())
 }
 
 // --- Languages ---------------------------------------------------------------
@@ -282,45 +341,29 @@ pub fn email_parse(text: &str) -> Result<String, EranosError> {
     Ok(Email::parse(text)?.as_str().to_owned())
 }
 
-/// The phone number written `text`, in E.164 form: "+40712345678".
+/// The phone number written `text`, in E.164 form, "+40712345678", and in
+/// international form, grouped as its country groups it, "+40 712 345 678".
 ///
 /// # Errors
 ///
 /// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber).
-pub fn phone_number_parse(text: &str) -> Result<String, EranosError> {
-    Ok(PhoneNumber::parse(text)?.as_str().to_owned())
-}
-
-/// The phone number written `text`, in international form, grouped as its
-/// country groups it: "+40 712 345 678".
-///
-/// # Errors
-///
-/// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber).
-pub fn phone_number_international(text: &str) -> Result<String, EranosError> {
-    Ok(PhoneNumber::parse(text)?.international())
+pub fn phone_number_parse(text: &str) -> Result<PhoneNumber, EranosError> {
+    Ok(PhoneNumber::from_library(&members::PhoneNumber::parse(
+        text,
+    )?))
 }
 
 // --- Accounts ----------------------------------------------------------------
 
-/// The IBAN written `text`, without spaces, in capitals.
+/// The IBAN written `text`, without spaces, in capitals, with its country
+/// code: "RO".
 ///
 /// # Errors
 ///
 /// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban), with
 /// the reason.
-pub fn iban_parse(text: &str) -> Result<String, EranosError> {
-    Ok(Iban::parse(text)?.as_str().to_owned())
-}
-
-/// The country code of the IBAN written `text`: "RO".
-///
-/// # Errors
-///
-/// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban), with
-/// the reason.
-pub fn iban_country_code(text: &str) -> Result<String, EranosError> {
-    Ok(Iban::parse(text)?.country_code().to_owned())
+pub fn iban_parse(text: &str) -> Result<Iban, EranosError> {
+    Ok(Iban::from_library(&members::Iban::parse(text)?))
 }
 
 /// The payment-app username written `text`, without surrounding

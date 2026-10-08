@@ -12,6 +12,7 @@
 #include "eranos/error.hpp"
 
 #include <expected>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,8 +22,9 @@ namespace eranos {
 namespace detail {
 
 [[nodiscard]] inline constexpr Email emailOf(std::string text) noexcept;
-[[nodiscard]] inline constexpr PhoneNumber phoneNumberOf(std::string text) noexcept;
-[[nodiscard]] inline constexpr Iban ibanOf(std::string text) noexcept;
+[[nodiscard]] inline PhoneNumber fromDetail(EranosPhoneNumber const &value) noexcept;
+[[nodiscard]] inline Iban fromDetail(EranosIban const &value) noexcept;
+[[nodiscard]] inline Iban ibanOf(EranosPaymentAccountDetails const &value) noexcept;
 [[nodiscard]] inline constexpr Username usernameOf(std::string text) noexcept;
 [[nodiscard]] inline constexpr Language languageOf(std::string text) noexcept;
 
@@ -58,25 +60,26 @@ class Email final {
     std::string text;
 };
 
-/// A phone number, which the library keeps in the E.164 form.
+/// A phone number, which the library keeps in the E.164 form, with the international form it derives from it. Only the library makes one, so the
+/// two forms always belong together.
 class PhoneNumber final {
   public:
-    /// The phone number written @p text, checked and made canonical by the library.
+    /// The phone number written @p text, checked and made canonical by the library, which derives its international form.
     ///
     /// @param text The text
     /// @return The phone number, or an error of the kind ErrorKind::CONTACT for text that is not one, and ErrorKind::INVALID_TEXT for text that is
     ///   not UTF-8
     [[nodiscard]] static std::expected<PhoneNumber, Error> parse(std::string_view const text) noexcept;
 
-    /// The phone number as the library writes it: "+40712345678".
+    /// The phone number as the library writes it, in the E.164 form: "+40712345678".
     ///
     /// @return The text
-    [[nodiscard]] inline constexpr std::string const &toString() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &toString() const noexcept { return fields.e164; }
 
-    /// The number in the international form: "+40 712 345 678".
+    /// The number in the international form, grouped as its country groups it: "+40 712 345 678".
     ///
     /// @return The text
-    [[nodiscard]] std::string international() const noexcept;
+    [[nodiscard]] inline constexpr std::string const &international() const noexcept { return fields.international; }
 
     /// Whether two values are written alike.
     ///
@@ -86,32 +89,41 @@ class PhoneNumber final {
     [[nodiscard]] friend constexpr bool operator==(PhoneNumber const &left, PhoneNumber const &right) noexcept = default;
 
   private:
-    friend constexpr PhoneNumber detail::phoneNumberOf(std::string text) noexcept;
+    friend PhoneNumber detail::fromDetail(detail::EranosPhoneNumber const &value) noexcept;
 
-    inline constexpr explicit PhoneNumber(std::string text) noexcept : text(std::move(text)) {}
+    /// The E.164 form and the international form.
+    struct Fields final {
+        std::string e164;
+        std::string international;
 
-    std::string text;
+        [[nodiscard]] friend constexpr bool operator==(Fields const &left, Fields const &right) noexcept = default;
+    };
+
+    inline constexpr explicit PhoneNumber(Fields fields) noexcept : fields(std::move(fields)) {}
+
+    Fields fields;
 };
 
-/// An IBAN, which the library checks and keeps in its electronic form.
+/// An IBAN, which the library checks and keeps in its electronic form, with the country code it starts with. Only the library makes one, so the
+/// two always belong together.
 class Iban final {
   public:
-    /// The IBAN written @p text, checked and made canonical by the library.
+    /// The IBAN written @p text, checked and made canonical by the library, which derives its country code.
     ///
     /// @param text The text
     /// @return The IBAN, or an error of the kind ErrorKind::PAYMENT_ACCOUNT for text that is not one, and ErrorKind::INVALID_TEXT for text that is
     ///   not UTF-8
     [[nodiscard]] static std::expected<Iban, Error> parse(std::string_view const text) noexcept;
 
-    /// The IBAN as the library writes it: "RO49AAAA1B31007593840000".
+    /// The IBAN as the library writes it, without spaces, in capitals: "RO49AAAA1B31007593840000".
     ///
     /// @return The text
-    [[nodiscard]] inline constexpr std::string const &toString() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &toString() const noexcept { return fields.iban; }
 
-    /// The IBAN's country code: "RO".
+    /// The two-letter code of the IBAN's country: "RO".
     ///
     /// @return The country code
-    [[nodiscard]] std::string countryCode() const noexcept;
+    [[nodiscard]] inline constexpr std::string const &countryCode() const noexcept { return fields.countryCode; }
 
     /// Whether two values are written alike.
     ///
@@ -121,11 +133,20 @@ class Iban final {
     [[nodiscard]] friend constexpr bool operator==(Iban const &left, Iban const &right) noexcept = default;
 
   private:
-    friend constexpr Iban detail::ibanOf(std::string text) noexcept;
+    friend Iban detail::fromDetail(detail::EranosIban const &value) noexcept;
+    friend Iban detail::ibanOf(detail::EranosPaymentAccountDetails const &value) noexcept;
 
-    inline constexpr explicit Iban(std::string text) noexcept : text(std::move(text)) {}
+    /// The IBAN and its country code.
+    struct Fields final {
+        std::string iban;
+        std::string countryCode;
 
-    std::string text;
+        [[nodiscard]] friend constexpr bool operator==(Fields const &left, Fields const &right) noexcept = default;
+    };
+
+    inline constexpr explicit Iban(Fields fields) noexcept : fields(std::move(fields)) {}
+
+    Fields fields;
 };
 
 /// A username in a payment app, trimmed by the library.
@@ -193,18 +214,16 @@ inline std::expected<Email, Error> Email::parse(std::string_view const text) noe
 }
 
 inline std::expected<PhoneNumber, Error> PhoneNumber::parse(std::string_view const text) noexcept {
-    return detail::expectedOf(detail::EranosPhoneNumber::parse(text)).transform(detail::phoneNumberOf);
+    return detail::expectedOf(detail::EranosPhoneNumber::parse(text)).transform([](std::unique_ptr<detail::EranosPhoneNumber> const &value) noexcept {
+        return detail::fromDetail(*value);
+    });
 }
-
-// A phone number is one the library checked.
-inline std::string PhoneNumber::international() const noexcept { return detail::known(detail::EranosPhoneNumber::international(text)); }
 
 inline std::expected<Iban, Error> Iban::parse(std::string_view const text) noexcept {
-    return detail::expectedOf(detail::EranosIban::parse(text)).transform(detail::ibanOf);
+    return detail::expectedOf(detail::EranosIban::parse(text)).transform([](std::unique_ptr<detail::EranosIban> const &value) noexcept {
+        return detail::fromDetail(*value);
+    });
 }
-
-// An IBAN is one the library checked.
-inline std::string Iban::countryCode() const noexcept { return detail::known(detail::EranosIban::country_code(text)); }
 
 inline std::expected<Username, Error> Username::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosUsername::parse(text)).transform(detail::usernameOf);

@@ -224,6 +224,80 @@ def test_percentages_and_parts_parse_and_format_as_the_library_does() -> None:
     assert none.value.failure == MoneyError.InvalidParts()
 
 
+def money_failure(make: Callable[[], object]) -> object:
+    """
+    Make a value that the library should refuse, and read what its money module reports.
+
+    Args:
+        make: What makes the value.
+
+    Returns:
+        The failure.
+
+    """
+    with pytest.raises(MoneyError) as refused:
+        make()
+    return refused.value.failure
+
+
+def calendar_failure(make: Callable[[], object]) -> object:
+    """
+    Make a value that the library should refuse, and read what its calendar module reports.
+
+    Args:
+        make: What makes the value.
+
+    Returns:
+        The failure.
+
+    """
+    with pytest.raises(CalendarError) as refused:
+        make()
+    return refused.value.failure
+
+
+def test_percentages_parts_dates_and_times_print_as_the_library_writes_them() -> None:
+    """A percentage, parts, a date, or a time printed otherwise than the library writes it would show an app one value and the group another."""
+    percentages = {0: '0%', 1: '0.01%', 10: '0.1%', 105: '1.05%', 1250: '12.5%', 3333: '33.33%', 10000: '100%', 2**31 - 1: '21474836.47%'}
+    for basis_points, text in percentages.items():
+        assert str(Percentage(basis_points)) == text, basis_points
+    parts = {1: '0.01', 10: '0.1', 50: '0.5', 100: '1', 150: '1.5', 225: '2.25', 2**31 - 1: '21474836.47'}
+    for hundredths, text in parts.items():
+        assert str(Parts(hundredths)) == text, hundredths
+    assert str(CalendarDate(1, 1, 1)) == '0001-01-01'
+    assert str(CalendarDate(2028, 2, 29)) == '2028-02-29'
+    assert str(CalendarDate(9999, 12, 31)) == '9999-12-31'
+    assert str(TimeOfDay(0, 0)) == '00:00'
+    assert str(TimeOfDay(9, 5)) == '09:05'
+    assert str(TimeOfDay(23, 59)) == '23:59'
+
+
+def test_percentages_parts_dates_and_times_are_refused_as_the_library_refuses_them() -> None:
+    """A value the layer took and the library refuses would fail only when an entry carries it; one it refused would keep an app from entering it."""
+    assert Percentage(0).basis_points == 0
+    assert Percentage(2**31 - 1).basis_points == 2**31 - 1
+    assert money_failure(lambda: Percentage(-1)) == MoneyError.InvalidPercentage()
+    assert money_failure(lambda: Percentage(-(2**31))) == MoneyError.InvalidPercentage()
+    assert Parts(1).hundredths == 1
+    assert Parts(2**31 - 1).hundredths == 2**31 - 1
+    assert money_failure(lambda: Parts(0)) == MoneyError.InvalidParts()
+    assert money_failure(lambda: Parts(-50)) == MoneyError.InvalidParts()
+    assert money_failure(lambda: Parts(-(2**31))) == MoneyError.InvalidParts()
+    # A day the month lacks, a year outside 1 to 9999, a month or a day out of range, and a month too large for the library's field.
+    assert calendar_failure(lambda: CalendarDate(2026, 2, 29)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: CalendarDate(2026, 4, 31)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: CalendarDate(0, 1, 1)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: CalendarDate(-1, 1, 1)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: CalendarDate(10000, 1, 1)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: CalendarDate(2026, 13, 1)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: CalendarDate(2026, 256, 1)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: CalendarDate(2026, 1, 0)) == CalendarError.InvalidDate()
+    assert calendar_failure(lambda: TimeOfDay(24, 0)) == CalendarError.InvalidTime()
+    assert calendar_failure(lambda: TimeOfDay(0, 60)) == CalendarError.InvalidTime()
+    assert calendar_failure(lambda: TimeOfDay(-1, 0)) == CalendarError.InvalidTime()
+    assert calendar_failure(lambda: TimeOfDay(0, 256)) == CalendarError.InvalidTime()
+
+
 def test_dates_and_times_are_checked_when_made() -> None:
     """A date or a time the calendar does not have, taken, would date an expense on a day that never was."""
     date = CalendarDate(2026, 9, 23)
@@ -262,13 +336,13 @@ def test_contacts_and_accounts_are_checked_and_made_canonical() -> None:
     assert email.value.failure == ContactError.InvalidEmail()
     phone = PhoneNumber('+40 712 345 678')
     assert str(phone) == '+40712345678'
-    assert phone.international() == '+40 712 345 678'
+    assert phone.international == '+40 712 345 678'
     with pytest.raises(ContactError) as local:
         PhoneNumber('0712345678')
     assert local.value.failure == ContactError.InvalidPhoneNumber()
     iban = Iban('ro49 aaaa 1b31 0075 9384 0000')
     assert str(iban) == 'RO49AAAA1B31007593840000'
-    assert iban.country_code() == 'RO'
+    assert iban.country_code == 'RO'
     with pytest.raises(PaymentAccountError) as checksum:
         Iban('RO49AAAA1B31007593840001')
     assert checksum.value.failure == PaymentAccountError.InvalidIban(PaymentAccountError.InvalidIban.InvalidChecksum())

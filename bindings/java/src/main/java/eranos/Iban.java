@@ -2,12 +2,19 @@ package eranos;
 
 import eranos.internal.Eranos;
 
-/** An international bank account number, checked against the SWIFT IBAN registry. */
+import java.util.Objects;
+
+/**
+ * An international bank account number, checked against the SWIFT IBAN registry, with the country
+ * code the library reads from it.
+ */
 public final class Iban {
     private final String text;
+    private final String countryCode;
 
-    private Iban(String text) {
+    private Iban(String text, String countryCode) {
         this.text = text;
+        this.countryCode = countryCode;
     }
 
     /**
@@ -19,17 +26,22 @@ public final class Iban {
      *     check it failed
      */
     public static Iban parse(String text) throws EranosException {
-        return Converting.call(() -> new Iban(Eranos.ibanParse(text)));
+        return Converting.call(
+                () -> {
+                    eranos.internal.Iban iban = Eranos.ibanParse(text);
+                    return new Iban(iban.iban(), iban.countryCode());
+                });
     }
 
     /**
-     * The IBAN the library wrote as {@code text}.
+     * The IBAN the library wrote as {@code text}, with the country code it gave.
      *
      * @param text the IBAN without spaces, in capitals
+     * @param countryCode the two-letter country code
      * @return the IBAN
      */
-    static Iban known(String text) {
-        return new Iban(text);
+    static Iban known(String text, String countryCode) {
+        return new Iban(text, countryCode);
     }
 
     /**
@@ -38,21 +50,19 @@ public final class Iban {
      * @return the code: "RO"
      */
     public String countryCode() {
-        try {
-            return Eranos.ibanCountryCode(text);
-        } catch (eranos.internal.EranosException exception) {
-            return text.substring(0, Math.min(2, text.length()));
-        }
+        return countryCode;
     }
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof Iban iban && text.equals(iban.text);
+        return other instanceof Iban iban
+                && text.equals(iban.text)
+                && countryCode.equals(iban.countryCode);
     }
 
     @Override
     public int hashCode() {
-        return text.hashCode();
+        return Objects.hash(text, countryCode);
     }
 
     /**

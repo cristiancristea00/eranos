@@ -1123,6 +1123,7 @@ public final class eranos/PhoneNumber {
 	public static final field Companion Leranos/PhoneNumber$Companion;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getE164 ()Ljava/lang/String;
+	public final fun getInternational ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

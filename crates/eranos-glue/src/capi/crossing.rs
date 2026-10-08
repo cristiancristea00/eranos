@@ -1,8 +1,10 @@
 //! How each type of the binding core crosses the C bridge, and which of the
 //! core's records, lists, and enums the bridge writes: those the group
-//! calls, the group's constructor, and the templates reach. A record a call
-//! takes, or a list one takes, is mutable, with a constructor and setters;
-//! one that only comes back is read-only.
+//! calls, the group's constructor, and the templates reach, and the records
+//! the library parses. A record a call takes, or a list one takes, is
+//! mutable, with a constructor and setters; one that only comes back is
+//! read-only, and so is a record the library parses, which only the
+//! library fills.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -32,6 +34,65 @@ const CONSTRUCTED: [&str; 1] = ["NewExpenseGroup"];
 /// The records whose lists the templates answer with: the list of every
 /// currency.
 const LISTED: [&str; 1] = ["CurrencyDetails"];
+
+/// A record of a value and the text the library derives from it, which C
+/// never writes: the core's helper parses the value's text and fills the
+/// rest, and C reads the record.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Parsed {
+    /// The core's record, whose first field is the value.
+    pub(crate) record: &'static str,
+    /// The core's helper that parses the value's text into the record.
+    pub(crate) helper: &'static str,
+    /// The summary of the record's `parse`.
+    pub(crate) summary: &'static str,
+    /// The sentence that says what a setter or a constructor that takes the
+    /// value's text fills.
+    pub(crate) fills: &'static str,
+    /// The kind of the error of text the helper refuses.
+    pub(crate) kind: &'static str,
+    /// The text the helper refuses.
+    pub(crate) refused: &'static str,
+}
+
+impl Parsed {
+    /// The `# Errors` text of a function that takes the value's text.
+    pub(crate) fn errors(&self) -> String {
+        format!(
+            "[`EranosError`] of the kind `{}` for {}, and of the kind `InvalidText` for text that is not UTF-8.",
+            self.kind, self.refused
+        )
+    }
+}
+
+/// The records the library parses: an IBAN with its country code, and a
+/// phone number with its international form. Each crosses as a read-only
+/// object that its `parse` makes; a record's setter of a field that holds
+/// one takes the value's text, and a variant named after one, which holds
+/// its fields, is made from that text.
+pub(crate) const PARSED: [Parsed; 2] = [
+    Parsed {
+        record: "Iban",
+        helper: "iban_parse",
+        summary: "The IBAN written `text`, without spaces, in capitals, with its country code.",
+        fills: "The library parses the IBAN, which it writes without spaces and in capitals, and fills its country code.",
+        kind: "PaymentAccount",
+        refused: "text that is not an IBAN",
+    },
+    Parsed {
+        record: "PhoneNumber",
+        helper: "phone_number_parse",
+        summary: "The phone number written `text`, in E.164 form and in international form.",
+        fills: "The library parses the number, which it writes in E.164 form, and fills its international form.",
+        kind: "Contact",
+        refused: "text that is not a phone number",
+    },
+];
+
+/// The record of [`PARSED`] named `name`, if the library parses it.
+pub(crate) fn parsed(name: &str) -> Option<&'static Parsed> {
+    PARSED.iter().find(|parsed| parsed.record == name)
+}
 
 /// How a value crosses the bridge.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -304,7 +365,8 @@ pub(crate) struct Plan {
 impl Plan {
     /// Every record, list, and enum that `core`'s calls reach through what
     /// they take and answer, and through the group's constructor and the
-    /// templates, but for the hand-written ones.
+    /// templates, and every record the library parses, but for the
+    /// hand-written ones.
     ///
     /// # Errors
     ///
@@ -326,11 +388,16 @@ impl Plan {
         for element in LISTED {
             plan.reach(&Crossing::List(format_ident!("{element}")), false, core)?;
         }
+        for parsed in &PARSED {
+            let record = format_ident!("{}", parsed.record);
+            plan.reach(&Crossing::Object(record), false, core)?;
+        }
         Ok(plan)
     }
 
     /// Adds what `crossing` reaches, taken by a call if `taken`, and what its
-    /// fields reach in turn.
+    /// fields reach in turn. A record the library parses is never taken: C
+    /// reads it, and sets a field that holds one from the value's text.
     ///
     /// # Errors
     ///
@@ -347,6 +414,7 @@ impl Plan {
             }
             Crossing::Object(name) => {
                 let text = name.to_string();
+                let taken = taken && parsed(&text).is_none();
                 if WRITTEN.contains(&text.as_str()) || !mark(&mut self.objects, name, taken) {
                     return Ok(());
                 }

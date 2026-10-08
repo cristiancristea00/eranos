@@ -13,7 +13,7 @@ public struct CalendarDate: Hashable, Sendable, CustomStringConvertible {
 
     /// The date as the library writes it, in ISO 8601: "2026-09-23".
     public var description: String {
-        (try? EranosGenerated.calendarDateFormat(date: generated)) ?? "\(year)/\(month)/\(day)"
+        EranosGenerated.calendarDateFormat(date: generated)
     }
 
     var generated: EranosGenerated.CalendarDate {
@@ -26,7 +26,7 @@ public struct CalendarDate: Hashable, Sendable, CustomStringConvertible {
     ///   day that does not exist, such as 30 February.
     public init(year: Int32, month: Int32, day: Int32) throws(EranosError) {
         let date = EranosGenerated.CalendarDate(year: year, month: month, day: day)
-        _ = try converting { try EranosGenerated.calendarDateFormat(date: date) }
+        try converting { try EranosGenerated.calendarDateCheck(date: date) }
         self.init(date)
     }
 
@@ -55,7 +55,7 @@ public struct TimeOfDay: Hashable, Sendable, CustomStringConvertible {
 
     /// The time as the library writes it, in ISO 8601: "18:30".
     public var description: String {
-        (try? EranosGenerated.timeOfDayFormat(time: generated)) ?? "\(hour)h\(minute)"
+        EranosGenerated.timeOfDayFormat(time: generated)
     }
 
     var generated: EranosGenerated.TimeOfDay {
@@ -68,7 +68,7 @@ public struct TimeOfDay: Hashable, Sendable, CustomStringConvertible {
     ///   hour or a minute out of range.
     public init(hour: Int32, minute: Int32) throws(EranosError) {
         let time = EranosGenerated.TimeOfDay(hour: hour, minute: minute)
-        _ = try converting { try EranosGenerated.timeOfDayFormat(time: time) }
+        try converting { try EranosGenerated.timeOfDayCheck(time: time) }
         self.init(time)
     }
 

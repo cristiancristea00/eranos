@@ -359,6 +359,36 @@ fn display_pads_every_component() {
     assert_eq!(date(9999, 12, 31).to_string(), "9999-12-31");
 }
 
+/// The bindings, which write a date from the fields of their record, would
+/// show a valid date otherwise than the library does, or fail on the fields
+/// of a day the library refuses rather than show them.
+#[test]
+fn the_date_writer_writes_any_fields_as_the_text_form_writes_a_date() {
+    // Every day of a leap year, and the bounds, as the text form writes them.
+    for date in (1..=12)
+        .flat_map(|month| (1..=31).map(move |day| CalendarDate::new(2028, month, day)))
+        .filter_map(Result::ok)
+        .chain([date(1, 1, 1), date(9999, 12, 31)])
+    {
+        let written =
+            format_calendar_date(date.year().into(), date.month().into(), date.day().into());
+        assert_eq!(written.to_string(), date.to_string());
+    }
+    // The fields of no date, padded the same way.
+    assert_eq!(format_calendar_date(0, 0, 0).to_string(), "0000-00-00");
+    assert_eq!(format_calendar_date(2026, 2, 30).to_string(), "2026-02-30");
+    assert_eq!(
+        format_calendar_date(10_000, 13, 32).to_string(),
+        "10000-13-32"
+    );
+    // A negative number keeps its sign within the width.
+    assert_eq!(format_calendar_date(-1, -1, -1).to_string(), "-001--1--1");
+    assert_eq!(
+        format_calendar_date(i32::MIN, i32::MAX, 0).to_string(),
+        "-2147483648-2147483647-00"
+    );
+}
+
 /// Expenses listed by date would appear out of order.
 #[test]
 fn dates_order_chronologically() {
@@ -388,6 +418,31 @@ fn a_time_runs_from_midnight_to_23_59() {
     assert_eq!(
         TimeOfDay::new(u8::MAX, u8::MAX),
         Err(CalendarError::InvalidTime)
+    );
+}
+
+/// The bindings, which write a time from the fields of their record, would
+/// show a valid time otherwise than the library does, or fail on the fields
+/// of a time the library refuses rather than show them.
+#[test]
+fn the_time_writer_writes_any_fields_as_the_text_form_writes_a_time() {
+    // Every minute of the day, as the text form writes it.
+    for hour in 0..=23 {
+        for minute in 0..=59 {
+            let time = TimeOfDay::new(hour, minute).unwrap();
+            let written = format_time_of_day(hour.into(), minute.into());
+            assert_eq!(written.to_string(), time.to_string());
+        }
+    }
+    // The fields of no time, padded the same way.
+    assert_eq!(format_time_of_day(24, 0).to_string(), "24:00");
+    assert_eq!(format_time_of_day(0, 60).to_string(), "00:60");
+    assert_eq!(format_time_of_day(255, 255).to_string(), "255:255");
+    // A negative number keeps its sign within the width.
+    assert_eq!(format_time_of_day(-1, -10).to_string(), "-1:-10");
+    assert_eq!(
+        format_time_of_day(i32::MIN, i32::MAX).to_string(),
+        "-2147483648:2147483647"
     );
 }
 
@@ -584,6 +639,14 @@ proptest! {
         let text = date.to_string();
         prop_assert_eq!(text.len(), 10);
         prop_assert_eq!(CalendarDate::parse(&text), Ok(date));
+    }
+
+    /// The bindings would write a valid date otherwise than the library does.
+    #[test]
+    fn the_date_writer_writes_every_valid_date_as_its_text_form(date in any_date()) {
+        let written =
+            format_calendar_date(date.year().into(), date.month().into(), date.day().into());
+        prop_assert_eq!(written.to_string(), date.to_string());
     }
 
     /// Dates sorted as text, as databases and file names do, would disagree

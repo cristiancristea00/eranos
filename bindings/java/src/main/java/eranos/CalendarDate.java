@@ -28,11 +28,8 @@ public final class CalendarDate {
      */
     public static CalendarDate of(int year, int month, int day) throws EranosException {
         CalendarDate date = new CalendarDate(year, month, day);
-        return Converting.call(
-                () -> {
-                    Eranos.calendarDateFormat(date.generated());
-                    return date;
-                });
+        Converting.run(() -> Eranos.calendarDateCheck(date.generated()));
+        return date;
     }
 
     /**
@@ -112,10 +109,6 @@ public final class CalendarDate {
      */
     @Override
     public String toString() {
-        try {
-            return Eranos.calendarDateFormat(generated());
-        } catch (eranos.internal.EranosException exception) {
-            return year + "/" + month + "/" + day;
-        }
+        return Eranos.calendarDateFormat(generated());
     }
 }

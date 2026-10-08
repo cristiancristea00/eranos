@@ -1,5 +1,8 @@
-//! The values of the C and C++ APIs: amounts, dates, times, lists of text, and the helpers that parse and
-//! write values as the library does.
+//! The values of the C and C++ APIs: amounts, dates, times, lists of text, and the helpers that parse,
+//! write, and check values as the library does.
+//!
+//! The objects of phone numbers and IBANs, which the library parses, are written with the records, in
+//! the module `generated`.
 
 /// The types and functions of the C and C++ APIs; C names each type as it is here, and C++ puts it in the
 /// namespace `eranos::detail`.
@@ -38,15 +41,20 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// Writes the date as the library does: "2026-09-23".
+        /// Writes the date as the library does: "2026-09-23". It writes the fields of a day the
+        /// calendar does not have, which `check` refuses, the same way: "2026-02-30".
+        pub fn format(self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::calendar_date_format(self.into()));
+        }
+
+        /// Checks that the date is a day of the calendar, between years 1 and 9999, as an entry's
+        /// date must be.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `Calendar` for a day the calendar does not have.
-        pub fn format(self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::calendar_date_format(self.into()).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn check(self) -> Result<(), Box<EranosError>> {
+            eranos_bindings::calendar_date_check(self.into()).map_err(crate::failed)
         }
     }
 
@@ -72,15 +80,19 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// Writes the time as the library does: "18:30".
+        /// Writes the time as the library does: "18:30". It writes the fields of a time the day
+        /// does not have, which `check` refuses, the same way: "24:00".
+        pub fn format(self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::time_of_day_format(self.into()));
+        }
+
+        /// Checks that the time is a time of day, from 00:00 to 23:59, as an entry's time must be.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `Calendar` for a time the day does not have.
-        pub fn format(self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::time_of_day_format(self.into()).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn check(self) -> Result<(), Box<EranosError>> {
+            eranos_bindings::time_of_day_check(self.into()).map_err(crate::failed)
         }
     }
 
@@ -258,18 +270,20 @@ pub mod ffi {
             eranos_bindings::percentage_parse(&crate::text(text)?).map_err(crate::failed)
         }
 
-        /// Writes the percentage of `basis_points` basis points as the library does: "12.5%".
+        /// Writes the percentage of `basis_points` basis points as the library does: "12.5%". It
+        /// writes a negative number, which `check` refuses, the same way after a minus sign:
+        /// "-12.5%".
+        pub fn format(basis_points: i32, write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::percentage_format(basis_points));
+        }
+
+        /// Checks that `basis_points` is a percentage, as an entry that holds one requires.
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `Money` for a percentage out of range.
-        pub fn format(
-            basis_points: i32,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::percentage_format(basis_points).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        /// [`EranosError`] of the kind `Money` for a negative number.
+        pub fn check(basis_points: i32) -> Result<(), Box<EranosError>> {
+            eranos_bindings::percentage_check(basis_points).map_err(crate::failed)
         }
     }
 
@@ -289,15 +303,19 @@ pub mod ffi {
             eranos_bindings::parts_parse(&crate::text(text)?).map_err(crate::failed)
         }
 
-        /// Writes the parts of `hundredths` hundredths as the library does: "0.5".
+        /// Writes the parts of `hundredths` hundredths as the library does: "0.5". It writes zero
+        /// and a negative number, which `check` refuses, the same way: "0" and "-0.5".
+        pub fn format(hundredths: i32, write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::parts_format(hundredths));
+        }
+
+        /// Checks that `hundredths` is a number of parts, as a split of parts requires.
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `Money` for parts out of range.
-        pub fn format(hundredths: i32, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::parts_format(hundredths).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        /// [`EranosError`] of the kind `Money` for a number that is not positive.
+        pub fn check(hundredths: i32) -> Result<(), Box<EranosError>> {
+            eranos_bindings::parts_check(hundredths).map_err(crate::failed)
         }
     }
 
@@ -380,84 +398,6 @@ pub mod ffi {
             write: &mut DiplomatWrite,
         ) -> Result<(), Box<EranosError>> {
             let text = eranos_bindings::email_parse(&crate::text(text)?).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-    }
-
-    /// The helpers of phone numbers, which cross in the E.164 form. It holds nothing, and nothing
-    /// makes one.
-    #[diplomat::opaque]
-    #[derive(Debug, Clone, Copy)]
-    pub struct EranosPhoneNumber;
-
-    impl EranosPhoneNumber {
-        /// Writes the phone number written `text` in the E.164 form: "+40712345678".
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `Contact` for text that is not a phone number, and of the
-        /// kind `InvalidText` for text that is not UTF-8.
-        pub fn parse(
-            text: &DiplomatStr,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text =
-                eranos_bindings::phone_number_parse(&crate::text(text)?).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// Writes the phone number written `text` in the international form: "+40 712 345 678".
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `Contact` for text that is not a phone number, and of the
-        /// kind `InvalidText` for text that is not UTF-8.
-        pub fn international(
-            text: &DiplomatStr,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::phone_number_international(&crate::text(text)?)
-                .map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-    }
-
-    /// The helpers of IBANs. It holds nothing, and nothing makes one.
-    #[diplomat::opaque]
-    #[derive(Debug, Clone, Copy)]
-    pub struct EranosIban;
-
-    impl EranosIban {
-        /// Writes the IBAN written `text` in its electronic form, without spaces.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `PaymentAccount` for text that is not an IBAN, and of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn parse(
-            text: &DiplomatStr,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::iban_parse(&crate::text(text)?).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// Writes the country code of the IBAN written `text`: "RO".
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `PaymentAccount` for text that is not an IBAN, and of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn country_code(
-            text: &DiplomatStr,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text =
-                eranos_bindings::iban_country_code(&crate::text(text)?).map_err(crate::failed)?;
             crate::write_text(write, &text);
             Ok(())
         }

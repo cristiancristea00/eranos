@@ -9,8 +9,8 @@ use quote::{ToTokens, quote};
 use super::*;
 
 /// The records and enums of a core that holds every kind of field and
-/// variant the bridge carries, and the names the templates and the group's
-/// constructor need.
+/// variant the bridge carries, and the names the templates, the group's
+/// constructor, and the records the library parses need.
 pub(crate) const RECORDS: &str = "
 /// An amount.
 #[mirrored]
@@ -51,6 +51,45 @@ pub struct ExpenseItem {
     pub name: String,
     /// How many units.
     pub quantity: i32,
+    /// Whom to call.
+    pub phone: Option<PhoneNumber>,
+    /// Where to pay.
+    pub account: Option<Account>,
+}
+
+/// A phone number.
+#[mirrored]
+pub struct PhoneNumber {
+    /// The E.164 form.
+    pub e164: String,
+    /// The international form.
+    pub international: String,
+}
+
+/// An IBAN.
+#[mirrored]
+pub struct Iban {
+    /// The IBAN.
+    pub iban: String,
+    /// The country code.
+    pub country_code: String,
+}
+
+/// Where to pay.
+#[mirrored]
+pub enum Account {
+    /// A bank account.
+    Iban {
+        /// The IBAN.
+        iban: String,
+        /// The country code.
+        country_code: String,
+    },
+    /// A username.
+    Username {
+        /// The username.
+        username: String,
+    },
 }
 
 /// A tip.

@@ -155,27 +155,25 @@ namespace detail {
 
 inline std::expected<CalendarDate, Error> CalendarDate::of(std::int32_t const year, std::int32_t const month, std::int32_t const day) noexcept {
     detail::EranosCalendarDate const date{.year = year, .month = month, .day = day};
-    return detail::expectedOf(date.format()).transform([date](std::string const & /* text */) noexcept { return detail::calendarDateOf(date); });
+    return detail::expectedOf(date.check()).transform([date] noexcept { return detail::calendarDateOf(date); });
 }
 
 inline std::expected<CalendarDate, Error> CalendarDate::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosCalendarDate::parse(text)).transform(detail::calendarDateOf);
 }
 
-// A date is checked when it is made.
-inline std::string CalendarDate::toString() const noexcept { return detail::known(detail::toDetail(*this).format()); }
+inline std::string CalendarDate::toString() const noexcept { return detail::toDetail(*this).format(); }
 
 inline std::expected<TimeOfDay, Error> TimeOfDay::of(std::int32_t const hour, std::int32_t const minute) noexcept {
     detail::EranosTimeOfDay const time{.hour = hour, .minute = minute};
-    return detail::expectedOf(time.format()).transform([time](std::string const & /* text */) noexcept { return detail::timeOfDayOf(time); });
+    return detail::expectedOf(time.check()).transform([time] noexcept { return detail::timeOfDayOf(time); });
 }
 
 inline std::expected<TimeOfDay, Error> TimeOfDay::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosTimeOfDay::parse(text)).transform(detail::timeOfDayOf);
 }
 
-// A time is checked when it is made.
-inline std::string TimeOfDay::toString() const noexcept { return detail::known(detail::toDetail(*this).format()); }
+inline std::string TimeOfDay::toString() const noexcept { return detail::toDetail(*this).format(); }
 
 } // namespace eranos
 

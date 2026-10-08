@@ -1,7 +1,6 @@
-// The value types. Every text they show comes from the library, every value an app builds is
-// checked by the library's rules, and a value the library never sends still prints something: a
-// type that formatted on its own, let a refused value through, or threw on an impossible one would
-// show an app another value than the library holds.
+// The value types. Every text they show comes from the library, and every value an app builds is
+// checked by the library's rules: a type that formatted on its own, kept derived text of its own,
+// or let a refused value through would show an app another value than the library holds.
 
 package eranos;
 
@@ -168,14 +167,22 @@ class ValuesTest {
         assertEquals(1_250, percentage.basisPoints());
         assertEquals("12.5%", percentage.toString());
         assertValue(percentage, Percentage.ofBasisPoints(1_250), Percentage.ofBasisPoints(1));
-        assertThrows(EranosException.Money.class, () -> Percentage.ofBasisPoints(-1));
+        assertEquals("0%", Percentage.ofBasisPoints(0).toString());
+        EranosException.Money negative =
+                assertThrows(EranosException.Money.class, () -> Percentage.ofBasisPoints(-1));
+        assertEquals(new MoneyFailure.InvalidPercentage(), negative.failure());
         assertThrows(EranosException.Money.class, () -> Percentage.parse("half"));
 
         Parts parts = Parts.parse("0.5");
         assertEquals(50, parts.hundredths());
         assertEquals("0.5", parts.toString());
         assertValue(parts, Parts.ofHundredths(50), Parts.ofHundredths(1));
-        assertThrows(EranosException.Money.class, () -> Parts.ofHundredths(0));
+        assertEquals("0.01", Parts.ofHundredths(1).toString());
+        for (int hundredths : List.of(0, -50)) {
+            EranosException.Money refused =
+                    assertThrows(EranosException.Money.class, () -> Parts.ofHundredths(hundredths));
+            assertEquals(new MoneyFailure.InvalidParts(), refused.failure());
+        }
         assertThrows(EranosException.Money.class, () -> Parts.parse("half"));
     }
 
@@ -197,6 +204,16 @@ class ValuesTest {
         assertEquals(
                 "invalid date: expected an existing ISO 8601 date between years 1 and 9999",
                 invalid.getMessage());
+        assertEquals("0001-01-01", CalendarDate.of(1, 1, 1).toString());
+        assertEquals("9999-12-31", CalendarDate.of(9_999, 12, 31).toString());
+        assertEquals(
+                new CalendarFailure.InvalidDate(),
+                assertThrows(EranosException.Calendar.class, () -> CalendarDate.of(0, 12, 31))
+                        .failure());
+        assertEquals(
+                new CalendarFailure.InvalidDate(),
+                assertThrows(EranosException.Calendar.class, () -> CalendarDate.of(10_000, 1, 1))
+                        .failure());
         assertThrows(EranosException.Calendar.class, () -> CalendarDate.parse("2026-02-30"));
 
         TimeOfDay time = TimeOfDay.of(18, 30);
@@ -204,7 +221,14 @@ class ValuesTest {
         assertEquals(18, time.hour());
         assertEquals(30, time.minute());
         assertValue(time, TimeOfDay.parse("18:30"), TimeOfDay.of(18, 31));
-        assertThrows(EranosException.Calendar.class, () -> TimeOfDay.of(24, 0));
+        assertEquals("00:00", TimeOfDay.of(0, 0).toString());
+        assertEquals("23:59", TimeOfDay.of(23, 59).toString());
+        assertEquals(
+                new CalendarFailure.InvalidTime(),
+                assertThrows(EranosException.Calendar.class, () -> TimeOfDay.of(24, 0)).failure());
+        assertEquals(
+                new CalendarFailure.InvalidTime(),
+                assertThrows(EranosException.Calendar.class, () -> TimeOfDay.of(0, 60)).failure());
         assertThrows(EranosException.Calendar.class, () -> TimeOfDay.parse("25:00"));
     }
 
@@ -221,6 +245,7 @@ class ValuesTest {
 
         PhoneNumber phone = PhoneNumber.parse("+40 712 345 678");
         assertEquals("+40712345678", phone.e164());
+        assertEquals("+40 712 345 678", phone.international());
         assertEquals("+40 712 345 678", phone.toString());
         assertValue(phone, PhoneNumber.parse("+40712345678"), PhoneNumber.parse("+40712345679"));
         assertThrows(EranosException.Contact.class, () -> PhoneNumber.parse("0712345678"));
@@ -361,18 +386,73 @@ class ValuesTest {
     }
 
     /**
-     * A value the library never sends, such as a negative percentage, would throw from its text
-     * instead of printing.
+     * A phone number or an IBAN that asked the library for its derived text on every read could
+     * fail to show a value it holds, and one that derived the text itself could show another form
+     * of the number or another country than the library's; both read it from the record the library
+     * sent, which crosses back whole.
      */
     @Test
-    void aValueTheLibraryNeverSendsStillPrints() {
-        assertEquals("-1 bp", Percentage.known(-1).toString());
-        assertEquals("0/100", Parts.known(0).toString());
+    void aPhoneNumberAndAnIbanReadTheirDerivedTextFromTheirRecord() {
+        eranos.internal.PhoneNumber sent =
+                new eranos.internal.PhoneNumber("+40712345678", "as the record holds it");
+        PhoneNumber phone = PhoneNumber.converted(sent);
+        assertEquals("+40712345678", phone.e164());
+        assertEquals("as the record holds it", phone.international());
+        assertEquals("as the record holds it", phone.toString());
+        assertEquals(sent, phone.generated());
+        assertNotEquals(
+                phone,
+                PhoneNumber.converted(
+                        new eranos.internal.PhoneNumber("+40712345678", "+40 712 345 678")));
+
+        Iban iban = Iban.known("RO49AAAA1B31007593840000", "as the record holds it");
+        assertEquals("RO49AAAA1B31007593840000", iban.toString());
+        assertEquals("as the record holds it", iban.countryCode());
         assertEquals(
-                "2026/2/30",
-                CalendarDate.converted(new eranos.internal.CalendarDate(2026, 2, 30)).toString());
-        assertEquals("25h0", TimeOfDay.converted(new eranos.internal.TimeOfDay(25, 0)).toString());
-        assertEquals("0712", PhoneNumber.known("0712").toString());
-        assertEquals("XY", Iban.known("XY").countryCode());
+                new eranos.internal.PaymentAccountDetails.Iban(
+                        "RO49AAAA1B31007593840000", "as the record holds it"),
+                Conversions.generated(new PaymentAccountDetails.Iban(iban)));
+        assertNotEquals(iban, Iban.known("RO49AAAA1B31007593840000", "RO"));
+    }
+
+    /**
+     * A phone number whose international form, or an IBAN whose country code, is not the one the
+     * library derives would reach the group as a value the library never wrote. The layer's public
+     * types build no such value: only the records the library sends do.
+     */
+    @Test
+    void aPhoneNumberOrAnIbanWhoseDerivedTextIsNotTheLibrarysIsRefused() throws EranosException {
+        Flat flat = new Flat();
+        Member grouped =
+                Member.builder("Carol")
+                        .phone(
+                                PhoneNumber.converted(
+                                        new eranos.internal.PhoneNumber(
+                                                "+40712345678", "+40 7123 45678")))
+                        .build();
+        EranosException.Contact phone =
+                assertThrows(EranosException.Contact.class, () -> flat.group.addMember(grouped));
+        assertEquals(new ContactFailure.InvalidPhoneNumber(), phone.failure());
+
+        Member banked =
+                Member.builder("Dan")
+                        .accounts(
+                                List.of(
+                                        new PaymentAccount(
+                                                "Bank",
+                                                new PaymentAccountDetails.Iban(
+                                                        Iban.known(
+                                                                "RO49AAAA1B31007593840000",
+                                                                "GB")))))
+                        .build();
+        EranosException.PaymentAccount iban =
+                assertThrows(
+                        EranosException.PaymentAccount.class, () -> flat.group.addMember(banked));
+        assertEquals(
+                new PaymentAccountFailure.InvalidIban(new IbanReason.UnknownCountry()),
+                iban.failure());
+        assertEquals(
+                List.of(flat.ana, flat.bob),
+                flat.group.members().stream().map(Member::id).toList());
     }
 }

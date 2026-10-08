@@ -1,6 +1,6 @@
 // The value types. Every text they show comes from the library, every value an app builds is checked by the library's rules,
-// and a value the library never sends still prints something: a type that formatted on its own, let a refused value through,
-// or threw on an impossible one would show an app another value than the library holds.
+// and a phone number or an IBAN keeps the text the library derives from it: a type that formatted on its own, let a refused
+// value through, or derived text of its own would show an app another value than the library holds.
 
 package eranos
 
@@ -106,8 +106,8 @@ class ValuesTest {
     }
 
     /**
-     * A rate, a percentage, or a number of parts read or written another way than the library's would divide an expense
-     * another way.
+     * A rate, a percentage, or a number of parts read or written another way than the library's, or one the library refuses
+     * let through, would divide an expense another way.
      */
     @Test
     fun ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() {
@@ -124,14 +124,28 @@ class ValuesTest {
         assertEquals(1_250, percentage.basisPoints)
         assertEquals("12.5%", percentage.toString())
         assertValue(percentage, Percentage.ofBasisPoints(1_250), Percentage.ofBasisPoints(1))
-        assertThrows<EranosException.Money> { Percentage.ofBasisPoints(-1) }
+        assertEquals("0%", Percentage.ofBasisPoints(0).toString())
+        assertEquals("33.33%", Percentage.ofBasisPoints(3_333).toString())
+        assertEquals("12%", Percentage.ofBasisPoints(1_200).toString())
+        assertEquals("21474836.47%", Percentage.ofBasisPoints(Int.MAX_VALUE).toString())
+        for (basisPoints in listOf(-1, Int.MIN_VALUE)) {
+            val refused = assertThrows<EranosException.Money> { Percentage.ofBasisPoints(basisPoints) }
+            assertEquals(MoneyFailure.InvalidPercentage, refused.failure)
+        }
         assertThrows<EranosException.Money> { Percentage.parse("half") }
 
         val parts = Parts.parse("0.5")
         assertEquals(50, parts.hundredths)
         assertEquals("0.5", parts.toString())
         assertValue(parts, Parts.ofHundredths(50), Parts.ofHundredths(1))
-        assertThrows<EranosException.Money> { Parts.ofHundredths(0) }
+        assertEquals("0.01", Parts.ofHundredths(1).toString())
+        assertEquals("2.25", Parts.ofHundredths(225).toString())
+        assertEquals("2", Parts.ofHundredths(200).toString())
+        assertEquals("21474836.47", Parts.ofHundredths(Int.MAX_VALUE).toString())
+        for (hundredths in listOf(0, -1, Int.MIN_VALUE)) {
+            val refused = assertThrows<EranosException.Money> { Parts.ofHundredths(hundredths) }
+            assertEquals(MoneyFailure.InvalidParts, refused.failure)
+        }
         assertThrows<EranosException.Money> { Parts.parse("half") }
     }
 
@@ -151,13 +165,48 @@ class ValuesTest {
         assertEquals(CalendarFailure.InvalidDate, invalid.failure)
         assertEquals("invalid date: expected an existing ISO 8601 date between years 1 and 9999", invalid.message)
         assertThrows<EranosException.Calendar> { CalendarDate.parse("2026-02-30") }
+        assertEquals("0001-01-01", CalendarDate.of(1, 1, 1).toString())
+        assertEquals("2024-02-29", CalendarDate.of(2024, 2, 29).toString())
+        assertEquals("9999-12-31", CalendarDate.of(9_999, 12, 31).toString())
+        val days: List<() -> CalendarDate> =
+            listOf(
+                { CalendarDate.of(0, 1, 1) },
+                { CalendarDate.of(10_000, 1, 1) },
+                { CalendarDate.of(2025, 2, 29) },
+                { CalendarDate.of(2026, 4, 31) },
+                { CalendarDate.of(2026, 0, 1) },
+                { CalendarDate.of(2026, 13, 1) },
+                { CalendarDate.of(2026, 1, 0) },
+                { CalendarDate.of(-1, 1, 1) },
+                // A field that a check cut down to its byte, or to two bytes for the year, would read as 1.
+                { CalendarDate.of(65_537, 1, 1) },
+                { CalendarDate.of(2026, 257, 1) },
+                { CalendarDate.of(2026, 1, 257) },
+            )
+        for (day in days) {
+            assertEquals(CalendarFailure.InvalidDate, assertThrows<EranosException.Calendar> { day() }.failure)
+        }
 
         val time = TimeOfDay.of(18, 30)
         assertEquals("18:30", time.toString())
         assertEquals(18, time.hour)
         assertEquals(30, time.minute)
         assertValue(time, TimeOfDay.parse("18:30"), TimeOfDay.of(18, 31))
-        assertThrows<EranosException.Calendar> { TimeOfDay.of(24, 0) }
+        assertEquals("00:00", TimeOfDay.of(0, 0).toString())
+        assertEquals("23:59", TimeOfDay.of(23, 59).toString())
+        val times: List<() -> TimeOfDay> =
+            listOf(
+                { TimeOfDay.of(24, 0) },
+                { TimeOfDay.of(0, 60) },
+                { TimeOfDay.of(-1, 0) },
+                { TimeOfDay.of(0, -1) },
+                // A field that a check cut down to its byte would read as 0.
+                { TimeOfDay.of(256, 0) },
+                { TimeOfDay.of(0, 256) },
+            )
+        for (moment in times) {
+            assertEquals(CalendarFailure.InvalidTime, assertThrows<EranosException.Calendar> { moment() }.failure)
+        }
         assertThrows<EranosException.Calendar> { TimeOfDay.parse("25:00") }
     }
 
@@ -174,6 +223,7 @@ class ValuesTest {
 
         val phone = PhoneNumber.parse("+40 712 345 678")
         assertEquals("+40712345678", phone.e164)
+        assertEquals("+40 712 345 678", phone.international)
         assertEquals("+40 712 345 678", phone.toString())
         assertValue(phone, PhoneNumber.parse("+40712345678"), PhoneNumber.parse("+40712345679"))
         assertThrows<EranosException.Contact> { PhoneNumber.parse("0712345678") }
@@ -197,6 +247,51 @@ class ValuesTest {
         val tag = assertThrows<EranosException.Language> { Language.parse("not a tag") }
         assertEquals(LanguageFailure.InvalidLanguage, tag.failure)
         assertEquals("invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`", tag.message)
+    }
+
+    /**
+     * A phone number or an IBAN that wrote its international form or its country code itself, or asked the library for it
+     * again, could show an app other text than the library gave, and one that crossed back without it would leave the
+     * library nothing to compare. These records hold text the library never writes, which only a value that keeps the
+     * record's text shows.
+     */
+    @Test
+    fun aPhoneNumberAndAnIbanKeepTheTextTheLibraryDerives() {
+        val record = eranos.internal.PhoneNumber("+40712345678", "+40 7123 45678")
+        val phone = record.converted()
+        assertEquals("+40712345678", phone.e164)
+        assertEquals("+40 7123 45678", phone.international)
+        assertEquals("+40 7123 45678", phone.toString())
+        assertEquals(record, phone.generated)
+
+        val iban = eranos.internal.Iban("RO49AAAA1B31007593840000", "ZZ").converted()
+        assertEquals("RO49AAAA1B31007593840000", iban.toString())
+        assertEquals("ZZ", iban.countryCode)
+        val details = eranos.internal.PaymentAccountDetails.Iban("RO49AAAA1B31007593840000", "ZZ")
+        assertEquals(PaymentAccountDetails.Iban(iban), details.converted())
+        assertEquals(details, details.converted().generated)
+    }
+
+    /**
+     * A phone number whose international form, or an IBAN whose country code, is not the one the library derives from it
+     * would show an app text the library never wrote for it, so the library refuses it. An app cannot build such a value,
+     * whose constructor is internal; a test of the package can.
+     */
+    @Test
+    fun aPhoneNumberOrAnIbanWithDerivedTextOtherThanTheLibrarysIsRefused() {
+        val flat = Flat()
+        val phone = PhoneNumber("+40712345678", "+40712345678")
+        val added = assertThrows<EranosException.Contact> { flat.group.addBlocking(Member("Carol", phone = phone)) }
+        assertEquals(ContactFailure.InvalidPhoneNumber, added.failure)
+        val ana = present(flat.group.memberBlocking(flat.ana))
+        val replaced = assertThrows<EranosException.Contact> { flat.group.replaceBlocking(ana.copy(phone = phone)) }
+        assertEquals(ContactFailure.InvalidPhoneNumber, replaced.failure)
+
+        val account = PaymentAccount("Main account", PaymentAccountDetails.Iban(Iban("RO49AAAA1B31007593840000", "GB")))
+        val refused = assertThrows<EranosException.PaymentAccount> { flat.group.addBlocking(Member("Dan", accounts = listOf(account))) }
+        assertEquals(PaymentAccountFailure.InvalidIban(IbanReason.UnknownCountry), refused.failure)
+        assertEquals(ana, flat.group.memberBlocking(flat.ana))
+        assertEquals(listOf(flat.ana, flat.bob), flat.group.membersBlocking().map { it.id })
     }
 
     /**
@@ -301,19 +396,6 @@ class ValuesTest {
         val text = "00000000-0000-0000-0000-000000000000"
         assertEquals(text, CategoryId.UNCATEGORISED.value)
         assertEquals(CategoryId.UNCATEGORISED, CategoryId.parse(text))
-    }
-
-    /**
-     * A value the library never sends, such as a percentage below zero, would throw from its text instead of printing.
-     */
-    @Test
-    fun aValueTheLibraryNeverSendsStillPrints() {
-        assertEquals("-1 bp", Percentage(-1).toString())
-        assertEquals("0/100", Parts(0).toString())
-        assertEquals("2026/2/30", CalendarDate(2026, 2, 30).toString())
-        assertEquals("25h0", TimeOfDay(25, 0).toString())
-        assertEquals("0712", PhoneNumber("0712").toString())
-        assertEquals("XY", Iban("XY").countryCode)
     }
 }
 

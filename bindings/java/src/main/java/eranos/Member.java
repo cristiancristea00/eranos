@@ -77,7 +77,7 @@ public final class Member {
         return new Builder(new MemberId(member.id()), member.firstName())
                 .lastName(member.lastName())
                 .email(null == member.email() ? null : Email.known(member.email()))
-                .phone(null == member.phone() ? null : PhoneNumber.known(member.phone()))
+                .phone(null == member.phone() ? null : PhoneNumber.converted(member.phone()))
                 .accounts(member.accounts().stream().map(PaymentAccount::converted).toList())
                 .build();
     }
@@ -93,7 +93,7 @@ public final class Member {
                 firstName,
                 lastName,
                 null == email ? null : email.toString(),
-                null == phone ? null : phone.e164(),
+                null == phone ? null : phone.generated(),
                 accounts.stream().map(PaymentAccount::generated).toList());
     }
 

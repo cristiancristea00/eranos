@@ -362,11 +362,19 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The email written @p text, which the library wrote.
 [[nodiscard]] inline constexpr Email emailOf(std::string text) noexcept { return Email(std::move(text)); }
 
-/// The phone number written @p text, which the library wrote.
-[[nodiscard]] inline constexpr PhoneNumber phoneNumberOf(std::string text) noexcept { return PhoneNumber(std::move(text)); }
+/// The phone number of @p value, in both the forms the library wrote it in.
+[[nodiscard]] inline PhoneNumber fromDetail(EranosPhoneNumber const &value) noexcept {
+    return PhoneNumber({.e164 = value.e164(), .international = value.international()});
+}
 
-/// The IBAN written @p text, which the library wrote.
-[[nodiscard]] inline constexpr Iban ibanOf(std::string text) noexcept { return Iban(std::move(text)); }
+/// The IBAN of @p value, with the country code the library derived from it.
+[[nodiscard]] inline Iban fromDetail(EranosIban const &value) noexcept { return Iban({.iban = value.iban(), .countryCode = value.country_code()}); }
+
+/// The IBAN that @p value, account details of the kind Iban, holds, with the country code the library derived from it.
+[[nodiscard]] inline Iban ibanOf(EranosPaymentAccountDetails const &value) noexcept {
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says both values are present.
+    return Iban({.iban = value.iban().value(), .countryCode = value.country_code().value()});
+}
 
 /// The username written @p text, which the library wrote.
 [[nodiscard]] inline constexpr Username usernameOf(std::string text) noexcept { return Username(std::move(text)); }
@@ -767,8 +775,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 [[nodiscard]] inline PaymentAccountDetails fromDetail(EranosPaymentAccountDetails const &value) noexcept {
     switch (value.kind()) {
     case EranosPaymentAccountDetailsKind::Iban:
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
-        return IbanPaymentAccountDetails{detail::ibanOf(value.iban().value())};
+        return IbanPaymentAccountDetails{detail::ibanOf(value)};
     case EranosPaymentAccountDetailsKind::Username:
         break;
     }
@@ -778,7 +785,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The generated account details of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(IbanPaymentAccountDetails const &value) noexcept {
-    // An IBAN is text the library wrote.
+    // An IBAN is one the library parsed, which it parses again into the same IBAN and country code.
     return known(EranosPaymentAccountDetails::create_iban(value.iban.toString()));
 }
 
@@ -808,7 +815,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     Member result(MemberId(value.id()), value.first_name());
     result.lastName = value.last_name();
     result.email = detail::optionalText<Email>(value.email(), detail::emailOf);
-    result.phone = detail::optionalText<PhoneNumber>(value.phone(), detail::phoneNumberOf);
+    result.phone = detail::optionalRecord<PhoneNumber>(value.phone());
     result.accounts = detail::fromDetail(*value.accounts());
     return result;
 }

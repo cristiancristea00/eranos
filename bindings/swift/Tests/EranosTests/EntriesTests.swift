@@ -136,6 +136,7 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     #expect("Popa" == stored.lastName)
     #expect("carol@example.com" == stored.email?.description)
     #expect("+40712345678" == stored.phone?.e164)
+    #expect("+40 712 345 678" == stored.phone?.international)
     #expect(stored.accounts == carol.accounts)
 
     let lei = try CurrencyCode(code: "RON")

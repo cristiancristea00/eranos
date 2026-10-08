@@ -67,7 +67,7 @@ impl Percentage {
 
 impl fmt::Display for Percentage {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_hundredths(formatter, self.0, "%")
+        fmt::Display::fmt(&format_basis_points(i64::from(self.0)), formatter)
     }
 }
 
@@ -155,7 +155,7 @@ impl Parts {
 
 impl fmt::Display for Parts {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_hundredths(formatter, self.0, "")
+        fmt::Display::fmt(&format_hundredths(i64::from(self.0)), formatter)
     }
 }
 
@@ -202,18 +202,68 @@ fn parse_hundredths(text: &str) -> Option<u32> {
         })
 }
 
+/// Formats `basis_points` as a percentage: the number of per cent without
+/// trailing zeros, then a `%` sign.
+///
+/// The text form of [`Percentage`] writes its basis points with it: 3333 is
+/// `33.33%`, 1250 is `12.5%`, and 1200 is `12%`. It takes any number, a
+/// negative one included, which no percentage holds, and writes it the same
+/// way after a minus sign: the binding core writes with it the basis points
+/// of a record it has not checked, so that its text for a percentage is this
+/// crate's.
+///
+/// # Examples
+///
+/// ```
+/// # // The facade does not re-export it: a caller writes a percentage through its `Percentage`.
+/// use eranos_money::format_basis_points;
+///
+/// assert_eq!(format_basis_points(1_250).to_string(), "12.5%");
+/// assert_eq!(format_basis_points(-5).to_string(), "-0.05%");
+/// ```
+#[must_use]
+pub fn format_basis_points(basis_points: i64) -> impl fmt::Display {
+    fmt::from_fn(move |formatter| write_hundredths(formatter, basis_points, "%"))
+}
+
+/// Formats `hundredths` as a number of parts: a decimal without trailing
+/// zeros.
+///
+/// The text form of [`Parts`] writes its hundredths with it: 150 is `1.5`,
+/// 225 is `2.25`, and 200 is `2`. It takes any number, zero and negative ones
+/// included, which no parts hold, and writes it the same way, a negative one
+/// after a minus sign: the binding core writes with it the hundredths of a
+/// record it has not checked, so that its text for parts is this crate's.
+///
+/// # Examples
+///
+/// ```
+/// # // The facade does not re-export it: a caller writes parts through its `Parts`.
+/// use eranos_money::format_hundredths;
+///
+/// assert_eq!(format_hundredths(150).to_string(), "1.5");
+/// assert_eq!(format_hundredths(0).to_string(), "0");
+/// assert_eq!(format_hundredths(-205).to_string(), "-2.05");
+/// ```
+#[must_use]
+pub fn format_hundredths(hundredths: i64) -> impl fmt::Display {
+    fmt::from_fn(move |formatter| write_hundredths(formatter, hundredths, ""))
+}
+
 /// Writes hundredths as a decimal without trailing zeros, followed by
-/// `unit`: 1250 and `%` → `12.5%`.
+/// `unit`: 1250 and `%` → `12.5%`, and -5 and `%` → `-0.05%`.
 fn write_hundredths(
     formatter: &mut fmt::Formatter<'_>,
-    hundredths: u32,
+    hundredths: i64,
     unit: &str,
 ) -> fmt::Result {
-    let (whole, fraction) = (hundredths / 100, hundredths % 100);
+    let sign = if 0 > hundredths { "-" } else { "" };
+    let magnitude = hundredths.unsigned_abs();
+    let (whole, fraction) = (magnitude / 100, magnitude % 100);
     match fraction {
-        0 => write!(formatter, "{whole}{unit}"),
-        _ if 0 == fraction % 10 => write!(formatter, "{whole}.{}{unit}", fraction / 10),
-        _ => write!(formatter, "{whole}.{fraction:02}{unit}"),
+        0 => write!(formatter, "{sign}{whole}{unit}"),
+        _ if 0 == fraction % 10 => write!(formatter, "{sign}{whole}.{}{unit}", fraction / 10),
+        _ => write!(formatter, "{sign}{whole}.{fraction:02}{unit}"),
     }
 }
 

@@ -882,6 +882,35 @@ pub mod ffi {
         Itemised,
     }
 
+    /// An IBAN, with the country code it starts with.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosIban(pub(crate) eranos_bindings::Iban);
+
+    impl EranosIban {
+        /// The IBAN written `text`, without spaces, in capitals, with its country code.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `PaymentAccount` for text that is not an IBAN, and of the
+        /// kind `InvalidText` for text that is not UTF-8.
+        pub fn parse(text: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+            eranos_bindings::iban_parse(&crate::text(text)?)
+                .map(|value| Box::new(Self(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The IBAN, without spaces, in capitals: "RO49AAAA1B31007593840000".
+        pub fn iban(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.iban);
+        }
+
+        /// The two-letter code of the IBAN's country: "RO".
+        pub fn country_code(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.country_code);
+        }
+    }
+
     /// A person in the group.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
@@ -979,25 +1008,32 @@ pub mod ffi {
             self.0.email = None;
         }
 
-        /// The phone number, starting with `+` and the country code; a member the group holds has
-        /// it in E.164 form: "+40712345678". Writes it, if present; absent otherwise.
-        pub fn phone(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.phone.as_deref())
+        /// The phone number, in E.164 form and in international form.
+        #[must_use]
+        pub fn phone(&self) -> Option<Box<EranosPhoneNumber>> {
+            self.0
+                .phone
+                .clone()
+                .map(|value| Box::new(EranosPhoneNumber(value)))
         }
 
-        /// Sets the phone number, starting with `+` and the country code; a member the group holds
-        /// has it in E.164 form: "+40712345678".
+        /// Sets the phone number, in E.164 form and in international form.
+        ///
+        /// The library parses the number, which it writes in E.164 form, and fills its
+        /// international form.
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        /// [`EranosError`] of the kind `Contact` for text that is not a phone number, and of the
+        /// kind `InvalidText` for text that is not UTF-8.
         pub fn set_phone(&mut self, phone: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.phone = Some(crate::text(phone)?);
+            self.0.phone = Some(
+                eranos_bindings::phone_number_parse(&crate::text(phone)?).map_err(crate::failed)?,
+            );
             Ok(())
         }
 
-        /// Clears the phone number, starting with `+` and the country code; a member the group
-        /// holds has it in E.164 form: "+40712345678".
+        /// Clears the phone number, in E.164 form and in international form.
         pub fn clear_phone(&mut self) {
             self.0.phone = None;
         }
@@ -1671,15 +1707,22 @@ pub mod ffi {
     impl EranosPaymentAccountDetails {
         /// A bank account.
         ///
+        /// The library parses the IBAN, which it writes without spaces and in capitals, and fills
+        /// its country code.
+        ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        /// [`EranosError`] of the kind `PaymentAccount` for text that is not an IBAN, and of the
+        /// kind `InvalidText` for text that is not UTF-8.
         pub fn create_iban(iban: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(
-                eranos_bindings::PaymentAccountDetails::Iban {
-                    iban: crate::text(iban)?,
-                },
-            )))
+            eranos_bindings::iban_parse(&crate::text(iban)?)
+                .map(|eranos_bindings::Iban { iban, country_code }| {
+                    Box::new(Self(eranos_bindings::PaymentAccountDetails::Iban {
+                        iban,
+                        country_code,
+                    }))
+                })
+                .map_err(crate::failed)
         }
 
         /// A username in a payment app.
@@ -1708,8 +1751,19 @@ pub mod ffi {
             }
         }
 
-        /// The IBAN, without spaces, in capitals. Present in the kind `Iban` alone. Writes it, if
-        /// present; absent otherwise.
+        /// The two-letter code of the IBAN's country: "RO". Present in the kind `Iban` alone.
+        /// Writes it, if present; absent otherwise.
+        pub fn country_code(&self, write: &mut DiplomatWrite) -> Option<()> {
+            match &self.0 {
+                eranos_bindings::PaymentAccountDetails::Iban { country_code, .. } => {
+                    crate::write_optional(write, Some(country_code))
+                }
+                eranos_bindings::PaymentAccountDetails::Username { .. } => None,
+            }
+        }
+
+        /// The IBAN, without spaces, in capitals: "RO49AAAA1B31007593840000". Present in the kind
+        /// `Iban` alone. Writes it, if present; absent otherwise.
         pub fn iban(&self, write: &mut DiplomatWrite) -> Option<()> {
             match &self.0 {
                 eranos_bindings::PaymentAccountDetails::Iban { iban, .. } => {
@@ -1802,6 +1856,35 @@ pub mod ffi {
             self.0
                 .get(index)
                 .map(|element| Box::new(EranosPayment(element.clone())))
+        }
+    }
+
+    /// A phone number, in the two forms the library writes it in.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosPhoneNumber(pub(crate) eranos_bindings::PhoneNumber);
+
+    impl EranosPhoneNumber {
+        /// The phone number written `text`, in E.164 form and in international form.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Contact` for text that is not a phone number, and of the
+        /// kind `InvalidText` for text that is not UTF-8.
+        pub fn parse(text: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+            eranos_bindings::phone_number_parse(&crate::text(text)?)
+                .map(|value| Box::new(Self(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The number in E.164 form: "+40712345678".
+        pub fn e164(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.e164);
+        }
+
+        /// The number in international form, grouped as its country groups it: "+40 712 345 678".
+        pub fn international(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.international);
         }
     }
 

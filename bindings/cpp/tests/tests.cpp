@@ -22,6 +22,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace eranos {
@@ -253,18 +254,19 @@ void aRateParsesAndConvertsAsTheLibraryDoes(Check &check) noexcept {
     check.that(isFailure(overflow, ErrorKind::MONEY, Failure::MONEY_OVERFLOW), "a converted amount out of range");
 }
 
-/// A percentage or a number of parts read otherwise than the library reads it would divide a split otherwise than it shows.
+/// A percentage or a number of parts read otherwise than the library reads it would divide a split otherwise than it shows, and one that
+/// printed otherwise than the library writes it would show an app a number the library does not hold.
 void percentagesAndPartsParseAndFormatAsTheLibraryDoes(Check &check) noexcept {
     auto const percentage = Percentage::parse("12.5 %").value();
     check.that(1'250 == percentage.basisPoints && "12.5%" == percentage.toString(), "12.5 % is 1250 basis points");
     checkValue(check, percentage, Percentage{1'250}, Percentage{1'251}, "percentages compare by basis points");
     check.that(isFailure(refusal(Percentage::parse("half")), ErrorKind::MONEY, Failure::MONEY_INVALID_PERCENTAGE), "a word is no percentage");
-    check.that(isFailure(refusal(Percentage{-1}.toString()), ErrorKind::MONEY, Failure::MONEY_INVALID_PERCENTAGE), "a negative percentage");
+    check.that("-12.5%" == Percentage{-1'250}.toString(), "a negative percentage, which a call refuses, is written as any other");
     auto const parts = Parts::parse("0.5").value();
     check.that(50 == parts.hundredths && "0.5" == parts.toString(), "half a part is 50 hundredths");
     checkValue(check, parts, Parts{50}, Parts{51}, "parts compare by hundredths");
     check.that(isFailure(refusal(Parts::parse("half")), ErrorKind::MONEY, Failure::MONEY_INVALID_PARTS), "a word is no number of parts");
-    check.that(isFailure(refusal(Parts{-1}.toString()), ErrorKind::MONEY, Failure::MONEY_INVALID_PARTS), "negative parts");
+    check.that("0" == Parts{0}.toString() && "-0.5" == Parts{-50}.toString(), "no parts and negative parts, which a call refuses, are written too");
 }
 
 /// A date or a time the calendar does not have, taken, would date an expense on a day that never was.
@@ -273,11 +275,13 @@ void datesAndTimesAreCheckedWhenMade(Check &check) noexcept {
     check.that(2026 == date.year() && 9 == date.month() && 23 == date.day() && "2026-09-23" == date.toString(), "the date's fields and text");
     checkValue(check, date, CalendarDate::parse("2026-09-23").value(), CalendarDate::of(2026, 9, 24).value(), "dates compare by day");
     check.that(isFailure(refusal(CalendarDate::of(2026, 2, 30)), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_DATE), "30 February");
+    check.that(isFailure(refusal(CalendarDate::of(10'000, 1, 1)), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_DATE), "year 10000");
     check.that(isFailure(refusal(CalendarDate::parse("2026-02-30")), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_DATE), "parsed");
     auto const time = TimeOfDay::of(18, 30).value();
     check.that(18 == time.hour() && 30 == time.minute() && "18:30" == time.toString(), "the time's fields and text");
     checkValue(check, time, TimeOfDay::parse("18:30").value(), TimeOfDay::of(18, 31).value(), "times compare by minute");
-    check.that(isFailure(refusal(TimeOfDay::of(25, 0)), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_TIME), "hour 25");
+    check.that(isFailure(refusal(TimeOfDay::of(24, 0)), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_TIME), "hour 24");
+    check.that(isFailure(refusal(TimeOfDay::of(23, 60)), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_TIME), "minute 60");
     check.that(isFailure(refusal(TimeOfDay::parse("25:00")), ErrorKind::CALENDAR, Failure::CALENDAR_INVALID_TIME), "parsed");
 }
 
@@ -288,13 +292,15 @@ void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) noexcept {
     checkValue(check, email, Email::parse("ana@example.com").value(), Email::parse("bob@example.com").value(), "emails compare by text");
     check.that(isFailure(refusal(Email::parse("ana")), ErrorKind::CONTACT, Failure::CONTACT_INVALID_EMAIL), "an email has a domain");
     auto const phone = PhoneNumber::parse("+40 712 345 678").value();
-    check.that("+40712345678" == phone.toString() && "+40 712 345 678" == phone.international(), "a phone number's two forms");
+    check.that("+40712345678" == phone.toString() && "+40 712 345 678" == phone.international(),
+               "a phone number holds its E.164 form and the international form the library derives from it");
     checkValue(check, phone, PhoneNumber::parse("+40712345678").value(), PhoneNumber::parse("+40712345679").value(),
                "phone numbers compare by number");
     auto const local = refusal(PhoneNumber::parse("0712345678"));
     check.that(isFailure(local, ErrorKind::CONTACT, Failure::CONTACT_INVALID_PHONE_NUMBER), "a phone number has a country code");
     auto const iban = Iban::parse("ro49 aaaa 1b31 0075 9384 0000").value();
-    check.that("RO49AAAA1B31007593840000" == iban.toString() && "RO" == iban.countryCode(), "an IBAN in its electronic form");
+    check.that("RO49AAAA1B31007593840000" == iban.toString() && "RO" == iban.countryCode(),
+               "an IBAN holds its electronic form and the country code the library derives from it");
     checkValue(check, iban, Iban::parse("RO49AAAA1B31007593840000").value(), Iban::parse("GB82WEST12345698765432").value(), "IBANs compare by text");
     auto const checksum = refusal(Iban::parse("RO49AAAA1B31007593840001"));
     check.that(isFailure(checksum, ErrorKind::PAYMENT_ACCOUNT, Failure::PAYMENT_ACCOUNT_INVALID_IBAN) &&
@@ -506,6 +512,9 @@ void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) noexcept {
         PaymentAccount("App", UsernamePaymentAccountDetails{Username::parse("carla.pays").value()}),
     };
     check.that(flat.group.addMember(carla) == carla.id && flat.group.member(carla.id) == carla, "a member with every detail reads back unchanged");
+    auto const read = flat.group.member(carla.id).value().value();
+    check.that("+40 712 345 678" == read.phone.value().international(), "with the international form of the phone number");
+    check.that("RO" == std::get<IbanPaymentAccountDetails>(read.accounts.front().details).iban.countryCode(), "and the IBAN's country code");
     check.that(3 == flat.group.members().size(), "the group holds three members");
     check.that(flat.group.category(flat.food) == Category(flat.food, "Food"), "the category reads back");
     check.that(2 == flat.group.categories().size(), "the built-in category and the food");

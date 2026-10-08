@@ -921,6 +921,11 @@ pub mod ffi {
         /// Adds `member` under their identifier, and returns the identifier. Writes it into
         /// `write`.
         ///
+        /// A phone number whose international form is not the one the library writes for it is
+        /// refused with `ContactFailure::InvalidPhoneNumber`, and an IBAN whose country code is not
+        /// its own with `PaymentAccountFailure::InvalidIban` and the reason
+        /// `IbanReason::UnknownCountry`.
+        ///
         /// # Errors
         ///
         /// The library's refusal. [`EranosError`] of the kind `ExpenseGroup` with the failure
@@ -963,6 +968,11 @@ pub mod ffi {
 
         /// Replaces the member that `member` names by their identifier, and returns them as they
         /// were.
+        ///
+        /// A phone number whose international form is not the one the library writes for it is
+        /// refused with `ContactFailure::InvalidPhoneNumber`, and an IBAN whose country code is not
+        /// its own with `PaymentAccountFailure::InvalidIban` and the reason
+        /// `IbanReason::UnknownCountry`.
         ///
         /// # Errors
         ///

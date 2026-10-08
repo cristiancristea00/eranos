@@ -89,6 +89,28 @@ static void addBalanceRow(Table *const table, BalanceRow const *const row) {
 /// A check of the library that writes the value it makes of a text, or refuses it.
 typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
+/// Writes into @p value the electronic form of the IBAN written @p text, or refuses it.
+[[nodiscard]] static EranosError *ibanValue(char const *const text, EranosText *const value) {
+    EranosIban *iban = nullptr;
+    EranosError *const error = eranosIbanParse(text, &iban);
+    if (nullptr != iban) {
+        eranosIbanIban(iban, value);
+    }
+    eranosIbanDestroy(iban);
+    return error;
+}
+
+/// Writes into @p value the E.164 form of the phone number written @p text, or refuses it.
+[[nodiscard]] static EranosError *phoneValue(char const *const text, EranosText *const value) {
+    EranosPhoneNumber *phone = nullptr;
+    EranosError *const error = eranosPhoneNumberParse(text, &phone);
+    if (nullptr != phone) {
+        eranosPhoneNumberE164(phone, value);
+    }
+    eranosPhoneNumberDestroy(phone);
+    return error;
+}
+
 /// The account @p name, paid to @p details; destroys @p details.
 [[nodiscard]] static EranosPaymentAccount *accountOf(char const *const name, EranosPaymentAccountDetails *const details) {
     EranosPaymentAccount *account = nullptr;
@@ -134,15 +156,15 @@ typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
 /// The phone number of @p member, grouped for reading, or nothing when there is none.
 [[nodiscard]] static Line phoneOf(EranosMember const *const member) {
-    EranosText *const text = eranosTextCreate();
+    EranosPhoneNumber *const phone = eranosMemberPhone(member);
     Line line = {};
-    if (eranosMemberPhone(member, text)) {
+    if (nullptr != phone) {
         EranosText *const international = eranosTextCreate();
-        must(eranosPhoneNumberInternational(eranosTextData(text), international));
+        eranosPhoneNumberInternational(phone, international);
         line = textLine(international);
         eranosTextDestroy(international);
     }
-    eranosTextDestroy(text);
+    eranosPhoneNumberDestroy(phone);
     return line;
 }
 
@@ -256,17 +278,17 @@ static void validation(void) {
               "and 5322, which refuse the doubled dots and stray commas of hurried typing, and\n"
               "phone numbers against their country's numbering plan, stored in E.164 form.");
     Table *const table = checkTable(3);
-    addValidated(table, "IBAN", eranosIbanParse, "ro49 aaaa 1b31 0075 9384 0000");
-    addValidated(table, "IBAN", eranosIbanParse, "RO49 AAAA 1B31 0075 9384 0001");
-    addValidated(table, "IBAN", eranosIbanParse, "RO49 AAAA 1B31 0075");
-    addValidated(table, "IBAN", eranosIbanParse, "DE46 37O4 0044 0532 0130 00");
+    addValidated(table, "IBAN", ibanValue, "ro49 aaaa 1b31 0075 9384 0000");
+    addValidated(table, "IBAN", ibanValue, "RO49 AAAA 1B31 0075 9384 0001");
+    addValidated(table, "IBAN", ibanValue, "RO49 AAAA 1B31 0075");
+    addValidated(table, "IBAN", ibanValue, "DE46 37O4 0044 0532 0130 00");
     addValidated(table, "email", eranosEmailParse, "ana@example.com");
     addValidated(table, "email", eranosEmailParse, "ana.example.com");
     addValidated(table, "email", eranosEmailParse, "ana..popescu@example.com");
-    addValidated(table, "phone", eranosPhoneNumberParse, "+40 (712) 345-678");
-    addValidated(table, "phone", eranosPhoneNumberParse, "0712 345 678");
-    addValidated(table, "phone", eranosPhoneNumberParse, "+40 612 345 678");
-    addValidated(table, "phone", eranosPhoneNumberParse, "+44 (0)20 7946 0958");
+    addValidated(table, "phone", phoneValue, "+40 (712) 345-678");
+    addValidated(table, "phone", phoneValue, "0712 345 678");
+    addValidated(table, "phone", phoneValue, "+40 612 345 678");
+    addValidated(table, "phone", phoneValue, "+44 (0)20 7946 0958");
     tablePrint(table);
 }
 

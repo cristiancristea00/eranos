@@ -1,6 +1,6 @@
-// The value types. Every text they show comes from the library, every value an app builds is checked by the library's rules,
-// and a value the library never sends still prints something: a type that formatted on its own, let a refused value through,
-// or threw on an impossible one would show an app another value than the library holds.
+// The value types. Every text they show comes from the library, and every value an app builds is checked by the library's
+// rules: a type that formatted on its own or let a refused value through would show an app another value than the library
+// holds.
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -25,6 +25,7 @@ import {
     TimeOfDay,
     Username,
     categoryId,
+    createMember,
     expenseId,
     formatBalance,
     expenseGroupId,
@@ -190,17 +191,36 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         const percentage = Percentage.parse('12.5 %');
         assert.equal(percentage.basisPoints, 1_250);
         assert.equal(percentage.toString(), '12.5%');
+        assert.deepEqual(
+            [0, 5, 1_200, 3_333, 10_000, 25_000].map((basisPoints) => Percentage.ofBasisPoints(basisPoints).toString()),
+            ['0%', '0.05%', '12%', '33.33%', '100%', '250%'],
+        );
         assert.ok(percentage.equals(Percentage.ofBasisPoints(1_250)));
         assert.ok(!percentage.equals(Percentage.ofBasisPoints(1)));
-        assertRefused(() => Percentage.ofBasisPoints(-1), MoneyError);
+        assertRefused(
+            () => Percentage.ofBasisPoints(-1),
+            MoneyError,
+            { kind: 'invalidPercentage' },
+            'invalid percentage: expected a number with at most 2 decimal places',
+        );
         assertRefused(() => Percentage.parse('half'), MoneyError);
 
         const parts = Parts.parse('0.5');
         assert.equal(parts.hundredths, 50);
         assert.equal(parts.toString(), '0.5');
+        assert.deepEqual(
+            [1, 100, 150, 205, 225].map((hundredths) => Parts.ofHundredths(hundredths).toString()),
+            ['0.01', '1', '1.5', '2.05', '2.25'],
+        );
         assert.ok(parts.equals(Parts.ofHundredths(50)));
         assert.ok(!parts.equals(Parts.ofHundredths(1)));
-        assertRefused(() => Parts.ofHundredths(0), MoneyError);
+        assertRefused(
+            () => Parts.ofHundredths(0),
+            MoneyError,
+            { kind: 'invalidParts' },
+            'invalid parts: expected a positive number with at most 2 decimal places',
+        );
+        assertRefused(() => Parts.ofHundredths(-50), MoneyError, { kind: 'invalidParts' });
         assertRefused(() => Parts.parse('half'), MoneyError);
     });
 
@@ -213,12 +233,19 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.equal(date.day, 23);
         assert.ok(date.equals(CalendarDate.parse('2026-09-23')));
         assert.ok(!date.equals(CalendarDate.of(2026, 9, 24)));
+        const days = [CalendarDate.of(1, 1, 1), CalendarDate.of(2028, 2, 29), CalendarDate.of(9999, 12, 31)];
+        assert.deepEqual(days.map(String), ['0001-01-01', '2028-02-29', '9999-12-31']);
         assertRefused(
             () => CalendarDate.of(2026, 2, 30),
             CalendarError,
             { kind: 'invalidDate' },
             'invalid date: expected an existing ISO 8601 date between years 1 and 9999',
         );
+        assertRefused(() => CalendarDate.of(2027, 2, 29), CalendarError, { kind: 'invalidDate' });
+        assertRefused(() => CalendarDate.of(2026, 13, 1), CalendarError, { kind: 'invalidDate' });
+        assertRefused(() => CalendarDate.of(2026, 9, 0), CalendarError, { kind: 'invalidDate' });
+        assertRefused(() => CalendarDate.of(0, 1, 1), CalendarError, { kind: 'invalidDate' });
+        assertRefused(() => CalendarDate.of(10_000, 1, 1), CalendarError, { kind: 'invalidDate' });
         assertRefused(() => CalendarDate.parse('2026-02-30'), CalendarError);
 
         const time = TimeOfDay.of(18, 30);
@@ -227,7 +254,14 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.equal(time.minute, 30);
         assert.ok(time.equals(TimeOfDay.parse('18:30')));
         assert.ok(!time.equals(TimeOfDay.of(18, 31)));
-        assertRefused(() => TimeOfDay.of(24, 0), CalendarError);
+        assert.deepEqual([TimeOfDay.of(0, 0), TimeOfDay.of(9, 5), TimeOfDay.of(23, 59)].map(String), ['00:00', '09:05', '23:59']);
+        assertRefused(
+            () => TimeOfDay.of(24, 0),
+            CalendarError,
+            { kind: 'invalidTime' },
+            'invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds',
+        );
+        assertRefused(() => TimeOfDay.of(23, 60), CalendarError, { kind: 'invalidTime' });
         assertRefused(() => TimeOfDay.parse('25:00'), CalendarError);
     });
 
@@ -241,10 +275,16 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
 
         const phone = PhoneNumber.parse('+40 712 345 678');
         assert.equal(phone.e164, '+40712345678');
+        assert.equal(phone.international, '+40 712 345 678');
         assert.equal(phone.toString(), '+40 712 345 678');
         assert.ok(phone.equals(PhoneNumber.parse('+40712345678')));
         assert.ok(!phone.equals(PhoneNumber.parse('+40712345679')));
-        assertRefused(() => PhoneNumber.parse('0712345678'), ContactError);
+        assertRefused(
+            () => PhoneNumber.parse('0712345678'),
+            ContactError,
+            { kind: 'invalidPhoneNumber' },
+            'invalid phone number: expected `+` and a number valid in its country',
+        );
 
         const iban = Iban.parse('ro49 aaaa 1b31 0075 9384 0000');
         assert.equal(iban.toString(), 'RO49AAAA1B31007593840000');
@@ -274,6 +314,53 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
             { kind: 'invalidLanguage' },
             'invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`',
         );
+    });
+
+    /**
+     * A phone number or an IBAN that asked the library for its international form or its country code, rather than keeping
+     * the text the library sent with it, would call into the library to show a value it holds; and a group that took a
+     * record whose derived text is not the library's would store a number or an account that the library writes another way.
+     */
+    void it("keeps the text the library derives from a phone number or an IBAN, and refuses a member whose text is not the library's", () => {
+        // The library writes neither text for these values, so a layer that derived it again would show another one.
+        const phone = PhoneNumber.converted(internal.PhoneNumber.create({ e164: '+40712345678', international: '+40 7123 45678' }));
+        assert.equal(phone.e164, '+40712345678');
+        assert.equal(phone.international, '+40 7123 45678');
+        assert.equal(phone.toString(), '+40 7123 45678');
+        const iban = Iban.converted(internal.Iban.create({ iban: 'RO49AAAA1B31007593840000', countryCode: 'GB' }));
+        assert.equal(iban.toString(), 'RO49AAAA1B31007593840000');
+        assert.equal(iban.countryCode, 'GB');
+        // Two records that differ only in the text derived from the same number or IBAN are not the same value.
+        assert.ok(!phone.equals(PhoneNumber.parse('+40712345678')));
+        assert.ok(!PhoneNumber.parse('+40712345678').equals(phone));
+        assert.ok(!iban.equals(Iban.parse('RO49AAAA1B31007593840000')));
+        assert.ok(!Iban.parse('RO49AAAA1B31007593840000').equals(iban));
+
+        const flat = new Flat();
+        const carol = createMember({ firstName: 'Carol', phone });
+        assertRefused(
+            () => flat.group.addMemberSync(carol),
+            ContactError,
+            { kind: 'invalidPhoneNumber' },
+            'invalid phone number: expected `+` and a number valid in its country',
+        );
+        const dan = createMember({ firstName: 'Dan', accounts: [{ name: 'Main account', details: { kind: 'iban', iban } }] });
+        assertRefused(
+            () => flat.group.addMemberSync(dan),
+            PaymentAccountError,
+            { kind: 'invalidIban', reason: { kind: 'unknownCountry' } },
+            'invalid IBAN: the country code is not in the IBAN registry',
+        );
+        assert.equal(flat.group.memberSync(carol.id), undefined);
+        assert.equal(flat.group.memberSync(dan.id), undefined);
+        const ana = flat.group.memberSync(flat.ana);
+        assert.ok(undefined !== ana);
+        assertRefused(() => flat.group.replaceMemberSync({ ...ana, phone }), ContactError, { kind: 'invalidPhoneNumber' });
+        assertRefused(() => flat.group.replaceMemberSync({ ...ana, accounts: dan.accounts }), PaymentAccountError, {
+            kind: 'invalidIban',
+            reason: { kind: 'unknownCountry' },
+        });
+        assert.deepEqual(flat.group.memberSync(flat.ana), ana);
     });
 
     /**
@@ -324,15 +411,5 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.equal(categoryId(text), text);
         assert.equal(expenseId(text), text);
         assert.equal(transferId(text), text);
-    });
-
-    /** A value the library never sends, such as a negative percentage or a date that does not exist, would throw from its text instead of printing. */
-    void it('prints a value the library never sends', () => {
-        assert.equal(Percentage.known(-1).toString(), '-1 bp');
-        assert.equal(Parts.known(0).toString(), '0/100');
-        assert.equal(CalendarDate.converted(internal.CalendarDate.create({ year: 2026, month: 2, day: 30 })).toString(), '2026/2/30');
-        assert.equal(TimeOfDay.converted(internal.TimeOfDay.create({ hour: 25, minute: 0 })).toString(), '25h0');
-        assert.equal(PhoneNumber.known('0712').toString(), '0712');
-        assert.equal(Iban.known('XY').countryCode, 'XY');
     });
 });

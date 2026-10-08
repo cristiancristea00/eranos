@@ -76,10 +76,11 @@ struct Percentage final {
     /// The basis points: 10000 for 100 %.
     std::int32_t basisPoints{};
 
-    /// The percentage as the library writes it: "12.5%".
+    /// The percentage as the library writes it: "12.5%". A negative number of basis points, which the library refuses when a call carries it, is
+    /// written the same way after a minus sign: "-12.5%".
     ///
-    /// @return The text, or an error of the kind ErrorKind::MONEY for a percentage out of range
-    [[nodiscard]] std::expected<std::string, Error> toString() const noexcept;
+    /// @return The text
+    [[nodiscard]] std::string toString() const noexcept;
 
     /// Whether two percentages have one number of basis points.
     ///
@@ -101,10 +102,11 @@ struct Parts final {
     /// The hundredths: 100 for one part.
     std::int32_t hundredths{};
 
-    /// The parts as the library writes them: "0.5".
+    /// The parts as the library writes them: "0.5". Zero and a negative number of hundredths, which the library refuses when a call carries them,
+    /// are written the same way: "0" and "-0.5".
     ///
-    /// @return The text, or an error of the kind ErrorKind::MONEY for parts out of range
-    [[nodiscard]] std::expected<std::string, Error> toString() const noexcept;
+    /// @return The text
+    [[nodiscard]] std::string toString() const noexcept;
 
     /// Whether two numbers of parts are equal.
     ///
@@ -129,15 +131,13 @@ inline std::expected<Percentage, Error> Percentage::parse(std::string_view const
     });
 }
 
-inline std::expected<std::string, Error> Percentage::toString() const noexcept {
-    return detail::expectedOf(detail::EranosPercentage::format(basisPoints));
-}
+inline std::string Percentage::toString() const noexcept { return detail::EranosPercentage::format(basisPoints); }
 
 inline std::expected<Parts, Error> Parts::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosParts::parse(text)).transform([](std::int32_t const hundredths) noexcept { return Parts{hundredths}; });
 }
 
-inline std::expected<std::string, Error> Parts::toString() const noexcept { return detail::expectedOf(detail::EranosParts::format(hundredths)); }
+inline std::string Parts::toString() const noexcept { return detail::EranosParts::format(hundredths); }
 
 } // namespace eranos
 

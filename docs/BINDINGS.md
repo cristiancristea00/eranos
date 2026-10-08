@@ -206,9 +206,14 @@ flowchart TD
   times, language tags, balances, currencies, and contact and account
   details), so every text a binding shows is the library's, and give the
   values an expense starts at: `category_id_uncategorised`, the built-in
-  category's identifier, and `tip_rule_none`, the no-tip rule.
-  `money_format` and `balance_format` write from the record alone and
-  cannot fail ([§ 5](#5-the-text-a-binding-shows)).
+  category's identifier, and `tip_rule_none`, the no-tip rule. Every
+  formatter writes from what it is given and cannot fail
+  ([§ 5](#5-the-text-a-binding-shows)); a value an entry holds as numbers
+  has a check beside its formatter (`percentage_check`, `parts_check`,
+  `calendar_date_check`, and `time_of_day_check`), which refuses what the
+  library refuses. `phone_number_parse` and `iban_parse` answer a record
+  that carries the text the library derives: a `PhoneNumber` of `e164` and
+  `international`, and an `Iban` of `iban` and `country_code`.
 - **Shapes every generator takes.** The types keep to what UniFFI 0.29,
   the oldest version the glue crates use, can mirror: records, enums with
   data, one error enum, and objects; no methods on records, and no
@@ -291,12 +296,38 @@ rather than dividing by a power of ten, which overflows an `i64` from 19
 places. A test of the core holds both to the library's text for every
 currency and every kind of balance.
 
+A percentage, parts, a date, and a time print from their numbers through
+the writers the library's own text forms call:
+`eranos_money::format_basis_points` and `format_hundredths`, and
+`eranos_calendar::format_calendar_date` and `format_time_of_day`. They take
+any number, so `percentage_format`, `parts_format`, `calendar_date_format`,
+and `time_of_day_format` cannot fail: a number the library refuses, a
+negative percentage, zero parts, 30 February, or 24:00, is written the way
+a valid one is, "-12.5%", "0", "2026-02-30", and "24:00", and the check
+beside each formatter is what refuses it. A layer that holds a value it
+checked when it made it prints it without a fallback; C, whose structs
+hold any numbers, checks with the check.
+
+A phone number and an IBAN cross with the text the library derives from
+them, which the core fills whenever it reads one from the library: a
+`PhoneNumber` holds its E.164 form and its international form, grouped as
+its country groups it, and an IBAN, in `iban_parse`'s `Iban` and in an
+account's `PaymentAccountDetails::Iban`, holds its country code. A layer
+reads the derived text from the record, so it calls no helper that could
+fail to print a value it holds. On the way in, the core parses the value
+as the library parses any phone number or IBAN and refuses a record whose
+derived text is not what the library derives from it: a phone number with
+`ContactFailure::InvalidPhoneNumber`, and an IBAN with
+`PaymentAccountFailure::InvalidIban` and the reason
+`IbanReason::UnknownCountry`, as the calls that take a member say.
+
 ## 6. Account details
 
 An account's IBAN and username cross as text, as the library holds them
-([ARCHITECTURE.md § 10](ARCHITECTURE.md#10-account-details)): checked when
-they reach the library and printed in full, with no masking and no secret
-type. An app that hides part of one on screen does so itself.
+([ARCHITECTURE.md § 10](ARCHITECTURE.md#10-account-details)), the IBAN with
+its country code beside it ([§ 5](#5-the-text-a-binding-shows)): checked
+when they reach the library and printed in full, with no masking and no
+secret type. An app that hides part of one on screen does so itself.
 
 ## 7. Identifiers that repeat
 
@@ -356,7 +387,8 @@ and C++ classes, which live in `eranos::detail`. `diplomat-tool` reads the
 crate's source files, not what a macro expands them to, so most of the
 bridge is code the repository holds: `cargo xtask generate` writes
 `src/generated/records.rs`, an object for every record, list, and enum the
-calls reach, and `src/generated/expense_group.rs`, the group with both forms of
+calls reach and for the records the library parses, and
+`src/generated/expense_group.rs`, the group with both forms of
 every call, the read handle with every read's, the cancellation, and an
 outcome per kind of answer, from the core's `#[mirrored]` items and its
 trait of calls, through eranos-glue's generator, and lays them out with
@@ -391,7 +423,16 @@ fields, which starts every other field absent, empty, or at its default
 category at the built-in one), a getter of every field, and, for an entry,
 a setter of each; a list has `len` and `get`, and `create` and `push` when
 a caller builds one; an enum with data has `kind`, a constructor per
-variant, and a getter per field. The no-tip rule is `EranosTipRule`'s
+variant, and a getter per field. A record the library parses,
+`EranosPhoneNumber` or `EranosIban`, is read-only and made only by its
+`parse`, so C never pairs a value with text the library did not derive
+from it: `EranosMember`'s `set_phone` takes the number's text, which the
+library parses, filling its international form, and
+`EranosPaymentAccountDetails`'s `create_iban` takes the IBAN's text and
+fills its country code, each refusing what the library refuses. The
+formatters of a date, a time, a percentage, and parts write any numbers
+and return nothing, and a `check` beside each refuses what the library
+refuses. The no-tip rule is `EranosTipRule`'s
 `none`, and the built-in category's identifier `EranosIdentifier`'s
 `uncategorised`. A date and a time of day are plain structs. Text crosses as
 bytes, which the bridge checks are UTF-8, reporting `InvalidText`
@@ -452,7 +493,13 @@ Design Guidelines:
   `Username`, and `Language`, each printing the library's text. A
   `CurrencyCode` holds the `CurrencyDetails` the core gives with an amount,
   as the group currency, and in a failure, and an amount crosses back with
-  them, so the layer looks no currency up.
+  them, so the layer looks no currency up. A `PhoneNumber` holds its
+  `e164` and `international` forms, the second also its `description`,
+  and an `IBAN` its text and `countryCode`, as the core gives them, and
+  each crosses back with them, so the layer derives neither form again.
+  `Percentage`, `Parts`, `CalendarDate`, and `TimeOfDay` check their
+  numbers through the core's checks when they are made and print through
+  its formatters, which cannot fail.
 - Every call throws `EranosError` as a typed throw, with the core's case per
   module and a failure enum per module whose payloads are typed
   (`ExpenseGroupFailure.memberInUse(expenses:member:transfers:)`); a failure the
@@ -499,7 +546,11 @@ its code. The layer follows the Kotlin library guidelines:
   both of `Expense`'s constructors default its `category` and `tip`, which
   are never `null`, to them. A value the library checks has
   an internal constructor and factories that check it (`CurrencyCode.of`,
-  `Money.parse`, `CalendarDate.of`), and prints the library's text.
+  `Money.parse`, `CalendarDate.of`), and prints the library's text: a
+  date, a time, a percentage, and parts through the core's formatters,
+  which cannot fail. A `PhoneNumber` and an `Iban` keep the international
+  form and the country code of the record they cross with, and read them
+  with no call into the library.
 - A currency the library answers with, in an amount, as the group
   currency, and in a failure, is a `CurrencyCode` built from the
   `CurrencyDetails` it crosses with, never looked up by its code, so an
@@ -561,6 +612,14 @@ The layer follows Effective Java and Google Java Style:
   unsigned byte: uniffi-bindgen-java writes the `u8` of decimal places as
   a `byte`, which `CurrencyCode` reads with `Byte.toUnsignedInt`, and
   `decimalPlaces()` returns an `int`.
+- `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`, and
+  `Parts.ofHundredths` refuse a value through the core's check of it, and
+  `toString` writes it through the core's formatter, which cannot fail, so
+  it has no fallback text. A `PhoneNumber` holds its E.164 and
+  international forms, and an `Iban` its text and country code, as the
+  records the library sends carry them: `international()` and
+  `countryCode()` read the stored text, and both cross back as the
+  records.
 - An absent value is an empty `Optional`, a variant a record of a sealed
   interface, and a failure the library reports a checked
   `EranosException`, a subclass per module holding the module's failure.
@@ -613,6 +672,13 @@ build. The layer follows the Google TypeScript Style Guide:
   one `CurrencyCode` per code, built on the code's first use, which
   `CurrencyCode.of`, `CurrencyCode.all`, amounts, failures, and the group
   all return, so currencies compare with `===`.
+- `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`, and
+  `Parts.ofHundredths` check their numbers with the core's checks, and the
+  four values print through the core's formatters, which cannot fail. A
+  `PhoneNumber` holds its `e164` and `international` forms, and an `Iban`
+  its text and its `countryCode`, as the core's records carry them, so
+  printing one calls nothing; the core refuses a record whose derived text
+  is not the library's ([§ 5](#5-the-text-a-binding-shows)).
 - A record with a field the library gives a default has two types. The
   one every read returns keeps the record's name, `Member`, `Expense`,
   `ExpenseItem`, and `TipRule`, and requires every field the library
@@ -733,6 +799,24 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   the group's, and a failure's, comes back as details the caller destroys,
   and `eranosMoneyFormat` and `eranosBalanceFormat` write their text from
   the amount alone and cannot fail.
+- A date and a time are plain structs, and a percentage and parts plain
+  integers, so they hold any numbers: their formatters
+  (`eranosCalendarDateFormat`, `eranosTimeOfDayFormat`,
+  `eranosPercentageFormat`, and `eranosPartsFormat`) write whatever they
+  hold, 30 February as "2026-02-30", and return nothing, and the check
+  beside each (`eranosCalendarDateCheck`, `eranosTimeOfDayCheck`,
+  `eranosPercentageCheck`, and `eranosPartsCheck`) returns the error the
+  library refuses the value with, or nullptr.
+- A phone number and an IBAN are objects that only the library makes:
+  `EranosPhoneNumber`, from `eranosPhoneNumberParse` or a member's
+  `eranosMemberPhone`, which gives nullptr for a member without one, and
+  `EranosIban`, from `eranosIbanParse`. Each holds the text the library
+  derives from it, which `eranosPhoneNumberInternational` and
+  `eranosIbanCountryCode` write. `eranosMemberSetPhone` and
+  `eranosPaymentAccountDetailsCreateIban` take text, which the library
+  parses, refusing what it refuses, and
+  `eranosPaymentAccountDetailsCountryCode` writes the country code of an
+  account's IBAN.
 - An asynchronous call takes a callback struct, a context and a function
   that receives the error or the value, which it owns; the struct stays
   valid until its function runs, once. The value is nullptr when the call
@@ -770,6 +854,13 @@ Core Guidelines with the naming rule above:
   `CalendarDate::of`, `Email::parse`), its fields in one private member;
   every identifier is a class of its own over its text, with `std::hash`,
   a `parse` that checks it, and a static `generate` that makes one.
+  `PhoneNumber` and `Iban` also hold the text the library derives from
+  them, the international form and the country code, which
+  `international()` and `countryCode()` read without a call, and only the
+  library makes either, through `parse` or a record it answers with.
+  `Percentage::toString()` and `Parts::toString()` return a
+  `std::string`, written for any number as the library's formatters write
+  it, so a negative percentage, which a call refuses, prints as "-12.5%".
   `CurrencyCode` also keeps, in a `std::shared_ptr`, the library's details
   it was read from, which an amount in it crosses with, so neither an
   amount nor its text looks the currency up; its `decimalPlaces()` is a
@@ -864,11 +955,19 @@ reads its annotations without checking its code, and Ruff leaves it out:
   constructor of `CurrencyCode` looks its code up, for an app's input; a
   currency the core gives with an amount, as the group currency, and in a
   failure is made from the `CurrencyDetails` it carries, with no lookup,
-  and an amount crosses back with them. Amounts, entries, and totals are
-  frozen dataclasses: an entry takes its fields by keyword and is edited
-  with `copy.replace`, which keeps its identifier, and a variant is a union
-  of frozen dataclasses (`EqualSplit`, `LocalCost`), which a `match` takes
-  apart.
+  and an amount crosses back with them. A `PhoneNumber` holds its
+  international form, and an `Iban` its country code, as the core derives
+  them when it parses the text, reads it through a property
+  (`phone.international`, `iban.country_code`), and equals only a value
+  with the same derived text; one the core gives with a member is made
+  from the text it carries, with no call, and crosses back with it
+  ([§ 5](#5-the-text-a-binding-shows)). `CalendarDate`, `TimeOfDay`,
+  `Percentage`, and `Parts` check their numbers through the core's checks
+  and print through its formatters, which cannot fail. Amounts, entries,
+  and totals are frozen dataclasses: an entry takes its fields by keyword
+  and is edited with `copy.replace`, which keeps its identifier, and a
+  variant is a union of frozen dataclasses (`EqualSplit`, `LocalCost`),
+  which a `match` takes apart.
 - An expense's `tip` and `category` are never optional. `NO_TIP`, the
   no-tip rule, and `UNCATEGORISED`, the built-in category's identifier,
   are module constants that `eranos` exports, read once from the core's

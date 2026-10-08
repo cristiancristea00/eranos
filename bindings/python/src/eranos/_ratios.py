@@ -64,7 +64,7 @@ class Percentage:
     def __post_init__(self) -> None:
         """Check the percentage with the library."""
         with library_errors():
-            generated.percentage_format(self.basis_points)
+            generated.percentage_check(self.basis_points)
 
     @classmethod
     def parse(cls, text: str) -> Percentage:
@@ -112,7 +112,7 @@ class Parts:
     def __post_init__(self) -> None:
         """Check the parts with the library."""
         with library_errors():
-            generated.parts_format(self.hundredths)
+            generated.parts_check(self.hundredths)
 
     @classmethod
     def parse(cls, text: str) -> Parts:

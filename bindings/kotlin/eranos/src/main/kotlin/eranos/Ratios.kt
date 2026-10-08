@@ -2,8 +2,10 @@ package eranos
 
 import eranos.internal.exchangeRateConvert
 import eranos.internal.exchangeRateParse
+import eranos.internal.partsCheck
 import eranos.internal.partsFormat
 import eranos.internal.partsParse
+import eranos.internal.percentageCheck
 import eranos.internal.percentageFormat
 import eranos.internal.percentageParse
 
@@ -57,12 +59,7 @@ public class Percentage internal constructor(
     override fun hashCode(): Int = basisPoints
 
     /** The percentage as the library writes it: "12.5%". */
-    override fun toString(): String =
-        try {
-            percentageFormat(basisPoints)
-        } catch (_: eranos.internal.EranosException) {
-            "$basisPoints bp"
-        }
+    override fun toString(): String = percentageFormat(basisPoints)
 
     /** The percentage of a number of basis points, and the parsing of one from its text. */
     public companion object {
@@ -74,7 +71,7 @@ public class Percentage internal constructor(
         @Throws(EranosException::class)
         public fun ofBasisPoints(basisPoints: Int): Percentage =
             converting {
-                percentageFormat(basisPoints)
+                percentageCheck(basisPoints)
                 Percentage(basisPoints)
             }
 
@@ -101,12 +98,7 @@ public class Parts internal constructor(
     override fun hashCode(): Int = hundredths
 
     /** The parts as the library writes them: "0.5". */
-    override fun toString(): String =
-        try {
-            partsFormat(hundredths)
-        } catch (_: eranos.internal.EranosException) {
-            "$hundredths/100"
-        }
+    override fun toString(): String = partsFormat(hundredths)
 
     /** The parts of a number of hundredths, and the parsing of them from their text. */
     public companion object {
@@ -118,7 +110,7 @@ public class Parts internal constructor(
         @Throws(EranosException::class)
         public fun ofHundredths(hundredths: Int): Parts =
             converting {
-                partsFormat(hundredths)
+                partsCheck(hundredths)
                 Parts(hundredths)
             }
 

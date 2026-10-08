@@ -1,7 +1,8 @@
 //! The C glue's bridge, written from the binding core: an opaque object for
-//! every record and enum with data that the group calls reach, with their
-//! lists and C-like enums, and the group, its read handle, the cancellation,
-//! and the outcomes of the asynchronous calls.
+//! every record and enum with data that the group calls reach, and for every
+//! record the library parses, with their lists and C-like enums, and the
+//! group, its read handle, the cancellation, and the outcomes of the
+//! asynchronous calls.
 //!
 //! `diplomat-tool` reads the C glue's source files, not what its macros
 //! expand to, so the bridge is code in files: `cargo xtask generate` writes

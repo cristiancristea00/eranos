@@ -1,7 +1,6 @@
-// The value types. Every text they show comes from the library, every value an app builds is
-// checked by the library's rules, and a value the library never sends still prints something:
-// a type that formatted on its own, let a refused value through, or trapped on an impossible
-// one would show an app another value than the library holds.
+// The value types. Every text they show comes from the library, and every value an app builds
+// is checked by the library's rules: a type that formatted on its own or let a refused value
+// through would show an app another value than the library holds.
 
 @testable import Eranos
 import Testing
@@ -91,7 +90,8 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     #expect(1_250 == percentage.basisPoints)
     #expect("12.5%" == percentage.description)
     #expect(try Percentage(basisPoints: 1_250) == percentage)
-    #expect(throws: EranosError.self) {
+    #expect(try "0%" == Percentage(basisPoints: 0).description)
+    #expect(throws: EranosError.money(.invalidPercentage, detail: "invalid percentage: expected a number with at most 2 decimal places")) {
         try Percentage(basisPoints: -1)
     }
     #expect(throws: EranosError.self) {
@@ -102,8 +102,11 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     #expect(50 == parts.hundredths)
     #expect("0.5" == parts.description)
     #expect(try Parts(hundredths: 50) == parts)
-    #expect(throws: EranosError.self) {
-        try Parts(hundredths: 0)
+    #expect(try "0.01" == Parts(hundredths: 1).description)
+    for hundredths: Int32 in [0, -50] {
+        #expect(throws: EranosError.money(.invalidParts, detail: "invalid parts: expected a positive number with at most 2 decimal places")) {
+            try Parts(hundredths: hundredths)
+        }
     }
     #expect(throws: EranosError.self) {
         try Parts(parsing: "half")
@@ -120,6 +123,7 @@ func datesAndTimesReadAndWriteAsTheLibraryDoes() throws {
     #expect(2026 == date.year)
     #expect(9 == date.month)
     #expect(23 == date.day)
+    #expect(try "0001-01-01" == CalendarDate(year: 1, month: 1, day: 1).description)
     #expect(throws: EranosError.calendar(.invalidDate, detail: "invalid date: expected an existing ISO 8601 date between years 1 and 9999")) {
         try CalendarDate(year: 2026, month: 2, day: 30)
     }
@@ -132,8 +136,14 @@ func datesAndTimesReadAndWriteAsTheLibraryDoes() throws {
     #expect(try TimeOfDay(parsing: "18:30") == time)
     #expect(18 == time.hour)
     #expect(30 == time.minute)
-    #expect(throws: EranosError.self) {
+    #expect(try "00:00" == TimeOfDay(hour: 0, minute: 0).description)
+    #expect(try "23:59" == TimeOfDay(hour: 23, minute: 59).description)
+    let invalidTime = EranosError.calendar(.invalidTime, detail: "invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")
+    #expect(throws: invalidTime) {
         try TimeOfDay(hour: 24, minute: 0)
+    }
+    #expect(throws: invalidTime) {
+        try TimeOfDay(hour: 0, minute: 60)
     }
     #expect(throws: EranosError.self) {
         try TimeOfDay(parsing: "25:00")
@@ -150,6 +160,7 @@ func contactAndAccountDetailsReadAsTheLibraryDoes() throws {
     }
     let phone = try PhoneNumber("+40 712 345 678")
     #expect("+40712345678" == phone.e164)
+    #expect("+40 712 345 678" == phone.international)
     #expect("+40 712 345 678" == phone.description)
     #expect(throws: EranosError.self) {
         try PhoneNumber("0712345678")

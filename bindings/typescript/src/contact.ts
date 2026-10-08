@@ -55,11 +55,18 @@ export class Email {
     }
 }
 
-/** A phone number, valid in its country's numbering plan. */
+/**
+ * A phone number, valid in its country's numbering plan.
+ *
+ * A number holds its E.164 form and its international form as the library writes them, so it prints without a call into
+ * the library.
+ */
 export class PhoneNumber {
     private constructor(
         /** The number in E.164 form: "+40712345678". */
         readonly e164: string,
+        /** The number in international form, grouped as its country groups it: "+40 712 345 678". */
+        readonly international: string,
     ) {}
 
     /**
@@ -70,47 +77,59 @@ export class PhoneNumber {
      * @throws {@link ContactError} with the failure `invalidPhoneNumber`
      */
     static parse(text: string): PhoneNumber {
-        return new PhoneNumber(calling(() => internal.phoneNumberParse(text)));
+        return PhoneNumber.converted(calling(() => internal.phoneNumberParse(text)));
     }
 
     /**
-     * The number the library wrote as `e164`.
+     * The number the generated code holds as `phone`.
      *
      * @internal
      */
-    static known(e164: string): PhoneNumber {
-        return new PhoneNumber(e164);
+    static converted(phone: internal.PhoneNumber): PhoneNumber {
+        return new PhoneNumber(phone.e164, phone.international);
     }
 
     /**
-     * Whether `other` is the same number.
+     * The number as the generated code holds it.
+     *
+     * @internal
+     */
+    generated(): internal.PhoneNumber {
+        return internal.PhoneNumber.create({ e164: this.e164, international: this.international });
+    }
+
+    /**
+     * Whether `other` is the same number, in both of its forms.
      *
      * @param other - The number to compare
      * @returns Whether the two are equal
      */
     equals(other: PhoneNumber): boolean {
-        return this.e164 === other.e164;
+        return this.e164 === other.e164 && this.international === other.international;
     }
 
     /**
-     * The number grouped as its country groups it.
+     * The number grouped as its country groups it: its international form.
      *
      * @returns The text: "+40 712 345 678"
      */
     toString(): string {
-        try {
-            return internal.phoneNumberInternational(this.e164);
-        } catch {
-            return this.e164;
-        }
+        return this.international;
     }
 }
 
-/** An international bank account number, checked against the SWIFT IBAN registry. */
+/**
+ * An international bank account number, checked against the SWIFT IBAN registry.
+ *
+ * An IBAN holds its text and its country code as the library writes them, so it gives its country without a call into the
+ * library.
+ */
 export class Iban {
     private constructor(
         /** The IBAN without spaces, in capitals. */
         private readonly text: string,
+        /** The two-letter code of the IBAN's country: "RO". */
+        readonly countryCode: string,
     ) {}
 
     /**
@@ -121,35 +140,35 @@ export class Iban {
      * @throws {@link PaymentAccountError} with the failure `invalidIban` and the check it failed
      */
     static parse(text: string): Iban {
-        return new Iban(calling(() => internal.ibanParse(text)));
+        return Iban.converted(calling(() => internal.ibanParse(text)));
     }
 
     /**
-     * The IBAN the library wrote as `text`.
+     * The IBAN the generated code holds as `iban`.
      *
      * @internal
      */
-    static known(text: string): Iban {
-        return new Iban(text);
-    }
-
-    /** The two-letter country code: "RO". */
-    get countryCode(): string {
-        try {
-            return internal.ibanCountryCode(this.text);
-        } catch {
-            return this.text.slice(0, 2);
-        }
+    static converted(iban: internal.Iban): Iban {
+        return new Iban(iban.iban, iban.countryCode);
     }
 
     /**
-     * Whether `other` is the same IBAN.
+     * The IBAN as the generated code holds it.
+     *
+     * @internal
+     */
+    generated(): internal.Iban {
+        return internal.Iban.create({ iban: this.text, countryCode: this.countryCode });
+    }
+
+    /**
+     * Whether `other` is the same IBAN, with the same country code.
      *
      * @param other - The IBAN to compare
      * @returns Whether the two are equal
      */
     equals(other: Iban): boolean {
-        return this.text === other.text;
+        return this.text === other.text && this.countryCode === other.countryCode;
     }
 
     /**

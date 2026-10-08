@@ -5,18 +5,21 @@
 //! A record a call takes is mutable: a constructor of its required fields,
 //! and a getter and a setter of every field in its order, with a `clear_`
 //! method for an optional one. A record that only comes back has its
-//! getters alone. An enum with data has a constructor per variant, `kind`,
-//! which answers a C-like enum of its variants, and a getter per field
-//! name, absent in the variants without it; an enum without data is a
-//! C-like enum. A list has `len`, `is_empty`, and `get`, and, when a call
-//! takes one, `create` and `push`.
+//! getters alone. A record the library parses has `parse` and its getters:
+//! the setter of a field that holds one takes the value's text, which the
+//! library parses, and a variant named after one, which holds its fields,
+//! is made from that text too. An enum with data has a constructor per
+//! variant, `kind`, which answers a C-like enum of its variants, and a
+//! getter per field name, absent in the variants without it; an enum
+//! without data is a C-like enum. A list has `len`, `is_empty`, and `get`,
+//! and, when a call takes one, `create` and `push`.
 
 use std::collections::BTreeSet;
 
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{ToTokens, format_ident, quote};
 
-use crate::capi::crossing::{Crossing, Plan, Value};
+use crate::capi::crossing::{Crossing, Parsed, Plan, Value, parsed};
 use crate::capi::items::{Core, Field, Mirrored, Shape, Variant};
 use crate::capi::{
     INVALID_TEXT, Named, article, capitalised, doc, doc_with_errors, eranos, inside, list, plural,
@@ -138,6 +141,7 @@ fn record(item: &Mirrored, fields: &[Field], taken: bool, core: &Core) -> syn::R
     } else {
         (quote!(#[diplomat::opaque]), None)
     };
+    let parse = parsed(&name.to_string()).map(parse);
     let accessors = fields
         .iter()
         .map(|typed| accessors(typed.field, typed.value, taken));
@@ -153,11 +157,27 @@ fn record(item: &Mirrored, fields: &[Field], taken: bool, core: &Core) -> syn::R
 
             impl #object {
                 #create
+                #parse
                 #(#accessors)*
                 #extras
             }
         },
     })
+}
+
+/// The `parse` of the record the library parses, `parsed`: the record of
+/// the value written `text`, with the text the library derives from it.
+fn parse(parsed: &Parsed) -> TokenStream {
+    let helper = format_ident!("{}", parsed.helper);
+    let documentation = doc_with_errors(parsed.summary, &parsed.errors());
+    quote! {
+        #documentation
+        pub fn parse(text: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+            eranos_bindings::#helper(&crate::text(text)?)
+                .map(|value| Box::new(Self(value)))
+                .map_err(crate::failed)
+        }
+    }
 }
 
 /// The constructor of the record `item` of `fields`, which takes every
@@ -347,20 +367,45 @@ fn getter(field: &Field, value: &Value) -> TokenStream {
     }
 }
 
-/// The setter of `field` of a record: text fails when it is not UTF-8, an
-/// integer is set in a constant function, and a record or a list is copied
-/// into the field's own allocation where it has one.
+/// The setter of `field` of a record: text fails when it is not UTF-8, a
+/// record the library parses is set from the value's text, which fails also
+/// when the library refuses it, an integer is set in a constant function,
+/// and any other record or a list is copied into the field's own allocation
+/// where it has one.
 fn setter(field: &Field, value: &Value) -> TokenStream {
     let name = &field.name;
     let setter = format_ident!("set_{name}");
     let summary = format!("Sets {}", inside(&field.doc));
-    let parameter = value.crossing.parameter(name);
-    let owned = value.crossing.owned(name);
+    let parsed = if let Crossing::Object(record) = &value.crossing {
+        parsed(&record.to_string())
+    } else {
+        None
+    };
+    let (parameter, owned) = parsed.map_or_else(
+        || (value.crossing.parameter(name), value.crossing.owned(name)),
+        |parsed| {
+            let helper = format_ident!("{}", parsed.helper);
+            (
+                quote!(#name: &DiplomatStr),
+                quote!(eranos_bindings::#helper(&crate::text(#name)?).map_err(crate::failed)?),
+            )
+        },
+    );
     let assigned = if value.optional {
         quote!(Some(#owned))
     } else {
         owned
     };
+    if let Some(parsed) = parsed {
+        let documentation = doc(&[&summary, parsed.fills, "# Errors", &parsed.errors()]);
+        return quote! {
+            #documentation
+            pub fn #setter(&mut self, #parameter) -> Result<(), Box<EranosError>> {
+                self.0.#name = #assigned;
+                Ok(())
+            }
+        };
+    }
     match (&value.crossing, value.optional) {
         (Crossing::Text, _) => {
             let documentation = doc_with_errors(&summary, INVALID_TEXT);
@@ -489,7 +534,13 @@ fn data_enum(item: &Mirrored, variants: &[Variant], core: &Core) -> syn::Result<
     let constructors = variants
         .iter()
         .zip(&crossings)
-        .map(|(variant, crossings)| create_variant(item, variant, crossings));
+        .map(|(variant, crossings)| {
+            parsed(&variant.name.to_string()).map_or_else(
+                || Ok(create_variant(item, variant, crossings)),
+                |parsed| create_parsed_variant(item, variant, parsed, core),
+            )
+        })
+        .collect::<syn::Result<Vec<_>>>()?;
     let arms = variants.iter().map(|variant| {
         let pattern = pattern(name, variant, None);
         let variant = &variant.name;
@@ -566,6 +617,59 @@ fn create_variant(item: &Mirrored, variant: &Variant, crossings: &[Crossing]) ->
         &quote!(Box::new(Self(#literal))),
         crossings.contains(&Crossing::Text),
     )
+}
+
+/// The constructor of `variant` of the enum with data `item`, named after
+/// the record the library parses, `parsed`, whose fields it holds: it takes
+/// the text of the value, the first field, and the core's helper fills
+/// every field.
+///
+/// # Errors
+///
+/// For a variant whose fields are not the record's, in name, type, and
+/// order.
+fn create_parsed_variant(
+    item: &Mirrored,
+    variant: &Variant,
+    parsed: &Parsed,
+    core: &Core,
+) -> syn::Result<TokenStream> {
+    let (name, variant_name) = (&item.name, &variant.name);
+    let declared = |fields: Vec<&Field>| {
+        fields
+            .iter()
+            .map(|field| format!("{}: {}", field.name, field.written.to_token_stream()))
+            .collect::<Vec<_>>()
+    };
+    let holds_its_fields = core.item(parsed.record).is_some_and(|record| {
+        declared(record.fields()) == declared(variant.fields.iter().collect())
+    });
+    let (true, Some(value)) = (holds_its_fields, variant.fields.first()) else {
+        return Err(syn::Error::new_spanned(
+            variant_name,
+            "a variant named after a record the library parses holds the record's fields",
+        ));
+    };
+    let value = &value.name;
+    let fields = variant
+        .fields
+        .iter()
+        .map(|field| &field.name)
+        .collect::<Vec<_>>();
+    let record = format_ident!("{}", parsed.record);
+    let helper = format_ident!("{}", parsed.helper);
+    let method = format_ident!("create_{}", crate::snake_case(&variant_name.to_string()));
+    let documentation = doc(&[&variant.doc, parsed.fills, "# Errors", &parsed.errors()]);
+    Ok(quote! {
+        #documentation
+        pub fn #method(#value: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+            eranos_bindings::#helper(&crate::text(#value)?)
+                .map(|eranos_bindings::#record { #(#fields),* }| {
+                    Box::new(Self(eranos_bindings::#name::#variant_name { #(#fields),* }))
+                })
+                .map_err(crate::failed)
+        }
+    })
 }
 
 /// The pattern of `variant` of the core's enum `name`, binding `field` when

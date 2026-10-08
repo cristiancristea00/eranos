@@ -129,11 +129,25 @@ trait ExpenseGroupCalls {
     fn is_archived(&self, id: &str) -> Result<Option<bool>, EranosError>;
 
     /// Adds `member` under their identifier, and returns the identifier.
+    ///
+    /// A phone number whose international form is not the one the library
+    /// writes for it is refused with
+    /// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber),
+    /// and an IBAN whose country code is not its own with
+    /// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban)
+    /// and the reason [`IbanReason::UnknownCountry`](crate::IbanReason::UnknownCountry).
     #[write]
     fn add_member(&self, member: &Member) -> Result<String, EranosError>;
 
     /// Replaces the member that `member` names by their identifier, and returns
     /// them as they were.
+    ///
+    /// A phone number whose international form is not the one the library
+    /// writes for it is refused with
+    /// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber),
+    /// and an IBAN whose country code is not its own with
+    /// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban)
+    /// and the reason [`IbanReason::UnknownCountry`](crate::IbanReason::UnknownCountry).
     #[write]
     fn replace_member(&self, member: &Member) -> Result<Member, EranosError>;
 

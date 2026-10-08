@@ -1,11 +1,72 @@
-//! Members, their accounts, and the group's categories, as the bindings
-//! carry them.
+//! Members, their contact details and accounts, and the group's
+//! categories, as the bindings carry them.
 
 use eranos::category as categories;
+use eranos::error::{ContactError, IbanError, PaymentAccountError};
 use eranos::member as library;
 use eranos_payment_account::FromPaymentAccountDetails;
 
 use crate::{EranosError, identifier};
+
+/// A phone number, in the two forms the library writes it in.
+#[eranos_glue_macros::mirrored]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PhoneNumber {
+    /// The number in E.164 form: "+40712345678".
+    pub e164: String,
+    /// The number in international form, grouped as its country groups it:
+    /// "+40 712 345 678".
+    pub international: String,
+}
+
+impl PhoneNumber {
+    /// The record of `phone`, with the international form the library
+    /// writes for it.
+    pub(crate) fn from_library(phone: &library::PhoneNumber) -> Self {
+        Self {
+            e164: phone.as_str().to_owned(),
+            international: phone.international(),
+        }
+    }
+
+    /// The library's phone number of the record's E.164 text, which it
+    /// parses as it parses any phone number.
+    ///
+    /// # Errors
+    ///
+    /// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber)
+    /// for text that is not a phone number, and for an international form
+    /// other than the one the library writes for the number: such a record
+    /// names no number as the library writes it.
+    pub(crate) fn to_library(&self) -> Result<library::PhoneNumber, EranosError> {
+        let phone = library::PhoneNumber::parse(&self.e164)?;
+        if phone.international() == self.international {
+            Ok(phone)
+        } else {
+            Err(ContactError::InvalidPhoneNumber.into())
+        }
+    }
+}
+
+/// An IBAN, with the country code it starts with.
+#[eranos_glue_macros::mirrored]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Iban {
+    /// The IBAN, without spaces, in capitals: "RO49AAAA1B31007593840000".
+    pub iban: String,
+    /// The two-letter code of the IBAN's country: "RO".
+    pub country_code: String,
+}
+
+impl Iban {
+    /// The record of `iban`, with its country code.
+    pub(crate) fn from_library(iban: &library::Iban) -> Self {
+        Self {
+            iban: iban.as_str().to_owned(),
+            country_code: iban.country_code().to_owned(),
+        }
+    }
+}
 
 /// Where a member can be paid, without its label.
 #[eranos_glue_macros::mirrored]
@@ -13,8 +74,10 @@ use crate::{EranosError, identifier};
 pub enum PaymentAccountDetails {
     /// A bank account.
     Iban {
-        /// The IBAN, without spaces, in capitals.
+        /// The IBAN, without spaces, in capitals: "RO49AAAA1B31007593840000".
         iban: String,
+        /// The two-letter code of the IBAN's country: "RO".
+        country_code: String,
     },
     /// A username in a payment app.
     Username {
@@ -24,27 +87,41 @@ pub enum PaymentAccountDetails {
 }
 
 impl PaymentAccountDetails {
-    /// The library's details.
+    /// The library's details. An IBAN is parsed as the library parses any
+    /// IBAN, so it may hold spaces and lower case.
     ///
     /// # Errors
     ///
     /// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban) for
-    /// an IBAN the library refuses, and
+    /// an IBAN the library refuses, with the reason, and for a country code
+    /// other than the IBAN's, with the reason
+    /// [`IbanReason::UnknownCountry`](crate::IbanReason::UnknownCountry): such
+    /// details name no account of the IBAN registry; and
     /// [`PaymentAccountFailure::EmptyUsername`](crate::PaymentAccountFailure::EmptyUsername)
     /// for a blank username.
     pub(crate) fn to_library(&self) -> Result<library::PaymentAccountDetails, EranosError> {
         Ok(match self {
-            Self::Iban { iban } => library::Iban::parse(iban)?.into(),
+            Self::Iban { iban, country_code } => {
+                let iban = library::Iban::parse(iban)?;
+                if iban.country_code() != country_code {
+                    return Err(PaymentAccountError::InvalidIban(IbanError::UnknownCountry).into());
+                }
+                iban.into()
+            }
             Self::Username { username } => library::Username::new(username)?.into(),
         })
     }
 }
 
+impl From<Iban> for PaymentAccountDetails {
+    fn from(Iban { iban, country_code }: Iban) -> Self {
+        Self::Iban { iban, country_code }
+    }
+}
+
 impl FromPaymentAccountDetails for PaymentAccountDetails {
     fn iban(iban: &library::Iban) -> Self {
-        Self::Iban {
-            iban: iban.as_str().to_owned(),
-        }
+        Iban::from_library(iban).into()
     }
 
     fn username(username: &library::Username) -> Self {
@@ -102,9 +179,8 @@ pub struct Member {
     pub last_name: Option<String>,
     /// The email address, without surrounding whitespace.
     pub email: Option<String>,
-    /// The phone number, starting with `+` and the country code; a member
-    /// the group holds has it in E.164 form: "+40712345678".
-    pub phone: Option<String>,
+    /// The phone number, in E.164 form and in international form.
+    pub phone: Option<PhoneNumber>,
     /// Where the member can be paid, in the order they were given.
     pub accounts: Vec<PaymentAccount>,
 }
@@ -117,7 +193,7 @@ impl Member {
             first_name: member.first_name().to_owned(),
             last_name: member.last_name().map(str::to_owned),
             email: member.email().map(|email| email.as_str().to_owned()),
-            phone: member.phone().map(|phone| phone.as_str().to_owned()),
+            phone: member.phone().map(PhoneNumber::from_library),
             accounts: member
                 .accounts()
                 .iter()
@@ -165,8 +241,8 @@ impl Member {
             .transpose()?;
         let phone = self
             .phone
-            .as_deref()
-            .map(library::PhoneNumber::parse)
+            .as_ref()
+            .map(PhoneNumber::to_library)
             .transpose()?;
         let accounts = self
             .accounts

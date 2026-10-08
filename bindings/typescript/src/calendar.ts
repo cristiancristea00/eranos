@@ -29,7 +29,9 @@ export class CalendarDate {
      */
     static of(year: number, month: number, day: number): CalendarDate {
         const date = new CalendarDate(year, month, day);
-        calling(() => internal.calendarDateFormat(date.generated()));
+        calling(() => {
+            internal.calendarDateCheck(date.generated());
+        });
         return date;
     }
 
@@ -78,11 +80,7 @@ export class CalendarDate {
      * @returns The text: "2026-09-23"
      */
     toString(): string {
-        try {
-            return internal.calendarDateFormat(this.generated());
-        } catch {
-            return `${this.year.toString()}/${this.month.toString()}/${this.day.toString()}`;
-        }
+        return internal.calendarDateFormat(this.generated());
     }
 }
 
@@ -105,7 +103,9 @@ export class TimeOfDay {
      */
     static of(hour: number, minute: number): TimeOfDay {
         const time = new TimeOfDay(hour, minute);
-        calling(() => internal.timeOfDayFormat(time.generated()));
+        calling(() => {
+            internal.timeOfDayCheck(time.generated());
+        });
         return time;
     }
 
@@ -154,10 +154,6 @@ export class TimeOfDay {
      * @returns The text: "18:30"
      */
     toString(): string {
-        try {
-            return internal.timeOfDayFormat(this.generated());
-        } catch {
-            return `${this.hour.toString()}h${this.minute.toString()}`;
-        }
+        return internal.timeOfDayFormat(this.generated());
     }
 }

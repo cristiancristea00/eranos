@@ -29,7 +29,7 @@ class CalendarDate:
     def __post_init__(self) -> None:
         """Check the date with the library."""
         with library_errors():
-            generated.calendar_date_format(generated_date(self))
+            generated.calendar_date_check(generated_date(self))
 
     @classmethod
     def parse(cls, text: str) -> CalendarDate:
@@ -79,7 +79,7 @@ class TimeOfDay:
     def __post_init__(self) -> None:
         """Check the time with the library."""
         with library_errors():
-            generated.time_of_day_format(generated_time(self))
+            generated.time_of_day_check(generated_time(self))
 
     @classmethod
     def parse(cls, text: str) -> TimeOfDay:

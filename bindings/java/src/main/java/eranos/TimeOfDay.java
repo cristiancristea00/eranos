@@ -25,11 +25,8 @@ public final class TimeOfDay {
      */
     public static TimeOfDay of(int hour, int minute) throws EranosException {
         TimeOfDay time = new TimeOfDay(hour, minute);
-        return Converting.call(
-                () -> {
-                    Eranos.timeOfDayFormat(time.generated());
-                    return time;
-                });
+        Converting.run(() -> Eranos.timeOfDayCheck(time.generated()));
+        return time;
     }
 
     /**
@@ -97,10 +94,6 @@ public final class TimeOfDay {
      */
     @Override
     public String toString() {
-        try {
-            return Eranos.timeOfDayFormat(generated());
-        } catch (eranos.internal.EranosException exception) {
-            return hour + "h" + minute;
-        }
+        return Eranos.timeOfDayFormat(generated());
     }
 }

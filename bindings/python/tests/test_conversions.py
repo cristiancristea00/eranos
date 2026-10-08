@@ -10,20 +10,30 @@ from typing import Any, final
 
 import pytest
 
+from conftest import Flat
 from eranos import (
     NO_TIP,
     UNCATEGORISED,
+    ContactError,
     CurrencyCode,
     EranosError,
     ExpenseError,
     ExpenseGroupError,
+    Iban,
+    IbanPaymentAccountDetails,
     InvalidJsonError,
+    Member,
     Money,
     MoneyError,
+    PaymentAccount,
+    PaymentAccountError,
+    PhoneNumber,
     _entries,
     _errors,
     _totals,
 )
+from eranos._contact import iban_of, phone_number_of
+from eranos._crossing import variant
 from eranos._currency_code import currency_of, generated_currency
 from eranos._errors import library_errors
 from eranos._internal import eranos as generated
@@ -75,6 +85,12 @@ FAILURES = {
 
 UNLISTED = generated.CurrencyDetails(code='XTS', name='Testing', numeric_code=963, decimal_places=4)
 """The details of a currency the library does not list: a lookup of its code is refused."""
+
+REGROUPED = generated.PhoneNumber(e164='+40712345678', international='+40-712-345-678')
+"""A phone number with an international form the library does not write for it: it groups the number ``+40 712 345 678``."""
+
+IBAN = 'RO49AAAA1B31007593840000'
+"""A Romanian IBAN, whose country code is ``RO``."""
 
 
 def cases(kind: type) -> list[type]:
@@ -262,3 +278,70 @@ def test_an_amount_whose_currency_details_are_not_the_librarys_is_refused() -> N
         with pytest.raises(MoneyError) as refused:
             Money(1, currency_of(details)).plus(Money(1, euro))
         assert refused.value.failure == MoneyError.UnknownCurrency(), details
+
+
+def test_a_phone_number_and_an_iban_hold_the_text_the_library_gives_without_a_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    A phone number's international form or an IBAN's country code worked out again for each member the library answers with would cost a call each.
+
+    The forms are not the ones the library writes, which no call returns, and a parse fails the test; the member crosses back as it came.
+    """
+
+    def parsed(text: str) -> object:
+        raise AssertionError(text)
+
+    monkeypatch.setattr(generated, 'phone_number_parse', parsed)
+    monkeypatch.setattr(generated, 'iban_parse', parsed)
+    german = variant(generated.PaymentAccountDetails, generated.PaymentAccountDetails.IBAN(IBAN, 'DE'))
+    record = generated.Member(
+        id='carla',
+        first_name='Carla',
+        last_name=None,
+        email=None,
+        phone=REGROUPED,
+        accounts=[generated.PaymentAccount(name='Bank', details=german)],
+    )
+    carla = _entries.member_of(record)
+    assert carla.phone is not None
+    assert str(carla.phone) == '+40712345678'
+    assert carla.phone.international == '+40-712-345-678'
+    details = carla.accounts[0].details
+    assert isinstance(details, IbanPaymentAccountDetails)
+    assert str(details.iban) == IBAN
+    assert details.iban.country_code == 'DE'
+    assert _entries.generated_member(carla) == record
+
+
+def test_a_phone_number_or_an_iban_whose_derived_text_is_not_the_librarys_is_refused(flat: Flat) -> None:
+    """
+    A member whose phone number or IBAN carried other text than the library derives from it, taken, would show a form the group does not hold.
+
+    An app makes a phone number and an IBAN only from their text, which the library parses, so only the package's private conversions make one.
+    """
+    with pytest.raises(ContactError) as phone:
+        flat.group.add_member(Member.create(first_name='Carla', phone=phone_number_of(REGROUPED)))
+    assert phone.value.failure == ContactError.InvalidPhoneNumber()
+    german = PaymentAccount('Bank', IbanPaymentAccountDetails(iban_of(IBAN, 'DE')))
+    with pytest.raises(PaymentAccountError) as iban:
+        flat.group.add_member(Member.create(first_name='Carla', accounts=(german,)))
+    assert iban.value.failure == PaymentAccountError.InvalidIban(PaymentAccountError.InvalidIban.UnknownCountry())
+    assert len(flat.group.members()) == 2
+
+
+def test_a_phone_number_or_an_iban_equals_only_one_with_the_same_derived_text() -> None:
+    """Two numbers or IBANs equal despite other derived text would let an app's set or cache keep a form the library does not write."""
+    phone = PhoneNumber('+40 712 345 678')
+    same = phone_number_of(generated.PhoneNumber(e164='+40712345678', international='+40 712 345 678'))
+    assert phone == same
+    assert hash(phone) == hash(same)
+    assert phone != phone_number_of(REGROUPED)
+    assert len({phone, phone_number_of(REGROUPED)}) == 2
+    assert phone != '+40712345678'
+    assert repr(phone) == "PhoneNumber('+40712345678')"
+    iban = Iban(IBAN)
+    assert iban == iban_of(IBAN, 'RO')
+    assert hash(iban) == hash(iban_of(IBAN, 'RO'))
+    assert iban != iban_of(IBAN, 'DE')
+    assert len({iban, iban_of(IBAN, 'DE')}) == 2
+    assert iban != IBAN
+    assert repr(iban) == f'Iban({IBAN!r})'

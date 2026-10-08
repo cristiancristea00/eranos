@@ -172,7 +172,7 @@ def print_members(group: ExpenseGroup) -> None:
             MemberRow(
                 name=' '.join(name for name in (member.first_name, member.last_name) if name is not None),
                 email='' if member.email is None else str(member.email),
-                phone='' if member.phone is None else member.phone.international(),
+                phone='' if member.phone is None else member.phone.international,
                 accounts='\n'.join(describe(account) for account in member.accounts),
             )
             for member in group.members()

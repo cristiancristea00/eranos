@@ -42,7 +42,7 @@ public class Member(
                 firstName,
                 lastName,
                 email?.toString(),
-                phone?.e164,
+                phone?.generated,
                 accounts.map { it.generated },
             )
 
@@ -81,7 +81,7 @@ internal fun eranos.internal.Member.converted(): Member =
         firstName,
         lastName,
         email?.let(::Email),
-        phone?.let(::PhoneNumber),
+        phone?.converted(),
         accounts.map { it.converted() },
     )
 
@@ -146,13 +146,13 @@ public sealed interface PaymentAccountDetails {
 internal val PaymentAccountDetails.generated: eranos.internal.PaymentAccountDetails
     get() =
         when (this) {
-            is PaymentAccountDetails.Iban -> eranos.internal.PaymentAccountDetails.Iban(iban.toString())
+            is PaymentAccountDetails.Iban -> eranos.internal.PaymentAccountDetails.Iban(iban.toString(), iban.countryCode)
             is PaymentAccountDetails.Username -> eranos.internal.PaymentAccountDetails.Username(username.toString())
         }
 
 /** The account details the generated code holds as [this]. */
 internal fun eranos.internal.PaymentAccountDetails.converted(): PaymentAccountDetails =
     when (this) {
-        is eranos.internal.PaymentAccountDetails.Iban -> PaymentAccountDetails.Iban(Iban(iban))
+        is eranos.internal.PaymentAccountDetails.Iban -> PaymentAccountDetails.Iban(Iban(iban, countryCode))
         is eranos.internal.PaymentAccountDetails.Username -> PaymentAccountDetails.Username(Username(username))
     }

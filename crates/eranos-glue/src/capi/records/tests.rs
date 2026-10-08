@@ -717,9 +717,114 @@ fn a_taken_list_is_mutable_and_an_answered_one_is_not() {
     );
 }
 
+/// A record the library parses is read-only, though a taken record holds
+/// it: C makes one only through `parse`, which the core's helper fills, and
+/// reads every field. A writable one would let C pair a value with text the
+/// library did not derive from it.
+#[test]
+fn a_parsed_record_is_read_only_and_made_by_parse() {
+    let named = named();
+    let phone = &named["EranosPhoneNumber"];
+    assert!(phone.to_string().contains("# [diplomat :: opaque]"));
+    let number = methods(phone);
+    assert_eq!(names(&number), ["parse", "e164", "international"]);
+    assert_written(
+        &number,
+        &[quote! {
+            pub fn parse(text: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+                eranos_bindings::phone_number_parse(&crate::text(text)?)
+                    .map(|value| Box::new(Self(value)))
+                    .map_err(crate::failed)
+            }
+        }],
+    );
+    assert_eq!(
+        docs(&number, "parse"),
+        "The phone number written `text`, in E.164 form and in international form.\n\n# Errors\n\n[`EranosError`] of the kind `Contact` for text that is not a phone number, and of the kind `InvalidText` for text that is not UTF-8."
+    );
+    let iban = methods(&named["EranosIban"]);
+    assert_eq!(names(&iban), ["parse", "iban", "country_code"]);
+    assert!(code(&iban, "parse").contains("eranos_bindings :: iban_parse"));
+}
+
+/// A field that holds a record the library parses is set from the value's
+/// text, which the library parses, filling the rest, and refuses as its own
+/// helper does, and is read as a copy.
+#[test]
+fn a_field_of_a_parsed_record_is_set_from_its_text() {
+    let named = named();
+    let item = methods(&named["EranosExpenseItem"]);
+    assert_written(
+        &item,
+        &[
+            quote! {
+                #[must_use]
+                pub fn phone(&self) -> Option<Box<EranosPhoneNumber>> {
+                    self.0.phone.clone().map(|value| Box::new(EranosPhoneNumber(value)))
+                }
+            },
+            quote! {
+                pub fn set_phone(&mut self, phone: &DiplomatStr) -> Result<(), Box<EranosError>> {
+                    self.0.phone = Some(
+                        eranos_bindings::phone_number_parse(&crate::text(phone)?)
+                            .map_err(crate::failed)?
+                    );
+                    Ok(())
+                }
+            },
+            quote! {
+                pub fn clear_phone(&mut self) {
+                    self.0.phone = None;
+                }
+            },
+        ],
+    );
+    assert_eq!(
+        docs(&item, "set_phone"),
+        "Sets whom to call.\n\nThe library parses the number, which it writes in E.164 form, and fills its international form.\n\n# Errors\n\n[`EranosError`] of the kind `Contact` for text that is not a phone number, and of the kind `InvalidText` for text that is not UTF-8."
+    );
+}
+
+/// A variant named after a record the library parses, which holds its
+/// fields, is made from the value's text alone, which the core's helper
+/// parses into every field; its fields read as any variant's do.
+#[test]
+fn a_variant_named_after_a_parsed_record_is_made_from_its_text() {
+    let named = named();
+    let account = methods(&named["EranosAccount"]);
+    assert_eq!(
+        names(&account),
+        [
+            "create_iban",
+            "create_username",
+            "kind",
+            "country_code",
+            "iban",
+            "username"
+        ]
+    );
+    assert_written(
+        &account,
+        &[quote! {
+            pub fn create_iban(iban: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+                eranos_bindings::iban_parse(&crate::text(iban)?)
+                    .map(|eranos_bindings::Iban { iban, country_code }| {
+                        Box::new(Self(eranos_bindings::Account::Iban { iban, country_code }))
+                    })
+                    .map_err(crate::failed)
+            }
+        }],
+    );
+    assert_eq!(
+        docs(&account, "create_iban"),
+        "A bank account.\n\nThe library parses the IBAN, which it writes without spaces and in capitals, and fills its country code.\n\n# Errors\n\n[`EranosError`] of the kind `PaymentAccount` for text that is not an IBAN, and of the kind `InvalidText` for text that is not UTF-8."
+    );
+}
+
 /// `items` writes what a plan names alone, and refuses a record or an enum
-/// of a type the bridge cannot carry, or an enum's optional field, even when
-/// a plan names it without having read it.
+/// of a type the bridge cannot carry, an enum's optional field, or a variant
+/// named after a record the library parses that does not hold its fields,
+/// even when a plan names it without having read it.
 #[test]
 fn items_write_what_the_plan_names_and_refuse_what_they_cannot_carry() {
     let core = Core::parse(&sources()).unwrap();
@@ -752,12 +857,31 @@ fn items_write_what_the_plan_names_and_refuse_what_they_cannot_carry() {
                 value: Option<String>,
             },
         }
+
+        /// An IBAN.
+        #[mirrored]
+        pub struct Iban {
+            /// The IBAN.
+            pub iban: String,
+            /// The country code.
+            pub country_code: String,
+        }
+
+        /// An account named after the IBAN without its country code.
+        #[mirrored]
+        pub enum Account {
+            /// A bank account.
+            Iban {
+                /// The IBAN.
+                iban: String,
+            },
+        }
         "
         .to_owned(),
         CALLS.to_owned(),
     ])
     .unwrap();
-    for name in ["Record", "Choice", "Optional"] {
+    for name in ["Record", "Choice", "Optional", "Account"] {
         let plan = Plan {
             objects: [(name.to_owned(), true)].into(),
             ..Plan::default()

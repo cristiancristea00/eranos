@@ -275,9 +275,11 @@ fn a_call_takes_records_by_reference_and_values_by_value() {
 }
 
 /// The plan holds what the calls, the group's constructor, and the list of
-/// currencies reach, through every field: a record a call takes is taken,
-/// though an earlier call answers it, and so is what it holds; a record
-/// reached only from answers is not; the hand-written amount has no object.
+/// currencies reach, through every field, and the records the library
+/// parses: a record a call takes is taken, though an earlier call answers
+/// it, and so is what it holds, but for a parsed record, which C only reads;
+/// a record reached only from answers is not; the hand-written amount has no
+/// object.
 #[test]
 fn the_plan_holds_what_the_calls_reach() {
     let plan = Plan::of(&core()).unwrap();
@@ -315,6 +317,10 @@ fn the_plan_holds_what_the_calls_reach() {
             ]),
             objects: names(&[
                 Reached {
+                    name: "Account",
+                    taken: true,
+                },
+                Reached {
                     name: "Balance",
                     taken: false,
                 },
@@ -335,8 +341,16 @@ fn the_plan_holds_what_the_calls_reach() {
                     taken: true,
                 },
                 Reached {
+                    name: "Iban",
+                    taken: false,
+                },
+                Reached {
                     name: "NewExpenseGroup",
                     taken: true,
+                },
+                Reached {
+                    name: "PhoneNumber",
+                    taken: false,
                 },
                 Reached {
                     name: "Split",
@@ -355,15 +369,18 @@ fn the_plan_holds_what_the_calls_reach() {
     );
 }
 
-/// A core without the records the constructor and the templates name gives
-/// no plan, and neither does a field the bridge cannot carry.
+/// A core without the records the constructor, the templates, and the
+/// parsing helpers name gives no plan, and neither does a field the bridge
+/// cannot carry.
 #[test]
 fn a_core_without_the_templates_records_gives_no_plan() {
     for records in [
         RECORDS.replace("pub struct NewExpenseGroup", "pub struct OldGroup"),
         RECORDS.replace("pub struct CurrencyDetails", "pub struct Currencies"),
+        RECORDS.replace("pub struct Iban", "pub struct BankAccount"),
         RECORDS.replace("pub code: String,", "pub code: f64,"),
     ] {
+        assert_ne!(records, RECORDS);
         let core = Core::parse(&[records, CALLS.to_owned()]).unwrap();
         assert!(Plan::of(&core).is_err());
     }
@@ -390,6 +407,20 @@ fn a_field_the_bridge_cannot_carry_is_refused_wherever_it_is_reached() {
         pub struct CurrencyDetails {
             /// The code.
             pub code: String,
+        }
+
+        /// An IBAN.
+        #[mirrored]
+        pub struct Iban {
+            /// The IBAN.
+            pub iban: String,
+        }
+
+        /// A phone number.
+        #[mirrored]
+        pub struct PhoneNumber {
+            /// The E.164 form.
+            pub e164: String,
         }
 
         /// A holder.

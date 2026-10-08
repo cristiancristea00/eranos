@@ -2,7 +2,8 @@
 //! comes from the library through them.
 
 use eranos_bindings::{
-    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Money, TimeOfDay, TipRule,
+    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Iban, Money, PhoneNumber,
+    TimeOfDay, TipRule,
 };
 
 /// A new identifier, which any entry or group can take.
@@ -125,13 +126,25 @@ pub(crate) fn percentage_parse(text: &str) -> Result<i32, EranosError> {
 
 /// The percentage of `basis_points`, as the library writes it: "12.5%".
 ///
+/// It writes the number as the library's text form of a percentage does, so
+/// it cannot fail: a negative number, which `percentage_check` refuses, is
+/// written the same way after a minus sign, "-12.5%".
+#[must_use]
+#[uniffi::export]
+pub(crate) fn percentage_format(basis_points: i32) -> String {
+    eranos_bindings::percentage_format(basis_points)
+}
+
+/// Checks that `basis_points` is a percentage, as an entry that holds one
+/// requires.
+///
 /// # Errors
 ///
 /// `MoneyFailure::InvalidPercentage`
 /// for a negative number.
 #[uniffi::export]
-pub(crate) fn percentage_format(basis_points: i32) -> Result<String, EranosError> {
-    eranos_bindings::percentage_format(basis_points)
+pub(crate) fn percentage_check(basis_points: i32) -> Result<(), EranosError> {
+    eranos_bindings::percentage_check(basis_points)
 }
 
 /// The parts written `text`, in hundredths: "0.5" is 50.
@@ -146,13 +159,25 @@ pub(crate) fn parts_parse(text: &str) -> Result<i32, EranosError> {
 
 /// The parts of `hundredths`, as the library writes them: "0.5".
 ///
+/// It writes the number as the library's text form of parts does, so it
+/// cannot fail: zero and a negative number, which `parts_check` refuses, are
+/// written the same way, "0" and "-0.5".
+#[must_use]
+#[uniffi::export]
+pub(crate) fn parts_format(hundredths: i32) -> String {
+    eranos_bindings::parts_format(hundredths)
+}
+
+/// Checks that `hundredths` is a number of parts, as a split of parts
+/// requires.
+///
 /// # Errors
 ///
 /// `MoneyFailure::InvalidParts` for a
 /// number that is not positive.
 #[uniffi::export]
-pub(crate) fn parts_format(hundredths: i32) -> Result<String, EranosError> {
-    eranos_bindings::parts_format(hundredths)
+pub(crate) fn parts_check(hundredths: i32) -> Result<(), EranosError> {
+    eranos_bindings::parts_check(hundredths)
 }
 
 /// The date written `text` in ISO 8601: "2026-09-23".
@@ -167,12 +192,25 @@ pub(crate) fn calendar_date_parse(text: &str) -> Result<CalendarDate, EranosErro
 
 /// The date as the library writes it: "2026-09-23".
 ///
+/// It writes the record's fields as the library's text form of a date
+/// does, so it cannot fail: the fields of a day the calendar does not have,
+/// which `calendar_date_check` refuses, are written the same way,
+/// "2026-02-30".
+#[must_use]
+#[uniffi::export]
+pub(crate) fn calendar_date_format(date: CalendarDate) -> String {
+    eranos_bindings::calendar_date_format(date)
+}
+
+/// Checks that `date` is a day of the calendar, between years 1 and 9999,
+/// as an entry's date must be.
+///
 /// # Errors
 ///
 /// `CalendarFailure::InvalidDate`.
 #[uniffi::export]
-pub(crate) fn calendar_date_format(date: CalendarDate) -> Result<String, EranosError> {
-    eranos_bindings::calendar_date_format(date)
+pub(crate) fn calendar_date_check(date: CalendarDate) -> Result<(), EranosError> {
+    eranos_bindings::calendar_date_check(date)
 }
 
 /// The time of day written `text` in ISO 8601: "18:30".
@@ -187,12 +225,24 @@ pub(crate) fn time_of_day_parse(text: &str) -> Result<TimeOfDay, EranosError> {
 
 /// The time of day as the library writes it: "18:30".
 ///
+/// It writes the record's fields as the library's text form of a time
+/// does, so it cannot fail: the fields of a time the day does not have,
+/// which `time_of_day_check` refuses, are written the same way, "24:00".
+#[must_use]
+#[uniffi::export]
+pub(crate) fn time_of_day_format(time: TimeOfDay) -> String {
+    eranos_bindings::time_of_day_format(time)
+}
+
+/// Checks that `time` is a time of day, from 00:00 to 23:59, as an entry's
+/// time must be.
+///
 /// # Errors
 ///
 /// `CalendarFailure::InvalidTime`.
 #[uniffi::export]
-pub(crate) fn time_of_day_format(time: TimeOfDay) -> Result<String, EranosError> {
-    eranos_bindings::time_of_day_format(time)
+pub(crate) fn time_of_day_check(time: TimeOfDay) -> Result<(), EranosError> {
+    eranos_bindings::time_of_day_check(time)
 }
 
 /// The language tag written `text`, in its canonical case: "pt-pt" is
@@ -244,47 +294,27 @@ pub(crate) fn email_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::email_parse(text)
 }
 
-/// The phone number written `text`, in E.164 form: "+40712345678".
+/// The phone number written `text`, in E.164 form, "+40712345678", and in
+/// international form, grouped as its country groups it, "+40 712 345 678".
 ///
 /// # Errors
 ///
 /// `ContactFailure::InvalidPhoneNumber`.
 #[uniffi::export]
-pub(crate) fn phone_number_parse(text: &str) -> Result<String, EranosError> {
+pub(crate) fn phone_number_parse(text: &str) -> Result<PhoneNumber, EranosError> {
     eranos_bindings::phone_number_parse(text)
 }
 
-/// The phone number written `text`, in international form, grouped as its
-/// country groups it: "+40 712 345 678".
-///
-/// # Errors
-///
-/// `ContactFailure::InvalidPhoneNumber`.
-#[uniffi::export]
-pub(crate) fn phone_number_international(text: &str) -> Result<String, EranosError> {
-    eranos_bindings::phone_number_international(text)
-}
-
-/// The IBAN written `text`, without spaces, in capitals.
+/// The IBAN written `text`, without spaces, in capitals, with its country
+/// code: "RO".
 ///
 /// # Errors
 ///
 /// `PaymentAccountFailure::InvalidIban`, with
 /// the reason.
 #[uniffi::export]
-pub(crate) fn iban_parse(text: &str) -> Result<String, EranosError> {
+pub(crate) fn iban_parse(text: &str) -> Result<Iban, EranosError> {
     eranos_bindings::iban_parse(text)
-}
-
-/// The country code of the IBAN written `text`: "RO".
-///
-/// # Errors
-///
-/// `PaymentAccountFailure::InvalidIban`, with
-/// the reason.
-#[uniffi::export]
-pub(crate) fn iban_country_code(text: &str) -> Result<String, EranosError> {
-    eranos_bindings::iban_country_code(text)
 }
 
 /// The payment-app username written `text`, without surrounding

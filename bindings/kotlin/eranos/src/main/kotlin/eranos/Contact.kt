@@ -1,10 +1,8 @@
 package eranos
 
 import eranos.internal.emailParse
-import eranos.internal.ibanCountryCode
 import eranos.internal.ibanParse
 import eranos.internal.languageParse
-import eranos.internal.phoneNumberInternational
 import eranos.internal.phoneNumberParse
 import eranos.internal.usernameParse
 
@@ -35,24 +33,30 @@ public class Email internal constructor(
     }
 }
 
-/** A phone number, valid in its country's numbering plan. */
+/**
+ * A phone number, valid in its country's numbering plan.
+ *
+ * A number holds the two forms the library writes it in, which it crosses with: the E.164 form it is stored in, and the
+ * international form it prints.
+ */
 public class PhoneNumber internal constructor(
     /** The number in E.164 form: "+40712345678". */
     public val e164: String,
+    /** The number grouped as its country groups it: "+40 712 345 678". */
+    public val international: String,
 ) {
-    /** Whether [other] is of the same class, with the same [e164]. */
-    override fun equals(other: Any?): Boolean = other is PhoneNumber && e164 == other.e164
+    /** The number as the generated code holds it. */
+    internal val generated: eranos.internal.PhoneNumber
+        get() = eranos.internal.PhoneNumber(e164, international)
+
+    /** Whether [other] is of the same class, with the same [e164] and [international]. */
+    override fun equals(other: Any?): Boolean = other is PhoneNumber && e164 == other.e164 && international == other.international
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = e164.hashCode()
+    override fun hashCode(): Int = hashOf(e164, international)
 
-    /** The number grouped as its country groups it: "+40 712 345 678". */
-    override fun toString(): String =
-        try {
-            phoneNumberInternational(e164)
-        } catch (_: eranos.internal.EranosException) {
-            e164
-        }
+    /** The number in its [international] form: "+40 712 345 678". */
+    override fun toString(): String = international
 
     /** The parsing of a number from its text. */
     public companion object {
@@ -62,29 +66,29 @@ public class PhoneNumber internal constructor(
          * @throws EranosException.Contact with [ContactFailure.InvalidPhoneNumber].
          */
         @Throws(EranosException::class)
-        public fun parse(text: String): PhoneNumber = converting { PhoneNumber(phoneNumberParse(text)) }
+        public fun parse(text: String): PhoneNumber = converting { phoneNumberParse(text).converted() }
     }
 }
 
-/** An international bank account number, checked against the SWIFT IBAN registry. */
+/** The number the generated code holds as [this]. */
+internal fun eranos.internal.PhoneNumber.converted(): PhoneNumber = PhoneNumber(e164, international)
+
+/**
+ * An international bank account number, checked against the SWIFT IBAN registry.
+ *
+ * An IBAN holds the country code the library reads from it, which it crosses with.
+ */
 public class Iban internal constructor(
     /** The IBAN without spaces, in capitals. */
     private val text: String,
-) {
     /** The two-letter country code: "RO". */
-    public val countryCode: String
-        get() =
-            try {
-                ibanCountryCode(text)
-            } catch (_: eranos.internal.EranosException) {
-                text.take(2)
-            }
-
-    /** Whether [other] is of the same class, with the same text. */
-    override fun equals(other: Any?): Boolean = other is Iban && text == other.text
+    public val countryCode: String,
+) {
+    /** Whether [other] is of the same class, with the same text and [countryCode]. */
+    override fun equals(other: Any?): Boolean = other is Iban && text == other.text && countryCode == other.countryCode
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = text.hashCode()
+    override fun hashCode(): Int = hashOf(text, countryCode)
 
     /** The IBAN without spaces, in capitals: "RO49AAAA1B31007593840000". */
     override fun toString(): String = text
@@ -97,9 +101,12 @@ public class Iban internal constructor(
          * @throws EranosException.PaymentAccount with [PaymentAccountFailure.InvalidIban] and the check it failed.
          */
         @Throws(EranosException::class)
-        public fun parse(text: String): Iban = converting { Iban(ibanParse(text)) }
+        public fun parse(text: String): Iban = converting { ibanParse(text).converted() }
     }
 }
+
+/** The IBAN the generated code holds as [this]. */
+internal fun eranos.internal.Iban.converted(): Iban = Iban(iban, countryCode)
 
 /** A username in a payment app. */
 public class Username internal constructor(

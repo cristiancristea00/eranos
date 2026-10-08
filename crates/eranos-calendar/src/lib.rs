@@ -8,7 +8,10 @@
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use. The facade does not re-export [`FromCalendarError`],
 //! through which a crate that tells every failure apart converts one without
-//! the wildcard arm a `match` outside this crate would need.
+//! the wildcard arm a `match` outside this crate would need, nor
+//! [`format_calendar_date`] and [`format_time_of_day`], with which the
+//! binding core writes a date and a time of day from the fields its records
+//! hold.
 #![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
@@ -140,14 +143,40 @@ impl fmt::Debug for CalendarDate {
 // not change with a dependency's release.
 impl fmt::Display for CalendarDate {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
+        fmt::Display::fmt(
+            &format_calendar_date(
+                i32::from(self.year()),
+                i32::from(self.month()),
+                i32::from(self.day()),
+            ),
             formatter,
-            "{:04}-{:02}-{:02}",
-            self.year(),
-            self.month(),
-            self.day()
         )
     }
+}
+
+/// Formats a date's fields as the text form of [`CalendarDate`] writes
+/// them: the year in four digits, the month and the day in two, padded with
+/// zeros and joined by hyphens.
+///
+/// The text form of a date writes its fields with it. It takes any numbers,
+/// those of no date included, and writes them the same way: the binding
+/// core writes with it the fields of a record it has not checked, so that
+/// its text for a date is this crate's. A number wider than its field is
+/// written whole, and a negative one keeps its sign within the width.
+///
+/// # Examples
+///
+/// ```
+/// # // The facade does not re-export it: a caller writes a date through its `CalendarDate`.
+/// use eranos_calendar::format_calendar_date;
+///
+/// assert_eq!(format_calendar_date(2026, 9, 3).to_string(), "2026-09-03");
+/// assert_eq!(format_calendar_date(12, 13, 32).to_string(), "0012-13-32");
+/// assert_eq!(format_calendar_date(-1, 0, 100).to_string(), "-001-00-100");
+/// ```
+#[must_use]
+pub fn format_calendar_date(year: i32, month: i32, day: i32) -> impl fmt::Display {
+    fmt::from_fn(move |formatter| write!(formatter, "{year:04}-{month:02}-{day:02}"))
 }
 
 impl FromStr for CalendarDate {
@@ -258,8 +287,36 @@ impl fmt::Debug for TimeOfDay {
 // saved form, so it must not change with a dependency's release.
 impl fmt::Display for TimeOfDay {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{:02}:{:02}", self.hour(), self.minute())
+        fmt::Display::fmt(
+            &format_time_of_day(i32::from(self.hour()), i32::from(self.minute())),
+            formatter,
+        )
     }
+}
+
+/// Formats a time's fields as the text form of [`TimeOfDay`] writes them:
+/// the hour and the minute in two digits each, padded with zeros and joined
+/// by a colon.
+///
+/// The text form of a time writes its fields with it. It takes any numbers,
+/// those of no time included, and writes them the same way: the binding
+/// core writes with it the fields of a record it has not checked, so that
+/// its text for a time is this crate's. A number wider than its field is
+/// written whole, and a negative one keeps its sign within the width.
+///
+/// # Examples
+///
+/// ```
+/// # // The facade does not re-export it: a caller writes a time through its `TimeOfDay`.
+/// use eranos_calendar::format_time_of_day;
+///
+/// assert_eq!(format_time_of_day(7, 5).to_string(), "07:05");
+/// assert_eq!(format_time_of_day(24, 60).to_string(), "24:60");
+/// assert_eq!(format_time_of_day(-1, 100).to_string(), "-1:100");
+/// ```
+#[must_use]
+pub fn format_time_of_day(hour: i32, minute: i32) -> impl fmt::Display {
+    fmt::from_fn(move |formatter| write!(formatter, "{hour:02}:{minute:02}"))
 }
 
 impl FromStr for TimeOfDay {

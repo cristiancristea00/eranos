@@ -1,13 +1,15 @@
-//! Members, their accounts, and categories cross the bindings as records. A
-//! record converted back and forth would change a detail, a detail the
-//! library refuses would reach it, and an entry to add would lose the
-//! identifier its app gives it.
+//! Members, their contact details and accounts, and categories cross the
+//! bindings as records. A record converted back and forth would change a
+//! detail, a detail the library refuses would reach it, the text the library
+//! derives from a detail would come back other than the library writes it
+//! or go in other than the library would write it, and an entry to add would
+//! lose the identifier its app gives it.
 
 use eranos::MemberId;
 
 use super::*;
 use crate::{
-    CategoryFailure, ContactFailure, IdFailure, MemberFailure, PaymentAccountFailure,
+    CategoryFailure, ContactFailure, IbanReason, IdFailure, MemberFailure, PaymentAccountFailure,
     identifier_generate,
 };
 
@@ -22,7 +24,16 @@ fn iban_account() -> PaymentAccount {
         name: "Main account".to_owned(),
         details: PaymentAccountDetails::Iban {
             iban: "RO49AAAA1B31007593840000".to_owned(),
+            country_code: "RO".to_owned(),
         },
+    }
+}
+
+/// Ana's phone number, as the library writes it.
+fn ana_phone() -> PhoneNumber {
+    PhoneNumber {
+        e164: "+40712345678".to_owned(),
+        international: "+40 712 345 678".to_owned(),
     }
 }
 
@@ -33,7 +44,7 @@ fn ana() -> Member {
         first_name: "Ana".to_owned(),
         last_name: Some("Popescu".to_owned()),
         email: Some("ana@example.com".to_owned()),
-        phone: Some("+40712345678".to_owned()),
+        phone: Some(ana_phone()),
         accounts: vec![
             iban_account(),
             PaymentAccount {
@@ -68,13 +79,14 @@ fn with_account(details: PaymentAccountDetails, name: &str) -> Member {
     }
 }
 
-/// Members with one detail the library refuses.
-fn refused_members() -> [Refusal; 6] {
+/// Members with one account detail the library refuses.
+fn refused_accounts() -> [Refusal; 4] {
     [
         Refusal {
             record: with_account(
                 PaymentAccountDetails::Iban {
                     iban: "RO49AAAA1B31007593840001".to_owned(),
+                    country_code: "RO".to_owned(),
                 },
                 "Main account",
             ),
@@ -82,7 +94,29 @@ fn refused_members() -> [Refusal; 6] {
                 matches!(
                     error,
                     EranosError::PaymentAccount {
-                        failure: PaymentAccountFailure::InvalidIban { .. },
+                        failure: PaymentAccountFailure::InvalidIban {
+                            reason: IbanReason::InvalidChecksum,
+                        },
+                        ..
+                    }
+                )
+            },
+        },
+        Refusal {
+            record: with_account(
+                PaymentAccountDetails::Iban {
+                    iban: "RO49AAAA1B31007593840000".to_owned(),
+                    country_code: "DE".to_owned(),
+                },
+                "Main account",
+            ),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::PaymentAccount {
+                        failure: PaymentAccountFailure::InvalidIban {
+                            reason: IbanReason::UnknownCountry,
+                        },
                         ..
                     }
                 )
@@ -117,6 +151,12 @@ fn refused_members() -> [Refusal; 6] {
                 )
             },
         },
+    ]
+}
+
+/// Members with one contact detail or name the library refuses.
+fn refused_contacts() -> [Refusal; 4] {
+    [
         Refusal {
             record: Member {
                 email: Some("ana at example.com".to_owned()),
@@ -134,7 +174,28 @@ fn refused_members() -> [Refusal; 6] {
         },
         Refusal {
             record: Member {
-                phone: Some("0712345678".to_owned()),
+                phone: Some(PhoneNumber {
+                    e164: "0712345678".to_owned(),
+                    international: "0712345678".to_owned(),
+                }),
+                ..ana()
+            },
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Contact {
+                        failure: ContactFailure::InvalidPhoneNumber,
+                        ..
+                    }
+                )
+            },
+        },
+        Refusal {
+            record: Member {
+                phone: Some(PhoneNumber {
+                    international: "+40712345678".to_owned(),
+                    ..ana_phone()
+                }),
                 ..ana()
             },
             is_expected: |error| {
@@ -167,19 +228,26 @@ fn refused_members() -> [Refusal; 6] {
 
 /// A member added through the bindings would reach the library with a
 /// detail changed or dropped, or come back without their identifier; the
-/// details come back in the form the group holds them.
+/// details come back in the form the group holds them, with the text the
+/// library derives from them.
 #[test]
 fn a_member_to_add_converts_both_ways() {
     for record in [ana(), bob()] {
         assert_eq!(Member::from_library(&record.to_new().unwrap()), record);
     }
+    // The values are parsed as the library parses them; the derived text is
+    // what it writes for them.
     let entered = Member {
         email: Some(" ana@example.com ".to_owned()),
-        phone: Some("+40 712 345 678".to_owned()),
+        phone: Some(PhoneNumber {
+            e164: "+40 712 345 678".to_owned(),
+            ..ana_phone()
+        }),
         accounts: vec![PaymentAccount {
             name: " Main account ".to_owned(),
             details: PaymentAccountDetails::Iban {
                 iban: "ro49 aaaa 1b31 0075 9384 0000".to_owned(),
+                country_code: "RO".to_owned(),
             },
         }],
         ..ana()
@@ -195,7 +263,7 @@ fn a_member_to_add_converts_both_ways() {
 #[test]
 fn a_member_refuses_every_detail_that_does_not_convert() {
     let stored = ana().to_new().unwrap();
-    for refusal in refused_members() {
+    for refusal in refused_accounts().into_iter().chain(refused_contacts()) {
         let errors = [
             refusal.record.to_new().unwrap_err(),
             refusal.record.replacing(&stored).unwrap_err(),
