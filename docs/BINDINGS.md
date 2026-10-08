@@ -491,11 +491,10 @@ tvOS, watchOS, and visionOS. Its binary target, `EranosFFI`, is an
 XCFramework of ten static libraries from the library's thirteen Apple
 targets, `lipo` joining the two architectures of the iOS simulator, macOS,
 and Mac Catalyst. The generated Swift compiles as the target
-`EranosGenerated` in Swift 5 mode, since UniFFI's Swift is not yet clean
-under Swift 6's concurrency checks, and the module apps import, `Eranos`, is
-written by hand in Swift 6 and imports the generated one with `internal
-import`, so no generated type reaches an app. It follows the Swift API
-Design Guidelines:
+`EranosGenerated`, and the module apps import, `Eranos`, is written by hand
+and imports the generated one with `internal import`, so no generated type
+reaches an app; both compile in Swift 6 language mode. It follows the
+Swift API Design Guidelines:
 
 - Every entry has an identifier type of its own (`Member.ID`, `Expense.ID`,
   an `Identifier` of the entity), which `Identifier(_:)` checks by the

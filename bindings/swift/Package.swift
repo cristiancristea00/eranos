@@ -24,13 +24,7 @@ let package = Package(
     ],
     targets: [
         .binaryTarget(name: "EranosFFI", path: "EranosFFI.xcframework"),
-        // UniFFI's Swift is not yet clean under Swift 6's strict concurrency
-        // checks, so its own target compiles it in Swift 5 mode.
-        .target(
-            name: "EranosGenerated",
-            dependencies: ["EranosFFI"],
-            swiftSettings: [.swiftLanguageMode(.v5)]
-        ),
+        .target(name: "EranosGenerated", dependencies: ["EranosFFI"]),
         .target(name: "Eranos", dependencies: ["EranosGenerated"]),
         // The tests build values of the generated code, to convert every one the library can
         // send and to reach the fallbacks for values it never sends.
