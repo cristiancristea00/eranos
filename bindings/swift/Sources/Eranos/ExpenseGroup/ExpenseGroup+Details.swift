@@ -69,7 +69,7 @@ public extension ExpenseGroup {
     /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
     ///   call holds the lock.
     func currency() throws(EranosError) -> CurrencyCode {
-        try converting { CurrencyCode(known: try handle.currency()) }
+        try converting { CurrencyCode(try handle.currency()) }
     }
 
     /// The group currency, which every total is in.
@@ -80,7 +80,7 @@ public extension ExpenseGroup {
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func currency() async throws(EranosError) -> CurrencyCode {
         try await converting { [handle] cancellation in
-            CurrencyCode(known: try await handle.currencyAsync(cancellation: cancellation))
+            CurrencyCode(try await handle.currencyAsync(cancellation: cancellation))
         }
     }
 

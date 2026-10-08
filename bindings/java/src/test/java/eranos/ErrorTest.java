@@ -23,8 +23,9 @@ class ErrorTest {
     private record Position(long line, long column) {}
 
     /**
-     * A conversion that reached another module or failure, dropped what the failure holds, or lost
-     * the message would show an app another failure than the library's.
+     * A conversion that reached another module or failure, dropped what the failure holds, looked a
+     * currency up by its code instead of keeping the details the library sent, or lost the message
+     * would show an app another failure than the library's.
      */
     @Test
     void everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
@@ -102,9 +103,28 @@ class ErrorTest {
         };
     }
 
-    /** {@code minorUnits} cents. */
+    /**
+     * The details the generated code sends for the currency {@code code}, with a name, a numeric
+     * code, and decimal places that the library's currency of the code does not have, so that a
+     * conversion that looked the code up would give another currency than {@link #currency}.
+     */
+    private static eranos.internal.CurrencyDetails details(String code) {
+        return new eranos.internal.CurrencyDetails(code, "Sent " + code, 999, (byte) 3);
+    }
+
+    /** The currency an app must see for {@link #details} of {@code code}. */
+    private static CurrencyCode currency(String code) {
+        return CurrencyCode.converted(details(code));
+    }
+
+    /** {@code minorUnits} minor units of the euro as {@link #details} describes it. */
     private static Money euros(long minorUnits) {
-        return new Money(minorUnits, CurrencyCode.known("EUR"));
+        return new Money(minorUnits, currency("EUR"));
+    }
+
+    /** {@link #euros} as the generated code sends it. */
+    private static eranos.internal.Money generatedEuros(long minorUnits) {
+        return new eranos.internal.Money(minorUnits, details("EUR"));
     }
 
     /** Every failure the generated code can report, with every reason of a refused IBAN. */
@@ -167,15 +187,16 @@ class ErrorTest {
                             new eranos.internal.EranosException.Money(
                                     new eranos.internal.MoneyFailure.InvalidAmount(), "detail")),
                     new Conversion(
-                            new MoneyFailure.TooManyDecimals(CurrencyCode.known("RON"), 29L),
+                            new MoneyFailure.TooManyDecimals(currency("RON"), 29L),
                             new eranos.internal.EranosException.Money(
-                                    new eranos.internal.MoneyFailure.TooManyDecimals("RON", 29L),
+                                    new eranos.internal.MoneyFailure.TooManyDecimals(
+                                            details("RON"), 29L),
                                     "detail")),
                     new Conversion(
-                            new MoneyFailure.CurrencyMismatch(
-                                    CurrencyCode.known("RON"), CurrencyCode.known("USD")),
+                            new MoneyFailure.CurrencyMismatch(currency("RON"), currency("USD")),
                             new eranos.internal.EranosException.Money(
-                                    new eranos.internal.MoneyFailure.CurrencyMismatch("RON", "USD"),
+                                    new eranos.internal.MoneyFailure.CurrencyMismatch(
+                                            details("RON"), details("USD")),
                                     "detail")),
                     new Conversion(
                             new MoneyFailure.UnknownCurrency(),
@@ -213,11 +234,10 @@ class ErrorTest {
                                     new eranos.internal.ExpenseFailure.NonPositiveAmount(),
                                     "detail")),
                     new Conversion(
-                            new ExpenseFailure.CurrencyMismatch(
-                                    CurrencyCode.known("USD"), CurrencyCode.known("GBP")),
+                            new ExpenseFailure.CurrencyMismatch(currency("USD"), currency("GBP")),
                             new eranos.internal.EranosException.Expense(
                                     new eranos.internal.ExpenseFailure.CurrencyMismatch(
-                                            "USD", "GBP"),
+                                            details("USD"), details("GBP")),
                                     "detail")),
                     new Conversion(
                             new ExpenseFailure.EmptySplit(),
@@ -237,8 +257,7 @@ class ErrorTest {
                             new ExpenseFailure.AmountsDoNotAddUp(euros(3), euros(2)),
                             new eranos.internal.EranosException.Expense(
                                     new eranos.internal.ExpenseFailure.AmountsDoNotAddUp(
-                                            new eranos.internal.Money(3, "EUR"),
-                                            new eranos.internal.Money(2, "EUR")),
+                                            generatedEuros(3), generatedEuros(2)),
                                     "detail")),
                     new Conversion(
                             new ExpenseFailure.PercentagesDoNotAddUp(10L),
@@ -261,8 +280,7 @@ class ErrorTest {
                             new ExpenseFailure.ItemsDoNotAddUp(euros(8), euros(7)),
                             new eranos.internal.EranosException.Expense(
                                     new eranos.internal.ExpenseFailure.ItemsDoNotAddUp(
-                                            new eranos.internal.Money(8, "EUR"),
-                                            new eranos.internal.Money(7, "EUR")),
+                                            generatedEuros(8), generatedEuros(7)),
                                     "detail")),
                     new Conversion(
                             new ExpenseFailure.NegativeTip(),
@@ -295,10 +313,10 @@ class ErrorTest {
                             new eranos.internal.EranosException.ExpenseGroup(
                                     new eranos.internal.ExpenseGroupFailure.EmptyName(), "detail")),
                     new Conversion(
-                            new ExpenseGroupFailure.MissingExchangeRate(CurrencyCode.known("RON")),
+                            new ExpenseGroupFailure.MissingExchangeRate(currency("RON")),
                             new eranos.internal.EranosException.ExpenseGroup(
                                     new eranos.internal.ExpenseGroupFailure.MissingExchangeRate(
-                                            "RON"),
+                                            details("RON")),
                                     "detail")),
                     new Conversion(
                             new ExpenseGroupFailure.UnexpectedExchangeRate(),
@@ -307,11 +325,10 @@ class ErrorTest {
                                             .UnexpectedExchangeRate(),
                                     "detail")),
                     new Conversion(
-                            new ExpenseGroupFailure.DuplicateExchangeRate(
-                                    CurrencyCode.known("GBP")),
+                            new ExpenseGroupFailure.DuplicateExchangeRate(currency("GBP")),
                             new eranos.internal.EranosException.ExpenseGroup(
                                     new eranos.internal.ExpenseGroupFailure.DuplicateExchangeRate(
-                                            "GBP"),
+                                            details("GBP")),
                                     "detail")),
                     new Conversion(
                             new ExpenseGroupFailure.DuplicateMember(new MemberId("member-16")),

@@ -14,7 +14,7 @@ use crate::expense::Expense;
 use crate::expense_group::{self, ExpenseGroupHandle};
 use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
-use crate::money::{CurrencyRate, Money};
+use crate::money::{CurrencyDetails, CurrencyRate, Money};
 use crate::operations;
 use crate::reader::ExpenseGroupReader;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
@@ -57,10 +57,10 @@ trait ExpenseGroupCalls {
 
     // --- Currency ------------------------------------------------------------
 
-    /// The ISO 4217 code of the group currency.
+    /// The group currency, with what ISO 4217 says of it.
     #[read]
     #[infallible]
-    fn currency(&self) -> Result<String, EranosError>;
+    fn currency(&self) -> Result<CurrencyDetails, EranosError>;
 
     /// Moves the group to `currency`, with a rate into it for every other
     /// currency its entries use.
@@ -85,11 +85,19 @@ trait ExpenseGroupCalls {
     fn expense_shares(&self, id: &str) -> Result<Option<ExpenseShares>, EranosError>;
 
     /// Adds `expense` under its identifier, and returns the identifier.
+    ///
+    /// An amount in a currency whose details are not the library's for its
+    /// code is refused with
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
     #[write]
     fn add_expense(&self, expense: &Expense) -> Result<String, EranosError>;
 
     /// Replaces the expense that `expense` names by its identifier, and returns
     /// it as it was.
+    ///
+    /// An amount in a currency whose details are not the library's for its
+    /// code is refused with
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
     #[write]
     fn replace_expense(&self, expense: &Expense) -> Result<Expense, EranosError>;
 
@@ -178,11 +186,19 @@ trait ExpenseGroupCalls {
     fn transfer_amount(&self, id: &str) -> Result<Option<Money>, EranosError>;
 
     /// Adds `transfer` under its identifier, and returns the identifier.
+    ///
+    /// An amount in a currency whose details are not the library's for its
+    /// code is refused with
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
     #[write]
     fn add_transfer(&self, transfer: &Transfer) -> Result<String, EranosError>;
 
     /// Replaces the transfer that `transfer` names by its identifier, and
     /// returns it as it was.
+    ///
+    /// An amount in a currency whose details are not the library's for its
+    /// code is refused with
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
     #[write]
     fn replace_transfer(&self, transfer: &Transfer) -> Result<Transfer, EranosError>;
 

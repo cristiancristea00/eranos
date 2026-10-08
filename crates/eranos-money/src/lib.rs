@@ -8,7 +8,8 @@
 //! types callers use. The facade does not re-export [`FromCost`] and
 //! [`FromMoneyError`], through which a crate that tells every variant apart
 //! converts a cost or a failure without the wildcard arm a `match` outside
-//! this crate would need.
+//! this crate would need, nor [`format_minor_units`], with which the binding
+//! core writes an amount from the currency details its record carries.
 #![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
@@ -20,7 +21,7 @@ mod error;
 mod rate;
 mod ratio;
 
-pub use amount::Money;
+pub use amount::{Money, format_minor_units};
 pub use cost::{Cost, FromCost};
 pub use currency_code::CurrencyCode;
 pub use error::{FromMoneyError, MoneyError};

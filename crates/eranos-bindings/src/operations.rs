@@ -8,7 +8,7 @@ use eranos::{CategoryId, ExpenseGroup, ExpenseId, Language, MemberId, TransferId
 use crate::expense::Expense;
 use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
-use crate::money::{self, CurrencyRate, Money};
+use crate::money::{self, CurrencyDetails, CurrencyRate, Money};
 use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{EranosError, identifier};
@@ -65,9 +65,9 @@ pub(crate) fn remove_category(group: &mut ExpenseGroup, id: &str) -> Result<Cate
 
 // --- Currency ----------------------------------------------------------------
 
-/// The ISO 4217 code of the group currency.
-pub(crate) fn currency(group: &ExpenseGroup) -> String {
-    group.currency().code().to_owned()
+/// The group currency, with what ISO 4217 says of it.
+pub(crate) fn currency(group: &ExpenseGroup) -> CurrencyDetails {
+    CurrencyDetails::from_library(group.currency())
 }
 
 /// A currency change, in the library's values.

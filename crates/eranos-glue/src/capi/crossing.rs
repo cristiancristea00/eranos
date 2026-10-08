@@ -13,6 +13,11 @@ use syn::{GenericArgument, PathArguments, Type};
 use crate::calls::Kind;
 use crate::capi::items::Core;
 
+/// The integers the core's records hold, which cross as themselves: the
+/// signed ones of every count and amount, and the `u8` of a currency's
+/// decimal places.
+const INTEGERS: [&str; 3] = ["i32", "i64", "u8"];
+
 /// The core's plain structs, which cross by value as the C glue's
 /// hand-written structs of the same fields.
 const PLAIN: [&str; 2] = ["CalendarDate", "TimeOfDay"];
@@ -33,7 +38,7 @@ const LISTED: [&str; 1] = ["CurrencyDetails"];
 pub(crate) enum Crossing {
     /// An enum without data, as a C-like enum converted with `into`.
     Choice(Ident),
-    /// An integer, as itself.
+    /// An integer, as itself: an `i32`, an `i64`, or a `u8`.
     Integer(Ident),
     /// A list of records, as an opaque list of copies.
     List(Ident),
@@ -52,8 +57,8 @@ impl Crossing {
     ///
     /// # Errors
     ///
-    /// For a type that is not text, an `i32` or an `i64`, a mirrored record
-    /// or enum, or a list of text or of records.
+    /// For a type that is not text, an `i32`, an `i64`, or a `u8`, a
+    /// mirrored record or enum, or a list of text or of records.
     pub(crate) fn of(written: &Type, core: &Core) -> syn::Result<Self> {
         if let Some(element) = argument(written, "Vec") {
             return match Self::of(element, core)? {
@@ -73,7 +78,7 @@ impl Crossing {
         let text = name.to_string();
         if "String" == text {
             Ok(Self::Text)
-        } else if "i32" == text || "i64" == text {
+        } else if INTEGERS.contains(&text.as_str()) {
             Ok(Self::Integer(name.clone()))
         } else if PLAIN.contains(&text.as_str()) {
             Ok(Self::Plain(name.clone()))
@@ -405,7 +410,7 @@ fn flag(written: &Type) -> bool {
 fn unsupported(written: &Type) -> syn::Error {
     syn::Error::new_spanned(
         written,
-        "the C bridge carries text, an `i32` or an `i64`, a mirrored record or enum, and a list of text or of records",
+        "the C bridge carries text, an `i32`, an `i64`, or a `u8`, a mirrored record or enum, and a list of text or of records",
     )
 }
 

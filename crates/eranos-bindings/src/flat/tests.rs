@@ -7,6 +7,7 @@
 use std::collections::HashSet;
 
 use super::*;
+use eranos::CurrencyCode;
 
 /// The message every error of the table holds.
 const DETAIL: &str = "the library's message";
@@ -233,11 +234,11 @@ fn flattenings() -> Vec<Flattening> {
                 failure: ExpenseFailure::AmountsDoNotAddUp {
                     expected: Money {
                         minor_units: 1000,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     },
                     actual: Money {
                         minor_units: 900,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     },
                 },
                 detail: DETAIL.to_owned(),
@@ -249,11 +250,11 @@ fn flattenings() -> Vec<Flattening> {
                 payload: Payload {
                     actual: Some(Money {
                         minor_units: 900,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     }),
                     expected_amount: Some(Money {
                         minor_units: 1000,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     }),
                     ..Payload::default()
                 },
@@ -262,8 +263,8 @@ fn flattenings() -> Vec<Flattening> {
         Flattening {
             error: EranosError::Expense {
                 failure: ExpenseFailure::CurrencyMismatch {
-                    expected: "EUR".to_owned(),
-                    found: "RON".to_owned(),
+                    expected: CurrencyDetails::from_library(CurrencyCode::EUR),
+                    found: CurrencyDetails::from_library(CurrencyCode::RON),
                 },
                 detail: DETAIL.to_owned(),
             },
@@ -272,8 +273,8 @@ fn flattenings() -> Vec<Flattening> {
                 failure: Some(FailureKind::ExpenseCurrencyMismatch),
                 message: DETAIL.to_owned(),
                 payload: Payload {
-                    expected_currency: Some("EUR".to_owned()),
-                    found_currency: Some("RON".to_owned()),
+                    expected_currency: Some(CurrencyDetails::from_library(CurrencyCode::EUR)),
+                    found_currency: Some(CurrencyDetails::from_library(CurrencyCode::RON)),
                     ..Payload::default()
                 },
             },
@@ -336,11 +337,11 @@ fn flattenings() -> Vec<Flattening> {
                 failure: ExpenseFailure::ItemsDoNotAddUp {
                     expected: Money {
                         minor_units: 1000,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     },
                     actual: Money {
                         minor_units: 900,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     },
                 },
                 detail: DETAIL.to_owned(),
@@ -352,11 +353,11 @@ fn flattenings() -> Vec<Flattening> {
                 payload: Payload {
                     actual: Some(Money {
                         minor_units: 900,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     }),
                     expected_amount: Some(Money {
                         minor_units: 1000,
-                        currency: "EUR".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     }),
                     ..Payload::default()
                 },
@@ -534,7 +535,7 @@ fn flattenings() -> Vec<Flattening> {
         Flattening {
             error: EranosError::ExpenseGroup {
                 failure: ExpenseGroupFailure::DuplicateExchangeRate {
-                    currency: "RON".to_owned(),
+                    currency: CurrencyDetails::from_library(CurrencyCode::RON),
                 },
                 detail: DETAIL.to_owned(),
             },
@@ -543,7 +544,7 @@ fn flattenings() -> Vec<Flattening> {
                 failure: Some(FailureKind::ExpenseGroupDuplicateExchangeRate),
                 message: DETAIL.to_owned(),
                 payload: Payload {
-                    currency: Some("RON".to_owned()),
+                    currency: Some(CurrencyDetails::from_library(CurrencyCode::RON)),
                     ..Payload::default()
                 },
             },
@@ -635,7 +636,7 @@ fn flattenings() -> Vec<Flattening> {
         Flattening {
             error: EranosError::ExpenseGroup {
                 failure: ExpenseGroupFailure::MissingExchangeRate {
-                    currency: "RON".to_owned(),
+                    currency: CurrencyDetails::from_library(CurrencyCode::RON),
                 },
                 detail: DETAIL.to_owned(),
             },
@@ -644,7 +645,7 @@ fn flattenings() -> Vec<Flattening> {
                 failure: Some(FailureKind::ExpenseGroupMissingExchangeRate),
                 message: DETAIL.to_owned(),
                 payload: Payload {
-                    currency: Some("RON".to_owned()),
+                    currency: Some(CurrencyDetails::from_library(CurrencyCode::RON)),
                     ..Payload::default()
                 },
             },
@@ -831,8 +832,8 @@ fn flattenings() -> Vec<Flattening> {
         Flattening {
             error: EranosError::Money {
                 failure: MoneyFailure::CurrencyMismatch {
-                    left: "EUR".to_owned(),
-                    right: "RON".to_owned(),
+                    left: CurrencyDetails::from_library(CurrencyCode::EUR),
+                    right: CurrencyDetails::from_library(CurrencyCode::RON),
                 },
                 detail: DETAIL.to_owned(),
             },
@@ -841,8 +842,8 @@ fn flattenings() -> Vec<Flattening> {
                 failure: Some(FailureKind::MoneyCurrencyMismatch),
                 message: DETAIL.to_owned(),
                 payload: Payload {
-                    left: Some("EUR".to_owned()),
-                    right: Some("RON".to_owned()),
+                    left: Some(CurrencyDetails::from_library(CurrencyCode::EUR)),
+                    right: Some(CurrencyDetails::from_library(CurrencyCode::RON)),
                     ..Payload::default()
                 },
             },
@@ -910,7 +911,7 @@ fn flattenings() -> Vec<Flattening> {
         Flattening {
             error: EranosError::Money {
                 failure: MoneyFailure::TooManyDecimals {
-                    currency: "EUR".to_owned(),
+                    currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                     allowed: 2,
                 },
                 detail: DETAIL.to_owned(),
@@ -921,7 +922,7 @@ fn flattenings() -> Vec<Flattening> {
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     allowed: Some(2),
-                    currency: Some("EUR".to_owned()),
+                    currency: Some(CurrencyDetails::from_library(CurrencyCode::EUR)),
                     ..Payload::default()
                 },
             },

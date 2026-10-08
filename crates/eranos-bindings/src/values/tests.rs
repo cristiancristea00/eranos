@@ -4,7 +4,8 @@
 //! number too large for the bindings' integers would show the apps other
 //! values than the library holds.
 
-use eranos::MemberId;
+use eranos::{CurrencyCode, MemberId, ledger};
+use eranos_ledger::FromBalance;
 
 use super::*;
 use crate::expense::{ExpenseItem, MemberAmount, TipDistribution, TipRule, TipValue};
@@ -15,23 +16,34 @@ use crate::{
 };
 
 fn euros(minor_units: i64) -> Money {
-    Money {
+    Money::from_library(library::Money::from_minor_units(
         minor_units,
-        currency: "EUR".to_owned(),
-    }
+        CurrencyCode::EUR,
+    ))
 }
 
 fn lei(minor_units: i64) -> Money {
-    Money {
+    Money::from_library(library::Money::from_minor_units(
         minor_units,
-        currency: "RON".to_owned(),
+        CurrencyCode::RON,
+    ))
+}
+
+/// Details of a currency the library does not list, with `decimal_places`
+/// decimal places.
+fn unlisted(decimal_places: u8) -> CurrencyDetails {
+    CurrencyDetails {
+        code: "XYZ".to_owned(),
+        name: "Unlisted".to_owned(),
+        numeric_code: 999,
+        decimal_places,
     }
 }
 
 fn unknown_money() -> Money {
     Money {
         minor_units: 1,
-        currency: "XYZ".to_owned(),
+        currency: unlisted(2),
     }
 }
 
@@ -183,8 +195,7 @@ fn amounts_parse_format_and_add_as_the_library_does() {
             ..
         })
     ));
-    assert_eq!(money_format(&euros(1_250)).as_deref(), Ok("12.50 EUR"));
-    assert!(is_unknown_currency(&money_format(&unknown_money())));
+    assert_eq!(money_format(&euros(1_250)), "12.50 EUR");
 
     assert_eq!(money_add(&euros(1_250), &euros(50)), Ok(euros(1_300)));
     assert_eq!(money_subtract(&euros(1_250), &euros(50)), Ok(euros(1_200)));
@@ -375,53 +386,80 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
     ));
 }
 
-/// A balance, beside the text the library writes for it.
-struct BalanceText {
-    balance: Balance,
-    text: &'static str,
-}
-
 /// A balance would be written another way than the library's, and the
 /// currencies would reach the apps other than ISO 4217 lists them.
 #[test]
 fn balances_and_currencies_read_as_the_library_writes_them() {
-    let balances = [
-        BalanceText {
-            balance: Balance::GetsBack {
-                amount: euros(1_200),
-            },
-            text: "gets back 12.00 EUR",
-        },
-        BalanceText {
-            balance: Balance::Owes { amount: euros(300) },
-            text: "owes 3.00 EUR",
-        },
-        BalanceText {
-            balance: Balance::Settled,
-            text: "settled",
-        },
-    ];
-    for BalanceText { balance, text } in balances {
-        assert_eq!(balance_format(&balance).as_deref(), Ok(text));
-    }
-    for balance in [
-        Balance::GetsBack {
-            amount: unknown_money(),
-        },
-        Balance::Owes {
-            amount: unknown_money(),
-        },
-    ] {
-        assert!(is_unknown_currency(&balance_format(&balance)));
-    }
+    assert_eq!(
+        balance_format(&Balance::GetsBack {
+            amount: euros(1_200)
+        }),
+        "gets back 12.00 EUR"
+    );
+    assert_eq!(
+        balance_format(&Balance::Owes { amount: euros(300) }),
+        "owes 3.00 EUR"
+    );
+    assert_eq!(balance_format(&Balance::Settled), "settled");
 
     let euro = currency_details("EUR").unwrap();
     assert_eq!(euro.name, "Euro");
     assert!(is_unknown_currency(&currency_details("XYZ")));
     let all = currencies();
-    assert_eq!(all.len(), eranos::CurrencyCode::all().len());
+    assert_eq!(all.len(), CurrencyCode::all().len());
     assert!(all.contains(&euro));
     assert!(all.windows(2).all(|pair| pair[0].code < pair[1].code));
+}
+
+/// The text the bindings write for an amount or a balance would drift from
+/// the library's text form of it, for a currency, a number of decimal
+/// places, a sign, or an amount at either end of the range.
+#[test]
+fn amounts_and_balances_format_as_the_library_writes_them() {
+    let mut decimal_places = BTreeSet::new();
+    for &currency in CurrencyCode::all() {
+        decimal_places.insert(currency.decimal_places());
+        for minor_units in [0, 1, -1, 5, -5, 1_234, -1_234, i64::MIN, i64::MAX] {
+            let amount = library::Money::from_minor_units(minor_units, currency);
+            let record = Money::from_library(amount);
+            assert_eq!(money_format(&record), amount.to_string());
+            for balance in [
+                ledger::Balance::Owes(amount),
+                ledger::Balance::Settled,
+                ledger::Balance::GetsBack(amount),
+            ] {
+                assert_eq!(
+                    balance_format(&Balance::from_balance(balance)),
+                    balance.to_string()
+                );
+            }
+        }
+    }
+    // The currencies cover every number of decimal places ISO 4217 gives.
+    assert_eq!(decimal_places, BTreeSet::from([0, 2, 3, 4]));
+}
+
+/// A record whose currency has more decimal places than an `i64` has
+/// digits would overflow while it is written, or fail where the apps show
+/// it, though nothing about it can fail.
+#[test]
+fn an_amount_with_any_number_of_decimal_places_formats() {
+    let most = Money {
+        minor_units: -5,
+        currency: unlisted(u8::MAX),
+    };
+    assert_eq!(money_format(&most), format!("-0.{}5 XYZ", "0".repeat(254)));
+    let past_an_i64 = Money {
+        minor_units: i64::MIN,
+        currency: unlisted(19),
+    };
+    assert_eq!(money_format(&past_an_i64), "-0.9223372036854775808 XYZ");
+    assert_eq!(
+        balance_format(&Balance::GetsBack {
+            amount: past_an_i64
+        }),
+        "gets back -0.9223372036854775808 XYZ"
+    );
 }
 
 /// Contact and account details would be kept in another form than the

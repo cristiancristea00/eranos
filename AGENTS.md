@@ -190,8 +190,11 @@ Linux, on macOS, or on both, on a dispatch that asks for the bindings
 Clippy is strict on every target (library, tests, examples, benches): the
 pedantic, nursery, and cargo groups plus the restriction lints listed, each
 with its reason, in `[workspace.lints]` of `Cargo.toml`. `clippy.toml`
-holds two kinds of exception: what a test needs to fail loudly (unwrapping,
-expecting, panicking, and indexing inside test functions), and, in
+holds three kinds of exception: what a test needs to fail loudly
+(unwrapping, expecting, panicking, and indexing inside test functions); in
+`large-error-threshold`, the size of the binding core's error, which UniFFI
+and Diplomat copy field for field and which no case can box, set one byte
+above it so that any growth reports again; and, in
 `allowed-duplicate-crates`, a crate that a dependency's graph lists in two
 versions, each with the upstream issue that removes it. Any other exception
 is an `#[expect(lint, reason = "...")]` at the narrowest scope (a whole file

@@ -25,13 +25,13 @@ namespace eranos {
 
 namespace detail {
 
-[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details) noexcept;
-[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code) noexcept;
+[[nodiscard]] inline CurrencyCode currencyOf(std::unique_ptr<EranosCurrencyDetails> details) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) noexcept;
 
 } // namespace detail
 
-/// A currency of the ISO 4217 list, with what the library knows of it: only the library's list makes one, so an amount
-/// in it always formats.
+/// A currency of the ISO 4217 list, with what the library knows of it: only the library makes one, and it keeps the library's details, which an
+/// amount in it crosses with, so no amount looks its currency up.
 class CurrencyCode final {
   public:
     /// The currency of the ISO 4217 code @p code: "EUR".
@@ -64,7 +64,7 @@ class CurrencyCode final {
     /// The number of decimal places of its amounts: 2 for the euro, 0 for the yen.
     ///
     /// @return The decimal places
-    [[nodiscard]] inline constexpr std::int32_t decimalPlaces() const noexcept { return fields.decimalPlaces; }
+    [[nodiscard]] inline constexpr std::uint8_t decimalPlaces() const noexcept { return fields.decimalPlaces; }
 
     /// Whether two currencies have one code.
     ///
@@ -85,24 +85,27 @@ class CurrencyCode final {
     }
 
   private:
-    friend CurrencyCode detail::currencyOf(detail::EranosCurrencyDetails const &details) noexcept;
+    friend CurrencyCode detail::currencyOf(std::unique_ptr<detail::EranosCurrencyDetails> details) noexcept;
+    friend std::unique_ptr<detail::EranosMoney> detail::toDetail(Money const &value) noexcept;
 
-    /// What the library knows of the currency.
+    /// What the library knows of the currency, and the library's details it read them from, which an amount in the currency crosses with.
     struct Fields final {
         std::string code;
         std::string name;
         std::int32_t numericCode;
-        std::int32_t decimalPlaces;
+        std::uint8_t decimalPlaces;
+        std::shared_ptr<detail::EranosCurrencyDetails const> details;
     };
 
-    inline constexpr explicit CurrencyCode(Fields fields) noexcept : fields(std::move(fields)) {}
+    inline explicit CurrencyCode(Fields fields) noexcept : fields(std::move(fields)) {}
 
     Fields fields;
 };
 
 inline std::expected<CurrencyCode, Error> CurrencyCode::of(std::string_view const code) noexcept {
-    return detail::expectedOf(detail::EranosCurrencyDetails::of(code))
-        .transform([](std::unique_ptr<detail::EranosCurrencyDetails> const &details) noexcept { return detail::currencyOf(*details); });
+    return detail::expectedOf(detail::EranosCurrencyDetails::of(code)).transform([](std::unique_ptr<detail::EranosCurrencyDetails> details) noexcept {
+        return detail::currencyOf(std::move(details));
+    });
 }
 
 inline std::vector<CurrencyCode> CurrencyCode::all() noexcept {
@@ -110,7 +113,7 @@ inline std::vector<CurrencyCode> CurrencyCode::all() noexcept {
     std::vector<CurrencyCode> result;
     result.reserve(list->len());
     for (std::size_t index = 0; index < list->len(); ++index) {
-        result.push_back(detail::currencyOf(*list->get(index)));
+        result.push_back(detail::currencyOf(list->get(index)));
     }
     return result;
 }

@@ -145,11 +145,6 @@ impl CurrencyCode {
     pub const fn decimal_places(self) -> u8 {
         self.decimal_places
     }
-
-    /// `10^decimal_places`: how many minor units make one major unit.
-    pub(crate) fn minor_units_per_major(self) -> i64 {
-        10_i64.pow(u32::from(self.decimal_places()))
-    }
 }
 
 impl fmt::Debug for CurrencyCode {

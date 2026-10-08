@@ -26,7 +26,7 @@ class ValuesTest {
         assertEquals(2, euro.decimalPlaces)
         assertTrue(euro in CurrencyCode.all)
         val lei = CurrencyCode.of("RON")
-        assertValue(euro, CurrencyCode.known("EUR"), lei)
+        assertValue(euro, CurrencyCode.all.first { "EUR" == it.code }, lei)
         val unknown = assertThrows<EranosException.Money> { CurrencyCode.of("XYZ") }
         assertEquals(MoneyFailure.UnknownCurrency, unknown.failure)
         assertEquals("unknown currency code", unknown.message)
@@ -41,6 +41,68 @@ class ValuesTest {
         assertThrows<EranosException.Money> { Money(Long.MAX_VALUE, euro) + Money(1, euro) }
         assertThrows<EranosException.Money> { Money(Long.MIN_VALUE, euro) - Money(1, euro) }
         assertThrows<EranosException.Money> { Money.parse("twelve", euro) }
+    }
+
+    /**
+     * An amount printed with other decimal places than its currency's would show an app another amount than the group holds:
+     * the yen has none, the euro two, the Bahraini dinar three, and the Unidad de Fomento four.
+     */
+    @Test
+    fun anAmountPrintsWithTheDecimalPlacesOfItsCurrency() {
+        for (printed in printedAmounts) {
+            val currency = CurrencyCode.of(printed.code)
+            assertEquals(printed.decimalPlaces, currency.decimalPlaces)
+            val amount = Money(printed.minorUnits, currency)
+            assertEquals(printed.text, amount.toString())
+            assertEquals("owes ${printed.text}", Balance.Owes(amount).toString())
+            assertEquals("gets back ${printed.text}", Balance.GetsBack(amount).toString())
+        }
+        assertEquals("settled", Balance.Settled.toString())
+    }
+
+    /**
+     * An amount that looked its currency up by its code, rather than keeping the details the library gave, would show an app
+     * another currency than the library's, or none for a code its list lacks.
+     */
+    @Test
+    fun anAmountKeepsTheCurrencyDetailsTheLibraryGives() {
+        val details = eranos.internal.CurrencyDetails("ZZZ", "Unlisted", 999, 7u)
+        val amount = eranos.internal.Money(-5, details).converted()
+        assertEquals(-5L, amount.minorUnits)
+        assertEquals("ZZZ", amount.currency.code)
+        assertEquals("Unlisted", amount.currency.name)
+        assertEquals(999, amount.currency.numericCode)
+        assertEquals(7, amount.currency.decimalPlaces)
+        assertEquals(details, amount.generated.currency)
+        assertEquals("-0.0000005 ZZZ", amount.toString())
+    }
+
+    /**
+     * An amount in a currency whose details are not the library's for its code would be divided by another number of
+     * decimal places than the library holds, so the library refuses it. An app cannot build such a currency, whose
+     * constructor is internal; a test of the package can.
+     */
+    @Test
+    fun anAmountInCurrencyDetailsOtherThanTheLibrarysIsRefused() {
+        val flat = Flat()
+        val euro = flat.euro
+        val forgeries =
+            listOf(
+                CurrencyCode("eur", euro.name, euro.numericCode, euro.decimalPlaces),
+                CurrencyCode(euro.code, "Euro dollar", euro.numericCode, euro.decimalPlaces),
+                CurrencyCode(euro.code, euro.name, 979, euro.decimalPlaces),
+                CurrencyCode(euro.code, euro.name, euro.numericCode, 3),
+            )
+        for (forgery in forgeries) {
+            val amount = Money(1_250, forgery)
+            val sum = assertThrows<EranosException.Money> { amount + flat.euros(1) }
+            assertEquals(MoneyFailure.UnknownCurrency, sum.failure)
+            val taxi =
+                Expense("Taxi", Cost.Local(amount), Split.Equal(listOf(flat.ana)), ExpenseSplit.Whole(Split.Equal(listOf(flat.bob))), flat.day)
+            val added = assertThrows<EranosException.Money> { flat.group.addBlocking(taxi) }
+            assertEquals(MoneyFailure.UnknownCurrency, added.failure)
+        }
+        assertEquals("1.250 EUR", Money(1_250, forgeries.last()).toString())
     }
 
     /**
@@ -242,26 +304,35 @@ class ValuesTest {
     }
 
     /**
-     * A value the library never sends, such as an amount in a currency it does not list, would throw from its text instead of
-     * printing.
+     * A value the library never sends, such as a percentage below zero, would throw from its text instead of printing.
      */
     @Test
     fun aValueTheLibraryNeverSendsStillPrints() {
-        val unlisted = CurrencyCode.known("XYZ")
-        assertEquals("XYZ", unlisted.code)
-        assertEquals("XYZ", unlisted.name)
-        assertEquals(0, unlisted.numericCode)
-        assertEquals(0, unlisted.decimalPlaces)
-        assertEquals("5 XYZ", Money(5, unlisted).toString())
         assertEquals("-1 bp", Percentage(-1).toString())
         assertEquals("0/100", Parts(0).toString())
         assertEquals("2026/2/30", CalendarDate(2026, 2, 30).toString())
         assertEquals("25h0", TimeOfDay(25, 0).toString())
         assertEquals("0712", PhoneNumber("0712").toString())
         assertEquals("XY", Iban("XY").countryCode)
-        assertTrue("XYZ" in Balance.Owes(Money(1, unlisted)).toString())
     }
 }
+
+/** [minorUnits] in the currency of [code], which has [decimalPlaces] decimal places, beside the text the library writes. */
+private data class PrintedAmount(
+    val minorUnits: Long,
+    val code: String,
+    val decimalPlaces: Int,
+    val text: String,
+)
+
+/** An amount in a currency with each number of decimal places that ISO 4217 lists, from none to four. */
+private val printedAmounts: List<PrintedAmount> =
+    listOf(
+        PrintedAmount(minorUnits = -1_234, code = "JPY", decimalPlaces = 0, text = "-1234 JPY"),
+        PrintedAmount(minorUnits = 1_250, code = "EUR", decimalPlaces = 2, text = "12.50 EUR"),
+        PrintedAmount(minorUnits = -5, code = "BHD", decimalPlaces = 3, text = "-0.005 BHD"),
+        PrintedAmount(minorUnits = 12_345, code = "CLF", decimalPlaces = 4, text = "1.2345 CLF"),
+    )
 
 /** Text the library refuses as an identifier, with the failure and the message it reports. */
 private data class IdentifierRefusal(

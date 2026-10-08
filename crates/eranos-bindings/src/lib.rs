@@ -9,11 +9,15 @@
 //! every call here, converting nothing and deciding nothing, so everything
 //! that can be wrong is in this crate, where Rust tests reach it. Values
 //! cross as records of text and integers: identifiers as their text, which
-//! for a generated one is a UUID v7 in lowercase hyphenated form,
-//! currencies as ISO 4217 codes, exchange rates as decimals, amounts as
-//! 64-bit minor units, percentages in basis points, and parts in hundredths.
-//! Every value is checked by the library's own rules on its way in, so a bad
-//! one is a typed [`EranosError`]. Every entry and every new group carries
+//! for a generated one is a UUID v7 in lowercase hyphenated form, a
+//! currency a caller names on its own as its ISO 4217 code, and one the
+//! library answers with, in an amount or as the group currency, as its
+//! [`CurrencyDetails`], exchange rates as decimals, amounts as 64-bit minor
+//! units with their currency's details, percentages in basis points, and
+//! parts in hundredths. Every value is checked by the library's own rules on
+//! its way in, so a bad one is a typed [`EranosError`]: an amount whose
+//! currency details are not the library's for its code is refused with
+//! [`MoneyFailure::UnknownCurrency`]. Every entry and every new group carries
 //! the identifier the app gives it: its own, or one [`identifier_generate`]
 //! returns.
 //!

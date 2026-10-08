@@ -47,7 +47,7 @@ static inline void eranosCurrencyDetailsName(EranosCurrencyDetails const *const 
 ///
 /// @param details The currency details
 /// @return How many decimal places its amounts have
-[[nodiscard]] static inline int32_t eranosCurrencyDetailsDecimalPlaces(EranosCurrencyDetails const *const details) {
+[[nodiscard]] static inline uint8_t eranosCurrencyDetailsDecimalPlaces(EranosCurrencyDetails const *const details) {
     return EranosCurrencyDetails_decimal_places(details);
 }
 

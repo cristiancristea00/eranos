@@ -232,6 +232,104 @@ fn display_handles_the_extremes() {
     );
 }
 
+/// The text of an amount, beside its minor units and decimal places.
+struct Formatted {
+    minor_units: i64,
+    decimal_places: u8,
+    text: &'static str,
+}
+
+/// An amount of a currency with more decimal places than ISO 4217 lists
+/// today would overflow while it is written, or be written with the point
+/// in another place.
+#[test]
+fn minor_units_format_at_any_number_of_decimal_places() {
+    for Formatted {
+        minor_units,
+        decimal_places,
+        text,
+    } in [
+        Formatted {
+            minor_units: 0,
+            decimal_places: 0,
+            text: "0",
+        },
+        Formatted {
+            minor_units: 0,
+            decimal_places: 2,
+            text: "0.00",
+        },
+        Formatted {
+            minor_units: -5,
+            decimal_places: 3,
+            text: "-0.005",
+        },
+        Formatted {
+            minor_units: 12_345,
+            decimal_places: 4,
+            text: "1.2345",
+        },
+        Formatted {
+            minor_units: i64::MAX,
+            decimal_places: 18,
+            text: "9.223372036854775807",
+        },
+        // From 19 places, `10^places` no longer fits an `i64`.
+        Formatted {
+            minor_units: i64::MIN,
+            decimal_places: 19,
+            text: "-0.9223372036854775808",
+        },
+        Formatted {
+            minor_units: i64::MAX,
+            decimal_places: 20,
+            text: "0.09223372036854775807",
+        },
+    ] {
+        assert_eq!(
+            format_minor_units(minor_units, decimal_places).to_string(),
+            text,
+            "{minor_units} at {decimal_places} places"
+        );
+    }
+    let most = format_minor_units(1, u8::MAX).to_string();
+    assert_eq!(most, format!("0.{}1", "0".repeat(254)));
+
+    // At every number of places, the digits are the amount's, the point
+    // leaves that many after it, and one digit stands before it.
+    for decimal_places in 0..=u8::MAX {
+        for minor_units in [0, 1, -1, 1_234, i64::MIN, i64::MAX] {
+            let text = format_minor_units(minor_units, decimal_places).to_string();
+            let unsigned = text.strip_prefix('-').unwrap_or(&text);
+            assert_eq!(text.starts_with('-'), 0 > minor_units, "{text}");
+            let (whole, fraction) = unsigned.split_once('.').unwrap_or((unsigned, ""));
+            assert_eq!(fraction.len(), usize::from(decimal_places), "{text}");
+            assert!(1 == whole.len() || !whole.starts_with('0'), "{text}");
+            let digits = format!("{whole}{fraction}");
+            assert_eq!(
+                digits.parse::<u128>(),
+                Ok(u128::from(minor_units.unsigned_abs())),
+                "{text}"
+            );
+        }
+    }
+}
+
+/// The text form of an amount and the formatter the bindings write it with
+/// would drift apart.
+#[test]
+fn display_writes_the_amount_as_the_formatter_does() {
+    for &currency in CurrencyCode::all() {
+        for minor_units in [0, 1, -1, 1_234, -1_234, i64::MIN, i64::MAX] {
+            let amount = format_minor_units(minor_units, currency.decimal_places());
+            assert_eq!(
+                Money::from_minor_units(minor_units, currency).to_string(),
+                format!("{amount} {}", currency.code())
+            );
+        }
+    }
+}
+
 /// Balances would be classified as owed, owing, or settled wrongly.
 #[test]
 fn sign_checks_follow_the_minor_units() {

@@ -23,6 +23,7 @@
 #include "eranos/detail/EranosCostKind.hpp"
 #include "eranos/detail/EranosCurrencyDetails.hpp"
 #include "eranos/detail/EranosCurrencyDetailsList.hpp"
+#include "eranos/detail/EranosCurrencyDetailsOutcome.hpp"
 #include "eranos/detail/EranosCurrencyRate.hpp"
 #include "eranos/detail/EranosCurrencyRateList.hpp"
 #include "eranos/detail/EranosEmail.hpp"

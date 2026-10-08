@@ -595,12 +595,12 @@ public abstract sealed class EranosException extends Exception
             case eranos.internal.MoneyFailure.InvalidAmount _ -> new MoneyFailure.InvalidAmount();
             case eranos.internal.MoneyFailure.TooManyDecimals tooManyDecimals ->
                     new MoneyFailure.TooManyDecimals(
-                            CurrencyCode.known(tooManyDecimals.currency()),
+                            CurrencyCode.converted(tooManyDecimals.currency()),
                             tooManyDecimals.allowed());
             case eranos.internal.MoneyFailure.CurrencyMismatch currencyMismatch ->
                     new MoneyFailure.CurrencyMismatch(
-                            CurrencyCode.known(currencyMismatch.left()),
-                            CurrencyCode.known(currencyMismatch.right()));
+                            CurrencyCode.converted(currencyMismatch.left()),
+                            CurrencyCode.converted(currencyMismatch.right()));
             case eranos.internal.MoneyFailure.UnknownCurrency _ ->
                     new MoneyFailure.UnknownCurrency();
             case eranos.internal.MoneyFailure.InvalidExchangeRate _ ->
@@ -637,8 +637,8 @@ public abstract sealed class EranosException extends Exception
                     new ExpenseFailure.NonPositiveAmount();
             case eranos.internal.ExpenseFailure.CurrencyMismatch currencyMismatch ->
                     new ExpenseFailure.CurrencyMismatch(
-                            CurrencyCode.known(currencyMismatch.expected()),
-                            CurrencyCode.known(currencyMismatch.found()));
+                            CurrencyCode.converted(currencyMismatch.expected()),
+                            CurrencyCode.converted(currencyMismatch.found()));
             case eranos.internal.ExpenseFailure.EmptySplit _ -> new ExpenseFailure.EmptySplit();
             case eranos.internal.ExpenseFailure.DuplicateMember duplicateMember ->
                     new ExpenseFailure.DuplicateMember(new MemberId(duplicateMember.member()));
@@ -704,12 +704,12 @@ public abstract sealed class EranosException extends Exception
                     new ExpenseGroupFailure.EmptyName();
             case eranos.internal.ExpenseGroupFailure.MissingExchangeRate missingExchangeRate ->
                     new ExpenseGroupFailure.MissingExchangeRate(
-                            CurrencyCode.known(missingExchangeRate.currency()));
+                            CurrencyCode.converted(missingExchangeRate.currency()));
             case eranos.internal.ExpenseGroupFailure.UnexpectedExchangeRate _ ->
                     new ExpenseGroupFailure.UnexpectedExchangeRate();
             case eranos.internal.ExpenseGroupFailure.DuplicateExchangeRate duplicateExchangeRate ->
                     new ExpenseGroupFailure.DuplicateExchangeRate(
-                            CurrencyCode.known(duplicateExchangeRate.currency()));
+                            CurrencyCode.converted(duplicateExchangeRate.currency()));
             case eranos.internal.ExpenseGroupFailure.DuplicateMember duplicateMember ->
                     new ExpenseGroupFailure.DuplicateMember(new MemberId(duplicateMember.member()));
             case eranos.internal.ExpenseGroupFailure.UnknownMember unknownMember ->

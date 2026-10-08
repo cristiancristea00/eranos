@@ -6,6 +6,7 @@
 
 #include "EranosExpenseGroupReader.h"
 #include "eranos/category.h"
+#include "eranos/currency_code.h"
 #include "eranos/detail.h"
 #include "eranos/expense.h"
 #include "eranos/members.h"
@@ -64,16 +65,16 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The ISO 4217 code of the group currency. Writes it into @p currency.
+/// The group currency, with what ISO 4217 says of it.
 ///
 /// @param reader The group reader
-/// @param currency Receives the currency, replacing what it held
+/// @param currency Receives the currency details on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_RELEASED after
 ///   eranosExpenseGroupReaderRelease()
-[[nodiscard]] static inline EranosError *eranosExpenseGroupReaderCurrency(EranosExpenseGroupReader const *const reader, EranosText *const currency) {
-    eranosDetailClear(currency);
-    EranosExpenseGroupReader_currency_result const result = EranosExpenseGroupReader_currency(reader, currency);
-    eranosDetailFinish(currency);
+[[nodiscard]] static inline EranosError *eranosExpenseGroupReaderCurrency(EranosExpenseGroupReader const *const reader,
+                                                                          EranosCurrencyDetails **const currency) {
+    EranosExpenseGroupReader_currency_result const result = EranosExpenseGroupReader_currency(reader);
+    *currency = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

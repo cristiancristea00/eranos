@@ -35,7 +35,7 @@ await initialised;
 
 /** `minorUnits` cents. */
 function euros(minorUnits: bigint): Money {
-    return new Money(minorUnits, CurrencyCode.known('EUR'));
+    return new Money(minorUnits, CurrencyCode.of('EUR'));
 }
 
 /** A module's subclass of {@link EranosError}, whose instances hold the module's failure. */
@@ -120,19 +120,19 @@ const conversions: readonly Conversion[] = [
     },
     {
         generated: new internal.EranosError.Money({
-            failure: new internal.MoneyFailure.TooManyDecimals({ currency: 'RON', allowed: 29n }),
+            failure: new internal.MoneyFailure.TooManyDecimals({ currency: internal.currencyDetails('RON'), allowed: 29n }),
             detail: 'detail',
         }),
         type: MoneyError,
-        failure: { kind: 'tooManyDecimals', currency: CurrencyCode.known('RON'), allowed: 29 },
+        failure: { kind: 'tooManyDecimals', currency: CurrencyCode.of('RON'), allowed: 29 },
     },
     {
         generated: new internal.EranosError.Money({
-            failure: new internal.MoneyFailure.CurrencyMismatch({ left: 'RON', right: 'USD' }),
+            failure: new internal.MoneyFailure.CurrencyMismatch({ left: internal.currencyDetails('RON'), right: internal.currencyDetails('USD') }),
             detail: 'detail',
         }),
         type: MoneyError,
-        failure: { kind: 'currencyMismatch', left: CurrencyCode.known('RON'), right: CurrencyCode.known('USD') },
+        failure: { kind: 'currencyMismatch', left: CurrencyCode.of('RON'), right: CurrencyCode.of('USD') },
     },
     {
         generated: new internal.EranosError.Money({ failure: new internal.MoneyFailure.UnknownCurrency(), detail: 'detail' }),
@@ -176,11 +176,14 @@ const conversions: readonly Conversion[] = [
     },
     {
         generated: new internal.EranosError.Expense({
-            failure: new internal.ExpenseFailure.CurrencyMismatch({ expected: 'USD', found: 'GBP' }),
+            failure: new internal.ExpenseFailure.CurrencyMismatch({
+                expected: internal.currencyDetails('USD'),
+                found: internal.currencyDetails('GBP'),
+            }),
             detail: 'detail',
         }),
         type: ExpenseError,
-        failure: { kind: 'currencyMismatch', expected: CurrencyCode.known('USD'), found: CurrencyCode.known('GBP') },
+        failure: { kind: 'currencyMismatch', expected: CurrencyCode.of('USD'), found: CurrencyCode.of('GBP') },
     },
     {
         generated: new internal.EranosError.Expense({ failure: new internal.ExpenseFailure.EmptySplit(), detail: 'detail' }),
@@ -206,8 +209,8 @@ const conversions: readonly Conversion[] = [
     {
         generated: new internal.EranosError.Expense({
             failure: new internal.ExpenseFailure.AmountsDoNotAddUp({
-                expected: internal.Money.create({ minorUnits: 3n, currency: 'EUR' }),
-                actual: internal.Money.create({ minorUnits: 2n, currency: 'EUR' }),
+                expected: euros(3n).generated(),
+                actual: euros(2n).generated(),
             }),
             detail: 'detail',
         }),
@@ -240,8 +243,8 @@ const conversions: readonly Conversion[] = [
     {
         generated: new internal.EranosError.Expense({
             failure: new internal.ExpenseFailure.ItemsDoNotAddUp({
-                expected: internal.Money.create({ minorUnits: 8n, currency: 'EUR' }),
-                actual: internal.Money.create({ minorUnits: 7n, currency: 'EUR' }),
+                expected: euros(8n).generated(),
+                actual: euros(7n).generated(),
             }),
             detail: 'detail',
         }),
@@ -288,11 +291,11 @@ const conversions: readonly Conversion[] = [
     },
     {
         generated: new internal.EranosError.ExpenseGroup({
-            failure: new internal.ExpenseGroupFailure.MissingExchangeRate({ currency: 'RON' }),
+            failure: new internal.ExpenseGroupFailure.MissingExchangeRate({ currency: internal.currencyDetails('RON') }),
             detail: 'detail',
         }),
         type: ExpenseGroupError,
-        failure: { kind: 'missingExchangeRate', currency: CurrencyCode.known('RON') },
+        failure: { kind: 'missingExchangeRate', currency: CurrencyCode.of('RON') },
     },
     {
         generated: new internal.EranosError.ExpenseGroup({ failure: new internal.ExpenseGroupFailure.UnexpectedExchangeRate(), detail: 'detail' }),
@@ -301,11 +304,11 @@ const conversions: readonly Conversion[] = [
     },
     {
         generated: new internal.EranosError.ExpenseGroup({
-            failure: new internal.ExpenseGroupFailure.DuplicateExchangeRate({ currency: 'GBP' }),
+            failure: new internal.ExpenseGroupFailure.DuplicateExchangeRate({ currency: internal.currencyDetails('GBP') }),
             detail: 'detail',
         }),
         type: ExpenseGroupError,
-        failure: { kind: 'duplicateExchangeRate', currency: CurrencyCode.known('GBP') },
+        failure: { kind: 'duplicateExchangeRate', currency: CurrencyCode.of('GBP') },
     },
     {
         generated: new internal.EranosError.ExpenseGroup({

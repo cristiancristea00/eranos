@@ -13,16 +13,16 @@ use crate::EranosError;
 pub struct Money {
     /// The amount in minor units: cents for the euro, none for the yen.
     pub minor_units: i64,
-    /// The ISO 4217 code of the currency.
-    pub currency: String,
+    /// The currency, with what ISO 4217 says of it.
+    pub currency: CurrencyDetails,
 }
 
 impl Money {
     /// The record of `money`.
     pub(crate) fn from_library(money: library::Money) -> Self {
         Self {
-            currency: money.currency().code().to_owned(),
             minor_units: money.minor_units(),
+            currency: CurrencyDetails::from_library(money.currency()),
         }
     }
 
@@ -31,11 +31,13 @@ impl Money {
     /// # Errors
     ///
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
-    /// for a code that is not an ISO 4217 currency with minor units.
+    /// for a currency the library does not list: a code that is not an ISO
+    /// 4217 currency with minor units, or details other than the library's
+    /// for the code.
     pub(crate) fn to_library(&self) -> Result<library::Money, EranosError> {
         Ok(library::Money::from_minor_units(
             self.minor_units,
-            currency(&self.currency)?,
+            self.currency.to_library()?,
         ))
     }
 }
@@ -65,7 +67,8 @@ impl Cost {
     /// # Errors
     ///
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
-    /// for an unknown currency and
+    /// for an amount in a currency the library does not list, as for
+    /// [`Money::to_library`], and
     /// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate)
     /// for a rate that is not a positive decimal.
     pub(crate) fn to_library(&self) -> Result<library::Cost, EranosError> {
@@ -129,7 +132,7 @@ pub struct CurrencyDetails {
     /// The three-digit numeric code: 978 for the euro.
     pub numeric_code: i32,
     /// How many decimal places its minor unit has: 2 for the euro.
-    pub decimal_places: i32,
+    pub decimal_places: u8,
 }
 
 impl CurrencyDetails {
@@ -139,7 +142,34 @@ impl CurrencyDetails {
             code: currency.code().to_owned(),
             name: currency.name().to_owned(),
             numeric_code: i32::from(currency.numeric_code()),
-            decimal_places: i32::from(currency.decimal_places()),
+            decimal_places: currency.decimal_places(),
+        }
+    }
+
+    /// The library's currency of these details.
+    ///
+    /// # Errors
+    ///
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// for a code that names no currency with minor units, and for details
+    /// other than the library's for the code, a code in lower case included:
+    /// such details name no currency the library lists.
+    pub(crate) fn to_library(&self) -> Result<library::CurrencyCode, EranosError> {
+        let Self {
+            code,
+            name,
+            numeric_code,
+            decimal_places,
+        } = self;
+        let currency = library::CurrencyCode::from_code(code)?;
+        if currency.code() == code
+            && currency.name() == name
+            && i32::from(currency.numeric_code()) == *numeric_code
+            && currency.decimal_places() == *decimal_places
+        {
+            Ok(currency)
+        } else {
+            Err(MoneyError::UnknownCurrency.into())
         }
     }
 }

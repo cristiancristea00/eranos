@@ -50,7 +50,7 @@ class ExpenseGroupReader final {
     ///   module that refused it
     [[nodiscard]] std::expected<std::optional<Category>, Error> category(CategoryId const &id) const noexcept;
 
-    /// The ISO 4217 code of the group currency.
+    /// The group currency, with what the library knows of it.
     ///
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<CurrencyCode, Error> currency() const noexcept;
@@ -170,7 +170,9 @@ inline std::expected<std::optional<Category>, Error> ExpenseGroupReader::categor
 }
 
 inline std::expected<CurrencyCode, Error> ExpenseGroupReader::currency() const noexcept {
-    return detail::expectedOf(handle->currency()).transform([](std::string const &code) noexcept { return detail::listedCurrency(code); });
+    return detail::expectedOf(handle->currency()).transform([](std::unique_ptr<detail::EranosCurrencyDetails> details) noexcept {
+        return detail::currencyOf(std::move(details));
+    });
 }
 
 inline std::expected<std::vector<Expense>, Error> ExpenseGroupReader::expenses() const noexcept {

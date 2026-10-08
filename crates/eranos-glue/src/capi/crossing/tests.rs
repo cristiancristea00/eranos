@@ -58,6 +58,10 @@ fn every_type_crosses_by_its_kind() {
         Crossing::Integer(format_ident!("i64"))
     );
     assert_eq!(
+        crossing("u8").unwrap(),
+        Crossing::Integer(format_ident!("u8"))
+    );
+    assert_eq!(
         crossing("CalendarDate").unwrap(),
         Crossing::Plain(format_ident!("CalendarDate"))
     );
@@ -80,6 +84,7 @@ fn every_type_crosses_by_its_kind() {
     );
     for refused in [
         "f64",
+        "u32",
         "(i32, i32)",
         "Box<String>",
         "Vec<i32>",

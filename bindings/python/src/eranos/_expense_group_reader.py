@@ -5,7 +5,7 @@ from typing import Self, final
 
 from eranos._contact import Language
 from eranos._crossing import optional
-from eranos._currency_code import CurrencyCode
+from eranos._currency_code import CurrencyCode, currency_of
 from eranos._entries import Category, Expense, Member, Transfer, category_of, expense_of, member_of, transfer_of
 from eranos._errors import library_errors
 from eranos._identifiers import CategoryId, ExpenseId, ExpenseGroupId, MemberId, TransferId
@@ -127,7 +127,7 @@ class ExpenseGroupReader:
 
         """
         with library_errors():
-            return CurrencyCode(self._handle.currency())
+            return currency_of(self._handle.currency())
 
     def expenses(self) -> tuple[Expense, ...]:
         """

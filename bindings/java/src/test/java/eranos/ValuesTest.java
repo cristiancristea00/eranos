@@ -8,6 +8,7 @@ package eranos;
 import static eranos.Flat.assertValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,7 +41,7 @@ class ValuesTest {
         assertEquals(2, euro.decimalPlaces());
         assertTrue(CurrencyCode.all().contains(euro));
         CurrencyCode lei = CurrencyCode.of("RON");
-        assertValue(euro, CurrencyCode.known("EUR"), lei);
+        assertValue(euro, CurrencyCode.of("EUR"), lei);
         EranosException.Money unknown =
                 assertThrows(EranosException.Money.class, () -> CurrencyCode.of("XYZ"));
         assertEquals(new MoneyFailure.UnknownCurrency(), unknown.failure());
@@ -61,6 +62,88 @@ class ValuesTest {
                 EranosException.Money.class,
                 () -> new Money(Long.MIN_VALUE, euro).minus(new Money(1, euro)));
         assertThrows(EranosException.Money.class, () -> Money.parse("twelve", euro));
+    }
+
+    /**
+     * An amount whose currency was looked up by its code would show an app the decimal places, the
+     * name, or the numeric code of the library's currency of that code instead of those the library
+     * sent with it, and decimal places read as a signed byte would turn negative from 128.
+     */
+    @Test
+    void anAmountCarriesTheDetailsOfItsCurrencyAsTheLibrarySendsThem() {
+        eranos.internal.CurrencyDetails sent =
+                new eranos.internal.CurrencyDetails("EUR", "Sent euro", 999, (byte) 3);
+        Money amount = Money.converted(new eranos.internal.Money(-1_234, sent));
+        assertEquals(-1_234, amount.minorUnits());
+        CurrencyCode currency = amount.currency();
+        assertEquals("EUR", currency.code());
+        assertEquals("Sent euro", currency.name());
+        assertEquals(999, currency.numericCode());
+        assertEquals(3, currency.decimalPlaces());
+        assertEquals("-1.234 EUR", amount.toString());
+        assertEquals(new eranos.internal.Money(-1_234, sent), amount.generated());
+
+        eranos.internal.CurrencyDetails manyPlaces =
+                new eranos.internal.CurrencyDetails("XYZ", "Unlisted", 999, (byte) 200);
+        CurrencyCode unlisted = CurrencyCode.converted(manyPlaces);
+        assertEquals(200, unlisted.decimalPlaces());
+        assertEquals(manyPlaces, unlisted.generated());
+    }
+
+    /** An amount in a currency with another number of places, beside the library's text for it. */
+    private record AmountText(Money amount, String text) {}
+
+    /**
+     * An amount written with other decimal places than its currency's would show an app another
+     * amount than the group holds.
+     */
+    @Test
+    void amountsWriteTheDecimalPlacesOfTheirCurrency() throws EranosException {
+        List<AmountText> amounts =
+                List.of(
+                        new AmountText(new Money(1_234, CurrencyCode.of("JPY")), "1234 JPY"),
+                        new AmountText(new Money(1_234, CurrencyCode.of("EUR")), "12.34 EUR"),
+                        new AmountText(new Money(1_234, CurrencyCode.of("BHD")), "1.234 BHD"),
+                        new AmountText(new Money(1_234, CurrencyCode.of("CLF")), "0.1234 CLF"));
+        for (AmountText written : amounts) {
+            assertEquals(written.text(), written.amount().toString());
+        }
+        assertEquals(
+                List.of(0, 2, 3, 4),
+                amounts.stream()
+                        .map(written -> written.amount().currency().decimalPlaces())
+                        .toList());
+    }
+
+    /**
+     * An amount whose currency's details are not the library's for its code would reach the library
+     * as the library's currency of that code, and the group would hold another amount than the app
+     * showed. The layer's public types build no such currency: only the details the library sends
+     * do.
+     */
+    @Test
+    void anAmountWhoseCurrencyIsNotTheLibrarysIsRefused() throws EranosException {
+        Flat flat = new Flat();
+        CurrencyCode altered =
+                CurrencyCode.converted(
+                        new eranos.internal.CurrencyDetails("EUR", "Euro", 978, (byte) 3));
+        assertNotEquals(flat.euro, altered);
+        Money amount = new Money(1_000, altered);
+        EranosException.Money added =
+                assertThrows(EranosException.Money.class, () -> amount.plus(flat.euros(1)));
+        assertEquals(new MoneyFailure.UnknownCurrency(), added.failure());
+        EranosException.Money transferred =
+                assertThrows(
+                        EranosException.Money.class,
+                        () ->
+                                flat.group.addTransfer(
+                                        Transfer.builder(
+                                                        flat.bob,
+                                                        flat.ana,
+                                                        new Cost.Local(amount),
+                                                        flat.day)
+                                                .build()));
+        assertEquals(new MoneyFailure.UnknownCurrency(), transferred.failure());
     }
 
     /**
@@ -278,17 +361,11 @@ class ValuesTest {
     }
 
     /**
-     * A value the library never sends, such as an amount in a currency it does not list, would
-     * throw from its text instead of printing.
+     * A value the library never sends, such as a negative percentage, would throw from its text
+     * instead of printing.
      */
     @Test
     void aValueTheLibraryNeverSendsStillPrints() {
-        CurrencyCode unlisted = CurrencyCode.known("XYZ");
-        assertEquals("XYZ", unlisted.code());
-        assertEquals("XYZ", unlisted.name());
-        assertEquals(0, unlisted.numericCode());
-        assertEquals(0, unlisted.decimalPlaces());
-        assertEquals("5 XYZ", new Money(5, unlisted).toString());
         assertEquals("-1 bp", Percentage.known(-1).toString());
         assertEquals("0/100", Parts.known(0).toString());
         assertEquals(
@@ -297,6 +374,5 @@ class ValuesTest {
         assertEquals("25h0", TimeOfDay.converted(new eranos.internal.TimeOfDay(25, 0)).toString());
         assertEquals("0712", PhoneNumber.known("0712").toString());
         assertEquals("XY", Iban.known("XY").countryCode());
-        assertTrue(new Balance.Owes(new Money(1, unlisted)).toString().contains("XYZ"));
     }
 }

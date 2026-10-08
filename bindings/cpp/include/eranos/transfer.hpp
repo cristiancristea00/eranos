@@ -31,7 +31,7 @@ struct Transfer final {
     /// @param to The identifier of the member who was paid.
     /// @param cost What was paid.
     /// @param date The day it was paid.
-    inline constexpr Transfer(TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate const date) noexcept
+    inline Transfer(TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate const date) noexcept
         : id(std::move(id)), from(std::move(from)), to(std::move(to)), cost(std::move(cost)), date(date) {}
 
     /// The record of its required fields under an identifier generated when it is called, which

@@ -42,7 +42,7 @@ struct ExpenseItem final {
     /// @param name What was bought.
     /// @param unitPrice The price of one unit, in the expense's currency.
     /// @param split How the line's total divides.
-    inline constexpr ExpenseItem(std::string name, Money unitPrice, Split split) noexcept
+    inline ExpenseItem(std::string name, Money unitPrice, Split split) noexcept
         : name(std::move(name)), unitPrice(std::move(unitPrice)), split(std::move(split)) {}
 
     /// What was bought.
@@ -196,7 +196,7 @@ struct Expense final {
     /// @param payers Who paid the total, amount and tip, and how much each.
     /// @param split How the amount is shared.
     /// @param date The day it was bought.
-    inline constexpr Expense(ExpenseId id, std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
+    inline Expense(ExpenseId id, std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
         : id(std::move(id)), name(std::move(name)), cost(std::move(cost)), payers(std::move(payers)), split(std::move(split)), date(date) {}
 
     /// The record of its required fields under an identifier generated when it is called, which

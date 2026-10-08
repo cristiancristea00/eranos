@@ -45,7 +45,7 @@ public record Money(long minorUnits, CurrencyCode currency) {
      * @return the amount
      */
     static Money converted(eranos.internal.Money money) {
-        return new Money(money.minorUnits(), CurrencyCode.known(money.currency()));
+        return new Money(money.minorUnits(), CurrencyCode.converted(money.currency()));
     }
 
     /**
@@ -54,7 +54,7 @@ public record Money(long minorUnits, CurrencyCode currency) {
      * @return the generated amount
      */
     eranos.internal.Money generated() {
-        return new eranos.internal.Money(minorUnits, currency.code());
+        return new eranos.internal.Money(minorUnits, currency.generated());
     }
 
     /**
@@ -83,16 +83,12 @@ public record Money(long minorUnits, CurrencyCode currency) {
     }
 
     /**
-     * The amount as the library writes it.
+     * The amount as the library writes it, with the decimal places of its currency.
      *
      * @return the text: "12.50 EUR"
      */
     @Override
     public String toString() {
-        try {
-            return Eranos.moneyFormat(generated());
-        } catch (eranos.internal.EranosException exception) {
-            return minorUnits + " " + currency.code();
-        }
+        return Eranos.moneyFormat(generated());
     }
 }

@@ -286,7 +286,7 @@ export class ExpenseGroup implements Disposable {
      * @returns A promise of the currency
      */
     async currency(options?: CallOptions): Promise<CurrencyCode> {
-        return CurrencyCode.known(await awaiting((signal) => this.handle.currencyAsync(undefined, signal), options));
+        return CurrencyCode.converted(await awaiting((signal) => this.handle.currencyAsync(undefined, signal), options));
     }
 
     /**
@@ -298,7 +298,7 @@ export class ExpenseGroup implements Disposable {
      * @returns The currency
      */
     currencySync(): CurrencyCode {
-        return CurrencyCode.known(calling(() => this.handle.currency()));
+        return CurrencyCode.converted(calling(() => this.handle.currency()));
     }
 
     /**

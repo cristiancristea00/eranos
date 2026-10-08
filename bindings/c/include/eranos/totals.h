@@ -88,13 +88,10 @@ typedef struct EranosBalance EranosBalance;
 ///
 /// @param balance The balance
 /// @param text Receives the text, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a
-///   currency the library does not list
-[[nodiscard]] static inline EranosError *eranosBalanceFormat(EranosBalance const *const balance, EranosText *const text) {
+static inline void eranosBalanceFormat(EranosBalance const *const balance, EranosText *const text) {
     eranosDetailClear(text);
-    EranosBalance_format_result const result = EranosBalance_format(balance, text);
+    EranosBalance_format(balance, text);
     eranosDetailFinish(text);
-    return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
 /// Destroys @p balance; destroying nullptr does nothing, as free() does.

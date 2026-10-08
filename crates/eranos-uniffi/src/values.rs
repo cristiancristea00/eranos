@@ -52,11 +52,12 @@ pub(crate) fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> 
 
 /// The amount as the library writes it: "12.50 EUR".
 ///
-/// # Errors
-///
-/// `MoneyFailure::UnknownCurrency`.
+/// It writes the minor units with the decimal places the record's currency
+/// details give, then the code, as the library's text form of an amount
+/// does, so it cannot fail.
+#[must_use]
 #[uniffi::export]
-pub(crate) fn money_format(money: &Money) -> Result<String, EranosError> {
+pub(crate) fn money_format(money: &Money) -> String {
     eranos_bindings::money_format(money)
 }
 
@@ -64,7 +65,8 @@ pub(crate) fn money_format(money: &Money) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// `MoneyFailure::UnknownCurrency`,
+/// `MoneyFailure::UnknownCurrency` for an amount in a currency the library
+/// does not list, or whose details are not the library's for its code,
 /// `MoneyFailure::CurrencyMismatch`,
 /// and `MoneyFailure::Overflow`.
 #[uniffi::export]
@@ -98,7 +100,9 @@ pub(crate) fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
 /// # Errors
 ///
 /// `MoneyFailure::InvalidExchangeRate`,
-/// `MoneyFailure::UnknownCurrency`, and
+/// `MoneyFailure::UnknownCurrency` for a code the library does not list and
+/// for an amount whose currency details are not the library's for its
+/// code, and
 /// `MoneyFailure::Overflow`.
 #[uniffi::export]
 pub(crate) fn exchange_rate_convert(
@@ -202,13 +206,14 @@ pub(crate) fn language_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::language_parse(text)
 }
 
-/// The balance as the library writes it: "owes 12.00 EUR".
+/// The balance as the library writes it: "owes 12.00 EUR", "settled", or
+/// "gets back 12.00 EUR".
 ///
-/// # Errors
-///
-/// `MoneyFailure::UnknownCurrency`.
+/// It writes the library's words around the amount as `money_format`
+/// writes it, so it cannot fail.
+#[must_use]
 #[uniffi::export]
-pub(crate) fn balance_format(balance: &Balance) -> Result<String, EranosError> {
+pub(crate) fn balance_format(balance: &Balance) -> String {
     eranos_bindings::balance_format(balance)
 }
 
@@ -305,8 +310,10 @@ pub(crate) fn tip_rule_none() -> TipRule {
 ///
 /// # Errors
 ///
-/// The errors of the cost's and the tip's conversions, and those of
-/// the library's `TipRule::amount_on`.
+/// The errors of the cost's and the tip's conversions, among them
+/// `MoneyFailure::UnknownCurrency` for an amount whose currency details are
+/// not the library's for its code, and those of the library's
+/// `TipRule::amount_on`.
 #[uniffi::export]
 pub(crate) fn expense_tip_amount(expense: &Expense) -> Result<Money, EranosError> {
     eranos_bindings::expense_tip_amount(expense)
@@ -329,7 +336,9 @@ pub(crate) fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
 ///
 /// # Errors
 ///
-/// The errors of the splits' and items' conversions.
+/// The errors of the splits' and items' conversions, among them
+/// `MoneyFailure::UnknownCurrency` for an amount whose currency details are
+/// not the library's for its code.
 #[uniffi::export]
 pub(crate) fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
     eranos_bindings::expense_members(expense)

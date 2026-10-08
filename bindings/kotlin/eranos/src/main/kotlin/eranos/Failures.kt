@@ -229,7 +229,7 @@ internal fun GeneratedExpenseFailure.converted(): ExpenseFailure =
     when (this) {
         GeneratedExpenseFailure.EmptyName -> ExpenseFailure.EmptyName
         GeneratedExpenseFailure.NonPositiveAmount -> ExpenseFailure.NonPositiveAmount
-        is GeneratedExpenseFailure.CurrencyMismatch -> ExpenseFailure.CurrencyMismatch(CurrencyCode.known(expected), CurrencyCode.known(found))
+        is GeneratedExpenseFailure.CurrencyMismatch -> ExpenseFailure.CurrencyMismatch(expected.converted(), found.converted())
         GeneratedExpenseFailure.EmptySplit -> ExpenseFailure.EmptySplit
         is GeneratedExpenseFailure.DuplicateMember -> ExpenseFailure.DuplicateMember(MemberId(member))
         is GeneratedExpenseFailure.NonPositiveShare -> ExpenseFailure.NonPositiveShare(MemberId(member))
@@ -484,9 +484,9 @@ internal fun GeneratedExpenseGroupFailure.converted(): ExpenseGroupFailure =
     when (this) {
         is GeneratedExpenseGroupFailure.UnsupportedFormat -> ExpenseGroupFailure.UnsupportedFormat(format)
         GeneratedExpenseGroupFailure.EmptyName -> ExpenseGroupFailure.EmptyName
-        is GeneratedExpenseGroupFailure.MissingExchangeRate -> ExpenseGroupFailure.MissingExchangeRate(CurrencyCode.known(currency))
+        is GeneratedExpenseGroupFailure.MissingExchangeRate -> ExpenseGroupFailure.MissingExchangeRate(currency.converted())
         GeneratedExpenseGroupFailure.UnexpectedExchangeRate -> ExpenseGroupFailure.UnexpectedExchangeRate
-        is GeneratedExpenseGroupFailure.DuplicateExchangeRate -> ExpenseGroupFailure.DuplicateExchangeRate(CurrencyCode.known(currency))
+        is GeneratedExpenseGroupFailure.DuplicateExchangeRate -> ExpenseGroupFailure.DuplicateExchangeRate(currency.converted())
         is GeneratedExpenseGroupFailure.DuplicateMember -> ExpenseGroupFailure.DuplicateMember(MemberId(member))
         is GeneratedExpenseGroupFailure.UnknownMember -> ExpenseGroupFailure.UnknownMember(MemberId(member))
         is GeneratedExpenseGroupFailure.ArchivedMember -> ExpenseGroupFailure.ArchivedMember(MemberId(member))
@@ -614,8 +614,8 @@ public sealed interface MoneyFailure {
 internal fun GeneratedMoneyFailure.converted(): MoneyFailure =
     when (this) {
         GeneratedMoneyFailure.InvalidAmount -> MoneyFailure.InvalidAmount
-        is GeneratedMoneyFailure.TooManyDecimals -> MoneyFailure.TooManyDecimals(CurrencyCode.known(currency), allowed)
-        is GeneratedMoneyFailure.CurrencyMismatch -> MoneyFailure.CurrencyMismatch(CurrencyCode.known(left), CurrencyCode.known(right))
+        is GeneratedMoneyFailure.TooManyDecimals -> MoneyFailure.TooManyDecimals(currency.converted(), allowed)
+        is GeneratedMoneyFailure.CurrencyMismatch -> MoneyFailure.CurrencyMismatch(left.converted(), right.converted())
         GeneratedMoneyFailure.UnknownCurrency -> MoneyFailure.UnknownCurrency
         GeneratedMoneyFailure.InvalidExchangeRate -> MoneyFailure.InvalidExchangeRate
         GeneratedMoneyFailure.InvalidParts -> MoneyFailure.InvalidParts

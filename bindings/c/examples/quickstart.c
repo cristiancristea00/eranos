@@ -154,10 +154,10 @@ int main(void) {
     EranosText *const text = eranosTextCreate();
     eranosExpenseGroupName(group, text);
     title(eranosTextData(text));
-    eranosExpenseGroupCurrency(group, text);
+    Line const currency = currencyLine(eranosExpenseGroupCurrency(group));
     printFormatted("Three friends rent a cabin and buy groceries. The group keeps its books in %s, so\n"
                    "every total, balance, and payment below is in %s.",
-                   eranosTextData(text), eranosTextData(text));
+                   currency.text, currency.text);
 
     section("1. Members");
     Id const ana = addMember(group, "Ana");

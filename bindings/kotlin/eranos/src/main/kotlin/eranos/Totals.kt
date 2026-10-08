@@ -151,13 +151,13 @@ public sealed interface Balance {
         override fun hashCode(): Int = amount.hashCode()
 
         /** The balance as the library writes it: "owes 12.00 EUR". */
-        override fun toString(): String = formatted()
+        override fun toString(): String = balanceFormat(generated)
     }
 
     /** The member owes nothing and is owed nothing. */
     public object Settled : Balance {
         /** The balance as the library writes it: "settled". */
-        override fun toString(): String = formatted()
+        override fun toString(): String = balanceFormat(generated)
     }
 
     /** The others owe the member [amount]. */
@@ -172,7 +172,7 @@ public sealed interface Balance {
         override fun hashCode(): Int = amount.hashCode()
 
         /** The balance as the library writes it: "gets back 12.00 EUR". */
-        override fun toString(): String = formatted()
+        override fun toString(): String = balanceFormat(generated)
     }
 }
 
@@ -184,14 +184,6 @@ internal val Balance.generated: eranos.internal.Balance
             Balance.Settled -> eranos.internal.Balance.Settled
             is Balance.GetsBack -> eranos.internal.Balance.GetsBack(amount.generated)
         }
-
-/** The balance as the library writes it; its description by the generated code if the library cannot format its amount. */
-internal fun Balance.formatted(): String =
-    try {
-        balanceFormat(generated)
-    } catch (_: eranos.internal.EranosException) {
-        generated.toString()
-    }
 
 /** The balance the generated code holds as [this]. */
 internal fun eranos.internal.Balance.converted(): Balance =

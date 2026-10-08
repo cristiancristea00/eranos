@@ -212,7 +212,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the currency
      */
     public CurrencyCode currency() {
-        return Converting.callUnfailing(() -> CurrencyCode.known(handle.currency()));
+        return Converting.callUnfailing(() -> CurrencyCode.converted(handle.currency()));
     }
 
     /**
@@ -224,7 +224,8 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return a future of the currency
      */
     public CompletableFuture<CurrencyCode> currencyAsync() {
-        return Converting.future(handle.currencyAsync(null), value -> CurrencyCode.known(value));
+        return Converting.future(
+                handle.currencyAsync(null), value -> CurrencyCode.converted(value));
     }
 
     /**

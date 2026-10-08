@@ -3,10 +3,10 @@
 //! would reach it, and a transfer to add would lose the identifier its app
 //! gives it.
 
-use eranos::MemberId;
+use eranos::{CurrencyCode, MemberId};
 
 use super::*;
-use crate::money::Money;
+use crate::money::{CurrencyDetails, Money};
 use crate::{CalendarFailure, IdFailure, MoneyFailure, TransferFailure, identifier_generate};
 
 /// A record the library refuses, beside a check of how it refuses it.
@@ -21,6 +21,16 @@ fn ana() -> String {
 
 fn bob() -> String {
     MemberId::new("member-2").unwrap().to_string()
+}
+
+/// The details of a currency the library does not list.
+fn unlisted() -> CurrencyDetails {
+    CurrencyDetails {
+        code: "XYZ".to_owned(),
+        name: "Unlisted".to_owned(),
+        numeric_code: 999,
+        decimal_places: 2,
+    }
 }
 
 fn date() -> CalendarDate {
@@ -40,7 +50,7 @@ fn repayment() -> Transfer {
         cost: Cost::Converted {
             amount: Money {
                 minor_units: 10_000,
-                currency: "RON".to_owned(),
+                currency: CurrencyDetails::from_library(CurrencyCode::RON),
             },
             rate: "0.2".to_owned(),
         },
@@ -59,7 +69,7 @@ fn payment() -> Transfer {
         cost: Cost::Local {
             amount: Money {
                 minor_units: 1_500,
-                currency: "EUR".to_owned(),
+                currency: CurrencyDetails::from_library(CurrencyCode::EUR),
             },
         },
         date: date(),
@@ -86,7 +96,7 @@ fn refused_transfers() -> [Refusal; 6] {
                 cost: Cost::Local {
                     amount: Money {
                         minor_units: 1,
-                        currency: "XYZ".to_owned(),
+                        currency: unlisted(),
                     },
                 },
                 ..payment()

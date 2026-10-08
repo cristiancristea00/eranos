@@ -366,7 +366,10 @@ export type MoneyFailure =
           readonly right: CurrencyCode;
       }
     | {
-          /** A currency code that is not an active ISO 4217 code. */
+          /**
+           * A currency the library does not list: a code that is not an active ISO 4217 code with minor units, or an amount's
+           * currency that holds other details than the library's for its code.
+           */
           readonly kind: 'unknownCurrency';
       }
     | {
@@ -757,9 +760,9 @@ function convertedMoneyFailure(failure: internal.MoneyFailure): MoneyFailure {
         case internal.MoneyFailure_Tags.InvalidAmount:
             return { kind: 'invalidAmount' };
         case internal.MoneyFailure_Tags.TooManyDecimals:
-            return { kind: 'tooManyDecimals', currency: CurrencyCode.known(failure.inner.currency), allowed: Number(failure.inner.allowed) };
+            return { kind: 'tooManyDecimals', currency: CurrencyCode.converted(failure.inner.currency), allowed: Number(failure.inner.allowed) };
         case internal.MoneyFailure_Tags.CurrencyMismatch:
-            return { kind: 'currencyMismatch', left: CurrencyCode.known(failure.inner.left), right: CurrencyCode.known(failure.inner.right) };
+            return { kind: 'currencyMismatch', left: CurrencyCode.converted(failure.inner.left), right: CurrencyCode.converted(failure.inner.right) };
         case internal.MoneyFailure_Tags.UnknownCurrency:
             return { kind: 'unknownCurrency' };
         case internal.MoneyFailure_Tags.InvalidExchangeRate:
@@ -790,7 +793,11 @@ function convertedExpenseFailure(failure: internal.ExpenseFailure): ExpenseFailu
         case internal.ExpenseFailure_Tags.NonPositiveAmount:
             return { kind: 'nonPositiveAmount' };
         case internal.ExpenseFailure_Tags.CurrencyMismatch:
-            return { kind: 'currencyMismatch', expected: CurrencyCode.known(failure.inner.expected), found: CurrencyCode.known(failure.inner.found) };
+            return {
+                kind: 'currencyMismatch',
+                expected: CurrencyCode.converted(failure.inner.expected),
+                found: CurrencyCode.converted(failure.inner.found),
+            };
         case internal.ExpenseFailure_Tags.EmptySplit:
             return { kind: 'emptySplit' };
         case internal.ExpenseFailure_Tags.DuplicateMember:
@@ -843,11 +850,11 @@ function convertedGroupFailure(failure: internal.ExpenseGroupFailure): ExpenseGr
         case internal.ExpenseGroupFailure_Tags.EmptyName:
             return { kind: 'emptyName' };
         case internal.ExpenseGroupFailure_Tags.MissingExchangeRate:
-            return { kind: 'missingExchangeRate', currency: CurrencyCode.known(failure.inner.currency) };
+            return { kind: 'missingExchangeRate', currency: CurrencyCode.converted(failure.inner.currency) };
         case internal.ExpenseGroupFailure_Tags.UnexpectedExchangeRate:
             return { kind: 'unexpectedExchangeRate' };
         case internal.ExpenseGroupFailure_Tags.DuplicateExchangeRate:
-            return { kind: 'duplicateExchangeRate', currency: CurrencyCode.known(failure.inner.currency) };
+            return { kind: 'duplicateExchangeRate', currency: CurrencyCode.converted(failure.inner.currency) };
         case internal.ExpenseGroupFailure_Tags.DuplicateMember:
             return { kind: 'duplicateMember', member: memberId(failure.inner.member) };
         case internal.ExpenseGroupFailure_Tags.UnknownMember:

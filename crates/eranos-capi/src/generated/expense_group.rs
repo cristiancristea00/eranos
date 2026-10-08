@@ -12,8 +12,8 @@
 pub mod ffi {
     use crate::error::ffi::EranosError;
     use crate::generated::records::ffi::{
-        EranosCategory, EranosCategoryList, EranosCurrencyRateList, EranosExpense,
-        EranosExpenseList, EranosExpenseShares, EranosMember, EranosMemberList,
+        EranosCategory, EranosCategoryList, EranosCurrencyDetails, EranosCurrencyRateList,
+        EranosExpense, EranosExpenseList, EranosExpenseShares, EranosMember, EranosMemberList,
         EranosNewExpenseGroup, EranosSettlementPlan, EranosSettlementStrategy, EranosSummary,
         EranosTransfer, EranosTransferList,
     };
@@ -111,6 +111,40 @@ pub mod ffi {
                 .as_ref()
                 .ok()
                 .map(|value| Box::new(EranosCategory(value.clone())))
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns currency details, which its callback
+    /// receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosCurrencyDetailsOutcome(
+        pub(crate) Result<eranos_bindings::CurrencyDetails, crate::Failure>,
+    );
+
+    impl EranosCurrencyDetailsOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// A copy of the currency details the call returned, if it succeeded.
+        #[must_use]
+        pub fn value(&self) -> Option<Box<EranosCurrencyDetails>> {
+            self.0
+                .as_ref()
+                .ok()
+                .map(|value| Box::new(EranosCurrencyDetails(value.clone())))
         }
     }
 
@@ -411,9 +445,10 @@ pub mod ffi {
             );
         }
 
-        /// The ISO 4217 code of the group currency. Writes it into `write`.
-        pub fn currency(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &crate::waited(self.handle.currency()));
+        /// The group currency, with what ISO 4217 says of it.
+        #[must_use]
+        pub fn currency(&self) -> Box<EranosCurrencyDetails> {
+            Box::new(EranosCurrencyDetails(crate::waited(self.handle.currency())))
         }
 
         /// The asynchronous form of `currency`: it runs on the group's worker thread, in the order
@@ -423,7 +458,7 @@ pub mod ffi {
         pub fn currency_async(
             &self,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+            callback: impl Fn(Box<EranosCurrencyDetailsOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -436,7 +471,7 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosTextOutcome,
+                EranosCurrencyDetailsOutcome,
             );
         }
 
@@ -605,6 +640,9 @@ pub mod ffi {
 
         /// Adds `expense` under its identifier, and returns the identifier. Writes it into `write`.
         ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
+        ///
         /// # Errors
         ///
         /// The library's refusal. [`EranosError`] of the kind `ExpenseGroup` with the failure
@@ -646,6 +684,9 @@ pub mod ffi {
         }
 
         /// Replaces the expense that `expense` names by its identifier, and returns it as it was.
+        ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
         ///
         /// # Errors
         ///
@@ -1314,6 +1355,9 @@ pub mod ffi {
         /// Adds `transfer` under its identifier, and returns the identifier. Writes it into
         /// `write`.
         ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
+        ///
         /// # Errors
         ///
         /// The library's refusal. [`EranosError`] of the kind `ExpenseGroup` with the failure
@@ -1358,6 +1402,9 @@ pub mod ffi {
         }
 
         /// Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
+        ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
         ///
         /// # Errors
         ///
@@ -1786,15 +1833,16 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// The ISO 4217 code of the group currency. Writes it into `write`.
+        /// The group currency, with what ISO 4217 says of it.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `Released` after `release`.
-        pub fn currency(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.currency().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn currency(&self) -> Result<Box<EranosCurrencyDetails>, Box<EranosError>> {
+            self.0
+                .currency()
+                .map(|value| Box::new(EranosCurrencyDetails(value)))
+                .map_err(crate::failed)
         }
 
         /// Every expense, in identifier order, which is creation order for generated identifiers.

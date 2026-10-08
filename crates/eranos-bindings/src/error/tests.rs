@@ -12,6 +12,7 @@ use eranos::error::{
 use eranos::{CategoryId, CurrencyCode, ExpenseId, MemberId, TransferId};
 
 use super::*;
+use crate::CurrencyDetails;
 
 /// A failure of the library, converted, beside the case it must become.
 struct Conversion {
@@ -102,8 +103,8 @@ fn conversions() -> Vec<Conversion> {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
                     failure: MoneyFailure::CurrencyMismatch {
-                        left: "USD".to_owned(),
-                        right: "GBP".to_owned(),
+                        left: CurrencyDetails::from_library(CurrencyCode::USD),
+                        right: CurrencyDetails::from_library(CurrencyCode::GBP),
                     },
                     detail: message,
                 },
@@ -174,7 +175,7 @@ fn conversions() -> Vec<Conversion> {
                 converted: EranosError::from(error),
                 expected: EranosError::Money {
                     failure: MoneyFailure::TooManyDecimals {
-                        currency: "USD".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::USD),
                         allowed: 3,
                     },
                     detail: message,
@@ -283,11 +284,11 @@ fn conversions() -> Vec<Conversion> {
                     failure: ExpenseFailure::AmountsDoNotAddUp {
                         expected: Money {
                             minor_units: 7,
-                            currency: "EUR".to_owned(),
+                            currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                         },
                         actual: Money {
                             minor_units: 6,
-                            currency: "EUR".to_owned(),
+                            currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                         },
                     },
                     detail: message,
@@ -304,8 +305,8 @@ fn conversions() -> Vec<Conversion> {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
                     failure: ExpenseFailure::CurrencyMismatch {
-                        expected: "GBP".to_owned(),
-                        found: "RON".to_owned(),
+                        expected: CurrencyDetails::from_library(CurrencyCode::GBP),
+                        found: CurrencyDetails::from_library(CurrencyCode::RON),
                     },
                     detail: message,
                 },
@@ -371,11 +372,11 @@ fn conversions() -> Vec<Conversion> {
                     failure: ExpenseFailure::ItemsDoNotAddUp {
                         expected: Money {
                             minor_units: 12,
-                            currency: "EUR".to_owned(),
+                            currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                         },
                         actual: Money {
                             minor_units: 11,
-                            currency: "EUR".to_owned(),
+                            currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                         },
                     },
                     detail: message,
@@ -584,7 +585,7 @@ fn conversions() -> Vec<Conversion> {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::DuplicateExchangeRate {
-                        currency: "USD".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::USD),
                     },
                     detail: message,
                 },
@@ -669,7 +670,7 @@ fn conversions() -> Vec<Conversion> {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::MissingExchangeRate {
-                        currency: "GBP".to_owned(),
+                        currency: CurrencyDetails::from_library(CurrencyCode::GBP),
                     },
                     detail: message,
                 },

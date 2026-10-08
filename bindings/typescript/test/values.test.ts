@@ -42,7 +42,7 @@ import {
     transferId,
 } from '../src/index.js';
 import * as internal from '../src/internal/eranos.js';
-import { initialised, refusedIdentifiers } from './flat.js';
+import { Flat, initialised, refusedIdentifiers } from './flat.js';
 
 await initialised;
 
@@ -60,6 +60,17 @@ function assertRefused(call: () => unknown, type: new (...parameters: never[]) =
     });
 }
 
+/** A currency of these details, built through the private constructor, which JavaScript, unlike TypeScript, lets a caller reach. */
+function forgedCurrency(code: string, name: string, numericCode: number, decimalPlaces: number): CurrencyCode {
+    const privateConstructor = CurrencyCode as unknown as new (
+        code: string,
+        name: string,
+        numericCode: number,
+        decimalPlaces: number,
+    ) => CurrencyCode;
+    return new privateConstructor(code, name, numericCode, decimalPlaces);
+}
+
 void describe('the currencies, amounts, ratios, dates, times, contact details, and identifiers', () => {
     /** A currency, an amount, or a check that read or wrote another way than the library's would show an app another amount than the group holds. */
     void it('reads and writes currencies and amounts as the library does', () => {
@@ -71,7 +82,6 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.equal(euro.decimalPlaces, 2);
         assert.ok(CurrencyCode.all().includes(euro));
         assert.equal(CurrencyCode.of('EUR'), euro);
-        assert.equal(CurrencyCode.known('EUR'), euro);
         assertRefused(() => CurrencyCode.of('XYZ'), MoneyError, { kind: 'unknownCurrency' }, 'unknown currency code');
         const lei = CurrencyCode.of('RON');
 
@@ -86,6 +96,83 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assertRefused(() => new Money(9_223_372_036_854_775_807n, euro).plus(new Money(1n, euro)), MoneyError);
         assertRefused(() => new Money(-9_223_372_036_854_775_808n, euro).minus(new Money(1n, euro)), MoneyError);
         assertRefused(() => Money.parse('twelve', euro), MoneyError);
+    });
+
+    /**
+     * An amount that formatted with another number of decimal places than its currency's would show an app ten or a hundred
+     * times the amount the group holds.
+     */
+    void it('formats an amount with the decimal places of its currency, from none to four', () => {
+        const yen = CurrencyCode.of('JPY');
+        const euro = CurrencyCode.of('EUR');
+        const dinar = CurrencyCode.of('BHD');
+        const unidad = CurrencyCode.of('CLF');
+        assert.deepEqual(
+            [yen, euro, dinar, unidad].map((currency) => currency.decimalPlaces),
+            [0, 2, 3, 4],
+        );
+        assert.equal(new Money(1_500n, yen).toString(), '1500 JPY');
+        assert.equal(new Money(-1_500n, yen).toString(), '-1500 JPY');
+        assert.equal(new Money(1_234n, euro).toString(), '12.34 EUR');
+        assert.equal(new Money(-5n, euro).toString(), '-0.05 EUR');
+        assert.equal(new Money(1_234n, dinar).toString(), '1.234 BHD');
+        assert.equal(new Money(5n, dinar).toString(), '0.005 BHD');
+        assert.equal(new Money(12_345n, unidad).toString(), '1.2345 CLF');
+        assert.equal(new Money(-1n, unidad).toString(), '-0.0001 CLF');
+        assert.equal(formatBalance({ kind: 'owes', amount: new Money(1_500n, yen) }), 'owes 1500 JPY');
+        assert.equal(formatBalance({ kind: 'settled' }), 'settled');
+        assert.equal(formatBalance({ kind: 'getsBack', amount: new Money(5n, dinar) }), 'gets back 0.005 BHD');
+    });
+
+    /**
+     * An amount, a failure, or a group that looked its currency up by code, rather than keeping the details the library sent,
+     * could show other details than the library's, and one that made a new object per amount would break `===`.
+     */
+    void it('keeps the currency details the library sends, one object per code, without a lookup', () => {
+        // The library lists no currency of this code, so a layer that looked the code up could not show the amount.
+        const testing = internal.CurrencyDetails.create({ code: 'XTS', name: 'Code for testing', numericCode: 963, decimalPlaces: 3 });
+        const amount = Money.converted(internal.Money.create({ minorUnits: 1_234n, currency: testing }));
+        assert.equal(amount.currency.code, 'XTS');
+        assert.equal(amount.currency.name, 'Code for testing');
+        assert.equal(amount.currency.numericCode, 963);
+        assert.equal(amount.currency.decimalPlaces, 3);
+        assert.equal(amount.toString(), '1.234 XTS');
+        assert.equal(Money.converted(internal.Money.create({ minorUnits: 1n, currency: testing })).currency, amount.currency);
+        assertRefused(() => CurrencyCode.of('XTS'), MoneyError, { kind: 'unknownCurrency' });
+
+        const euro = CurrencyCode.of('EUR');
+        const lei = CurrencyCode.of('RON');
+        const sum = new Money(1n, euro).plus(new Money(2n, euro));
+        assert.equal(sum.currency, euro);
+        assert.throws(
+            () => new Money(1n, euro).plus(new Money(1n, lei)),
+            (error: unknown) =>
+                error instanceof MoneyError &&
+                'currencyMismatch' === error.failure.kind &&
+                euro === error.failure.left &&
+                lei === error.failure.right,
+        );
+    });
+
+    /**
+     * An amount whose currency holds other details than the library's for its code, which JavaScript can build through the
+     * private constructor, would put a currency the library does not list into a group if it crossed unchecked.
+     */
+    void it("refuses an amount whose currency details are not the library's, and still prints it", () => {
+        const forged = forgedCurrency('EUR', 'Euro', 978, 3);
+        const euro = CurrencyCode.of('EUR');
+        assert.equal(new Money(1_234n, forged).toString(), '1.234 EUR');
+        assertRefused(() => new Money(1n, forged).plus(new Money(1n, euro)), MoneyError, { kind: 'unknownCurrency' }, 'unknown currency code');
+        const flat = new Flat();
+        const repayment = flat.group.transferSync(flat.repayment);
+        assert.ok(undefined !== repayment);
+        assertRefused(
+            () => flat.group.replaceTransferSync({ ...repayment, cost: { kind: 'local', amount: new Money(1_000n, forged) } }),
+            MoneyError,
+            { kind: 'unknownCurrency' },
+        );
+        assert.deepEqual(flat.group.transferSync(flat.repayment), repayment);
+        assertRefused(() => new Money(1n, euro).minus(new Money(1n, forgedCurrency('eur', 'Euro', 978, 2))), MoneyError, { kind: 'unknownCurrency' });
     });
 
     /** A rate, a percentage, or a number of parts read or written another way than the library's would divide an expense another way. */
@@ -239,20 +326,13 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.equal(transferId(text), text);
     });
 
-    /** A value the library never sends, such as an amount in a currency it does not list, would throw from its text instead of printing. */
+    /** A value the library never sends, such as a negative percentage or a date that does not exist, would throw from its text instead of printing. */
     void it('prints a value the library never sends', () => {
-        const unlisted = CurrencyCode.known('XYZ');
-        assert.equal(unlisted.code, 'XYZ');
-        assert.equal(unlisted.name, 'XYZ');
-        assert.equal(unlisted.numericCode, 0);
-        assert.equal(unlisted.decimalPlaces, 0);
-        assert.equal(new Money(5n, unlisted).toString(), '5 XYZ');
         assert.equal(Percentage.known(-1).toString(), '-1 bp');
         assert.equal(Parts.known(0).toString(), '0/100');
         assert.equal(CalendarDate.converted(internal.CalendarDate.create({ year: 2026, month: 2, day: 30 })).toString(), '2026/2/30');
         assert.equal(TimeOfDay.converted(internal.TimeOfDay.create({ hour: 25, minute: 0 })).toString(), '25h0');
         assert.equal(PhoneNumber.known('0712').toString(), '0712');
         assert.equal(Iban.known('XY').countryCode, 'XY');
-        assert.equal(formatBalance({ kind: 'owes', amount: new Money(1n, unlisted) }), 'owes 1 XYZ');
     });
 });

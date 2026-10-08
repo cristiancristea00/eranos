@@ -6,7 +6,7 @@ from typing import final, override
 # The module of errors, not its function: its conversions make amounts, so whichever of this module and it is imported
 # first finds the other partly run.
 from eranos import _errors
-from eranos._currency_code import CurrencyCode
+from eranos._currency_code import CurrencyCode, currency_of, generated_currency
 from eranos._internal import eranos as generated
 
 
@@ -16,8 +16,9 @@ class Money:
     """
     An amount: a whole number of minor units of a currency, cents for the euro.
 
-    An amount prints as the library writes it, ``12.50 EUR``, and adds and subtracts with the library's checks: both
-    amounts in one currency, and the result within the range of a 64-bit number of minor units.
+    An amount prints as the library writes it, ``12.50 EUR``, with the decimal places its currency holds, and adds and
+    subtracts with the library's checks: both amounts in one currency, and the result within the range of a 64-bit number
+    of minor units.
     """
 
     minor_units: int
@@ -102,7 +103,7 @@ def money_of(value: generated.Money) -> Money:
         The amount.
 
     """
-    return Money(value.minor_units, CurrencyCode(value.currency))
+    return Money(value.minor_units, currency_of(value.currency))
 
 
 def generated_money(money: Money) -> generated.Money:
@@ -116,4 +117,4 @@ def generated_money(money: Money) -> generated.Money:
         The generated amount.
 
     """
-    return generated.Money(minor_units=money.minor_units, currency=money.currency.code)
+    return generated.Money(minor_units=money.minor_units, currency=generated_currency(money.currency))

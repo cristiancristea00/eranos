@@ -75,7 +75,8 @@ impl Split {
     ///
     /// An [`EranosError::Id`] for a member that is not an identifier,
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
-    /// for an amount in an unknown currency,
+    /// for an amount in a currency the library does not list, as for
+    /// [`Money::to_library`],
     /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for
     /// parts that are not positive, and
     /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
@@ -334,7 +335,8 @@ impl TipRule {
     /// # Errors
     ///
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
-    /// for a fixed tip in an unknown currency, and
+    /// for a fixed tip in a currency the library does not list, as for
+    /// [`Money::to_library`], and
     /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
     /// for a negative percentage.
     pub(crate) fn to_library(&self) -> Result<library::TipRule, EranosError> {

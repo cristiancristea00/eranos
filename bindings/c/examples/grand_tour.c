@@ -398,19 +398,13 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
 }
 
 /// The currency of @p group, as its code.
-[[nodiscard]] static Line currencyOf(EranosExpenseGroup const *const group) {
-    EranosText *const text = eranosTextCreate();
-    eranosExpenseGroupCurrency(group, text);
-    Line const line = textLine(text);
-    eranosTextDestroy(text);
-    return line;
-}
+[[nodiscard]] static Line currencyOf(EranosExpenseGroup const *const group) { return currencyLine(eranosExpenseGroupCurrency(group)); }
 
 /// Zero in the currency of @p group, as the library writes it.
 [[nodiscard]] static Line zeroOf(EranosExpenseGroup const *const group) {
-    Line const currency = currencyOf(group);
-    EranosMoney *zero = nullptr;
-    must(eranosMoneyCreate(0, currency.text, &zero));
+    EranosCurrencyDetails *const currency = eranosExpenseGroupCurrency(group);
+    EranosMoney *const zero = eranosMoneyCreate(0, currency);
+    eranosCurrencyDetailsDestroy(currency);
     return moneyLine(zero);
 }
 
@@ -452,13 +446,9 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
 
 /// Whether @p left and @p right are the same amount.
 [[nodiscard]] static bool sameAmount(EranosMoney *const left, EranosMoney *const right) {
-    EranosText *const leftText = eranosTextCreate();
-    EranosText *const rightText = eranosTextCreate();
-    eranosMoneyCurrency(left, leftText);
-    eranosMoneyCurrency(right, rightText);
-    bool const same = 0 == strcmp(eranosTextData(leftText), eranosTextData(rightText)) && eranosMoneyMinorUnits(left) == eranosMoneyMinorUnits(right);
-    eranosTextDestroy(rightText);
-    eranosTextDestroy(leftText);
+    Line const leftCurrency = currencyLine(eranosMoneyCurrency(left));
+    Line const rightCurrency = currencyLine(eranosMoneyCurrency(right));
+    bool const same = 0 == strcmp(leftCurrency.text, rightCurrency.text) && eranosMoneyMinorUnits(left) == eranosMoneyMinorUnits(right);
     eranosMoneyDestroy(right);
     eranosMoneyDestroy(left);
     return same;
@@ -658,10 +648,8 @@ static void printCategories(EranosExpenseGroup const *const group) {
         return true;
     }
     EranosMoney *const amount = eranosCostAmount(cost);
-    EranosText *const text = eranosTextCreate();
-    eranosMoneyCurrency(amount, text);
-    bool const shown = 0 != strcmp(eranosTextData(text), hidden);
-    eranosTextDestroy(text);
+    Line const currency = currencyLine(eranosMoneyCurrency(amount));
+    bool const shown = 0 != strcmp(currency.text, hidden);
     eranosMoneyDestroy(amount);
     return shown;
 }
@@ -1247,9 +1235,9 @@ static void printItems(EranosExpenseGroup const *const group, Id const id) {
         Members const sharedBy = splitMembers(itemSplit);
         EranosMoney *const unitPrice = eranosExpenseItemUnitPrice(item);
         int32_t const quantity = eranosExpenseItemQuantity(item);
-        eranosMoneyCurrency(unitPrice, text);
-        EranosMoney *total = nullptr;
-        must(eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, eranosTextData(text), &total));
+        EranosCurrencyDetails *const currency = eranosMoneyCurrency(unitPrice);
+        EranosMoney *const total = eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, currency);
+        eranosCurrencyDetailsDestroy(currency);
         eranosExpenseItemName(item, text);
         addItemRow(table, &(ItemRow){
                               .name = textLine(text),
@@ -1712,10 +1700,8 @@ static void anotherCurrency(EranosExpenseGroup *const group, People const *const
 
 /// Whether @p error is the currency @p currency, as the currency it names.
 [[nodiscard]] static bool namesCurrency(EranosError const *const error, char const *const currency) {
-    EranosText *const text = eranosTextCreate();
-    bool const same = eranosErrorCurrency(error, text) && 0 == strcmp(eranosTextData(text), currency);
-    eranosTextDestroy(text);
-    return same;
+    EranosCurrencyDetails *const named = eranosErrorCurrency(error);
+    return nullptr != named && 0 == strcmp(currencyLine(named).text, currency);
 }
 
 /// Replaces an expense and a transfer and removes one of each, then shows that a change that does not fit is refused.
@@ -2351,11 +2337,9 @@ static void amounts(void) {
     EranosMoney *const yen = amountOf("1500", "JPY");
     int64_t const yenUnits = eranosMoneyMinorUnits(yen);
     Line const yenLine = moneyLine(yen);
-    EranosMoney *dinars = nullptr;
-    must(eranosMoneyCreate(1'234, "BHD", &dinars));
+    EranosMoney *const dinars = minorUnitsOf(1'234, "BHD");
     Line const dinarsLine = moneyLine(dinars);
-    EranosMoney *nothing = nullptr;
-    must(eranosMoneyCreate(0, "RON", &nothing));
+    EranosMoney *const nothing = minorUnitsOf(0, "RON");
     bool const zero = 0 == eranosMoneyMinorUnits(nothing);
     Line const nothingLine = moneyLine(nothing);
     EranosCost *const cost = convertedCost(eur("10.00"), "4.9765");
@@ -2571,6 +2555,11 @@ static void receiveUnit(void *const context, EranosError *const error) { finish(
 /// Receives text.
 static void receiveText(void *const context, EranosError *const error, EranosText *const text) { finish(context, error, text); }
 
+/// Receives a currency's details.
+static void receiveCurrency(void *const context, EranosError *const error, EranosCurrencyDetails *const currency) {
+    finish(context, error, currency);
+}
+
 /// Receives the expenses.
 static void receiveExpenses(void *const context, EranosError *const error, EranosExpenseList *const expenses) { finish(context, error, expenses); }
 
@@ -2694,14 +2683,14 @@ static void sharing(EranosExpenseGroup *const group, People const *const people)
     eranosErrorDestroy(cancelled);
     EranosSummary *const after = summaryAsync(group);
     Waiter currency;
-    EranosTextCallback const currencyCallback = {.context = waiting(&currency), .run = receiveText};
+    EranosCurrencyDetailsCallback const currencyCallback = {.context = waiting(&currency), .run = receiveCurrency};
     eranosExpenseGroupCurrencyAsync(group, nullptr, &currencyCallback);
-    EranosText *const code = awaited(&currency);
+    Line const code = currencyLine(awaited(&currency));
     Line const spent = moneyLine(eranosSummaryTotalSpent(after));
     printFormatted("While a report reads the group, a change of its currency to EUR waits for the\n"
                    "report. The app drops the waiting change, which cancels it: the group still\n"
                    "keeps its books in %s, and the trip cost %s, as the report read.",
-                   eranosTextData(code), spent.text);
+                   code.text, spent.text);
     Waiter listed;
     EranosExpenseListCallback const listedCallback = {.context = waiting(&listed), .run = receiveExpenses};
     eranosExpenseGroupExpensesAsync(group, nullptr, &listedCallback);
@@ -2711,9 +2700,8 @@ static void sharing(EranosExpenseGroup *const group, People const *const people)
     check(wasCancelled, "the change is cancelled");
     check(sameSummaries(before, after), "the cancelled change leaves the group as it was");
     check(sameAmount(eranosSummaryTotalSpent(reportedSummary), eranosSummaryTotalSpent(after)), "the report read what the group holds");
-    check(0 == strcmp(eranosTextData(code), "RON"), "the group keeps its books in RON");
+    check(0 == strcmp(code.text, "RON"), "the group keeps its books in RON");
     eranosExpenseListDestroy(expenses);
-    eranosTextDestroy(code);
     eranosSummaryDestroy(after);
     eranosSummaryDestroy(reportedSummary);
     eranosCancellationDestroy(cancellation);

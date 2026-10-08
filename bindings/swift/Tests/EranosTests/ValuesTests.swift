@@ -17,7 +17,6 @@ func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
     #expect(2 == euro.decimalPlaces)
     #expect("EUR" == euro.description)
     #expect(CurrencyCode.all.contains(euro))
-    #expect(CurrencyCode(known: "EUR") == euro)
     #expect(throws: EranosError.money(.unknownCurrency, detail: "unknown currency code")) {
         try CurrencyCode(code: "XYZ")
     }
@@ -41,6 +40,33 @@ func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
     }
     #expect(throws: EranosError.self) {
         try Money(parsing: "twelve", in: euro)
+    }
+}
+
+/// A currency's amount and the text the library writes for it.
+private struct WrittenAmount {
+    let code: String
+    let decimalPlaces: Int
+    let text: String
+}
+
+/// An amount or a balance written with other decimal places than its currency has would show
+/// an app another amount than the group holds.
+@Test
+func amountsAndBalancesWriteTheDecimalPlacesOfTheirCurrency() throws {
+    let amounts = [
+        WrittenAmount(code: "JPY", decimalPlaces: 0, text: "12345 JPY"),
+        WrittenAmount(code: "EUR", decimalPlaces: 2, text: "123.45 EUR"),
+        WrittenAmount(code: "BHD", decimalPlaces: 3, text: "12.345 BHD"),
+        WrittenAmount(code: "CLF", decimalPlaces: 4, text: "1.2345 CLF")
+    ]
+    for amount in amounts {
+        let currency = try CurrencyCode(code: amount.code)
+        #expect(amount.decimalPlaces == currency.decimalPlaces)
+        let money = Money(minorUnits: 12_345, currency: currency)
+        #expect(amount.text == money.description)
+        #expect("owes \(amount.text)" == Balance.owes(money).description)
+        #expect("gets back \(amount.text)" == Balance.getsBack(money).description)
     }
 }
 

@@ -7,8 +7,8 @@ import eranos.internal.currencyDetails
 /**
  * A currency with minor units, as ISO 4217 lists it: the only currencies an amount can be in.
  *
- * A currency comes from the library's list, so an amount in one always formats: look one up by its code with [of], or pick
- * one from [all].
+ * A currency comes from the library's list and holds the details the library gives of it, which an amount in it crosses
+ * with: look one up by its code with [of], or pick one from [all].
  */
 public class CurrencyCode internal constructor(
     /** The three-letter code: "EUR". */
@@ -20,6 +20,15 @@ public class CurrencyCode internal constructor(
     /** How many decimal places its minor unit has: 2 for the euro, 0 for the yen. */
     public val decimalPlaces: Int,
 ) {
+    /**
+     * The currency as the generated code holds it.
+     *
+     * [decimalPlaces] holds the value of a `UByte`, the one the library gives for every currency an app can reach, so it
+     * converts back unchanged.
+     */
+    internal val generated: CurrencyDetails
+        get() = CurrencyDetails(code, name, numericCode, decimalPlaces.toUByte())
+
     /** Whether [other] is of the same class, with the same [code], [name], [numericCode], and [decimalPlaces]. */
     override fun equals(other: Any?): Boolean =
         other is CurrencyCode &&
@@ -39,9 +48,6 @@ public class CurrencyCode internal constructor(
         /** Every currency with minor units, by code. */
         public val all: List<CurrencyCode> by lazy { currencies().map { it.converted() } }
 
-        /** The currencies of [all] by their codes. */
-        private val byCode: Map<String, CurrencyCode> by lazy { all.associateBy { it.code } }
-
         /**
          * The currency with the ISO 4217 code [code].
          *
@@ -50,14 +56,8 @@ public class CurrencyCode internal constructor(
          */
         @Throws(EranosException::class)
         public fun of(code: String): CurrencyCode = converting { currencyDetails(code).converted() }
-
-        /**
-         * The currency of [code], a code the library gave, so always one of [all]; any other code stands for itself, so
-         * that an amount in it keeps the code it came with.
-         */
-        internal fun known(code: String): CurrencyCode = byCode[code] ?: CurrencyCode(code, code, 0, 0)
     }
 }
 
 /** The currency the library describes as [this]. */
-internal fun CurrencyDetails.converted(): CurrencyCode = CurrencyCode(code, name, numericCode, decimalPlaces)
+internal fun CurrencyDetails.converted(): CurrencyCode = CurrencyCode(code, name, numericCode, decimalPlaces.toInt())

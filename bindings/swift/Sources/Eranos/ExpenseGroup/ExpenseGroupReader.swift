@@ -37,7 +37,7 @@ public final class ExpenseGroupReader: Sendable {
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
     public func currency() throws(EranosError) -> CurrencyCode {
-        try converting { CurrencyCode(known: try handle.currency()) }
+        try converting { CurrencyCode(try handle.currency()) }
     }
 
     /// The group's description.

@@ -13,15 +13,18 @@ from eranos import (
     CurrencyCode,
     Email,
     ExchangeRate,
+    GetsBackBalance,
     Iban,
     IdError,
     Language,
     LanguageError,
     Money,
     MoneyError,
+    OwesBalance,
     Parts,
     Percentage,
     PhoneNumber,
+    SettledBalance,
     TimeOfDay,
     Username,
     ContactError,
@@ -107,10 +110,19 @@ def test_a_currency_holds_what_the_library_knows_of_it() -> None:
 
 
 def test_every_currency_the_library_lists_is_listed_by_code() -> None:
-    """A list that missed a currency or came out of order would hide one from the currency pickers of an app."""
+    """
+    A list that missed a currency or came out of order would hide one from the currency pickers of an app.
+
+    A listed currency that held other details than its code's would format its amounts otherwise than the library does.
+    """
     listed = CurrencyCode.all()
     assert list(listed) == sorted(listed)
     assert CurrencyCode('EUR') in listed
+    for currency in listed:
+        looked_up = CurrencyCode(currency.code)
+        assert currency.name == looked_up.name, currency
+        assert currency.numeric_code == looked_up.numeric_code, currency
+        assert currency.decimal_places == looked_up.decimal_places, currency
 
 
 def test_a_code_the_library_does_not_list_is_refused() -> None:
@@ -139,6 +151,18 @@ def test_an_amount_parses_and_formats_as_the_library_writes_it() -> None:
     with pytest.raises(MoneyError) as precise:
         Money.parse('1.234', euro)
     assert precise.value.failure == MoneyError.TooManyDecimals(currency=euro, allowed=2)
+
+
+def test_an_amount_and_a_balance_format_with_their_currencys_decimal_places() -> None:
+    """An amount written with other decimal places than its currency has would show a price ten or a hundred times off."""
+    assert str(Money(-12345, CurrencyCode('JPY'))) == '-12345 JPY'
+    assert str(Money(-12345, CurrencyCode('EUR'))) == '-123.45 EUR'
+    assert str(Money(-12345, CurrencyCode('BHD'))) == '-12.345 BHD'
+    assert str(Money(-12345, CurrencyCode('CLF'))) == '-1.2345 CLF'
+    assert str(Money(5, CurrencyCode('CLF'))) == '0.0005 CLF'
+    assert str(OwesBalance(Money(1500, CurrencyCode('JPY')))) == 'owes 1500 JPY'
+    assert str(SettledBalance()) == 'settled'
+    assert str(GetsBackBalance(Money(1234, CurrencyCode('BHD')))) == 'gets back 1.234 BHD'
 
 
 def test_amounts_in_one_currency_add_and_subtract() -> None:

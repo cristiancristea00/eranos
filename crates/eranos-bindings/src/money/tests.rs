@@ -1,23 +1,42 @@
-//! Amounts, costs, and rates cross the bindings as codes, integers, and
-//! decimals. One converted back and forth would change its currency, its
-//! minor units, or its rate, and an unknown currency or a bad rate would
-//! reach the library.
+//! Amounts, costs, and rates cross the bindings as currency details,
+//! codes, integers, and decimals. One converted back and forth would change
+//! its currency, its minor units, or its rate, and an unknown currency, a
+//! currency with details of its own, or a bad rate would reach the library.
 
 use super::*;
 use crate::MoneyFailure;
 
+fn euro() -> CurrencyDetails {
+    CurrencyDetails::from_library(library::CurrencyCode::EUR)
+}
+
 fn euros(minor_units: i64) -> Money {
     Money {
         minor_units,
-        currency: "EUR".to_owned(),
+        currency: euro(),
     }
 }
 
 fn unknown() -> Money {
     Money {
         minor_units: 1,
-        currency: "XYZ".to_owned(),
+        currency: CurrencyDetails {
+            code: "XYZ".to_owned(),
+            name: "Unknown".to_owned(),
+            numeric_code: 999,
+            decimal_places: 2,
+        },
     }
+}
+
+fn is_unknown_currency<T>(result: &Result<T, EranosError>) -> bool {
+    matches!(
+        result,
+        Err(EranosError::Money {
+            failure: MoneyFailure::UnknownCurrency,
+            ..
+        })
+    )
 }
 
 /// An amount would come back in another currency or with other minor
@@ -28,13 +47,58 @@ fn amounts_convert_both_ways_and_refuse_unknown_currencies() {
         euros(1_250).to_library().map(Money::from_library),
         Ok(euros(1_250))
     );
-    assert!(matches!(
-        unknown().to_library(),
-        Err(EranosError::Money {
-            failure: MoneyFailure::UnknownCurrency,
-            ..
-        })
-    ));
+    assert!(is_unknown_currency(&unknown().to_library()));
+}
+
+/// The details of every currency would come back other than the library
+/// holds them, or an amount in one would come back in another currency.
+#[test]
+fn the_details_of_every_currency_convert_both_ways() {
+    for &currency in library::CurrencyCode::all() {
+        let details = CurrencyDetails::from_library(currency);
+        assert_eq!(details.code, currency.code());
+        assert_eq!(details.name, currency.name());
+        assert_eq!(details.numeric_code, i32::from(currency.numeric_code()));
+        assert_eq!(details.decimal_places, currency.decimal_places());
+        assert_eq!(details.to_library(), Ok(currency));
+        let amount = library::Money::from_minor_units(-1_234, currency);
+        assert_eq!(Money::from_library(amount).to_library(), Ok(amount));
+    }
+}
+
+/// An amount whose record gives its currency details other than the
+/// library's would reach the library as the library's currency of its code,
+/// so the apps would show it with other decimal places, another name, or
+/// another numeric code than the group holds.
+#[test]
+fn details_that_differ_from_the_library_are_refused() {
+    let altered = [
+        CurrencyDetails {
+            code: "eur".to_owned(),
+            ..euro()
+        },
+        CurrencyDetails {
+            name: "Euros".to_owned(),
+            ..euro()
+        },
+        CurrencyDetails {
+            numeric_code: 840,
+            ..euro()
+        },
+        CurrencyDetails {
+            decimal_places: 3,
+            ..euro()
+        },
+    ];
+    for currency in altered {
+        assert!(is_unknown_currency(&currency.to_library()), "{currency:?}");
+        let amount = Money {
+            minor_units: 100,
+            currency,
+        };
+        assert!(is_unknown_currency(&amount.to_library()), "{amount:?}");
+    }
+    assert!(is_unknown_currency(&unknown().currency.to_library()));
 }
 
 /// A cost would come back without its rate, a foreign cost would reach the
@@ -44,7 +108,7 @@ fn costs_convert_both_ways_and_refuse_bad_parts() {
     let converted = Cost::Converted {
         amount: Money {
             minor_units: 5_000,
-            currency: "RON".to_owned(),
+            currency: CurrencyDetails::from_library(library::CurrencyCode::RON),
         },
         rate: "0.2".to_owned(),
     };
@@ -67,21 +131,9 @@ fn costs_convert_both_ways_and_refuse_bad_parts() {
         amount: unknown(),
         rate: "1".to_owned(),
     };
-    assert!(matches!(
-        foreign_in_unknown.to_library(),
-        Err(EranosError::Money {
-            failure: MoneyFailure::UnknownCurrency,
-            ..
-        })
-    ));
+    assert!(is_unknown_currency(&foreign_in_unknown.to_library()));
     let local_in_unknown = Cost::Local { amount: unknown() };
-    assert!(matches!(
-        local_in_unknown.to_library(),
-        Err(EranosError::Money {
-            failure: MoneyFailure::UnknownCurrency,
-            ..
-        })
-    ));
+    assert!(is_unknown_currency(&local_in_unknown.to_library()));
 }
 
 /// A currency change's rate would reach the library for another currency
@@ -101,13 +153,7 @@ fn rates_and_currency_details_convert() {
         currency: "XYZ".to_owned(),
         rate: "1".to_owned(),
     };
-    assert!(matches!(
-        unknown_currency.to_library(),
-        Err(EranosError::Money {
-            failure: MoneyFailure::UnknownCurrency,
-            ..
-        })
-    ));
+    assert!(is_unknown_currency(&unknown_currency.to_library()));
     let bad_rate = CurrencyRate {
         currency: "EUR".to_owned(),
         rate: "zero".to_owned(),

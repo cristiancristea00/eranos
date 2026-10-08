@@ -163,14 +163,14 @@ public class ExpenseGroup private constructor(
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [currencyBlocking] blocks instead.
      */
-    public suspend fun currency(): CurrencyCode = converting { CurrencyCode.known(handle.currencyAsync(null)) }
+    public suspend fun currency(): CurrencyCode = converting { handle.currencyAsync(null).converted() }
 
     /**
      * The group currency, which every total is in.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [currency] waits without blocking it.
      */
-    public fun currencyBlocking(): CurrencyCode = converting { CurrencyCode.known(handle.currency()) }
+    public fun currencyBlocking(): CurrencyCode = converting { handle.currency().converted() }
 
     /**
      * Moves the group to [currency], converting every entry with the rate [rates] gives its currency.

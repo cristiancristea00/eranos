@@ -12,9 +12,9 @@ import kotlin.coroutines.cancellation.CancellationException
 /** The conversions of every failure the generated code can report. */
 class ErrorTest {
     /**
-     * A conversion that reached another module or failure, dropped what the failure holds, or lost the message would show
-     * an app another failure than the library's; a failure that hashed or printed with a field left out would merge two
-     * failures an app tells apart.
+     * A conversion that reached another module or failure, dropped what the failure holds, looked a currency up by its code
+     * rather than keeping the details the library gave, or lost the message would show an app another failure than the
+     * library's; a failure that hashed or printed with a field left out would merge two failures an app tells apart.
      */
     @Test
     fun everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
@@ -90,8 +90,14 @@ private fun EranosException.failure(): Any =
         is EranosException.InvalidJson -> Position(line, column)
     }
 
-/** [minorUnits] cents. */
-private fun euros(minorUnits: Long): Money = Money(minorUnits, CurrencyCode.known("EUR"))
+/**
+ * A currency of [code] with details the library gives no currency, which a conversion that looked the code up would replace
+ * with the library's.
+ */
+private fun unlisted(code: String): CurrencyCode = CurrencyCode(code, "Unlisted", 0, 7)
+
+/** [minorUnits] in the unlisted currency of the code "EUR". */
+private fun euros(minorUnits: Long): Money = Money(minorUnits, unlisted("EUR"))
 
 /** Every failure the generated code can report, with every reason of a refused IBAN, beside the failure it becomes. */
 private val conversions: List<Conversion> =
@@ -147,12 +153,16 @@ private val conversions: List<Conversion> =
             generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.InvalidAmount, "detail"),
         ),
         Conversion(
-            failure = MoneyFailure.TooManyDecimals(CurrencyCode.known("RON"), 29),
-            generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.TooManyDecimals("RON", 29), "detail"),
+            failure = MoneyFailure.TooManyDecimals(unlisted("RON"), 29),
+            generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.TooManyDecimals(unlisted("RON").generated, 29), "detail"),
         ),
         Conversion(
-            failure = MoneyFailure.CurrencyMismatch(CurrencyCode.known("RON"), CurrencyCode.known("USD")),
-            generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.CurrencyMismatch("RON", "USD"), "detail"),
+            failure = MoneyFailure.CurrencyMismatch(unlisted("RON"), unlisted("USD")),
+            generated =
+                eranos.internal.EranosException.Money(
+                    eranos.internal.MoneyFailure.CurrencyMismatch(unlisted("RON").generated, unlisted("USD").generated),
+                    "detail",
+                ),
         ),
         Conversion(
             failure = MoneyFailure.UnknownCurrency,
@@ -187,8 +197,12 @@ private val conversions: List<Conversion> =
             generated = eranos.internal.EranosException.Expense(eranos.internal.ExpenseFailure.NonPositiveAmount, "detail"),
         ),
         Conversion(
-            failure = ExpenseFailure.CurrencyMismatch(CurrencyCode.known("USD"), CurrencyCode.known("GBP")),
-            generated = eranos.internal.EranosException.Expense(eranos.internal.ExpenseFailure.CurrencyMismatch("USD", "GBP"), "detail"),
+            failure = ExpenseFailure.CurrencyMismatch(unlisted("USD"), unlisted("GBP")),
+            generated =
+                eranos.internal.EranosException.Expense(
+                    eranos.internal.ExpenseFailure.CurrencyMismatch(unlisted("USD").generated, unlisted("GBP").generated),
+                    "detail",
+                ),
         ),
         Conversion(
             failure = ExpenseFailure.EmptySplit,
@@ -206,7 +220,7 @@ private val conversions: List<Conversion> =
             failure = ExpenseFailure.AmountsDoNotAddUp(euros(3), euros(2)),
             generated =
                 eranos.internal.EranosException.Expense(
-                    eranos.internal.ExpenseFailure.AmountsDoNotAddUp(eranos.internal.Money(3, "EUR"), eranos.internal.Money(2, "EUR")),
+                    eranos.internal.ExpenseFailure.AmountsDoNotAddUp(euros(3).generated, euros(2).generated),
                     "detail",
                 ),
         ),
@@ -230,7 +244,7 @@ private val conversions: List<Conversion> =
             failure = ExpenseFailure.ItemsDoNotAddUp(euros(8), euros(7)),
             generated =
                 eranos.internal.EranosException.Expense(
-                    eranos.internal.ExpenseFailure.ItemsDoNotAddUp(eranos.internal.Money(8, "EUR"), eranos.internal.Money(7, "EUR")),
+                    eranos.internal.ExpenseFailure.ItemsDoNotAddUp(euros(8).generated, euros(7).generated),
                     "detail",
                 ),
         ),
@@ -263,16 +277,24 @@ private val conversions: List<Conversion> =
             generated = eranos.internal.EranosException.ExpenseGroup(eranos.internal.ExpenseGroupFailure.EmptyName, "detail"),
         ),
         Conversion(
-            failure = ExpenseGroupFailure.MissingExchangeRate(CurrencyCode.known("RON")),
-            generated = eranos.internal.EranosException.ExpenseGroup(eranos.internal.ExpenseGroupFailure.MissingExchangeRate("RON"), "detail"),
+            failure = ExpenseGroupFailure.MissingExchangeRate(unlisted("RON")),
+            generated =
+                eranos.internal.EranosException.ExpenseGroup(
+                    eranos.internal.ExpenseGroupFailure.MissingExchangeRate(unlisted("RON").generated),
+                    "detail",
+                ),
         ),
         Conversion(
             failure = ExpenseGroupFailure.UnexpectedExchangeRate,
             generated = eranos.internal.EranosException.ExpenseGroup(eranos.internal.ExpenseGroupFailure.UnexpectedExchangeRate, "detail"),
         ),
         Conversion(
-            failure = ExpenseGroupFailure.DuplicateExchangeRate(CurrencyCode.known("GBP")),
-            generated = eranos.internal.EranosException.ExpenseGroup(eranos.internal.ExpenseGroupFailure.DuplicateExchangeRate("GBP"), "detail"),
+            failure = ExpenseGroupFailure.DuplicateExchangeRate(unlisted("GBP")),
+            generated =
+                eranos.internal.EranosException.ExpenseGroup(
+                    eranos.internal.ExpenseGroupFailure.DuplicateExchangeRate(unlisted("GBP").generated),
+                    "detail",
+                ),
         ),
         Conversion(
             failure = ExpenseGroupFailure.DuplicateMember(MemberId("member-16")),

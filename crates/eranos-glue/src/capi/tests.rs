@@ -181,6 +181,8 @@ pub struct Expense {
 pub struct CurrencyDetails {
     /// The code.
     pub code: String,
+    /// The decimal places.
+    pub places: u8,
 }
 
 /// What a new group starts with.

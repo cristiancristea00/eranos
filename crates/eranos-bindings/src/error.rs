@@ -22,7 +22,7 @@ use eranos_payment_account::{FromIbanError, FromPaymentAccountError};
 use eranos_settlement::FromSettlementError;
 use eranos_transfer::FromTransferError;
 
-use crate::Money;
+use crate::{CurrencyDetails, Money};
 
 /// Why a call failed.
 ///
@@ -266,10 +266,10 @@ pub enum ExpenseFailure {
     NonPositiveAmount,
     /// [`ExpenseError::CurrencyMismatch`].
     CurrencyMismatch {
-        /// The currency the entry must be in, as its ISO 4217 code.
-        expected: String,
-        /// The currency the part is in, as its ISO 4217 code.
-        found: String,
+        /// The currency the entry must be in.
+        expected: CurrencyDetails,
+        /// The currency the part is in.
+        found: CurrencyDetails,
     },
     /// [`ExpenseError::EmptySplit`].
     EmptySplit,
@@ -328,15 +328,15 @@ pub enum ExpenseGroupFailure {
     EmptyName,
     /// [`ExpenseGroupError::MissingExchangeRate`].
     MissingExchangeRate {
-        /// The currency, as its ISO 4217 code.
-        currency: String,
+        /// The currency.
+        currency: CurrencyDetails,
     },
     /// [`ExpenseGroupError::UnexpectedExchangeRate`].
     UnexpectedExchangeRate,
     /// [`ExpenseGroupError::DuplicateExchangeRate`].
     DuplicateExchangeRate {
-        /// The currency, as its ISO 4217 code.
-        currency: String,
+        /// The currency.
+        currency: CurrencyDetails,
     },
     /// [`ExpenseGroupError::DuplicateMember`].
     DuplicateMember {
@@ -447,17 +447,17 @@ pub enum MoneyFailure {
     InvalidAmount,
     /// [`MoneyError::TooManyDecimals`].
     TooManyDecimals {
-        /// The currency, as its ISO 4217 code.
-        currency: String,
+        /// The currency.
+        currency: CurrencyDetails,
         /// How many decimal places the currency allows.
         allowed: i64,
     },
     /// [`MoneyError::CurrencyMismatch`].
     CurrencyMismatch {
-        /// The currency of the first amount, as its ISO 4217 code.
-        left: String,
-        /// The currency of the second amount, as its ISO 4217 code.
-        right: String,
+        /// The currency of the first amount.
+        left: CurrencyDetails,
+        /// The currency of the second amount.
+        right: CurrencyDetails,
     },
     /// [`MoneyError::UnknownCurrency`].
     UnknownCurrency,
@@ -616,7 +616,7 @@ impl FromMoneyError for EranosError {
     fn too_many_decimals(currency: CurrencyCode, allowed: u8, message: String) -> Self {
         Self::Money {
             failure: MoneyFailure::TooManyDecimals {
-                currency: currency.code().to_owned(),
+                currency: CurrencyDetails::from_library(currency),
                 allowed: i64::from(allowed),
             },
             detail: message,
@@ -626,8 +626,8 @@ impl FromMoneyError for EranosError {
     fn currency_mismatch(left: CurrencyCode, right: CurrencyCode, message: String) -> Self {
         Self::Money {
             failure: MoneyFailure::CurrencyMismatch {
-                left: left.code().to_owned(),
-                right: right.code().to_owned(),
+                left: CurrencyDetails::from_library(left),
+                right: CurrencyDetails::from_library(right),
             },
             detail: message,
         }
@@ -776,8 +776,8 @@ impl FromExpenseError for EranosError {
     fn currency_mismatch(expected: CurrencyCode, found: CurrencyCode, message: String) -> Self {
         Self::Expense {
             failure: ExpenseFailure::CurrencyMismatch {
-                expected: expected.code().to_owned(),
-                found: found.code().to_owned(),
+                expected: CurrencyDetails::from_library(expected),
+                found: CurrencyDetails::from_library(found),
             },
             detail: message,
         }
@@ -961,7 +961,7 @@ impl FromExpenseGroupError for EranosError {
     fn missing_exchange_rate(currency: CurrencyCode, message: String) -> Self {
         Self::ExpenseGroup {
             failure: ExpenseGroupFailure::MissingExchangeRate {
-                currency: currency.code().to_owned(),
+                currency: CurrencyDetails::from_library(currency),
             },
             detail: message,
         }
@@ -977,7 +977,7 @@ impl FromExpenseGroupError for EranosError {
     fn duplicate_exchange_rate(currency: CurrencyCode, message: String) -> Self {
         Self::ExpenseGroup {
             failure: ExpenseGroupFailure::DuplicateExchangeRate {
-                currency: currency.code().to_owned(),
+                currency: CurrencyDetails::from_library(currency),
             },
             detail: message,
         }

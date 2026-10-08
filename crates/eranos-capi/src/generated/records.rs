@@ -67,14 +67,8 @@ pub mod ffi {
 
         /// Writes the balance as the library does: "gets back 12.00 EUR", "owes 12.00 EUR", or
         /// "settled".
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `Money` for a currency the library does not list.
-        pub fn format(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::balance_format(&self.0).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn format(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::balance_format(&self.0));
         }
     }
 
@@ -306,7 +300,7 @@ pub mod ffi {
 
         /// How many decimal places its minor unit has: 2 for the euro.
         #[must_use]
-        pub const fn decimal_places(&self) -> i32 {
+        pub const fn decimal_places(&self) -> u8 {
             self.0.decimal_places
         }
 

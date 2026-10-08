@@ -77,11 +77,9 @@ static void addBalanceRow(Table *const table, BalanceRow const *const row) {
     if (nullptr != amount) {
         return moneyLine(amount);
     }
-    EranosText *const currency = eranosTextCreate();
-    eranosExpenseGroupCurrency(group, currency);
-    EranosMoney *zero = nullptr;
-    must(eranosMoneyCreate(0, eranosTextData(currency), &zero));
-    eranosTextDestroy(currency);
+    EranosCurrencyDetails *const currency = eranosExpenseGroupCurrency(group);
+    EranosMoney *const zero = eranosMoneyCreate(0, currency);
+    eranosCurrencyDetailsDestroy(currency);
     return moneyLine(zero);
 }
 
@@ -187,13 +185,7 @@ static void printBalances(EranosExpenseGroup const *const group) {
 }
 
 /// The currency of @p group, as its code.
-[[nodiscard]] static Line currencyOf(EranosExpenseGroup const *const group) {
-    EranosText *const text = eranosTextCreate();
-    eranosExpenseGroupCurrency(group, text);
-    Line const line = textLine(text);
-    eranosTextDestroy(text);
-    return line;
-}
+[[nodiscard]] static Line currencyOf(EranosExpenseGroup const *const group) { return currencyLine(eranosExpenseGroupCurrency(group)); }
 
 /// Whether the balance of @p member in @p group is of @p kind, and of @p minorUnits when it has an amount.
 [[nodiscard]] static bool balanceIs(EranosExpenseGroup const *const group, Id const member, EranosBalanceKind const kind, int64_t const minorUnits) {

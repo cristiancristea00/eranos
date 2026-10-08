@@ -46,7 +46,7 @@ struct CurrencyRate final {
     ///
     /// @param currency The ISO 4217 code of the currency the rate converts from.
     /// @param rate The rate, as a decimal.
-    inline constexpr CurrencyRate(CurrencyCode currency, ExchangeRate rate) noexcept : currency(std::move(currency)), rate(std::move(rate)) {}
+    inline CurrencyRate(CurrencyCode currency, ExchangeRate rate) noexcept : currency(std::move(currency)), rate(std::move(rate)) {}
 
     /// The ISO 4217 code of the currency the rate converts from.
     CurrencyCode currency;
@@ -226,7 +226,7 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Category, Error>> removeCategoryAsync(CategoryId const &id,
                                                                                   Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The ISO 4217 code of the group currency. Blocks the calling thread while another call holds the group's lock.
+    /// The group currency, with what the library knows of it. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @return The result
     [[nodiscard]] CurrencyCode currency() const noexcept;
@@ -884,11 +884,11 @@ inline std::future<std::expected<Category, Error>> ExpenseGroup::removeCategoryA
         [](detail::EranosCategoryOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline CurrencyCode ExpenseGroup::currency() const noexcept { return detail::listedCurrency(handle->currency()); }
+inline CurrencyCode ExpenseGroup::currency() const noexcept { return detail::currencyOf(handle->currency()); }
 
 inline std::future<std::expected<CurrencyCode, Error>> ExpenseGroup::currencyAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<CurrencyCode>([&](auto callback) noexcept { handle->currency_async(detail::handleOf(cancellation), std::move(callback)); },
-                                        [](detail::EranosTextOutcome const &done) noexcept { return detail::listedCurrency(*done.value()); });
+                                        [](detail::EranosCurrencyDetailsOutcome const &done) noexcept { return detail::currencyOf(done.value()); });
 }
 
 inline std::expected<void, Error> ExpenseGroup::changeCurrency(CurrencyCode const &currency, std::span<CurrencyRate const> const rates) noexcept {

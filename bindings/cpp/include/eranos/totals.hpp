@@ -82,7 +82,7 @@ struct MemberSummary final {
     /// @param received What the member received in transfers.
     /// @param net What the member is owed, less what they owe: positive when they get money back.
     /// @param balance Where the member stands.
-    inline constexpr MemberSummary(MemberId member, Money paid, Money share, Money sent, Money received, Money net, Balance balance) noexcept
+    inline MemberSummary(MemberId member, Money paid, Money share, Money sent, Money received, Money net, Balance balance) noexcept
         : member(std::move(member)), paid(std::move(paid)), share(std::move(share)), sent(std::move(sent)), received(std::move(received)),
           net(std::move(net)), balance(std::move(balance)) {}
 
@@ -121,7 +121,7 @@ struct CategoryTotal final {
     ///
     /// @param category The category's identifier.
     /// @param total The total.
-    inline constexpr CategoryTotal(CategoryId category, Money total) noexcept : category(std::move(category)), total(std::move(total)) {}
+    inline CategoryTotal(CategoryId category, Money total) noexcept : category(std::move(category)), total(std::move(total)) {}
 
     /// The category's identifier.
     CategoryId category;
@@ -168,8 +168,8 @@ struct Summary final {
     /// @param members Where every member stands.
     /// @param categoryTotals The total of every category.
     /// @param memberCategoryTotals The totals per category of every member.
-    inline constexpr Summary(Money totalSpent, std::vector<MemberSummary> members, std::vector<CategoryTotal> categoryTotals,
-                             std::vector<MemberCategoryTotals> memberCategoryTotals) noexcept
+    inline Summary(Money totalSpent, std::vector<MemberSummary> members, std::vector<CategoryTotal> categoryTotals,
+                   std::vector<MemberCategoryTotals> memberCategoryTotals) noexcept
         : totalSpent(std::move(totalSpent)), members(std::move(members)), categoryTotals(std::move(categoryTotals)),
           memberCategoryTotals(std::move(memberCategoryTotals)) {}
 
@@ -200,7 +200,7 @@ struct MemberShare final {
     /// @param member The member's identifier.
     /// @param paid What the member paid of it.
     /// @param share The member's share of it.
-    inline constexpr MemberShare(MemberId member, Money paid, Money share) noexcept
+    inline MemberShare(MemberId member, Money paid, Money share) noexcept
         : member(std::move(member)), paid(std::move(paid)), share(std::move(share)) {}
 
     /// The member's identifier.
@@ -227,7 +227,7 @@ struct ExpenseShares final {
     /// @param members Every member's part.
     /// @param total The amount with the tip.
     /// @param tip The tip.
-    inline constexpr ExpenseShares(std::vector<MemberShare> members, Money total, Money tip) noexcept
+    inline ExpenseShares(std::vector<MemberShare> members, Money total, Money tip) noexcept
         : members(std::move(members)), total(std::move(total)), tip(std::move(tip)) {}
 
     /// Every member's part.
@@ -254,8 +254,7 @@ struct Payment final {
     /// @param from The identifier of the member who pays.
     /// @param to The identifier of the member who is paid.
     /// @param amount What is paid.
-    inline constexpr Payment(MemberId from, MemberId to, Money amount) noexcept
-        : from(std::move(from)), to(std::move(to)), amount(std::move(amount)) {}
+    inline Payment(MemberId from, MemberId to, Money amount) noexcept : from(std::move(from)), to(std::move(to)), amount(std::move(amount)) {}
 
     /// The identifier of the member who pays.
     MemberId from;
@@ -328,8 +327,7 @@ namespace detail {
 
 } // namespace detail
 
-// A balance's amount is in a currency the library lists.
-inline std::string toString(Balance const &balance) noexcept { return detail::known(detail::toDetail(balance)->format()); }
+inline std::string toString(Balance const &balance) noexcept { return detail::toDetail(balance)->format(); }
 
 } // namespace eranos
 

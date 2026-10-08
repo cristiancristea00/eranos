@@ -409,7 +409,7 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
 }
 
 /// The amount of @p cost, as entered.
-[[nodiscard]] inline constexpr Money amountOf(Cost const &cost) noexcept {
+[[nodiscard]] Money amountOf(Cost const &cost) noexcept {
     return std::visit([](auto const &alternative) noexcept { return alternative.amount; }, cost);
 }
 
@@ -804,7 +804,7 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) noexcept {
 }
 
 /// @p expense in @p category.
-[[nodiscard]] inline constexpr Expense inCategory(Expense expense, CategoryId const &category) noexcept {
+[[nodiscard]] Expense inCategory(Expense expense, CategoryId const &category) noexcept {
     expense.category = category;
     return expense;
 }
@@ -1048,7 +1048,7 @@ void edits(ExpenseGroup &group, People const &people, Categories const &categori
           "percentages that do not add up are refused");
     check(toHerself.has_value() && Failure::TRANSFER_SAME_MEMBER == toHerself->failure(), "a transfer to oneself is refused");
     check(unrated.has_value() && Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE == unrated->failure() &&
-              std::optional<std::string>("RON") == unrated->currency(),
+              must(CurrencyCode::of("RON")) == unrated->currency(),
           "an amount in RON without a rate is refused");
     check(before == group.summary(), "the refusals change nothing");
 }
@@ -1103,14 +1103,14 @@ void comingsAndGoings(ExpenseGroup &group, People const &people) noexcept {
 // 8. The summary.
 
 /// The totals per category of @p member in @p summary.
-[[nodiscard]] inline constexpr std::vector<CategoryTotal> byCategory(Summary const &summary, MemberId const &member) noexcept {
+[[nodiscard]] std::vector<CategoryTotal> byCategory(Summary const &summary, MemberId const &member) noexcept {
     auto const found =
         std::ranges::find_if(summary.memberCategoryTotals, [&](MemberCategoryTotals const &entry) noexcept { return member == entry.member; });
     return summary.memberCategoryTotals.end() == found ? std::vector<CategoryTotal>() : found->totals;
 }
 
 /// The total of @p category among @p totals, absent when they list none.
-[[nodiscard]] inline constexpr std::optional<Money> totalOf(std::vector<CategoryTotal> const &totals, CategoryId const &category) noexcept {
+[[nodiscard]] std::optional<Money> totalOf(std::vector<CategoryTotal> const &totals, CategoryId const &category) noexcept {
     auto const found = std::ranges::find_if(totals, [&](CategoryTotal const &entry) noexcept { return category == entry.category; });
     return totals.end() == found ? std::nullopt : std::optional<Money>(found->total);
 }
@@ -1208,7 +1208,7 @@ void newCurrency(ExpenseGroup &group, People const &people) noexcept {
 
     auto const summary = group.summary();
     check(missing.has_value() && Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE == missing->failure() &&
-              std::optional<std::string>("EUR") == missing->currency(),
+              must(CurrencyCode::of("EUR")) == missing->currency(),
           "a change without the rate from EUR is refused");
     check(leu == group.currency(), "the group keeps its books in RON");
     check(ron("6114.50") == summary.totalSpent, "the trip cost 6114.50 RON");

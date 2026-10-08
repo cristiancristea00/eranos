@@ -13,24 +13,31 @@ private struct Conversion {
     let generated: EranosGenerated.EranosError
 }
 
-/// `minorUnits` cents, as the generated code holds them.
-private func generatedEuros(_ minorUnits: Int64) -> EranosGenerated.Money {
-    EranosGenerated.Money(minorUnits: minorUnits, currency: "EUR")
+/// The currency `code` with a name, a numeric code, and decimal places of its own, as the
+/// generated code holds it: the library lists no such currency, so a conversion that looked the
+/// code up would change them.
+private func generatedCurrency(_ code: String) -> EranosGenerated.CurrencyDetails {
+    EranosGenerated.CurrencyDetails(code: code, name: "Test \(code)", numericCode: 999, decimalPlaces: 4)
 }
 
-/// `minorUnits` cents.
+/// The currency `generatedCurrency(code)`.
+private func currency(_ code: String) -> Eranos.CurrencyCode {
+    Eranos.CurrencyCode(generatedCurrency(code))
+}
+
+/// `minorUnits` minor units of the currency "EUR", as the generated code holds them.
+private func generatedEuros(_ minorUnits: Int64) -> EranosGenerated.Money {
+    EranosGenerated.Money(minorUnits: minorUnits, currency: generatedCurrency("EUR"))
+}
+
+/// `minorUnits` minor units of the currency "EUR".
 private func euros(_ minorUnits: Int64) -> Eranos.Money {
-    Eranos.Money(minorUnits: minorUnits, currency: known("EUR"))
+    Eranos.Money(minorUnits: minorUnits, currency: currency("EUR"))
 }
 
 /// The identifier written `text`, of the entity the call site expects.
 private func id<Entity>(_ text: String) -> Identifier<Entity> {
     Identifier(rawValue: text)
-}
-
-/// The currency of `code`.
-private func known(_ code: String) -> Eranos.CurrencyCode {
-    Eranos.CurrencyCode(known: code)
 }
 
 /// Every failure the generated code can report, with every reason of a refused IBAN.
@@ -88,12 +95,12 @@ private let conversions: [Conversion] = [
         generated: .Money(failure: .invalidAmount, detail: "detail")
     ),
     Conversion(
-        expected: .money(.tooManyDecimals(currency: known("RON"), allowed: 29), detail: "detail"),
-        generated: .Money(failure: .tooManyDecimals(currency: "RON", allowed: 29), detail: "detail")
+        expected: .money(.tooManyDecimals(currency: currency("RON"), allowed: 29), detail: "detail"),
+        generated: .Money(failure: .tooManyDecimals(currency: generatedCurrency("RON"), allowed: 29), detail: "detail")
     ),
     Conversion(
-        expected: .money(.currencyMismatch(left: known("RON"), right: known("USD")), detail: "detail"),
-        generated: .Money(failure: .currencyMismatch(left: "RON", right: "USD"), detail: "detail")
+        expected: .money(.currencyMismatch(left: currency("RON"), right: currency("USD")), detail: "detail"),
+        generated: .Money(failure: .currencyMismatch(left: generatedCurrency("RON"), right: generatedCurrency("USD")), detail: "detail")
     ),
     Conversion(
         expected: .money(.unknownCurrency, detail: "detail"),
@@ -128,8 +135,8 @@ private let conversions: [Conversion] = [
         generated: .Expense(failure: .nonPositiveAmount, detail: "detail")
     ),
     Conversion(
-        expected: .expense(.currencyMismatch(expected: known("USD"), found: known("GBP")), detail: "detail"),
-        generated: .Expense(failure: .currencyMismatch(expected: "USD", found: "GBP"), detail: "detail")
+        expected: .expense(.currencyMismatch(expected: currency("USD"), found: currency("GBP")), detail: "detail"),
+        generated: .Expense(failure: .currencyMismatch(expected: generatedCurrency("USD"), found: generatedCurrency("GBP")), detail: "detail")
     ),
     Conversion(
         expected: .expense(.emptySplit, detail: "detail"),
@@ -196,16 +203,16 @@ private let conversions: [Conversion] = [
         generated: .ExpenseGroup(failure: .emptyName, detail: "detail")
     ),
     Conversion(
-        expected: .expenseGroup(.missingExchangeRate(known("RON")), detail: "detail"),
-        generated: .ExpenseGroup(failure: .missingExchangeRate(currency: "RON"), detail: "detail")
+        expected: .expenseGroup(.missingExchangeRate(currency("RON")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .missingExchangeRate(currency: generatedCurrency("RON")), detail: "detail")
     ),
     Conversion(
         expected: .expenseGroup(.unexpectedExchangeRate, detail: "detail"),
         generated: .ExpenseGroup(failure: .unexpectedExchangeRate, detail: "detail")
     ),
     Conversion(
-        expected: .expenseGroup(.duplicateExchangeRate(known("GBP")), detail: "detail"),
-        generated: .ExpenseGroup(failure: .duplicateExchangeRate(currency: "GBP"), detail: "detail")
+        expected: .expenseGroup(.duplicateExchangeRate(currency("GBP")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .duplicateExchangeRate(currency: generatedCurrency("GBP")), detail: "detail")
     ),
     Conversion(
         expected: .expenseGroup(.duplicateMember(id("member-16")), detail: "detail"),
@@ -305,8 +312,9 @@ private let conversions: [Conversion] = [
     )
 ]
 
-/// A conversion that reached another case or failure, dropped what the failure holds, or lost
-/// the message would show an app another failure than the library's.
+/// A conversion that reached another case or failure, dropped what the failure holds, looked a
+/// currency up again by its code, or lost the message would show an app another failure than
+/// the library's.
 @Test
 func everyFailureOfTheGeneratedCodeConvertsToItsCase() {
     #expect(67 == conversions.count)

@@ -3,7 +3,7 @@
 //! and what the failure holds, each in a field of its own.
 
 use crate::{
-    CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
+    CalendarFailure, CategoryFailure, ContactFailure, CurrencyDetails, EranosError, ExpenseFailure,
     ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, Money,
     MoneyFailure, PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
@@ -356,11 +356,10 @@ pub struct Payload {
     /// The column where the saved group stops being one, from 1:
     /// [`EranosError::InvalidJson`].
     pub column: Option<i64>,
-    /// The currency, as its ISO 4217 code:
-    /// [`ExpenseGroupFailure::DuplicateExchangeRate`],
+    /// The currency: [`ExpenseGroupFailure::DuplicateExchangeRate`],
     /// [`ExpenseGroupFailure::MissingExchangeRate`],
     /// [`MoneyFailure::TooManyDecimals`].
-    pub currency: Option<String>,
+    pub currency: Option<CurrencyDetails>,
     /// The category that has the name, as its identifier:
     /// [`ExpenseGroupFailure::DuplicateCategoryName`].
     pub existing: Option<String>,
@@ -370,7 +369,7 @@ pub struct Payload {
     pub expected_amount: Option<Money>,
     /// The currency the entry must be in:
     /// [`ExpenseFailure::CurrencyMismatch`].
-    pub expected_currency: Option<String>,
+    pub expected_currency: Option<CurrencyDetails>,
     /// How many characters the country's IBANs have:
     /// [`IbanReason::WrongLength`].
     pub expected_length: Option<i64>,
@@ -383,11 +382,11 @@ pub struct Payload {
     /// [`ExpenseGroupFailure::UnsupportedFormat`].
     pub format: Option<i64>,
     /// The currency the part is in: [`ExpenseFailure::CurrencyMismatch`].
-    pub found_currency: Option<String>,
+    pub found_currency: Option<CurrencyDetails>,
     /// How many characters the IBAN has: [`IbanReason::WrongLength`].
     pub found_length: Option<i64>,
     /// The currency of the first amount: [`MoneyFailure::CurrencyMismatch`].
-    pub left: Option<String>,
+    pub left: Option<CurrencyDetails>,
     /// The line where the saved group stops being one, from 1:
     /// [`EranosError::InvalidJson`].
     pub line: Option<i64>,
@@ -400,7 +399,7 @@ pub struct Payload {
     pub reason: Option<IbanReasonKind>,
     /// The currency of the second amount:
     /// [`MoneyFailure::CurrencyMismatch`].
-    pub right: Option<String>,
+    pub right: Option<CurrencyDetails>,
     /// What the percentages add up to, in basis points:
     /// [`ExpenseFailure::PercentagesDoNotAddUp`].
     pub total_basis_points: Option<i64>,

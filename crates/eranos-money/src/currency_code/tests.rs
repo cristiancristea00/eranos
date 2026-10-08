@@ -326,21 +326,6 @@ fn numeric_codes_are_the_iso_4217_numbers() {
     }
 }
 
-/// Amounts would be scaled by the wrong power of ten.
-#[test]
-fn minor_units_per_major_is_ten_to_the_decimal_places() {
-    // One per decimal-place count.
-    assert_eq!(CurrencyCode::JPY.minor_units_per_major(), 1);
-    assert_eq!(CurrencyCode::EUR.minor_units_per_major(), 100);
-    assert_eq!(CurrencyCode::BHD.minor_units_per_major(), 1_000);
-    assert_eq!(CurrencyCode::CLF.minor_units_per_major(), 10_000);
-    // Every currency.
-    for &currency in CurrencyCode::all() {
-        let expected = 10_i64.pow(u32::from(currency.decimal_places()));
-        assert_eq!(currency.minor_units_per_major(), expected, "{currency}");
-    }
-}
-
 /// Codes parsed through `str::parse` would behave differently from
 /// `from_code`.
 #[test]

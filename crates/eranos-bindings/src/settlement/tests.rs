@@ -5,6 +5,7 @@
 use eranos::{CalendarDate, CurrencyCode, ExpenseGroup, Member, Money, Transfer};
 
 use super::*;
+use crate::CurrencyDetails;
 
 /// A strategy would reach the library, or come back from it, as another.
 #[test]
@@ -57,7 +58,7 @@ fn a_settlement_keeps_every_payment() {
                 to: bob.to_string(),
                 amount: crate::Money {
                     minor_units: 2_000,
-                    currency: "EUR".to_owned(),
+                    currency: CurrencyDetails::from_library(CurrencyCode::EUR),
                 },
             }],
             strategy: SettlementStrategy::Greedy,

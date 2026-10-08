@@ -72,7 +72,7 @@ struct MemberAmount final {
     ///
     /// @param member The member's identifier.
     /// @param amount The amount.
-    inline constexpr MemberAmount(MemberId member, Money amount) noexcept : member(std::move(member)), amount(std::move(amount)) {}
+    inline MemberAmount(MemberId member, Money amount) noexcept : member(std::move(member)), amount(std::move(amount)) {}
 
     /// The member's identifier.
     MemberId member;

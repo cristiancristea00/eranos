@@ -18,7 +18,7 @@ use super::*;
 use crate::calendar::CalendarDate;
 use crate::expense::{Expense, ExpenseSplit, Split};
 use crate::member::{Category, Member};
-use crate::money::{Cost, Money};
+use crate::money::{Cost, CurrencyDetails, Money};
 use crate::transfer::Transfer;
 use crate::{
     ExpenseGroupFailure, IdFailure, LanguageFailure, MoneyFailure, SettlementFailure,
@@ -57,7 +57,7 @@ struct Flat {
 fn euros(minor_units: i64) -> Money {
     Money {
         minor_units,
-        currency: "EUR".to_owned(),
+        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
     }
 }
 
@@ -234,7 +234,10 @@ fn a_new_group_takes_what_it_starts_with() {
     let generated = new_group();
     let handle = ExpenseGroupHandle::new(&generated).unwrap();
     assert_eq!(handle.id(), Ok(generated.id));
-    assert_eq!(handle.currency(), Ok("EUR".to_owned()));
+    assert_eq!(
+        handle.currency(),
+        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+    );
     assert_eq!(handle.name(), Ok("Flat".to_owned()));
     assert_eq!(handle.description(), Ok(Some("Rent".to_owned())));
     assert_eq!(handle.language(), Ok(Some("pt-PT".to_owned())));
@@ -552,9 +555,15 @@ fn the_name_description_and_language_change_alike_in_both_forms() {
 fn the_currency_changes_alike_in_both_forms() {
     let handle = flat().handle;
     handle.change_currency("RON", &[rate("EUR", "5")]).unwrap();
-    assert_eq!(handle.currency(), Ok("RON".to_owned()));
+    assert_eq!(
+        handle.currency(),
+        Ok(CurrencyDetails::from_library(CurrencyCode::RON))
+    );
     block_on(handle.change_currency_async("EUR".to_owned(), Vec::new(), None)).unwrap();
-    assert_eq!(handle.currency(), Ok("EUR".to_owned()));
+    assert_eq!(
+        handle.currency(),
+        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+    );
     assert_eq!(
         handle.summary().map(|summary| summary.total_spent),
         Ok(euros(3_000))
@@ -580,7 +589,10 @@ fn the_currency_changes_alike_in_both_forms() {
         ),
         "{refusals:?}"
     );
-    assert_eq!(handle.currency(), Ok("EUR".to_owned()));
+    assert_eq!(
+        handle.currency(),
+        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+    );
 }
 
 /// A settlement the solver cannot hold would be reported another way in
@@ -721,7 +733,10 @@ fn trying_the_lock_is_busy_while_an_async_call_holds_it() {
         })
     ));
     assert_eq!(changing.as_mut().poll(&mut context), Poll::Ready(Ok(())));
-    assert_eq!(busy.currency(), Ok("RON".to_owned()));
+    assert_eq!(
+        busy.currency(),
+        Ok(CurrencyDetails::from_library(CurrencyCode::RON))
+    );
 }
 
 /// A synchronous call where a thread can sleep would fail, or read the
@@ -739,7 +754,10 @@ fn a_synchronous_call_waits_for_a_change_in_progress() {
     let reading = thread::spawn(move || sender.send(busy.currency()));
     assert!(receiver.recv_timeout(Duration::from_millis(50)).is_err());
     assert_eq!(changing.as_mut().poll(&mut context), Poll::Ready(Ok(())));
-    assert_eq!(receiver.recv(), Ok(Ok("RON".to_owned())));
+    assert_eq!(
+        receiver.recv(),
+        Ok(Ok(CurrencyDetails::from_library(CurrencyCode::RON)))
+    );
     reading.join().unwrap().unwrap();
 }
 
@@ -777,7 +795,10 @@ fn a_change_cancelled_while_it_waits_changes_nothing() {
     drop(reader);
     assert!(handle.try_write_lock().is_ok());
     assert_eq!(handle.members().map(|members| members.len()), Ok(2));
-    assert_eq!(handle.currency(), Ok("EUR".to_owned()));
+    assert_eq!(
+        handle.currency(),
+        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+    );
 }
 
 /// A read cancelled while a change holds the lock would still run once the

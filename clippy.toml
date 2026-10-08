@@ -1,6 +1,7 @@
-# Two kinds of exception apply beyond one item: what a test needs to fail
-# loudly, and duplicate crates that only a dependency's release can remove.
-# Every other exception is an `#[expect(..., reason = "...")]` in the code.
+# Three kinds of exception apply beyond one item: what a test needs to fail
+# loudly, the size of the binding core's error, and duplicate crates that
+# only a dependency's release can remove. Every other exception is an
+# `#[expect(..., reason = "...")]` in the code.
 
 # Tests are held to the same lints as the library, except that a panic is how
 # a test reports failure: unwrapping, expecting, panicking, and indexing are
@@ -9,6 +10,16 @@ allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-panic-in-tests = true
 allow-indexing-slicing-in-tests = true
+
+# `result_large_err` reports a function whose error is this many bytes or
+# more. The binding core's `EranosError` is the enum that UniFFI and
+# Diplomat copy field for field, and UniFFI 0.29, which the KMP glue
+# builds on, lowers no `Box`, so no case can box what it holds. An amount
+# carries its currency's details, two texts among them, and the failures
+# that hold two amounts make the error 160 bytes on a 64-bit target, which
+# every function of the core and the UniFFI glue returns. The threshold is
+# one byte above it, so an error that grows reports again.
+large-error-threshold = 161
 
 # `multiple_crate_versions` reads `cargo metadata`, which also lists crates
 # that are never built, and it fires in every target, so it cannot be an

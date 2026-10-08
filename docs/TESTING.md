@@ -258,9 +258,10 @@ follows three rules:
 The Swift layer is held to the same rules by its own tests: `swift test
 --enable-code-coverage` reports every line, region, and function of the
 `Eranos` module, and the generated module is not measured. A value the
-library never sends, such as an amount in a currency it does not list,
-still prints, through a fallback its test reaches by building the value
-from the generated code's.
+library never sends, such as a date that does not exist, still prints,
+through a fallback its test reaches by building the value from the
+generated code's; an amount needs none, since the core writes it from its
+currency's details.
 
 The Kotlin layer's tests hold it to every line and every method, which
 Kover measures and `koverVerify` enforces; the generated module is not

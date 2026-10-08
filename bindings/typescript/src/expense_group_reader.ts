@@ -90,7 +90,7 @@ export class ExpenseGroupReader implements Disposable {
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
      */
     currency(): CurrencyCode {
-        return CurrencyCode.known(calling(() => this.handle.currency()));
+        return CurrencyCode.converted(calling(() => this.handle.currency()));
     }
 
     /**

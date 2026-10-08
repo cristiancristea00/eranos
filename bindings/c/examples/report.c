@@ -80,9 +80,18 @@ void cellAdd(Cell *const cell, char const *const text) {
 
 Line textLine(EranosText const *const text) { return lineFrom(eranosTextData(text)); }
 
+Line currencyLine(EranosCurrencyDetails *const currency) {
+    EranosText *const text = eranosTextCreate();
+    eranosCurrencyDetailsCode(currency, text);
+    Line const line = textLine(text);
+    eranosTextDestroy(text);
+    eranosCurrencyDetailsDestroy(currency);
+    return line;
+}
+
 Line moneyLine(EranosMoney *const money) {
     EranosText *const text = eranosTextCreate();
-    must(eranosMoneyFormat(money, text));
+    eranosMoneyFormat(money, text);
     Line const line = textLine(text);
     eranosTextDestroy(text);
     eranosMoneyDestroy(money);
@@ -91,7 +100,7 @@ Line moneyLine(EranosMoney *const money) {
 
 Line balanceLine(EranosBalance *const balance) {
     EranosText *const text = eranosTextCreate();
-    must(eranosBalanceFormat(balance, text));
+    eranosBalanceFormat(balance, text);
     Line const line = textLine(text);
     eranosTextDestroy(text);
     eranosBalanceDestroy(balance);
@@ -131,6 +140,14 @@ Id addMember(EranosExpenseGroup *const group, char const *const firstName) {
 EranosMoney *amountOf(char const *const text, char const *const currency) {
     EranosMoney *money = nullptr;
     must(eranosMoneyParse(text, currency, &money));
+    return money;
+}
+
+EranosMoney *minorUnitsOf(int64_t const minorUnits, char const *const currency) {
+    EranosCurrencyDetails *details = nullptr;
+    must(eranosCurrencyDetailsOf(currency, &details));
+    EranosMoney *const money = eranosMoneyCreate(minorUnits, details);
+    eranosCurrencyDetailsDestroy(details);
     return money;
 }
 

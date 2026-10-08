@@ -4,12 +4,12 @@
 //! would reach the library; and an entry to add would lose the identifier
 //! its app gives it.
 
-use eranos::{CategoryId, ExpenseId};
+use eranos::{CategoryId, CurrencyCode, ExpenseId};
 
 use super::*;
 use crate::{
-    CalendarFailure, ExpenseFailure, IdFailure, MoneyFailure, category_id_uncategorised,
-    identifier_generate, tip_rule_none,
+    CalendarFailure, CurrencyDetails, ExpenseFailure, IdFailure, MoneyFailure,
+    category_id_uncategorised, identifier_generate, tip_rule_none,
 };
 
 /// A record the library refuses, beside a check of how it refuses it.
@@ -29,21 +29,31 @@ fn bob() -> MemberId {
 fn euros(minor_units: i64) -> Money {
     Money {
         minor_units,
-        currency: "EUR".to_owned(),
+        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
     }
 }
 
 fn lei(minor_units: i64) -> Money {
     Money {
         minor_units,
-        currency: "RON".to_owned(),
+        currency: CurrencyDetails::from_library(CurrencyCode::RON),
+    }
+}
+
+/// The details of a currency the library does not list.
+fn unlisted() -> CurrencyDetails {
+    CurrencyDetails {
+        code: "XYZ".to_owned(),
+        name: "Unlisted".to_owned(),
+        numeric_code: 999,
+        decimal_places: 2,
     }
 }
 
 fn unknown_money() -> Money {
     Money {
         minor_units: 3_000,
-        currency: "XYZ".to_owned(),
+        currency: unlisted(),
     }
 }
 
@@ -557,7 +567,7 @@ fn an_expense_to_add_converts_both_ways() {
 fn an_expense_reads_back_no_tip_and_the_built_in_category_by_name() {
     let expense = library::Expense::builder(
         "Taxi",
-        money::Money::from_minor_units(5_000, money::CurrencyCode::EUR),
+        money::Money::from_minor_units(5_000, CurrencyCode::EUR),
         ana(),
         library::Split::equal([ana(), bob()]),
         eranos::CalendarDate::new(2026, 9, 24).unwrap(),

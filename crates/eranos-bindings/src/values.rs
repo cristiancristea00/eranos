@@ -7,7 +7,8 @@ use std::collections::BTreeSet;
 use eranos::error::MoneyError;
 use eranos::expense as expenses;
 use eranos::{CategoryId, Email, Iban, Language, MemberId, PhoneNumber, Username};
-use eranos::{calendar, ledger, money as library};
+use eranos::{calendar, money as library};
+use eranos_money::format_minor_units;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::expense::{Expense, ExpenseSplit, Split, TipRule};
@@ -73,18 +74,26 @@ pub fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> {
 
 /// The amount as the library writes it: "12.50 EUR".
 ///
-/// # Errors
-///
-/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
-pub fn money_format(money: &Money) -> Result<String, EranosError> {
-    Ok(money.to_library()?.to_string())
+/// It writes the minor units with the decimal places the record's currency
+/// details give, then the code, as the library's text form of an amount
+/// does, so it cannot fail: for every number of decimal places, and for
+/// details the library would refuse as well.
+#[must_use]
+pub fn money_format(money: &Money) -> String {
+    format!(
+        "{} {}",
+        format_minor_units(money.minor_units, money.currency.decimal_places),
+        money.currency.code
+    )
 }
 
 /// `left` plus `right`, both in one currency.
 ///
 /// # Errors
 ///
-/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency),
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+/// for an amount in a currency the library does not list, or whose details
+/// are not the library's for its code,
 /// [`MoneyFailure::CurrencyMismatch`](crate::MoneyFailure::CurrencyMismatch),
 /// and [`MoneyFailure::Overflow`](crate::MoneyFailure::Overflow).
 pub fn money_add(left: &Money, right: &Money) -> Result<Money, EranosError> {
@@ -121,7 +130,9 @@ pub fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
 /// # Errors
 ///
 /// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate),
-/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency), and
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+/// for a code the library does not list and for an amount whose currency
+/// details are not the library's for its code, and
 /// [`MoneyFailure::Overflow`](crate::MoneyFailure::Overflow).
 pub fn exchange_rate_convert(rate: &str, amount: &Money, code: &str) -> Result<Money, EranosError> {
     Ok(Money::from_library(
@@ -225,18 +236,19 @@ pub fn language_parse(text: &str) -> Result<String, EranosError> {
 
 // --- Balances ----------------------------------------------------------------
 
-/// The balance as the library writes it: "owes 12.00 EUR".
+/// The balance as the library writes it: "owes 12.00 EUR", "settled", or
+/// "gets back 12.00 EUR".
 ///
-/// # Errors
-///
-/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
-pub fn balance_format(balance: &Balance) -> Result<String, EranosError> {
-    let balance = match balance {
-        Balance::GetsBack { amount } => ledger::Balance::GetsBack(amount.to_library()?),
-        Balance::Owes { amount } => ledger::Balance::Owes(amount.to_library()?),
-        Balance::Settled => ledger::Balance::Settled,
-    };
-    Ok(balance.to_string())
+/// It writes the library's words around the amount as [`money_format`]
+/// writes it, so it cannot fail; a test holds the words to the library's
+/// text form of a balance.
+#[must_use]
+pub fn balance_format(balance: &Balance) -> String {
+    match balance {
+        Balance::Owes { amount } => format!("owes {}", money_format(amount)),
+        Balance::Settled => "settled".to_owned(),
+        Balance::GetsBack { amount } => format!("gets back {}", money_format(amount)),
+    }
 }
 
 // --- Currencies --------------------------------------------------------------
@@ -336,7 +348,10 @@ pub fn tip_rule_none() -> TipRule {
 ///
 /// # Errors
 ///
-/// The errors of the cost's and the tip's conversions, and those of
+/// The errors of the cost's and the tip's conversions, among them
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+/// for an amount whose currency details are not the library's for its
+/// code, and those of
 /// [`TipRule::amount_on`](eranos::expense::TipRule::amount_on).
 pub fn expense_tip_amount(expense: &Expense) -> Result<Money, EranosError> {
     Ok(Money::from_library(tip_amount(expense)?))
@@ -361,7 +376,10 @@ pub fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
 ///
 /// # Errors
 ///
-/// The errors of the splits' and items' conversions.
+/// The errors of the splits' and items' conversions, among them
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+/// for an amount whose currency details are not the library's for its
+/// code.
 pub fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
     let payers = expense.payers.to_library()?;
     let split = match &expense.split {
@@ -383,7 +401,10 @@ pub fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
 ///
 /// # Errors
 ///
-/// The errors of the split's conversion.
+/// The errors of the split's conversion, among them
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+/// for an amount whose currency details are not the library's for its
+/// code.
 pub fn split_members(split: &Split) -> Result<Vec<String>, EranosError> {
     Ok(Split::members_of(&split.to_library()?))
 }

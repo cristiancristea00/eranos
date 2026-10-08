@@ -218,7 +218,7 @@ flowchart TD
 | `eranos-contact`         | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                                   | core; icu_properties, rlibphonenumber                                                                                  |
 | `eranos-ledger`          | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                                       | core, money                                                                                                            |
 | `eranos-calendar`        | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                                                                                             | core; jiff                                                                                                             |
-| `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                                       | core; iso4217-static                                                                                                   |
+| `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`, `format_minor_units`                                                                                                 | core; iso4217-static                                                                                                   |
 | `eranos-core`            | the five identifiers, `CategoryKey`, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                    | uuid                                                                                                                   |
 | `eranos-glue-macros`     | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                                          | eranos-glue; syn                                                                                                       |
 | `eranos-glue`            | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge                | proc-macro2, quote, syn                                                                                                |
@@ -310,7 +310,10 @@ cannot be removed.
   minor unit and are not currencies here. `CurrencyCode` holds the crate's
   value and its minor unit, read once when a code is looked up, so no crate
   type is part of the API; it also gives each currency's ISO English name
-  and numeric code.
+  and numeric code. The text form of `Money` writes its minor units through
+  `format_minor_units`, which places the point among the digits, and the
+  binding core writes an amount from the details its record carries through
+  the same function ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)).
 - `ExchangeRate` is an exact positive decimal (`mantissa / 10^scale`, up to
   18 decimal places) meaning "one unit of the entry's currency is this many
   units of the group's". Conversion multiplies in checked `i128` and rounds

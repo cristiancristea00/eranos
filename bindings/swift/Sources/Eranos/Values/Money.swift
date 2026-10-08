@@ -13,11 +13,11 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
 
     /// The amount as the library writes it: "12.50 EUR".
     public var description: String {
-        (try? EranosGenerated.moneyFormat(money: generated)) ?? "\(minorUnits) \(currency.code)"
+        EranosGenerated.moneyFormat(money: generated)
     }
 
     var generated: EranosGenerated.Money {
-        .init(minorUnits: minorUnits, currency: currency.code)
+        .init(minorUnits: minorUnits, currency: currency.generated)
     }
 
     /// The amount of `minorUnits` minor units of `currency`.
@@ -37,7 +37,7 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
     }
 
     init(_ money: EranosGenerated.Money) {
-        self.init(minorUnits: money.minorUnits, currency: CurrencyCode(known: money.currency))
+        self.init(minorUnits: money.minorUnits, currency: CurrencyCode(money.currency))
     }
 
     /// This amount plus `other`.

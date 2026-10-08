@@ -209,21 +209,50 @@ impl Money {
 
 impl fmt::Display for Money {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let sign = if 0 > self.minor_units { "-" } else { "" };
-        let magnitude = self.minor_units.unsigned_abs();
-        let decimal_places = usize::from(self.currency.decimal_places());
-        if 0 == decimal_places {
-            return write!(formatter, "{sign}{magnitude} {}", self.currency);
-        }
-        let per_major = self.currency.minor_units_per_major().unsigned_abs();
-        let whole = magnitude / per_major;
-        let fraction = magnitude % per_major;
         write!(
             formatter,
-            "{sign}{whole}.{fraction:0decimal_places$} {}",
+            "{} {}",
+            format_minor_units(self.minor_units, self.currency.decimal_places()),
             self.currency
         )
     }
+}
+
+/// Formats `minor_units` as a decimal number of `decimal_places` places.
+///
+/// The text form of [`Money`] writes its amount with it: 1234 at two places
+/// is `12.34`, -5 at three is `-0.005`, and 1500 at none is `1500`. The
+/// point goes between the digits, padded with zeros to one more digit than
+/// the decimal places, so every `u8` of decimal places formats: dividing by
+/// `10^decimal_places` would overflow an `i64` from 19 places.
+///
+/// # Examples
+///
+/// ```
+/// # // The facade does not re-export it: a caller writes an amount through its `Money`.
+/// use eranos_money::format_minor_units;
+///
+/// assert_eq!(format_minor_units(1_234, 2).to_string(), "12.34");
+/// assert_eq!(format_minor_units(-5, 3).to_string(), "-0.005");
+/// assert_eq!(format_minor_units(1_500, 0).to_string(), "1500");
+/// ```
+#[must_use]
+pub fn format_minor_units(minor_units: i64, decimal_places: u8) -> impl fmt::Display {
+    fmt::from_fn(move |formatter| {
+        let sign = if 0 > minor_units { "-" } else { "" };
+        let magnitude = minor_units.unsigned_abs();
+        if 0 == decimal_places {
+            return write!(formatter, "{sign}{magnitude}");
+        }
+        let places = usize::from(decimal_places);
+        let width = places + 1;
+        let digits = format!("{magnitude:0width$}");
+        // `digits` holds at least `width` ASCII digits, so the split falls
+        // inside it, on a character boundary, and leaves a digit before the
+        // point.
+        let (whole, fraction) = digits.split_at(digits.len() - places);
+        write!(formatter, "{sign}{whole}.{fraction}")
+    })
 }
 
 #[cfg(test)]

@@ -73,19 +73,13 @@ final class Conversions {
     }
 
     /**
-     * The balance as the library writes it; {@code description} if the library cannot format its
-     * amount, which happens only for a currency it does not list.
+     * The balance as the library writes it.
      *
      * @param balance the balance
-     * @param description the balance's description by its components
      * @return the text: "owes 12.00 EUR"
      */
-    static String formatted(Balance balance, String description) {
-        try {
-            return Eranos.balanceFormat(generated(balance));
-        } catch (eranos.internal.EranosException exception) {
-            return description;
-        }
+    static String formatted(Balance balance) {
+        return Eranos.balanceFormat(generated(balance));
     }
 
     /**

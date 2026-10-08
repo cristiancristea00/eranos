@@ -7,7 +7,7 @@ from typing import Self, final
 
 from eranos._contact import Language
 from eranos._crossing import optional
-from eranos._currency_code import CurrencyCode
+from eranos._currency_code import CurrencyCode, currency_of
 from eranos._entries import (
     Category,
     Expense,
@@ -442,7 +442,7 @@ class ExpenseGroup:
 
         """
         with library_errors():
-            return CurrencyCode(self._generated().currency())
+            return currency_of(self._generated().currency())
 
     async def currency_async(self) -> CurrencyCode:
         """
@@ -456,7 +456,7 @@ class ExpenseGroup:
 
         """
         with library_errors():
-            return CurrencyCode(await self._generated().currency_async(None))
+            return currency_of(await self._generated().currency_async(None))
 
     def change_currency(self, currency: CurrencyCode, rates: Iterable[CurrencyRate]) -> None:
         """

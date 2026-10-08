@@ -7,6 +7,7 @@
 #include "eranos.h"
 
 #include <stddef.h>
+#include <stdint.h>
 
 /// The most bytes a line of a report holds, its NUL included: every value, message, and cell of the examples fits.
 static constexpr size_t LINE_SIZE = 512;
@@ -82,6 +83,12 @@ void cellAdd(Cell *cell, char const *text);
 /// @return The text
 [[nodiscard]] Line textLine(EranosText const *text);
 
+/// The ISO 4217 code of @p currency; destroys @p currency.
+///
+/// @param currency The currency's details
+/// @return The code
+[[nodiscard]] Line currencyLine(EranosCurrencyDetails *currency);
+
 /// The text of @p money, as the library writes it; destroys @p money.
 ///
 /// @param money The amount
@@ -127,6 +134,13 @@ typedef struct Share {
 /// @param currency The currency's code
 /// @return The amount, which the caller destroys
 [[nodiscard]] EranosMoney *amountOf(char const *text, char const *currency);
+
+/// The amount of @p minorUnits minor units of @p currency.
+///
+/// @param minorUnits The amount in minor units, such as 1250 for 12.50 EUR
+/// @param currency The currency's code
+/// @return The amount, which the caller destroys
+[[nodiscard]] EranosMoney *minorUnitsOf(int64_t minorUnits, char const *currency);
 
 /// The split that @p members share equally.
 ///

@@ -17,9 +17,9 @@ public class Money(
     /** The currency. */
     public val currency: CurrencyCode,
 ) {
-    /** The amount as the generated code holds it. */
+    /** The amount as the generated code holds it, with the details its currency holds. */
     internal val generated: eranos.internal.Money
-        get() = eranos.internal.Money(minorUnits, currency.code)
+        get() = eranos.internal.Money(minorUnits, currency.generated)
 
     /**
      * This amount plus [other].
@@ -46,12 +46,7 @@ public class Money(
     override fun hashCode(): Int = hashOf(minorUnits, currency)
 
     /** The amount as the library writes it: "12.50 EUR". */
-    override fun toString(): String =
-        try {
-            moneyFormat(generated)
-        } catch (_: eranos.internal.EranosException) {
-            "$minorUnits ${currency.code}"
-        }
+    override fun toString(): String = moneyFormat(generated)
 
     /** The parsing of an amount from its text. */
     public companion object {
@@ -70,4 +65,4 @@ public class Money(
 }
 
 /** The amount the generated code holds as [this]. */
-internal fun eranos.internal.Money.converted(): Money = Money(minorUnits, CurrencyCode.known(currency))
+internal fun eranos.internal.Money.converted(): Money = Money(minorUnits, currency.converted())

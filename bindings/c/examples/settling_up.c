@@ -374,8 +374,7 @@ static void printPayments(EranosExpenseGroup const *const group, EranosPaymentLi
     constexpr EranosCalendarDate DATE = {.year = 2026, .month = 9, .day = 18};
     for (size_t index = 0; FRIENDS > index; ++index) {
         int64_t const number = (int64_t)index + 1;
-        EranosMoney *amount = nullptr;
-        must(eranosMoneyCreate((int64_t)FRIENDS * number * number, "EUR", &amount));
+        EranosMoney *const amount = minorUnitsOf((int64_t)FRIENDS * number * number, "EUR");
         (void)addExpense(group, expenseOf("Round", localCost(amount), soleSplit(friends[index]), eranosSplitCreateEqual(everyone), DATE));
     }
     size_t const open = openBalances(group);

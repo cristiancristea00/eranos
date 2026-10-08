@@ -55,7 +55,7 @@ public final class ExpenseGroupReader implements AutoCloseable {
      * @throws IllegalStateException after {@link #close}
      */
     public CurrencyCode currency() {
-        return Converting.callUnfailing(() -> CurrencyCode.known(handle.currency()));
+        return Converting.callUnfailing(() -> CurrencyCode.converted(handle.currency()));
     }
 
     /**

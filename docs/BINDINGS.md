@@ -118,42 +118,50 @@ flowchart TD
 
 ## 2. What every binding shares
 
-- **Records of text and integers.** Values and entries cross as records
-  and enums with data: identifiers as their text, which for a generated one
-  is a UUID v7 in lowercase hyphenated form, currencies as ISO 4217 codes,
+- **Records of text and integers.** Values and entries cross as records and
+  enums with data: identifiers as their text, which for a generated one is a
+  UUID v7 in lowercase hyphenated form, a currency a caller names on its own
+  (a new group's, a currency change's and its rates', and the one
+  `money_parse` and `exchange_rate_convert` take) as its ISO 4217 code,
   exchange rates as decimals, amounts as 64-bit minor units, percentages in
-  basis points, and parts in hundredths. Days, months, years, hours,
-  minutes, quantities, basis points, and hundredths are 32-bit signed
-  integers, which every target language has: Kotlin's unsigned types are
-  invisible from Java, and JavaScript has one number type. A record is
-  checked by the library's rules on its way in, so a bad value, a number
-  too large for its field included, is a typed error and never wraps into
-  another value. A value the library always holds is never optional in a
-  record: an expense's `category` and `tip` read back as the library
-  holds them, the built-in category's identifier and the no-tip rule (0 %
-  shared proportionally) when the expense has no other, and a record to
-  add or replace sets them as given. A value the domain makes optional is
-  optional, never an empty stand-in: an expense's description, a member's
-  last name, and a transfer's note are optional text, which a replacement
-  without it clears; so are a new group's description and language; and
-  the group's `set_description` and `set_language` take optional text,
-  none clearing the value. Text is trimmed, and blank text reads back
-  absent.
+  basis points, and parts in hundredths. A currency the library answers
+  with, in an amount, as the group currency, and in a failure, crosses as
+  `CurrencyDetails`: its code, name, numeric code, and decimal places, so a
+  layer shows an amount without looking its currency up. Days, months,
+  years, hours, minutes, quantities, basis points, and hundredths are 32-bit
+  signed integers, which every target language has: Kotlin's unsigned types
+  are invisible from Java, and JavaScript has one number type. A currency's
+  decimal places are the one exception, a `u8` as the library holds them, so
+  the core writes an amount for every value the field can hold. A record is
+  checked by the library's rules on its way in, so a bad value, a number too
+  large for its field included, is a typed error and never wraps into
+  another value; an amount whose currency details are not the library's for
+  its code is refused with `MoneyFailure::UnknownCurrency`, as an unknown
+  code is. A value the library always holds is never optional in a record:
+  an expense's `category` and `tip` read back as the library holds them, the
+  built-in category's identifier and the no-tip rule (0 % shared
+  proportionally) when the expense has no other, and a record to add or
+  replace sets them as given. A value the domain makes optional is optional,
+  never an empty stand-in: an expense's description, a member's last name,
+  and a transfer's note are optional text, which a replacement without it
+  clears; so are a new group's description and language; and the group's
+  `set_description` and `set_language` take optional text, none clearing the
+  value. Text is trimmed, and blank text reads back absent.
 - **Identity is given or generated.** Every entry and every new group
-  carries an identifier from the moment it is made: the app's own, any
-  text the library accepts, such as the key of its store, or a generated
-  one. The core's records always carry it, and `identifier_generate`
-  makes one; each language makes an entry or a group in two ways, one
-  that takes the identifier and one that generates it when it is called,
-  as the library's constructors and their `with_id` twins do, and no
-  record leaves it out. Adding an entry returns its identifier, and one
-  the group already holds is refused as a duplicate. `identifier_parse` checks a text by the rules
+  carries an identifier from the moment it is made: the app's own, any text
+  the library accepts, such as the key of its store, or a generated one. The
+  core's records always carry it, and `identifier_generate` makes one; each
+  language makes an entry or a group in two ways, one that takes the
+  identifier and one that generates it when it is called, as the library's
+  constructors and their `with_id` twins do, and no record leaves it out.
+  Adding an entry returns its identifier, and one the group already holds is
+  refused as a duplicate. `identifier_parse` checks a text by the rules
   every kind of identifier shares before an app stores it, and every kind
   draws a generated identifier from the one generator of eranos-core. An
   entry to replace names its entry, which the group must hold (the
-  `Unknown…` failure of its kind otherwise), and the replacement starts
-  from the stored entry's `to_builder()` and takes every field of the
-  record, so a replacement cannot move an entry to another identifier.
+  `Unknown…` failure of its kind otherwise), and the replacement starts from
+  the stored entry's `to_builder()` and takes every field of the record, so
+  a replacement cannot move an entry to another identifier.
 - **One error, grouped by module.** A binding call can fail in several
   modules at once, since its records are converted before the library runs
   it, and a generated function throws one error type, so every call
@@ -199,6 +207,8 @@ flowchart TD
   details), so every text a binding shows is the library's, and give the
   values an expense starts at: `category_id_uncategorised`, the built-in
   category's identifier, and `tip_rule_none`, the no-tip rule.
+  `money_format` and `balance_format` write from the record alone and
+  cannot fail ([§ 5](#5-the-text-a-binding-shows)).
 - **Shapes every generator takes.** The types keep to what UniFFI 0.29,
   the oldest version the glue crates use, can mirror: records, enums with
   data, one error enum, and objects; no methods on records, and no
@@ -269,6 +279,17 @@ value helpers of [§ 2](#2-what-every-binding-shares) write each as the
 library does, and every layer's values print through them, so a report
 reads the same in every language, and a change to how the library writes a
 value reaches every binding at once.
+
+An amount prints from its record: `money_format` writes the minor units
+with the decimal places of the record's `CurrencyDetails`, through
+`eranos_money::format_minor_units`, which the library's own text form of an
+amount writes with, and then the code; `balance_format` puts the library's
+words, "owes", "settled", and "gets back", around it. Neither looks the
+currency up, so neither can fail, for any of the 256 numbers of decimal
+places a record can hold: the formatter places the point among the digits
+rather than dividing by a power of ten, which overflows an `i64` from 19
+places. A test of the core holds both to the library's text for every
+currency and every kind of balance.
 
 ## 6. Account details
 
@@ -428,7 +449,10 @@ Design Guidelines:
 - A value the library checks is a type that is valid once made: `CurrencyCode`,
   from the library's list, and `Money`, `ExchangeRate`, `Percentage`,
   `Parts`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`, `IBAN`,
-  `Username`, and `Language`, each printing the library's text.
+  `Username`, and `Language`, each printing the library's text. A
+  `CurrencyCode` holds the `CurrencyDetails` the core gives with an amount,
+  as the group currency, and in a failure, and an amount crosses back with
+  them, so the layer looks no currency up.
 - Every call throws `EranosError` as a typed throw, with the core's case per
   module and a failure enum per module whose payloads are typed
   (`ExpenseGroupFailure.memberInUse(expenses:member:transfers:)`); a failure the
@@ -476,6 +500,13 @@ its code. The layer follows the Kotlin library guidelines:
   are never `null`, to them. A value the library checks has
   an internal constructor and factories that check it (`CurrencyCode.of`,
   `Money.parse`, `CalendarDate.of`), and prints the library's text.
+- A currency the library answers with, in an amount, as the group
+  currency, and in a failure, is a `CurrencyCode` built from the
+  `CurrencyDetails` it crosses with, never looked up by its code, so an
+  amount prints with the decimal places the library sent, and an amount
+  crosses back with the details its currency holds. uniffi-bindgen and
+  gobley both write the `u8` of decimal places as a `UByte`, and Kotlin's
+  unsigned types are invisible from Java, so `decimalPlaces` is an `Int`.
 - A failure the library reports throws `EranosException`, a subclass per
   module holding the module's failure (`ExpenseGroupFailure.MemberInUse`)
   and the library's message. A call the program should not make throws the
@@ -523,6 +554,13 @@ The layer follows Effective Java and Google Java Style:
   helpers give; `Expense`'s builder starts the category and the tip at
   them, its `category` and `tip` refuse a `null` the same way, and
   `Expense.category()` and `tip()` return the values, not an `Optional`.
+- A currency the library answers with, in an amount, as the group
+  currency, and in a failure, is a `CurrencyCode` built from the
+  `CurrencyDetails` it crosses with, never looked up by its code, so an
+  amount prints with the decimal places the library sent. Java has no
+  unsigned byte: uniffi-bindgen-java writes the `u8` of decimal places as
+  a `byte`, which `CurrencyCode` reads with `Byte.toUnsignedInt`, and
+  `decimalPlaces()` returns an `int`.
 - An absent value is an empty `Optional`, a variant a record of a sealed
   interface, and a failure the library reports a checked
   `EranosException`, a subclass per module holding the module's failure.
@@ -568,6 +606,13 @@ build. The layer follows the Google TypeScript Style Guide:
   library's text; entries and totals are read-only interfaces, and a
   variant is a union discriminated by `kind`
   (`{ kind: 'equal', members }`).
+- A currency the library answers with, in an amount, as the group
+  currency, and in a failure, is a `CurrencyCode` built from the
+  `CurrencyDetails` it crosses with, never looked up by its code, so an
+  amount prints with the decimal places the library sent. The layer keeps
+  one `CurrencyCode` per code, built on the code's first use, which
+  `CurrencyCode.of`, `CurrencyCode.all`, amounts, failures, and the group
+  all return, so currencies compare with `===`.
 - A record with a field the library gives a default has two types. The
   one every read returns keeps the record's name, `Member`, `Expense`,
   `ExpenseItem`, and `TipRule`, and requires every field the library
@@ -679,6 +724,15 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   comes back in an `EranosText`, which the call replaces and ends with a
   NUL; a buffer of Diplomat's grows or ends the program, as the library's
   own allocations do, so the NUL always has room.
+- An amount is made from the details of its currency, an
+  `EranosCurrencyDetails` that only the library makes
+  (`eranosCurrencyDetailsOf`, the list of every currency, or another
+  amount's `eranosMoneyCurrency`), so `eranosMoneyCreate(minorUnits,
+  currency)` cannot fail, and no amount in details the library would
+  refuse can be built. A currency the library answers with, an amount's,
+  the group's, and a failure's, comes back as details the caller destroys,
+  and `eranosMoneyFormat` and `eranosBalanceFormat` write their text from
+  the amount alone and cannot fail.
 - An asynchronous call takes a callback struct, a context and a function
   that receives the error or the value, which it owns; the struct stays
   valid until its function runs, once. The value is nullptr when the call
@@ -716,6 +770,12 @@ Core Guidelines with the naming rule above:
   `CalendarDate::of`, `Email::parse`), its fields in one private member;
   every identifier is a class of its own over its text, with `std::hash`,
   a `parse` that checks it, and a static `generate` that makes one.
+  `CurrencyCode` also keeps, in a `std::shared_ptr`, the library's details
+  it was read from, which an amount in it crosses with, so neither an
+  amount nor its text looks the currency up; its `decimalPlaces()` is a
+  `std::uint8_t`, as the library holds it, which a stream's `<<` writes as
+  a character and `std::format` and `std::to_string` write as a number,
+  and a failure's currencies are `CurrencyCode`s.
   A record is a struct whose constructor takes its required fields, and a
   variant a `std::variant` of structs (`EqualSplit`, `LocalCost`). An
   entry has two constructors: one takes its identifier first
@@ -749,7 +809,11 @@ Core Guidelines with the naming rule above:
   that reaches neither the C API, Diplomat's classes, nor a part of the
   standard library that C++23 cannot evaluate at compile time, such as
   `std::shared_ptr` and `std::format`, and `inline` on every function a
-  header defines, written even where the language implies it.
+  header defines, written even where the language implies it. A currency
+  holds its details in a `std::shared_ptr`, so the constructors of
+  `Money`, of `CurrencyCode`, and of every record that takes an amount or
+  a cost are not `constexpr`; `TipRule::none()` is, since a percentage
+  tip holds no amount.
 - Equality is defaulted wherever it compares every field; `CurrencyCode`
   compares its code alone. An identifier orders by its text through a
   `<=>` written out, since the defaulted one holds a branch that no
@@ -796,11 +860,15 @@ reads its annotations without checking its code, and Ruff leaves it out:
   `ExpenseGroup.create_with_id(id, name, currency)` takes it. A value the
   library checks is a class whose constructor checks it, as
   `datetime.date`'s does (`CurrencyCode('EUR')`, `CalendarDate(2026, 9, 23)`,
-  `Email('ana@example.com')`), and prints the library's text. Amounts,
-  entries, and totals are frozen dataclasses: an entry takes its fields by
-  keyword and is edited with `copy.replace`, which keeps its identifier,
-  and a variant is a union of frozen dataclasses (`EqualSplit`,
-  `LocalCost`), which a `match` takes apart.
+  `Email('ana@example.com')`), and prints the library's text. The
+  constructor of `CurrencyCode` looks its code up, for an app's input; a
+  currency the core gives with an amount, as the group currency, and in a
+  failure is made from the `CurrencyDetails` it carries, with no lookup,
+  and an amount crosses back with them. Amounts, entries, and totals are
+  frozen dataclasses: an entry takes its fields by keyword and is edited
+  with `copy.replace`, which keeps its identifier, and a variant is a union
+  of frozen dataclasses (`EqualSplit`, `LocalCost`), which a `match` takes
+  apart.
 - An expense's `tip` and `category` are never optional. `NO_TIP`, the
   no-tip rule, and `UNCATEGORISED`, the built-in category's identifier,
   are module constants that `eranos` exports, read once from the core's

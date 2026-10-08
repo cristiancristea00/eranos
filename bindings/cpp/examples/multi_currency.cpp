@@ -70,7 +70,7 @@ struct BalanceRow final {
 }
 
 /// The amount of @p cost, as entered.
-[[nodiscard]] inline constexpr Money amountOf(Cost const &cost) noexcept {
+[[nodiscard]] Money amountOf(Cost const &cost) noexcept {
     return std::visit([](auto const &alternative) noexcept { return alternative.amount; }, cost);
 }
 

@@ -9,7 +9,7 @@ use crate::calendar::CalendarDate;
 use crate::expense::{Expense, ExpenseSplit, Split};
 use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
-use crate::money::{Cost, CurrencyRate, Money};
+use crate::money::{Cost, CurrencyDetails, CurrencyRate, Money};
 use crate::operations;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
@@ -33,7 +33,7 @@ struct Flat {
 fn euros(minor_units: i64) -> Money {
     Money {
         minor_units,
-        currency: "EUR".to_owned(),
+        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
     }
 }
 
@@ -144,7 +144,7 @@ fn every_read_converts_what_the_group_holds() {
         operations::category(group, &flat.food),
         Ok(Some(categories[1].clone()))
     );
-    assert_eq!(operations::currency(group), "EUR");
+    assert_eq!(operations::currency(group), euros(0).currency);
     let expenses = operations::expenses(group);
     assert_eq!(expenses.len(), 1);
     assert_eq!(expenses[0].id, flat.dinner);
@@ -725,7 +725,7 @@ fn the_currency_changes_at_the_given_rates() {
         cost: Cost::Converted {
             amount: Money {
                 minor_units: 5_000,
-                currency: "RON".to_owned(),
+                currency: CurrencyDetails::from_library(CurrencyCode::RON),
             },
             rate: "0.2".to_owned(),
         },
@@ -774,12 +774,15 @@ fn the_currency_changes_at_the_given_rates() {
     assert_eq!(*group, before);
 
     operations::change_currency(group, "RON", &[rate("EUR", "5")]).unwrap();
-    assert_eq!(operations::currency(group), "RON");
+    assert_eq!(
+        operations::currency(group),
+        CurrencyDetails::from_library(CurrencyCode::RON)
+    );
     assert_eq!(
         operations::summary(group).total_spent,
         Money {
             minor_units: 20_000,
-            currency: "RON".to_owned(),
+            currency: CurrencyDetails::from_library(CurrencyCode::RON),
         }
     );
 }

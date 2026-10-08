@@ -138,7 +138,7 @@ extension ExpenseFailure {
         case .nonPositiveAmount:
             self = .nonPositiveAmount
         case let .currencyMismatch(expected, found):
-            self = .currencyMismatch(expected: CurrencyCode(known: expected), found: CurrencyCode(known: found))
+            self = .currencyMismatch(expected: CurrencyCode(expected), found: CurrencyCode(found))
         case .emptySplit:
             self = .emptySplit
         case let .duplicateMember(member):
@@ -236,11 +236,11 @@ extension ExpenseGroupFailure {
         case .emptyName:
             self = .emptyName
         case let .missingExchangeRate(currency):
-            self = .missingExchangeRate(CurrencyCode(known: currency))
+            self = .missingExchangeRate(CurrencyCode(currency))
         case .unexpectedExchangeRate:
             self = .unexpectedExchangeRate
         case let .duplicateExchangeRate(currency):
-            self = .duplicateExchangeRate(CurrencyCode(known: currency))
+            self = .duplicateExchangeRate(CurrencyCode(currency))
         case let .duplicateMember(member):
             self = .duplicateMember(Member.ID(rawValue: member))
         case let .unknownMember(member):
@@ -366,9 +366,9 @@ extension MoneyFailure {
         case .invalidAmount:
             self = .invalidAmount
         case let .tooManyDecimals(currency, allowed):
-            self = .tooManyDecimals(currency: CurrencyCode(known: currency), allowed: Int(allowed))
+            self = .tooManyDecimals(currency: CurrencyCode(currency), allowed: Int(allowed))
         case let .currencyMismatch(left, right):
-            self = .currencyMismatch(left: CurrencyCode(known: left), right: CurrencyCode(known: right))
+            self = .currencyMismatch(left: CurrencyCode(left), right: CurrencyCode(right))
         case .unknownCurrency:
             self = .unknownCurrency
         case .invalidExchangeRate:

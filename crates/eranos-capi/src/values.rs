@@ -11,6 +11,7 @@
 #[diplomat::attr(cpp, namespace = "eranos::detail")]
 pub mod ffi {
     use crate::error::ffi::EranosError;
+    use crate::generated::records::ffi::EranosCurrencyDetails;
     use diplomat_runtime::{DiplomatStr, DiplomatWrite};
 
     /// A day of the calendar.
@@ -129,20 +130,15 @@ pub mod ffi {
     pub struct EranosMoney(pub(crate) eranos_bindings::Money);
 
     impl EranosMoney {
-        /// A new money of its required fields; every other field starts absent, empty, or at its
-        /// default.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create(
-            minor_units: i64,
-            currency: &DiplomatStr,
-        ) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::Money {
+        /// `minor_units` of `currency`, whose details come from the library: from
+        /// `EranosCurrencyDetails::of`, the list of every currency, or another amount, so the
+        /// amount needs no lookup and no check of its own.
+        #[must_use]
+        pub fn create(minor_units: i64, currency: &EranosCurrencyDetails) -> Box<Self> {
+            Box::new(Self(eranos_bindings::Money {
                 minor_units,
-                currency: crate::text(currency)?,
-            })))
+                currency: currency.0.clone(),
+            }))
         }
 
         /// The amount in minor units: cents for the euro, none for the yen.
@@ -151,9 +147,10 @@ pub mod ffi {
             self.0.minor_units
         }
 
-        /// The currency, as an ISO 4217 code.
-        pub fn currency(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.currency);
+        /// The currency, with what ISO 4217 says of it.
+        #[must_use]
+        pub fn currency(&self) -> Box<EranosCurrencyDetails> {
+            Box::new(EranosCurrencyDetails(self.0.currency.clone()))
         }
 
         /// The amount written `text` in the currency `currency`: "12.50", "12.5", or "-3".
@@ -172,14 +169,8 @@ pub mod ffi {
         }
 
         /// Writes the amount as the library does: "12.50 EUR".
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `Money` for a currency the library does not list.
-        pub fn format(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = eranos_bindings::money_format(&self.0).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
+        pub fn format(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::money_format(&self.0));
         }
 
         /// This amount plus `other`.

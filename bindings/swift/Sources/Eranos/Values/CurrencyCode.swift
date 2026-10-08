@@ -2,26 +2,35 @@ internal import EranosGenerated
 
 /// A currency with minor units, as ISO 4217 lists it: the only currencies an amount can be in.
 ///
-/// A currency comes from the library's list, so an amount in one always formats: create one from
-/// its code with ``init(code:)``, or pick one from ``all``.
+/// A currency holds the details the library gives for it, and an amount prints from them and
+/// crosses back with them. Create one from its code with ``init(code:)``, or pick one from
+/// ``all``; the library gives one with every amount, as the group currency, and in a failure.
 public struct CurrencyCode: Hashable, Sendable, CustomStringConvertible {
     /// Every currency with minor units, by code.
     public static let all: [Self] = EranosGenerated.currencies().map(Self.init)
 
-    /// The currencies of ``all`` by their codes.
-    private static let byCode: [String: Self] = Dictionary(uniqueKeysWithValues: all.map { ($0.code, $0) })
+    /// The details as the library gives them.
+    let generated: EranosGenerated.CurrencyDetails
 
     /// The three-letter code: "EUR".
-    public let code: String
+    public var code: String {
+        generated.code
+    }
 
     /// The English name: "Euro".
-    public let name: String
+    public var name: String {
+        generated.name
+    }
 
     /// The three-digit numeric code: 978 for the euro.
-    public let numericCode: Int
+    public var numericCode: Int {
+        Int(generated.numericCode)
+    }
 
     /// How many decimal places its minor unit has: 2 for the euro, 0 for the yen.
-    public let decimalPlaces: Int
+    public var decimalPlaces: Int {
+        Int(generated.decimalPlaces)
+    }
 
     /// The code: "EUR".
     public var description: String {
@@ -37,24 +46,7 @@ public struct CurrencyCode: Hashable, Sendable, CustomStringConvertible {
         self.init(details)
     }
 
-    init(_ details: CurrencyDetails) {
-        code = details.code
-        name = details.name
-        numericCode = Int(details.numericCode)
-        decimalPlaces = Int(details.decimalPlaces)
-    }
-
-    /// The currency of `code`, a code the library gave, so always one of ``all``; any other code
-    /// stands for itself, so that an amount in it keeps the code it came with.
-    init(known code: String) {
-        self = Self.byCode[code] ?? Self(unlisted: code)
-    }
-
-    /// A currency that is not one of ``all``, named by its code alone.
-    init(unlisted code: String) {
-        self.code = code
-        name = code
-        numericCode = 0
-        decimalPlaces = 0
+    init(_ details: EranosGenerated.CurrencyDetails) {
+        generated = details
     }
 }

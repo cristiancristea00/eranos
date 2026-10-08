@@ -535,7 +535,11 @@ contradicts a convention everywhere is removed from `[workspace.lints]` in
 `multiple_crate_versions` reports, and that only a dependency's release can
 remove, goes into `allowed-duplicate-crates` in `clippy.toml`, with the
 dependency, the cause, and the upstream issue; it comes out when that
-release lands.
+release lands. `large-error-threshold` in `clippy.toml` sits one byte above
+the size of the binding core's `EranosError`, whose cases cannot box what
+they hold, since UniFFI 0.29 lowers no `Box`, with the reason beside it: a
+change that grows the error moves it, with the new size, in the same
+commit.
 
 The Kotlin layer follows the same order. A detekt finding is fixed, or
 suppressed on the narrowest declaration with `@Suppress("RuleName")`

@@ -6,6 +6,7 @@
 #[diplomat::bridge]
 #[diplomat::attr(cpp, namespace = "eranos::detail")]
 pub mod ffi {
+    use crate::generated::records::ffi::EranosCurrencyDetails;
     use crate::values::ffi::{EranosMoney, EranosTextList};
     use diplomat_runtime::DiplomatWrite;
 
@@ -258,9 +259,14 @@ pub mod ffi {
         }
 
         /// The currency that appears twice. Present for the failures `DuplicateExchangeRate`,
-        /// `MissingExchangeRate`, `TooManyDecimals`. Writes it, if present; absent otherwise.
-        pub fn currency(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.payload.currency.as_deref())
+        /// `MissingExchangeRate`, `TooManyDecimals`.
+        #[must_use]
+        pub fn currency(&self) -> Option<Box<EranosCurrencyDetails>> {
+            self.0
+                .payload
+                .currency
+                .clone()
+                .map(|currency| Box::new(EranosCurrencyDetails(currency)))
         }
 
         /// The category that has the name. Present for the failure `DuplicateCategoryName`. Writes
@@ -279,10 +285,14 @@ pub mod ffi {
                 .map(|money| Box::new(EranosMoney(money)))
         }
 
-        /// The expense's currency. Present for the failure `CurrencyMismatch`. Writes it, if
-        /// present; absent otherwise.
-        pub fn expected_currency(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.payload.expected_currency.as_deref())
+        /// The expense's currency. Present for the failure `CurrencyMismatch`.
+        #[must_use]
+        pub fn expected_currency(&self) -> Option<Box<EranosCurrencyDetails>> {
+            self.0
+                .payload
+                .expected_currency
+                .clone()
+                .map(|currency| Box::new(EranosCurrencyDetails(currency)))
         }
 
         /// How many characters the country's IBANs have. Present for the failure `WrongLength`.
@@ -313,10 +323,14 @@ pub mod ffi {
             self.0.payload.format
         }
 
-        /// The currency of the amount inside it. Present for the failure `CurrencyMismatch`. Writes
-        /// it, if present; absent otherwise.
-        pub fn found_currency(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.payload.found_currency.as_deref())
+        /// The currency of the amount inside it. Present for the failure `CurrencyMismatch`.
+        #[must_use]
+        pub fn found_currency(&self) -> Option<Box<EranosCurrencyDetails>> {
+            self.0
+                .payload
+                .found_currency
+                .clone()
+                .map(|currency| Box::new(EranosCurrencyDetails(currency)))
         }
 
         /// How many characters the IBAN has. Present for the failure `WrongLength`.
@@ -325,10 +339,14 @@ pub mod ffi {
             self.0.payload.found_length
         }
 
-        /// The currency of the first amount. Present for the failure `CurrencyMismatch`. Writes it,
-        /// if present; absent otherwise.
-        pub fn left(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.payload.left.as_deref())
+        /// The currency of the first amount. Present for the failure `CurrencyMismatch`.
+        #[must_use]
+        pub fn left(&self) -> Option<Box<EranosCurrencyDetails>> {
+            self.0
+                .payload
+                .left
+                .clone()
+                .map(|currency| Box::new(EranosCurrencyDetails(currency)))
         }
 
         /// The line of the saved group where the text stops being one, from 1. Present for the
@@ -351,10 +369,14 @@ pub mod ffi {
             self.0.payload.reason.map(Into::into)
         }
 
-        /// The currency of the second amount. Present for the failure `CurrencyMismatch`. Writes
-        /// it, if present; absent otherwise.
-        pub fn right(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.payload.right.as_deref())
+        /// The currency of the second amount. Present for the failure `CurrencyMismatch`.
+        #[must_use]
+        pub fn right(&self) -> Option<Box<EranosCurrencyDetails>> {
+            self.0
+                .payload
+                .right
+                .clone()
+                .map(|currency| Box::new(EranosCurrencyDetails(currency)))
         }
 
         /// What the percentages add up to, in basis points. Present for the failure

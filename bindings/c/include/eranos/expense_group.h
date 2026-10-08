@@ -8,6 +8,7 @@
 #include "EranosCancellation.h"
 #include "EranosCategoryListOutcome.h"
 #include "EranosCategoryOutcome.h"
+#include "EranosCurrencyDetailsOutcome.h"
 #include "EranosCurrencyRate.h"
 #include "EranosCurrencyRateList.h"
 #include "EranosExpenseGroup.h"
@@ -33,6 +34,7 @@
 #include "EranosTransferOutcome.h"
 #include "EranosUnitOutcome.h"
 #include "eranos/category.h"
+#include "eranos/currency_code.h"
 #include "eranos/detail.h"
 #include "eranos/expense.h"
 #include "eranos/expense_group_reader.h"
@@ -97,6 +99,24 @@ static inline void eranosDetailRunFoundCategoryCallback(void const *const data, 
     EranosCategory *const category = EranosFoundCategoryOutcome_value(outcome);
     EranosFoundCategoryOutcome_destroy(outcome);
     callback->run(callback->context, error, category);
+}
+
+/// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the currency details, or nullptr when the
+/// call failed. The callback destroys each object it receives.
+typedef struct EranosCurrencyDetailsCallback {
+    /// What the caller passes back to itself.
+    void *context;
+    /// Called once with @p context and the outcome.
+    void (*run)(void *context, EranosError *error, EranosCurrencyDetails *currency);
+} EranosCurrencyDetailsCallback;
+
+/// Reports @p outcome to the callback @p data points to, and destroys it.
+static inline void eranosDetailRunCurrencyDetailsCallback(void const *const data, EranosCurrencyDetailsOutcome *const outcome) {
+    EranosCurrencyDetailsCallback const *const callback = data;
+    EranosError *const error = EranosCurrencyDetailsOutcome_error(outcome);
+    EranosCurrencyDetails *const currency = EranosCurrencyDetailsOutcome_value(outcome);
+    EranosCurrencyDetailsOutcome_destroy(outcome);
+    callback->run(callback->context, error, currency);
 }
 
 /// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the expenses, or nullptr when the call
@@ -841,14 +861,12 @@ static inline void eranosExpenseGroupRemoveCategoryAsync(EranosExpenseGroup *con
     EranosExpenseGroup_remove_category_async(group, eranosDetailView(id), cancellation, wrapped);
 }
 
-/// The ISO 4217 code of the group currency. Writes it into @p currency.
+/// The group currency, with what ISO 4217 says of it.
 ///
 /// @param group The group
-/// @param currency Receives the currency, replacing what it held
-static inline void eranosExpenseGroupCurrency(EranosExpenseGroup const *const group, EranosText *const currency) {
-    eranosDetailClear(currency);
-    EranosExpenseGroup_currency(group, currency);
-    eranosDetailFinish(currency);
+/// @return The currency details, which the caller destroys
+[[nodiscard]] static inline EranosCurrencyDetails *eranosExpenseGroupCurrency(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_currency(group);
 }
 
 /// The asynchronous form of eranosExpenseGroupCurrency(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
@@ -860,10 +878,10 @@ static inline void eranosExpenseGroupCurrency(EranosExpenseGroup const *const gr
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupCurrencyAsync(EranosExpenseGroup const *const group, EranosCancellation const *const cancellation,
-                                                   EranosTextCallback const *const callback) {
+                                                   EranosCurrencyDetailsCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_currency_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunTextCallback,
+        .run_callback = eranosDetailRunCurrencyDetailsCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_currency_async(group, cancellation, wrapped);

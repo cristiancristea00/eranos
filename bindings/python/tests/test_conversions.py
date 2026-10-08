@@ -10,9 +10,24 @@ from typing import Any, final
 
 import pytest
 
-from eranos import NO_TIP, UNCATEGORISED, EranosError, InvalidJsonError, _entries, _errors, _totals
+from eranos import (
+    NO_TIP,
+    UNCATEGORISED,
+    CurrencyCode,
+    EranosError,
+    ExpenseError,
+    ExpenseGroupError,
+    InvalidJsonError,
+    Money,
+    MoneyError,
+    _entries,
+    _errors,
+    _totals,
+)
+from eranos._currency_code import currency_of, generated_currency
 from eranos._errors import library_errors
 from eranos._internal import eranos as generated
+from eranos._money import money_of
 
 
 @final
@@ -58,6 +73,9 @@ FAILURES = {
 }
 """How each module's failure converts, by the module's name."""
 
+UNLISTED = generated.CurrencyDetails(code='XTS', name='Testing', numeric_code=963, decimal_places=4)
+"""The details of a currency the library does not list: a lookup of its code is refused."""
+
 
 def cases(kind: type) -> list[type]:
     """
@@ -75,7 +93,7 @@ def cases(kind: type) -> list[type]:
 
 def instance(case: type) -> object:
     """
-    Make a case of a generated data enum, each field an example of its type: a currency's code for text.
+    Make a case of a generated data enum, each field an example of its type: a currency's code for text, and an unlisted currency's details.
 
     Args:
         case: The case.
@@ -87,7 +105,8 @@ def instance(case: type) -> object:
     examples = {
         'str': 'EUR',
         'int': 1,
-        'Money': generated.Money(minor_units=1, currency='EUR'),
+        'CurrencyDetails': UNLISTED,
+        'Money': generated.Money(minor_units=1, currency=UNLISTED),
         'typing.List[str]': ['EUR'],
         'IbanReason': generated.IbanReason.INVALID_FORMAT(),
     }
@@ -186,3 +205,60 @@ def test_the_librarys_own_errors_convert_to_the_standard_errors_they_stand_for()
     assert str(invalid) == 'invalid'
     assert isinstance(converted(generated.EranosError.Cancelled('cancelled')), asyncio.CancelledError)
     assert isinstance(converted(generated.EranosError.Released('released')), RuntimeError)
+
+
+def test_an_amount_and_a_failure_hold_the_details_the_library_gives_without_a_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    A currency looked up by its code for each amount and failure the library answers with would cost a call of the library each.
+
+    The details are of a currency the library does not list, which no lookup returns, and a lookup fails the test.
+    """
+
+    def looked_up(code: str) -> generated.CurrencyDetails:
+        raise AssertionError(code)
+
+    monkeypatch.setattr(generated, 'currency_details', looked_up)
+    amount = money_of(generated.Money(minor_units=-12345, currency=UNLISTED))
+    assert generated_currency(amount.currency) == UNLISTED
+    assert str(amount) == '-1.2345 XTS'
+    decimals = converted(generated.EranosError.Money(generated.MoneyFailure.TOO_MANY_DECIMALS(UNLISTED, 4), 'the message'))
+    assert isinstance(decimals, MoneyError)
+    assert isinstance(decimals.failure, MoneyError.TooManyDecimals)
+    assert generated_currency(decimals.failure.currency) == UNLISTED
+    amounts = converted(generated.EranosError.Money(generated.MoneyFailure.CURRENCY_MISMATCH(UNLISTED, UNLISTED), 'the message'))
+    assert isinstance(amounts, MoneyError)
+    assert isinstance(amounts.failure, MoneyError.CurrencyMismatch)
+    assert generated_currency(amounts.failure.left) == UNLISTED
+    assert generated_currency(amounts.failure.right) == UNLISTED
+    parts = converted(generated.EranosError.Expense(generated.ExpenseFailure.CURRENCY_MISMATCH(UNLISTED, UNLISTED), 'the message'))
+    assert isinstance(parts, ExpenseError)
+    assert isinstance(parts.failure, ExpenseError.CurrencyMismatch)
+    assert generated_currency(parts.failure.expected) == UNLISTED
+    assert generated_currency(parts.failure.found) == UNLISTED
+    missing = converted(generated.EranosError.ExpenseGroup(generated.ExpenseGroupFailure.MISSING_EXCHANGE_RATE(UNLISTED), 'the message'))
+    assert isinstance(missing, ExpenseGroupError)
+    assert isinstance(missing.failure, ExpenseGroupError.MissingExchangeRate)
+    assert generated_currency(missing.failure.currency) == UNLISTED
+    twice = converted(generated.EranosError.ExpenseGroup(generated.ExpenseGroupFailure.DUPLICATE_EXCHANGE_RATE(UNLISTED), 'the message'))
+    assert isinstance(twice, ExpenseGroupError)
+    assert isinstance(twice.failure, ExpenseGroupError.DuplicateExchangeRate)
+    assert generated_currency(twice.failure.currency) == UNLISTED
+
+
+def test_an_amount_whose_currency_details_are_not_the_librarys_is_refused() -> None:
+    """
+    An amount whose currency held other details than the library's for its code, taken, would show other decimal places than the group holds.
+
+    An app makes a currency only from its code, which the library looks up, so only the package's private conversion makes one.
+    """
+    euro = CurrencyCode('EUR')
+    for details in (
+        generated.CurrencyDetails(code='eur', name='Euro', numeric_code=978, decimal_places=2),
+        generated.CurrencyDetails(code='EUR', name='Euros', numeric_code=978, decimal_places=2),
+        generated.CurrencyDetails(code='EUR', name='Euro', numeric_code=840, decimal_places=2),
+        generated.CurrencyDetails(code='EUR', name='Euro', numeric_code=978, decimal_places=3),
+        UNLISTED,
+    ):
+        with pytest.raises(MoneyError) as refused:
+            Money(1, currency_of(details)).plus(Money(1, euro))
+        assert refused.value.failure == MoneyError.UnknownCurrency(), details

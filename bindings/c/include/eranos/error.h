@@ -5,6 +5,7 @@
 #define ERANOS_ERROR_H
 
 #include "EranosError.h"
+#include "eranos/currency_code.h"
 #include "eranos/detail.h"
 #include "eranos/failures.h"
 #include "eranos/identifiers.h"
@@ -92,19 +93,12 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, column);
 }
 
-/// The ISO 4217 code of the currency. Present for the failures ERANOS_FAILURE_MONEY_TOO_MANY_DECIMALS,
-/// ERANOS_FAILURE_EXPENSE_GROUP_MISSING_EXCHANGE_RATE, and ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE. Writes it, if present; absent
-/// otherwise.
+/// The currency, with what ISO 4217 says of it. Present for the failures ERANOS_FAILURE_MONEY_TOO_MANY_DECIMALS,
+/// ERANOS_FAILURE_EXPENSE_GROUP_MISSING_EXCHANGE_RATE, and ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE.
 ///
 /// @param error The error
-/// @param currency Receives the currency, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosErrorCurrency(EranosError const *const error, EranosText *const currency) {
-    eranosDetailClear(currency);
-    bool const present = EranosError_currency(error, currency).is_ok;
-    eranosDetailFinish(currency);
-    return present;
-}
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosCurrencyDetails *eranosErrorCurrency(EranosError const *const error) { return EranosError_currency(error); }
 
 /// The category that has the name. Present for the failure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME. Writes it, if present; absent
 /// otherwise.
@@ -125,16 +119,12 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
 /// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
 [[nodiscard]] static inline EranosMoney *eranosErrorExpectedAmount(EranosError const *const error) { return EranosError_expected_amount(error); }
 
-/// The expense's currency. Present for the failure ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
+/// The expense's currency. Present for the failure ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH.
 ///
 /// @param error The error
-/// @param expectedCurrency Receives the expected currency, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosErrorExpectedCurrency(EranosError const *const error, EranosText *const expectedCurrency) {
-    eranosDetailClear(expectedCurrency);
-    bool const present = EranosError_expected_currency(error, expectedCurrency).is_ok;
-    eranosDetailFinish(expectedCurrency);
-    return present;
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosCurrencyDetails *eranosErrorExpectedCurrency(EranosError const *const error) {
+    return EranosError_expected_currency(error);
 }
 
 /// How many characters the country's IBANs have. Present for the failure ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN with the reason
@@ -177,16 +167,12 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, format);
 }
 
-/// The currency of the amount inside it. Present for the failure ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
+/// The currency of the amount inside it. Present for the failure ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH.
 ///
 /// @param error The error
-/// @param foundCurrency Receives the found currency, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosErrorFoundCurrency(EranosError const *const error, EranosText *const foundCurrency) {
-    eranosDetailClear(foundCurrency);
-    bool const present = EranosError_found_currency(error, foundCurrency).is_ok;
-    eranosDetailFinish(foundCurrency);
-    return present;
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosCurrencyDetails *eranosErrorFoundCurrency(EranosError const *const error) {
+    return EranosError_found_currency(error);
 }
 
 /// How many characters the IBAN has. Present for the failure ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN with the reason
@@ -200,17 +186,11 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentInt64(result.is_ok, &result.ok, foundLength);
 }
 
-/// The currency of the first amount. Present for the failure ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
+/// The currency of the first amount. Present for the failure ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH.
 ///
 /// @param error The error
-/// @param left Receives the left, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosErrorLeft(EranosError const *const error, EranosText *const left) {
-    eranosDetailClear(left);
-    bool const present = EranosError_left(error, left).is_ok;
-    eranosDetailFinish(left);
-    return present;
-}
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosCurrencyDetails *eranosErrorLeft(EranosError const *const error) { return EranosError_left(error); }
 
 /// The line of the saved group where the text stops being one, from 1. Present for the kind ERANOS_ERROR_KIND_INVALID_JSON.
 ///
@@ -246,17 +226,11 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
     return eranosDetailPresentIbanReason(result.is_ok, &result.ok, reason);
 }
 
-/// The currency of the second amount. Present for the failure ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH. Writes it, if present; absent otherwise.
+/// The currency of the second amount. Present for the failure ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH.
 ///
 /// @param error The error
-/// @param right Receives the right, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosErrorRight(EranosError const *const error, EranosText *const right) {
-    eranosDetailClear(right);
-    bool const present = EranosError_right(error, right).is_ok;
-    eranosDetailFinish(right);
-    return present;
-}
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosCurrencyDetails *eranosErrorRight(EranosError const *const error) { return EranosError_right(error); }
 
 /// What the percentages add up to, in basis points. Present for the failure ERANOS_FAILURE_EXPENSE_PERCENTAGES_DO_NOT_ADD_UP.
 ///

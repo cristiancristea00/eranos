@@ -26,7 +26,7 @@ public sealed interface Balance {
          */
         @Override
         public String toString() {
-            return Conversions.formatted(this, "Owes[amount=" + amount + "]");
+            return Conversions.formatted(this);
         }
     }
 
@@ -39,7 +39,7 @@ public sealed interface Balance {
          */
         @Override
         public String toString() {
-            return Conversions.formatted(this, "Settled[]");
+            return Conversions.formatted(this);
         }
     }
 
@@ -65,7 +65,7 @@ public sealed interface Balance {
          */
         @Override
         public String toString() {
-            return Conversions.formatted(this, "GetsBack[amount=" + amount + "]");
+            return Conversions.formatted(this);
         }
     }
 }

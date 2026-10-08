@@ -713,7 +713,7 @@ fn a_taken_list_is_mutable_and_an_answered_one_is_not() {
     );
     assert_eq!(
         names(&methods(&named["EranosCurrencyDetails"])),
-        ["code", "of"]
+        ["code", "places", "of"]
     );
 }
 

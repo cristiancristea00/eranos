@@ -98,7 +98,7 @@ public enum Balance: Hashable, Sendable, CustomStringConvertible {
 
     /// The balance as the library writes it: "owes 12.00 EUR".
     public var description: String {
-        (try? EranosGenerated.balanceFormat(balance: generated)) ?? String(describing: generated)
+        EranosGenerated.balanceFormat(balance: generated)
     }
 
     var generated: EranosGenerated.Balance {

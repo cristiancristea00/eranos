@@ -51,21 +51,21 @@ struct Error::Fields final {
     std::optional<std::int64_t> balances;
     std::optional<CategoryId> category;
     std::optional<std::int64_t> column;
-    std::optional<std::string> currency;
+    std::optional<CurrencyCode> currency;
     std::optional<CategoryId> existing;
     std::optional<Money> expectedAmount;
-    std::optional<std::string> expectedCurrency;
+    std::optional<CurrencyCode> expectedCurrency;
     std::optional<std::int64_t> expectedLength;
     std::optional<ExpenseId> expense;
     std::optional<std::vector<ExpenseId>> expenses;
     std::optional<std::int64_t> format;
-    std::optional<std::string> foundCurrency;
+    std::optional<CurrencyCode> foundCurrency;
     std::optional<std::int64_t> foundLength;
-    std::optional<std::string> left;
+    std::optional<CurrencyCode> left;
     std::optional<std::int64_t> line;
     std::optional<MemberId> member;
     std::optional<IbanReason> reason;
-    std::optional<std::string> right;
+    std::optional<CurrencyCode> right;
     std::optional<std::int64_t> totalBasisPoints;
     std::optional<TransferId> transfer;
     std::optional<std::vector<TransferId>> transfers;
@@ -87,13 +87,13 @@ inline std::optional<CategoryId> const &Error::category() const noexcept { retur
 
 inline std::optional<std::int64_t> const &Error::column() const noexcept { return fields->column; }
 
-inline std::optional<std::string> const &Error::currency() const noexcept { return fields->currency; }
+inline std::optional<CurrencyCode> const &Error::currency() const noexcept { return fields->currency; }
 
 inline std::optional<CategoryId> const &Error::existing() const noexcept { return fields->existing; }
 
 inline std::optional<Money> const &Error::expectedAmount() const noexcept { return fields->expectedAmount; }
 
-inline std::optional<std::string> const &Error::expectedCurrency() const noexcept { return fields->expectedCurrency; }
+inline std::optional<CurrencyCode> const &Error::expectedCurrency() const noexcept { return fields->expectedCurrency; }
 
 inline std::optional<std::int64_t> const &Error::expectedLength() const noexcept { return fields->expectedLength; }
 
@@ -103,11 +103,11 @@ inline std::optional<std::vector<ExpenseId>> const &Error::expenses() const noex
 
 inline std::optional<std::int64_t> const &Error::format() const noexcept { return fields->format; }
 
-inline std::optional<std::string> const &Error::foundCurrency() const noexcept { return fields->foundCurrency; }
+inline std::optional<CurrencyCode> const &Error::foundCurrency() const noexcept { return fields->foundCurrency; }
 
 inline std::optional<std::int64_t> const &Error::foundLength() const noexcept { return fields->foundLength; }
 
-inline std::optional<std::string> const &Error::left() const noexcept { return fields->left; }
+inline std::optional<CurrencyCode> const &Error::left() const noexcept { return fields->left; }
 
 inline std::optional<std::int64_t> const &Error::line() const noexcept { return fields->line; }
 
@@ -115,7 +115,7 @@ inline std::optional<MemberId> const &Error::member() const noexcept { return fi
 
 inline std::optional<IbanReason> const &Error::reason() const noexcept { return fields->reason; }
 
-inline std::optional<std::string> const &Error::right() const noexcept { return fields->right; }
+inline std::optional<CurrencyCode> const &Error::right() const noexcept { return fields->right; }
 
 inline std::optional<std::int64_t> const &Error::totalBasisPoints() const noexcept { return fields->totalBasisPoints; }
 
@@ -300,26 +300,32 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     return promise.get_future();
 }
 
-/// The currency of @p details.
-[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details) noexcept {
-    return CurrencyCode(
-        {.code = details.code(), .name = details.name(), .numericCode = details.numeric_code(), .decimalPlaces = details.decimal_places()});
+/// The currency of @p details, which the library made: the currency keeps them, so an amount in it crosses with them.
+[[nodiscard]] inline CurrencyCode currencyOf(std::unique_ptr<EranosCurrencyDetails> details) noexcept {
+    std::shared_ptr<EranosCurrencyDetails const> const shared = std::move(details);
+    return CurrencyCode({
+        .code = shared->code(),
+        .name = shared->name(),
+        .numericCode = shared->numeric_code(),
+        .decimalPlaces = shared->decimal_places(),
+        .details = shared,
+    });
 }
 
-/// The currency of the ISO 4217 code @p code, which the library wrote.
-[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code) noexcept {
-    // A code the library wrote is one it lists.
-    return currencyOf(*known(EranosCurrencyDetails::of(code)));
+/// The currency of @p details, if present.
+[[nodiscard]] inline std::optional<CurrencyCode> optionalCurrency(std::unique_ptr<EranosCurrencyDetails> details) noexcept {
+    if (!details) {
+        return std::nullopt;
+    }
+    return currencyOf(std::move(details));
 }
 
-/// The amount of @p value, which the library made. It reads the currency with known(), which converts no error: an error's amounts convert
-/// through this function, so converting an error here would make the two call each other.
-[[nodiscard]] inline Money fromDetail(EranosMoney const &value) noexcept { return {value.minor_units(), listedCurrency(value.currency())}; }
+/// The amount of @p value, which the library made.
+[[nodiscard]] inline Money fromDetail(EranosMoney const &value) noexcept { return {value.minor_units(), currencyOf(value.currency())}; }
 
-/// The generated amount of @p value.
+/// The generated amount of @p value, with the details its currency keeps.
 [[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) noexcept {
-    // A currency's code is text the library wrote.
-    return known(EranosMoney::create(value.minorUnits, value.currency.code()));
+    return EranosMoney::create(value.minorUnits, *value.currency.fields.details);
 }
 
 /// The rate written @p text, which the library wrote.
@@ -396,22 +402,22 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     fields.balances = detail.balances();
     fields.category = optionalId<CategoryId>(detail.category());
     fields.column = detail.column();
-    fields.currency = detail.currency();
+    fields.currency = optionalCurrency(detail.currency());
     fields.existing = optionalId<CategoryId>(detail.existing());
     fields.expectedAmount = optionalRecord<Money>(detail.expected_amount());
-    fields.expectedCurrency = detail.expected_currency();
+    fields.expectedCurrency = optionalCurrency(detail.expected_currency());
     fields.expectedLength = detail.expected_length();
     fields.expense = optionalId<ExpenseId>(detail.expense());
     auto const expenses = detail.expenses();
     fields.expenses = expenses ? std::optional<std::vector<ExpenseId>>(identifiers<ExpenseId>(*expenses)) : std::nullopt;
     fields.format = detail.format();
-    fields.foundCurrency = detail.found_currency();
+    fields.foundCurrency = optionalCurrency(detail.found_currency());
     fields.foundLength = detail.found_length();
-    fields.left = detail.left();
+    fields.left = optionalCurrency(detail.left());
     fields.line = detail.line();
     fields.member = optionalId<MemberId>(detail.member());
     fields.reason = detail.reason().transform([](EranosIbanReason const value) noexcept { return fromDetail(value); });
-    fields.right = detail.right();
+    fields.right = optionalCurrency(detail.right());
     fields.totalBasisPoints = detail.total_basis_points();
     fields.transfer = optionalId<TransferId>(detail.transfer());
     auto const transfers = detail.transfers();

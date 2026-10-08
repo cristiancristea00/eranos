@@ -5,6 +5,7 @@
 use eranos::{CalendarDate, CurrencyCode, Expense, ExpenseGroup, Member, Split, Transfer};
 
 use super::*;
+use crate::CurrencyDetails;
 
 fn euros(minor_units: i64) -> eranos::Money {
     eranos::Money::from_minor_units(minor_units, CurrencyCode::EUR)
@@ -13,7 +14,7 @@ fn euros(minor_units: i64) -> eranos::Money {
 fn record(minor_units: i64) -> Money {
     Money {
         minor_units,
-        currency: "EUR".to_owned(),
+        currency: CurrencyDetails::from_library(CurrencyCode::EUR),
     }
 }
 

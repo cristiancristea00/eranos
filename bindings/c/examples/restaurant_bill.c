@@ -196,9 +196,9 @@ static void printReceipt(EranosExpenseGroup const *const group, Friends const *c
         Members const sharedBy = splitMembers(split);
         EranosMoney *const unitPrice = eranosExpenseItemUnitPrice(item);
         int32_t const quantity = eranosExpenseItemQuantity(item);
-        eranosMoneyCurrency(unitPrice, text);
-        EranosMoney *total = nullptr;
-        must(eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, eranosTextData(text), &total));
+        EranosCurrencyDetails *const currency = eranosMoneyCurrency(unitPrice);
+        EranosMoney *const total = eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, currency);
+        eranosCurrencyDetailsDestroy(currency);
         eranosExpenseItemName(item, text);
         addLineRow(table, &(LineRow){
                               .name = textLine(text),

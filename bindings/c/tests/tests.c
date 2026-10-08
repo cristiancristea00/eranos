@@ -71,26 +71,43 @@ static void checkSucceeded(Check *const check, EranosError *const error, char co
     return nullptr != error && eranosErrorKind(error) == kind && eranosErrorFailure(error, &failure) && failure == expected;
 }
 
-/// The amount of @p minorUnits minor units of @p currency.
-[[nodiscard]] static EranosMoney *amountOf(int64_t const minorUnits, char const *const currency) {
-    EranosMoney *money = nullptr;
-    EranosError *const error = eranosMoneyCreate(minorUnits, currency, &money);
-    eranosErrorDestroy(error);
+/// The details of the currency of the ISO 4217 code @p code, which the library lists.
+[[nodiscard]] static EranosCurrencyDetails *currencyOf(char const *const code) {
+    EranosCurrencyDetails *currency = nullptr;
+    eranosErrorDestroy(eranosCurrencyDetailsOf(code, &currency));
+    return currency;
+}
+
+/// The amount of @p minorUnits minor units of the currency of the ISO 4217 code @p code, which the library lists.
+[[nodiscard]] static EranosMoney *amountOf(int64_t const minorUnits, char const *const code) {
+    EranosCurrencyDetails *const currency = currencyOf(code);
+    EranosMoney *const money = eranosMoneyCreate(minorUnits, currency);
+    eranosCurrencyDetailsDestroy(currency);
     return money;
 }
 
 /// @p cents euro cents.
 [[nodiscard]] static EranosMoney *euros(int64_t const cents) { return amountOf(cents, "EUR"); }
 
-/// Whether @p money is @p minorUnits minor units of @p currency; destroys it.
-[[nodiscard]] static bool isAmount(EranosMoney *const money, int64_t const minorUnits, char const *const currency) {
+/// Whether @p currency is the currency of the ISO 4217 code @p code; destroys it.
+[[nodiscard]] static bool isCurrency(EranosCurrencyDetails *const currency, char const *const code) {
+    if (nullptr == currency) {
+        return false;
+    }
+    EranosText *const text = eranosTextCreate();
+    eranosCurrencyDetailsCode(currency, text);
+    bool const same = isText(text, code);
+    eranosTextDestroy(text);
+    eranosCurrencyDetailsDestroy(currency);
+    return same;
+}
+
+/// Whether @p money is @p minorUnits minor units of the currency of the ISO 4217 code @p code; destroys it.
+[[nodiscard]] static bool isAmount(EranosMoney *const money, int64_t const minorUnits, char const *const code) {
     if (nullptr == money) {
         return false;
     }
-    EranosText *const code = eranosTextCreate();
-    eranosMoneyCurrency(money, code);
-    bool const same = eranosMoneyMinorUnits(money) == minorUnits && isText(code, currency);
-    eranosTextDestroy(code);
+    bool const same = eranosMoneyMinorUnits(money) == minorUnits && isCurrency(eranosMoneyCurrency(money), code);
     eranosMoneyDestroy(money);
     return same;
 }
@@ -346,6 +363,14 @@ static void receiveCategory(void *const context, EranosError *const error, Erano
     finish(waiter);
 }
 
+/// Receives a currency's details.
+static void receiveCurrency(void *const context, EranosError *const error, EranosCurrencyDetails *const currency) {
+    Waiter *const waiter = context;
+    waiter->error = error;
+    waiter->object = currency;
+    finish(waiter);
+}
+
 /// Receives a list of expenses.
 static void receiveExpenses(void *const context, EranosError *const error, EranosExpenseList *const expenses) {
     Waiter *const waiter = context;
@@ -449,10 +474,12 @@ static void aTextHoldsWhatTheLastCallWrote(Check *const check) {
     EranosText *const text = eranosTextCreate();
     checkThat(check, isText(text, "") && 0 == eranosTextLength(text), "a text starts empty");
     EranosMoney *const price = euros(1'250);
-    checkSucceeded(check, eranosMoneyFormat(price, text), "an amount formats");
+    eranosMoneyFormat(price, text);
     checkThat(check, isText(text, "12.50 EUR") && eranosTextLength(text) == strlen("12.50 EUR"), "the amount as the library writes it");
-    eranosMoneyCurrency(price, text);
+    EranosCurrencyDetails *const currency = eranosMoneyCurrency(price);
+    eranosCurrencyDetailsCode(currency, text);
     checkThat(check, isText(text, "EUR"), "a second call replaces the first's text");
+    eranosCurrencyDetailsDestroy(currency);
     eranosMoneyDestroy(price);
     eranosTextDestroy(text);
 }
@@ -506,9 +533,7 @@ static void anAmountParsesFormatsAndAdds(Check *const check) {
     EranosMoney *none = nullptr;
     EranosError *const refused = eranosMoneyAdd(price, lei, &none);
     checkThat(check, holdsFailure(refused, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH) && nullptr == none, "two currencies");
-    EranosText *const text = eranosTextCreate();
-    checkThat(check, eranosErrorLeft(refused, text) && isText(text, "EUR") && eranosErrorRight(refused, text) && isText(text, "RON"),
-              "the error names both currencies");
+    checkThat(check, isCurrency(eranosErrorLeft(refused), "EUR") && isCurrency(eranosErrorRight(refused), "RON"), "the error names both currencies");
     eranosErrorDestroy(refused);
     EranosMoney *const largest = euros(INT64_MAX);
     checkThat(check, isFailure(eranosMoneySubtract(lei, largest, &none), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_CURRENCY_MISMATCH),
@@ -519,19 +544,61 @@ static void anAmountParsesFormatsAndAdds(Check *const check) {
     int64_t allowed = 0;
     checkThat(check,
               holdsFailure(precise, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_TOO_MANY_DECIMALS) && eranosErrorAllowed(precise, &allowed) &&
-                  2 == allowed && eranosErrorCurrency(precise, text) && isText(text, "EUR"),
+                  2 == allowed && isCurrency(eranosErrorCurrency(precise), "EUR"),
               "the euro has two decimal places, which the error holds with the currency");
     eranosErrorDestroy(precise);
-    EranosMoney *const unlisted = amountOf(5, "XYZ");
-    checkThat(check, isFailure(eranosMoneyFormat(unlisted, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_UNKNOWN_CURRENCY),
-              "an amount in a currency the library does not list does not format");
-    checkThat(check, isKind(eranosMoneyCreate(1, "\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT), "a currency's code is text");
-    eranosMoneyDestroy(unlisted);
     eranosMoneyDestroy(largest);
-    eranosTextDestroy(text);
     eranosMoneyDestroy(lei);
     eranosMoneyDestroy(quarter);
     eranosMoneyDestroy(price);
+}
+
+/// An amount or a failure that lost its currency's details would leave an app to look the currency up again before it shows a
+/// name or the decimal places of a field.
+static void anAmountAndAFailureCarryTheirCurrencysDetails(Check *const check) {
+    EranosText *const text = eranosTextCreate();
+    EranosMoney *const dinars = amountOf(1'234, "BHD");
+    EranosCurrencyDetails *const dinar = eranosMoneyCurrency(dinars);
+    eranosCurrencyDetailsName(dinar, text);
+    checkThat(check,
+              isText(text, "Bahraini Dinar") && 3 == eranosCurrencyDetailsDecimalPlaces(dinar) && 48 == eranosCurrencyDetailsNumericCode(dinar),
+              "an amount holds its currency's name, decimal places, and number");
+    EranosMoney *const copy = eranosMoneyCreate(5, dinar);
+    checkThat(check, isAmount(copy, 5, "BHD"), "and makes another amount in it");
+    EranosMoney *none = nullptr;
+    EranosError *const precise = eranosMoneyParse("1.2345", "BHD", &none);
+    EranosCurrencyDetails *const refused = eranosErrorCurrency(precise);
+    checkThat(check, holdsFailure(precise, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_TOO_MANY_DECIMALS) && nullptr != refused,
+              "a failure holds the currency");
+    eranosCurrencyDetailsName(refused, text);
+    checkThat(check, isText(text, "Bahraini Dinar") && 3 == eranosCurrencyDetailsDecimalPlaces(refused), "with its name and decimal places");
+    eranosCurrencyDetailsDestroy(refused);
+    eranosErrorDestroy(precise);
+    eranosCurrencyDetailsDestroy(dinar);
+    eranosMoneyDestroy(dinars);
+    eranosTextDestroy(text);
+}
+
+/// An amount written with other decimal places than its currency's would show a price ten or a hundred times its value.
+static void anAmountFormatsWithItsCurrencysDecimalPlaces(Check *const check) {
+    EranosText *const text = eranosTextCreate();
+    EranosMoney *const yen = amountOf(1'234, "JPY");
+    eranosMoneyFormat(yen, text);
+    checkThat(check, isText(text, "1234 JPY"), "the yen has none");
+    EranosMoney *const euro = amountOf(1'234, "EUR");
+    eranosMoneyFormat(euro, text);
+    checkThat(check, isText(text, "12.34 EUR"), "the euro has two");
+    EranosMoney *const dinar = amountOf(1'234, "BHD");
+    eranosMoneyFormat(dinar, text);
+    checkThat(check, isText(text, "1.234 BHD"), "the Bahraini dinar has three");
+    EranosMoney *const unidad = amountOf(12'345, "CLF");
+    eranosMoneyFormat(unidad, text);
+    checkThat(check, isText(text, "1.2345 CLF"), "the Chilean unidad de fomento has four");
+    eranosMoneyDestroy(unidad);
+    eranosMoneyDestroy(dinar);
+    eranosMoneyDestroy(euro);
+    eranosMoneyDestroy(yen);
+    eranosTextDestroy(text);
 }
 
 /// A rate, a percentage, or a number of parts read otherwise than the library reads it would divide or convert otherwise
@@ -955,12 +1022,16 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     checkThat(check, isFailure(eranosExpenseParticipants(unreadable, &participants), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_CONTROL_CHARACTER),
               "an expense's members are identifiers");
     eranosExpenseDestroy(unreadable);
-    EranosMoney *const unlisted = amountOf(100, "XYZ");
-    EranosCost *const strange = eranosCostCreateLocal(unlisted);
-    eranosExpenseSetCost(expense, strange);
-    checkThat(check, isFailure(eranosExpenseTipAmount(expense, &amount), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_UNKNOWN_CURRENCY),
-              "a tip on an amount in no listed currency");
-    checkThat(check, isFailure(eranosExpenseTotal(expense, &amount), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_UNKNOWN_CURRENCY), "its total");
+    EranosMoney *const lei = amountOf(100, "RON");
+    EranosTipValue *const fixedLei = eranosTipValueCreateFixed(lei);
+    EranosTipRule *const foreignTip = eranosTipRuleCreate(fixedLei, ERANOS_TIP_DISTRIBUTION_EQUAL);
+    eranosExpenseSetTip(expense, foreignTip);
+    checkThat(check,
+              isFailure(eranosExpenseTipAmount(expense, &amount), ERANOS_ERROR_KIND_EXPENSE, ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH) &&
+                  nullptr == amount,
+              "a fixed tip in another currency than the expense's");
+    checkThat(check, isFailure(eranosExpenseTotal(expense, &amount), ERANOS_ERROR_KIND_EXPENSE, ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH),
+              "its total");
     checkThat(check,
               isKind(eranosExpenseSetId(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosExpenseSetName(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
@@ -987,8 +1058,9 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
               isKind(eranosExpenseCreateWithId("\xff", "Receipt", cost, bob, split, NEXT, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   nullptr == noExpense,
               "an identifier is text");
-    eranosCostDestroy(strange);
-    eranosMoneyDestroy(unlisted);
+    eranosTipRuleDestroy(foreignTip);
+    eranosTipValueDestroy(fixedLei);
+    eranosMoneyDestroy(lei);
     eranosTipRuleDestroy(none);
     eranosTipRuleDestroy(readTip);
     eranosExpenseSplitDestroy(readSplit);
@@ -1192,22 +1264,16 @@ static void everyBalanceFormatsAsTheLibraryWritesIt(Check *const check) {
     EranosBalance *const getsBack = eranosBalanceCreateGetsBack(twelve);
     EranosBalance *const owes = eranosBalanceCreateOwes(twelve);
     EranosBalance *const settled = eranosBalanceCreateSettled();
-    checkSucceeded(check, eranosBalanceFormat(getsBack, text), "a balance owed to a member formats");
+    eranosBalanceFormat(getsBack, text);
     checkThat(check,
               isText(text, "gets back 12.00 EUR") && ERANOS_BALANCE_KIND_GETS_BACK == eranosBalanceKind(getsBack) &&
                   isAmount(eranosBalanceAmount(getsBack), 1'200, "EUR"),
               "as what the member gets back");
-    checkSucceeded(check, eranosBalanceFormat(owes, text), "a balance a member owes formats");
+    eranosBalanceFormat(owes, text);
     checkThat(check, isText(text, "owes 12.00 EUR") && ERANOS_BALANCE_KIND_OWES == eranosBalanceKind(owes), "as what the member owes");
-    checkSucceeded(check, eranosBalanceFormat(settled, text), "a settled balance formats");
+    eranosBalanceFormat(settled, text);
     checkThat(check, isText(text, "settled") && ERANOS_BALANCE_KIND_SETTLED == eranosBalanceKind(settled) && nullptr == eranosBalanceAmount(settled),
               "with no amount");
-    EranosMoney *const unlisted = amountOf(1, "XYZ");
-    EranosBalance *const strange = eranosBalanceCreateOwes(unlisted);
-    checkThat(check, isFailure(eranosBalanceFormat(strange, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_UNKNOWN_CURRENCY),
-              "an unlisted currency");
-    eranosBalanceDestroy(strange);
-    eranosMoneyDestroy(unlisted);
     eranosBalanceDestroy(settled);
     eranosBalanceDestroy(owes);
     eranosBalanceDestroy(getsBack);
@@ -1332,8 +1398,7 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     eranosExpenseGroupId(group, text);
     checkThat(check, isText(text, eranosTextData(id)) && eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"),
               "the generated one, a hyphenated UUID");
-    eranosExpenseGroupCurrency(group, text);
-    checkThat(check, isText(text, "RON"), "the one it started with");
+    checkThat(check, isCurrency(eranosExpenseGroupCurrency(group), "RON"), "the one it started with");
     checkSucceeded(check, eranosExpenseGroupSetName(group, "Trip"), "a name is set");
     eranosExpenseGroupName(group, text);
     checkThat(check, isText(text, "Trip"), "the name as set");
@@ -2015,7 +2080,7 @@ static void aChangeOfCurrencyConvertsEveryEntry(Check *const check) {
     EranosError *const missing = eranosExpenseGroupChangeCurrency(flat.group, "RON", empty);
     checkThat(check,
               holdsFailure(missing, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_MISSING_EXCHANGE_RATE) &&
-                  eranosErrorCurrency(missing, text) && isText(text, "EUR"),
+                  isCurrency(eranosErrorCurrency(missing), "EUR"),
               "the euro needs a rate");
     eranosErrorDestroy(missing);
     EranosCurrencyRateList *const rates = eranosCurrencyRateListCreate();
@@ -2024,8 +2089,7 @@ static void aChangeOfCurrencyConvertsEveryEntry(Check *const check) {
     EranosCurrencyRate *const first = eranosCurrencyRateListGet(rates, 0);
     checkThat(check, 1 == eranosCurrencyRateListLength(rates) && nullptr != first && nullptr == eranosCurrencyRateListGet(rates, 1), "one rate");
     checkSucceeded(check, eranosExpenseGroupChangeCurrency(flat.group, "RON", rates), "the change");
-    eranosExpenseGroupCurrency(flat.group, text);
-    checkThat(check, isText(text, "RON"), "is the new one");
+    checkThat(check, isCurrency(eranosExpenseGroupCurrency(flat.group), "RON"), "is the new one");
     eranosCurrencyRateDestroy(first);
     eranosCurrencyRateListDestroy(rates);
     eranosCurrencyRateListDestroy(empty);
@@ -2074,10 +2138,10 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     checkThat(check,
               nullptr == eranosErrorActual(inUse) && nullptr == eranosErrorExpectedAmount(inUse) && !eranosErrorAllowed(inUse, &number) &&
                   !eranosErrorBalances(inUse, &number) && !eranosErrorCategory(inUse, text) && !eranosErrorColumn(inUse, &number) &&
-                  !eranosErrorCurrency(inUse, text) && !eranosErrorExisting(inUse, text) && !eranosErrorExpectedCurrency(inUse, text) &&
+                  nullptr == eranosErrorCurrency(inUse) && !eranosErrorExisting(inUse, text) && nullptr == eranosErrorExpectedCurrency(inUse) &&
                   !eranosErrorExpectedLength(inUse, &number) && !eranosErrorExpense(inUse, text) && !eranosErrorFormat(inUse, &number) &&
-                  !eranosErrorFoundCurrency(inUse, text) && !eranosErrorFoundLength(inUse, &number) && !eranosErrorLeft(inUse, text) &&
-                  !eranosErrorLine(inUse, &number) && !eranosErrorReason(inUse, &reason) && !eranosErrorRight(inUse, text) &&
+                  nullptr == eranosErrorFoundCurrency(inUse) && !eranosErrorFoundLength(inUse, &number) && nullptr == eranosErrorLeft(inUse) &&
+                  !eranosErrorLine(inUse, &number) && !eranosErrorReason(inUse, &reason) && nullptr == eranosErrorRight(inUse) &&
                   !eranosErrorTotalBasisPoints(inUse, &number) && !eranosErrorTransfer(inUse, text),
               "and holds nothing else");
     eranosErrorDestroy(inUse);
@@ -2109,8 +2173,7 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     EranosError *const currencies = eranosExpenseGroupAddExpense(flat.group, expense, text);
     checkThat(check,
               holdsFailure(currencies, ERANOS_ERROR_KIND_EXPENSE, ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH) &&
-                  eranosErrorExpectedCurrency(currencies, text) && isText(text, "EUR") && eranosErrorFoundCurrency(currencies, text) &&
-                  isText(text, "RON"),
+                  isCurrency(eranosErrorExpectedCurrency(currencies), "EUR") && isCurrency(eranosErrorFoundCurrency(currencies), "RON"),
               "the expense's currency and the share's");
     eranosErrorDestroy(currencies);
     EranosMemberPercentage *half = nullptr;
@@ -2218,11 +2281,10 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     await(&waiter);
     checkThat(check, isText(waiter.text, "Flat"), "the name");
     eranosTextDestroy(waiter.text);
-    EranosTextCallback const currencyCallback = {waiting(&waiter), receiveText};
+    EranosCurrencyDetailsCallback const currencyCallback = {waiting(&waiter), receiveCurrency};
     eranosExpenseGroupCurrencyAsync(flat.group, nullptr, &currencyCallback);
     await(&waiter);
-    checkThat(check, isText(waiter.text, "EUR"), "the currency");
-    eranosTextDestroy(waiter.text);
+    checkThat(check, nullptr == waiter.error && isCurrency(waiter.object, "EUR"), "the currency");
     EranosOptionalTextCallback const descriptionCallback = {waiting(&waiter), receiveText};
     eranosExpenseGroupDescriptionAsync(flat.group, nullptr, &descriptionCallback);
     await(&waiter);
@@ -2430,8 +2492,7 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     EranosUnitCallback const changeCallback = {waiting(&waiter), receiveUnit};
     eranosExpenseGroupChangeCurrencyAsync(flat.group, "RON", rates, nullptr, &changeCallback);
     await(&waiter);
-    eranosExpenseGroupCurrency(flat.group, text);
-    checkThat(check, nullptr == waiter.error && isText(text, "RON"), "changed");
+    checkThat(check, nullptr == waiter.error && isCurrency(eranosExpenseGroupCurrency(flat.group), "RON"), "changed");
     eranosCurrencyRateDestroy(rate);
     eranosCurrencyRateListDestroy(rates);
     EranosMemberCallback const failingCallback = {waiting(&waiter), receiveMember};
@@ -2497,8 +2558,9 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     checkSucceeded(check, eranosExpenseGroupReaderName(reader, text), "the name");
     checkThat(check, isText(text, "Flat"), "the group's");
     checkSucceeded(check, eranosExpenseGroupReaderId(reader, text), "the identifier");
-    checkSucceeded(check, eranosExpenseGroupReaderCurrency(reader, text), "the currency");
-    checkThat(check, isText(text, "EUR"), "the euro");
+    EranosCurrencyDetails *currency = nullptr;
+    checkSucceeded(check, eranosExpenseGroupReaderCurrency(reader, &currency), "the currency");
+    checkThat(check, isCurrency(currency, "EUR"), "the euro");
     checkSucceeded(check, eranosExpenseGroupReaderDescription(reader, text), "the description");
     checkThat(check, isText(text, "Rent"), "as given");
     checkSucceeded(check, eranosExpenseGroupReaderLanguage(reader, text), "the language");
@@ -2570,7 +2632,6 @@ static void everyReadOfAReleasedReaderFails(Check *const check) {
     EranosText *const text = eranosTextCreate();
     checkThat(check,
               isKind(eranosExpenseGroupReaderId(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
-                  isKind(eranosExpenseGroupReaderCurrency(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
                   isKind(eranosExpenseGroupReaderDescription(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
                   isKind(eranosExpenseGroupReaderLanguage(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
                   isKind(eranosExpenseGroupReaderSave(reader, text), ERANOS_ERROR_KIND_RELEASED) && 0 == eranosTextLength(text),
@@ -2582,6 +2643,8 @@ static void everyReadOfAReleasedReaderFails(Check *const check) {
     EranosCategory *category = nullptr;
     checkThat(check, isKind(eranosExpenseGroupReaderCategory(reader, food, &category), ERANOS_ERROR_KIND_RELEASED) && nullptr == category,
               "a category");
+    EranosCurrencyDetails *currency = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupReaderCurrency(reader, &currency), ERANOS_ERROR_KIND_RELEASED) && nullptr == currency, "the currency");
     EranosExpenseList *expenses = nullptr;
     checkThat(check, isKind(eranosExpenseGroupReaderExpenses(reader, &expenses), ERANOS_ERROR_KIND_RELEASED) && nullptr == expenses, "the expenses");
     EranosExpense *expense = nullptr;
@@ -2639,8 +2702,7 @@ static void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_CANCELLED), "the change reports its cancellation");
     eranosExpenseGroupReaderRelease(reader);
-    eranosExpenseGroupCurrency(flat.group, text);
-    checkThat(check, isText(text, "EUR"), "is still the euro");
+    checkThat(check, isCurrency(eranosExpenseGroupCurrency(flat.group), "EUR"), "is still the euro");
     EranosTextCallback const lateCallback = {waiting(&waiter), receiveText};
     eranosExpenseGroupNameAsync(flat.group, cancellation, &lateCallback);
     await(&waiter);
@@ -2672,6 +2734,8 @@ int main(void) {
         {.body = aCurrencyHoldsWhatTheLibraryKnowsOfIt, .name = "aCurrencyHoldsWhatTheLibraryKnowsOfIt"},
         {.body = textThatIsNotUtf8IsRefusedAndNullReadsAsEmpty, .name = "textThatIsNotUtf8IsRefusedAndNullReadsAsEmpty"},
         {.body = anAmountParsesFormatsAndAdds, .name = "anAmountParsesFormatsAndAdds"},
+        {.body = anAmountAndAFailureCarryTheirCurrencysDetails, .name = "anAmountAndAFailureCarryTheirCurrencysDetails"},
+        {.body = anAmountFormatsWithItsCurrencysDecimalPlaces, .name = "anAmountFormatsWithItsCurrencysDecimalPlaces"},
         {.body = ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes, .name = "ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes"},
         {.body = datesAndTimesAreCheckedAndWritten, .name = "datesAndTimesAreCheckedAndWritten"},
         {.body = contactsAndAccountsAreCheckedAndMadeCanonical, .name = "contactsAndAccountsAreCheckedAndMadeCanonical"},

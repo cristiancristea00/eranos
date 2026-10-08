@@ -198,8 +198,32 @@ void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) noexcept {
     check.that(isFailure(refusal(Money::parse("twelve", euro)), ErrorKind::MONEY, Failure::MONEY_INVALID_AMOUNT), "a word is no amount");
     auto const precise = refusal(Money::parse("1.234", euro));
     check.that(isFailure(precise, ErrorKind::MONEY, Failure::MONEY_TOO_MANY_DECIMALS), "the euro has two decimal places");
-    check.that(precise.has_value() && 2 == precise.value().allowed() && "EUR" == precise.value().currency(),
+    check.that(precise.has_value() && 2 == precise.value().allowed() && euro == precise.value().currency(),
                "the error holds the decimal places and the currency");
+}
+
+/// An amount or a failure that lost its currency's details would leave an app to look the currency up again before it shows a name or the
+/// decimal places of a field.
+void anAmountAndAFailureCarryTheirCurrencysDetails(Check &check) noexcept {
+    auto const dinar = CurrencyCode::of("BHD").value();
+    auto const dinars = Money::parse("1.234", dinar).value();
+    check.that("Bahraini Dinar" == dinars.currency.name() && 3 == dinars.currency.decimalPlaces() && 48 == dinars.currency.numericCode(),
+               "an amount the library made holds its currency's name, decimal places, and number");
+    check.that(Money(5, dinars.currency).plus(dinars) == Money(1'239, dinar), "and makes another amount in it");
+    auto const precise = refusal(Money::parse("1.2345", dinar));
+    check.that(precise.has_value() && precise.value().currency().has_value() && "Bahraini Dinar" == precise.value().currency().value().name() &&
+                   3 == precise.value().currency().value().decimalPlaces(),
+               "a failure holds the currency with its name and decimal places");
+    Flat const flat;
+    check.that("Euro" == flat.group.currency().name() && 2 == flat.group.currency().decimalPlaces(), "and so does the group currency");
+}
+
+/// An amount written with other decimal places than its currency's would show a price ten or a hundred times its value.
+void anAmountFormatsWithItsCurrencysDecimalPlaces(Check &check) noexcept {
+    check.that("1234 JPY" == Money(1'234, CurrencyCode::of("JPY").value()).toString(), "the yen has none");
+    check.that("12.34 EUR" == Money(1'234, CurrencyCode::of("EUR").value()).toString(), "the euro has two");
+    check.that("1.234 BHD" == Money(1'234, CurrencyCode::of("BHD").value()).toString(), "the Bahraini dinar has three");
+    check.that("1.2345 CLF" == Money(12'345, CurrencyCode::of("CLF").value()).toString(), "the Chilean unidad de fomento has four");
 }
 
 /// Arithmetic that mixed currencies or wrapped around would put a wrong total in a report.
@@ -210,7 +234,7 @@ void amountsInOneCurrencyAddAndSubtract(Check &check) noexcept {
     check.that(Money(1'000, euro).minus(Money(250, euro)) == Money(750, euro), "10.00 EUR less 2.50 EUR is 7.50 EUR");
     auto const mixed = refusal(Money(1, euro).plus(Money(1, lei)));
     check.that(isFailure(mixed, ErrorKind::MONEY, Failure::MONEY_CURRENCY_MISMATCH), "amounts in two currencies do not add");
-    check.that(mixed.has_value() && "EUR" == mixed.value().left() && "RON" == mixed.value().right(), "the error names both currencies");
+    check.that(mixed.has_value() && euro == mixed.value().left() && lei == mixed.value().right(), "the error names both currencies");
     auto const largest = Money(INT64_MAX, euro);
     check.that(isFailure(refusal(largest.plus(Money(1, euro))), ErrorKind::MONEY, Failure::MONEY_OVERFLOW), "a sum out of range");
 }
@@ -724,11 +748,11 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) noexcept {
     Flat flat;
     auto const lei = CurrencyCode::of("RON").value();
     auto const missing = refusal(flat.group.changeCurrency(lei, {}));
-    check.that(isFailure(missing, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE) && "EUR" == missing.value().currency(),
+    check.that(isFailure(missing, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE) && flat.euro == missing.value().currency(),
                "the euro needs a rate");
     auto const rate = CurrencyRate(flat.euro, ExchangeRate::parse("5").value());
     auto const twice = refusal(flat.group.changeCurrency(lei, std::array{rate, rate}));
-    check.that(isFailure(twice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE) && "EUR" == twice.value().currency(),
+    check.that(isFailure(twice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE) && flat.euro == twice.value().currency(),
                "one rate per currency");
     auto converted = flat.expense("Taxi", flat.ana, {flat.ana});
     converted.cost = ConvertedCost{.amount = flat.euros(1'000), .rate = ExchangeRate::parse("1").value()};
@@ -739,7 +763,7 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) noexcept {
     local.cost = LocalCost{Money(1'000, lei)};
     auto const unconverted = refusal(flat.group.addExpense(local));
     check.that(isFailure(unconverted, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE) &&
-                   "RON" == unconverted.value().currency(),
+                   lei == unconverted.value().currency(),
                "an amount in another currency needs a rate");
     flat.group.changeCurrency(lei, std::array{rate}).value();
     check.that(flat.group.currency() == lei && flat.group.summary().totalSpent == Money(15'000, lei), "30.00 EUR at 5 is 150.00 RON");
@@ -808,10 +832,11 @@ void everyErrorHoldsWhatItsFailureHolds(Check &check) noexcept {
                    amounts.value().expectedAmount() == flat.euros(3'000),
                "the amounts and what they should add up to");
     auto foreign = uneven;
-    foreign.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.ana, Money(3'000, CurrencyCode::of("RON").value()))}}};
+    auto const lei = CurrencyCode::of("RON").value();
+    foreign.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.ana, Money(3'000, lei))}}};
     auto const currencies = refusal(flat.group.addExpense(foreign));
-    check.that(isFailure(currencies, ErrorKind::EXPENSE, Failure::EXPENSE_CURRENCY_MISMATCH) && "EUR" == currencies.value().expectedCurrency() &&
-                   "RON" == currencies.value().foundCurrency(),
+    check.that(isFailure(currencies, ErrorKind::EXPENSE, Failure::EXPENSE_CURRENCY_MISMATCH) && flat.euro == currencies.value().expectedCurrency() &&
+                   lei == currencies.value().foundCurrency(),
                "the expense's currency and the share's");
     auto halves = uneven;
     halves.split = WholeExpenseSplit{PercentagesSplit{{MemberPercentage(flat.ana, Percentage{5'000})}}};
@@ -1013,6 +1038,8 @@ constexpr std::array TESTS = {
     Test{.name = "aCodeTheLibraryDoesNotListIsRefused", .body = aCodeTheLibraryDoesNotListIsRefused},
     Test{.name = "textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt", .body = textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt},
     Test{.name = "anAmountParsesAndFormatsAsTheLibraryWritesIt", .body = anAmountParsesAndFormatsAsTheLibraryWritesIt},
+    Test{.name = "anAmountAndAFailureCarryTheirCurrencysDetails", .body = anAmountAndAFailureCarryTheirCurrencysDetails},
+    Test{.name = "anAmountFormatsWithItsCurrencysDecimalPlaces", .body = anAmountFormatsWithItsCurrencysDecimalPlaces},
     Test{.name = "amountsInOneCurrencyAddAndSubtract", .body = amountsInOneCurrencyAddAndSubtract},
     Test{.name = "aRateParsesAndConvertsAsTheLibraryDoes", .body = aRateParsesAndConvertsAsTheLibraryDoes},
     Test{.name = "percentagesAndPartsParseAndFormatAsTheLibraryDoes", .body = percentagesAndPartsParseAndFormatAsTheLibraryDoes},

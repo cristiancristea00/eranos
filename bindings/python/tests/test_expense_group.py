@@ -50,7 +50,12 @@ def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
     """
     assert flat.group.id()
     assert flat.group.name() == 'Flat'
-    assert flat.group.currency() == flat.euro
+    currency = flat.group.currency()
+    assert currency == flat.euro
+    # A currency compares by code alone: its details are what the library answered with.
+    assert currency.name == 'Euro'
+    assert currency.numeric_code == 978
+    assert currency.decimal_places == 2
     assert flat.group.description() == 'Rent'
     assert flat.group.language() == Language('pt-PT')
     flat.group.set_name('Home')

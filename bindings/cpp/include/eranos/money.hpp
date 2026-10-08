@@ -27,7 +27,7 @@ struct Money final {
     ///
     /// @param minorUnits The amount in minor units: cents for the euro, none for the yen
     /// @param currency The currency
-    inline constexpr Money(std::int64_t const minorUnits, CurrencyCode currency) noexcept : minorUnits(minorUnits), currency(std::move(currency)) {}
+    inline Money(std::int64_t const minorUnits, CurrencyCode currency) noexcept : minorUnits(minorUnits), currency(std::move(currency)) {}
 
     /// The amount written @p text in @p currency: "12.50", "12.5", or "-3".
     ///
@@ -55,7 +55,7 @@ struct Money final {
     /// @return The difference, or an error of the kind ErrorKind::MONEY for amounts in two currencies, or a difference out of range
     [[nodiscard]] std::expected<Money, Error> minus(Money const &other) const noexcept;
 
-    /// The amount as the library writes it: "12.50 EUR".
+    /// The amount as the library writes it, with the decimal places of its currency: "12.50 EUR".
     ///
     /// @return The text
     [[nodiscard]] std::string toString() const noexcept;
@@ -93,8 +93,7 @@ inline std::expected<Money, Error> Money::minus(Money const &other) const noexce
     });
 }
 
-// An amount's currency is one the library lists.
-inline std::string Money::toString() const noexcept { return detail::known(detail::toDetail(*this)->format()); }
+inline std::string Money::toString() const noexcept { return detail::toDetail(*this)->format(); }
 
 } // namespace eranos
 

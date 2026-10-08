@@ -4,16 +4,14 @@ import eranos.internal.CurrencyDetails;
 import eranos.internal.Eranos;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * A currency with minor units, as ISO 4217 lists it: the only currencies an amount can be in.
  *
- * <p>A currency comes from the library's list, so an amount in one always formats: look one up by
- * its code with {@link #of}, or pick one from {@link #all}.
+ * <p>A currency comes from the library: look one up by its code with {@link #of}, or pick one from
+ * {@link #all}. An amount, the group currency, and a failure carry the details the library sends
+ * with them, so a currency is never looked up by its code to show an amount.
  */
 public final class CurrencyCode {
     private final String code;
@@ -35,13 +33,6 @@ public final class CurrencyCode {
         /** Every currency with minor units, by code. */
         static final List<CurrencyCode> ALL =
                 Eranos.currencies().stream().map(CurrencyCode::converted).toList();
-
-        /** The currencies of {@link #ALL} by their codes. */
-        static final Map<String, CurrencyCode> BY_CODE =
-                ALL.stream()
-                        .collect(
-                                Collectors.toUnmodifiableMap(
-                                        CurrencyCode::code, Function.identity()));
     }
 
     /**
@@ -66,26 +57,30 @@ public final class CurrencyCode {
     }
 
     /**
-     * The currency of {@code code}, a code the library gave, so always one of {@link #all}; any
-     * other code stands for itself, so that an amount in it keeps the code it came with.
+     * The currency the library describes as {@code details}, with the details as they are: its code
+     * is not looked up.
      *
-     * @param code the code
-     * @return the currency
-     */
-    static CurrencyCode known(String code) {
-        CurrencyCode listed = Listed.BY_CODE.get(code);
-        return null == listed ? new CurrencyCode(code, code, 0, 0) : listed;
-    }
-
-    /**
-     * The currency the library describes as {@code details}.
+     * <p>The decimal places cross as a {@code byte}, which holds the library's unsigned 8-bit
+     * number, so they are read unsigned.
      *
      * @param details the description
      * @return the currency
      */
     static CurrencyCode converted(CurrencyDetails details) {
         return new CurrencyCode(
-                details.code(), details.name(), details.numericCode(), details.decimalPlaces());
+                details.code(),
+                details.name(),
+                details.numericCode(),
+                Byte.toUnsignedInt(details.decimalPlaces()));
+    }
+
+    /**
+     * The currency as the generated code holds it.
+     *
+     * @return the generated details
+     */
+    CurrencyDetails generated() {
+        return new CurrencyDetails(code, name, numericCode, (byte) decimalPlaces);
     }
 
     /**

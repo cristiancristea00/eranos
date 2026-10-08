@@ -853,10 +853,10 @@ _CONTACT_FAILURES: dict[generated.ContactFailure, ContactFailure] = {
 _MONEY_FAILURES: dict[type[object], Callable[[Any], MoneyFailure]] = {
     generated.MoneyFailure.INVALID_AMOUNT: lambda _: MoneyError.InvalidAmount(),
     generated.MoneyFailure.TOO_MANY_DECIMALS: lambda failure: MoneyError.TooManyDecimals(
-        currency=_currency_code.CurrencyCode(failure.currency), allowed=failure.allowed
+        currency=_currency_code.currency_of(failure.currency), allowed=failure.allowed
     ),
     generated.MoneyFailure.CURRENCY_MISMATCH: lambda failure: MoneyError.CurrencyMismatch(
-        left=_currency_code.CurrencyCode(failure.left), right=_currency_code.CurrencyCode(failure.right)
+        left=_currency_code.currency_of(failure.left), right=_currency_code.currency_of(failure.right)
     ),
     generated.MoneyFailure.UNKNOWN_CURRENCY: lambda _: MoneyError.UnknownCurrency(),
     generated.MoneyFailure.INVALID_EXCHANGE_RATE: lambda _: MoneyError.InvalidExchangeRate(),
@@ -873,7 +873,7 @@ _EXPENSE_FAILURES: dict[type[object], Callable[[Any], ExpenseFailure]] = {
     generated.ExpenseFailure.EMPTY_NAME: lambda _: ExpenseError.EmptyName(),
     generated.ExpenseFailure.NON_POSITIVE_AMOUNT: lambda _: ExpenseError.NonPositiveAmount(),
     generated.ExpenseFailure.CURRENCY_MISMATCH: lambda failure: ExpenseError.CurrencyMismatch(
-        expected=_currency_code.CurrencyCode(failure.expected), found=_currency_code.CurrencyCode(failure.found)
+        expected=_currency_code.currency_of(failure.expected), found=_currency_code.currency_of(failure.found)
     ),
     generated.ExpenseFailure.EMPTY_SPLIT: lambda _: ExpenseError.EmptySplit(),
     generated.ExpenseFailure.DUPLICATE_MEMBER: lambda failure: ExpenseError.DuplicateMember(member=MemberId(failure.member)),
@@ -907,11 +907,11 @@ _EXPENSE_GROUP_FAILURES: dict[type[object], Callable[[Any], ExpenseGroupFailure]
     generated.ExpenseGroupFailure.UNSUPPORTED_FORMAT: lambda failure: ExpenseGroupError.UnsupportedFormat(format=failure.format),
     generated.ExpenseGroupFailure.EMPTY_NAME: lambda _: ExpenseGroupError.EmptyName(),
     generated.ExpenseGroupFailure.MISSING_EXCHANGE_RATE: lambda failure: ExpenseGroupError.MissingExchangeRate(
-        currency=_currency_code.CurrencyCode(failure.currency)
+        currency=_currency_code.currency_of(failure.currency)
     ),
     generated.ExpenseGroupFailure.UNEXPECTED_EXCHANGE_RATE: lambda _: ExpenseGroupError.UnexpectedExchangeRate(),
     generated.ExpenseGroupFailure.DUPLICATE_EXCHANGE_RATE: lambda failure: ExpenseGroupError.DuplicateExchangeRate(
-        currency=_currency_code.CurrencyCode(failure.currency)
+        currency=_currency_code.currency_of(failure.currency)
     ),
     generated.ExpenseGroupFailure.DUPLICATE_MEMBER: lambda failure: ExpenseGroupError.DuplicateMember(member=MemberId(failure.member)),
     generated.ExpenseGroupFailure.UNKNOWN_MEMBER: lambda failure: ExpenseGroupError.UnknownMember(member=MemberId(failure.member)),

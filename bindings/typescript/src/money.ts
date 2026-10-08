@@ -47,7 +47,7 @@ export class Money {
      * @internal
      */
     static converted(money: internal.Money): Money {
-        return new Money(money.minorUnits, CurrencyCode.known(money.currency));
+        return new Money(money.minorUnits, CurrencyCode.converted(money.currency));
     }
 
     /**
@@ -56,7 +56,7 @@ export class Money {
      * @internal
      */
     generated(): internal.Money {
-        return internal.Money.create({ minorUnits: this.minorUnits, currency: this.currency.code });
+        return internal.Money.create({ minorUnits: this.minorUnits, currency: this.currency.generated() });
     }
 
     /**
@@ -99,10 +99,6 @@ export class Money {
      * @returns The text: "12.50 EUR"
      */
     toString(): string {
-        try {
-            return internal.moneyFormat(this.generated());
-        } catch {
-            return `${this.minorUnits.toString()} ${this.currency.code}`;
-        }
+        return internal.moneyFormat(this.generated());
     }
 }
