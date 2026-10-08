@@ -102,8 +102,9 @@ flowchart TD
  │ eranos-web           eranos-uniffi's sources on UniFFI 0.31.2            │
  │ eranos-capi          the Diplomat bridge, on Diplomat 0.16.1             │
  ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-bindings      records, EranosError, FlatError, ExpenseGroupHandle,       │
- │                      ExpenseGroupReader, Cancellation, the value helpers        │
+ │ eranos-bindings      records, EranosError, FlatError,                    │
+ │                      ExpenseGroupHandle, ExpenseGroupReader,             │
+ │                      Cancellation, the value helpers                     │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos               the library                                         │
  └──────────────────────────────────────────────────────────────────────────┘

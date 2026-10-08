@@ -256,8 +256,8 @@ pub mod ffi {
             self.0.payload.balances
         }
 
-        /// The identifier another category has. Present for the failures `DuplicateCategory`,
-        /// `UnknownCategory`. Writes it, if present; absent otherwise.
+        /// The category the failure is about: one the group already holds, or one it does not. Present
+        /// for the failures `DuplicateCategory`, `UnknownCategory`. Writes it, if present; absent otherwise.
         pub fn category(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.payload.category.as_deref())
         }
@@ -269,7 +269,8 @@ pub mod ffi {
             self.0.payload.column
         }
 
-        /// The currency that appears twice. Present for the failures `DuplicateExchangeRate`,
+        /// The currency the failure is about: one that appears twice, one without a rate, or one with
+        /// more decimal places than the value allows. Present for the failures `DuplicateExchangeRate`,
         /// `MissingExchangeRate`, `TooManyDecimals`.
         #[must_use]
         pub fn currency(&self) -> Option<Box<EranosCurrencyDetails>> {
@@ -312,8 +313,8 @@ pub mod ffi {
             self.0.payload.expected_length
         }
 
-        /// The identifier another expense has. Present for the failures `DuplicateExpense`,
-        /// `UnknownExpense`. Writes it, if present; absent otherwise.
+        /// The expense the failure is about: one the group already holds, or one it does not. Present
+        /// for the failures `DuplicateExpense`, `UnknownExpense`. Writes it, if present; absent otherwise.
         pub fn expense(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.payload.expense.as_deref())
         }
@@ -367,9 +368,10 @@ pub mod ffi {
             self.0.payload.line
         }
 
-        /// The member who appears more than once. Present for the failures `DuplicateMember`,
-        /// `NonPositiveShare`, `ArchivedMember`, `DuplicateMember`, `MemberInUse`, `UnknownMember`.
-        /// Writes it, if present; absent otherwise.
+        /// The member the failure is about: one who appears more than once in a split, one whose share
+        /// is not positive, one who is archived, one the group already holds, one an entry references,
+        /// or one the group does not hold. Present for the failures `DuplicateMember`, `NonPositiveShare`,
+        /// `ArchivedMember`, `MemberInUse`, `UnknownMember`. Writes it, if present; absent otherwise.
         pub fn member(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.payload.member.as_deref())
         }
@@ -397,8 +399,8 @@ pub mod ffi {
             self.0.payload.total_basis_points
         }
 
-        /// The identifier another transfer has. Present for the failures `DuplicateTransfer`,
-        /// `UnknownTransfer`. Writes it, if present; absent otherwise.
+        /// The transfer the failure is about: one the group already holds, or one it does not. Present
+        /// for the failures `DuplicateTransfer`, `UnknownTransfer`. Writes it, if present; absent otherwise.
         pub fn transfer(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.payload.transfer.as_deref())
         }

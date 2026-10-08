@@ -1877,7 +1877,9 @@ static inline void eranosExpenseGroupSaveAsync(EranosExpenseGroup const *const g
     EranosExpenseGroup_save_async(group, cancellation, wrapped);
 }
 
-/// A read handle, which holds the shared lock until it is released or destroyed, so that its reads see no change in between.
+/// A read handle, which holds the shared lock until it is released or destroyed, so that its reads see no change in between. Any synchronous
+/// call of the group on the thread that holds one can wait forever, a change for the handle and a read behind a change another thread
+/// started: release or destroy the handle first.
 ///
 /// @param group The group
 /// @return The reader, which the caller destroys

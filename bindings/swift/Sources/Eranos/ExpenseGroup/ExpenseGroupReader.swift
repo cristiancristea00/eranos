@@ -4,8 +4,9 @@ internal import EranosGenerated
 /// until the handle is released or freed.
 ///
 /// `ExpenseGroup.withRead(_:)` releases the handle when its closure returns. A handle from
-/// `ExpenseGroup.read()` holds the lock until ``release()`` or until it is freed; a synchronous change on
-/// the thread that holds one waits for it forever, so release it first.
+/// `ExpenseGroup.read()` holds the lock until ``release()`` or until it is freed; any synchronous call of
+/// the group on the thread that holds one can wait forever, a change for the handle and a read behind a
+/// change another thread started, so release it first.
 public final class ExpenseGroupReader: Sendable {
     private let handle: EranosGenerated.ExpenseGroupReader
 

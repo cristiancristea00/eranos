@@ -30,7 +30,9 @@ class ExpenseGroupReader:
     """
     A read handle: it holds the group's shared lock until it is released, so the reads of one report see no change in between.
 
-    A change waits for it. It is a context manager, which releases the lock at the end of its block::
+    A change waits for it, and so does a read behind a change another thread started, so a blocking call of the group on the
+    thread that holds a reader can wait forever: release the reader first. It is a context manager, which releases the lock at
+    the end of its block::
 
         with group.read() as reader:
             report(reader.summary(), reader.members())

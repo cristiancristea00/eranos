@@ -697,7 +697,8 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::string, Error>> saveAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
     /// A read handle, which holds the shared lock until it is released or dropped, so that its reads see no change in between. Blocks the calling
-    /// thread while another call holds the group's lock.
+    /// thread while another call holds the group's lock; any synchronous call of the group on the thread that holds a handle can wait forever,
+    /// a change for the handle and a read behind a change another thread started, so release the handle first.
     ///
     /// @return The result
     [[nodiscard]] ExpenseGroupReader read() const noexcept;

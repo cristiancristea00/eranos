@@ -41,7 +41,7 @@ pub enum EranosError {
         /// The library's message.
         detail: String,
     },
-    /// An [`PaymentAccountError`], about a payment account: its IBAN, username, or
+    /// A [`PaymentAccountError`], about a payment account: its IBAN, username, or
     /// label.
     PaymentAccount {
         /// Which failure, with what it holds.
@@ -105,7 +105,7 @@ pub enum EranosError {
         /// The library's message.
         detail: String,
     },
-    /// A [`ExpenseGroupError`], about how an entry fits the group, or the group's
+    /// An [`ExpenseGroupError`], about how an entry fits the group, or the group's
     /// lock.
     ExpenseGroup {
         /// Which failure, with what it holds.

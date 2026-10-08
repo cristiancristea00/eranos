@@ -4,8 +4,9 @@
 //! asynchronous form of every group call, the read handle, cancellation, the
 //! value helpers, and the saved form.
 //!
-//! The glue crates (built with `uniffi` for Swift, Kotlin, Java, KMP, and the
-//! web, and with `diplomat` for C and C++) mirror these types and forward
+//! The glue crates (built with `uniffi` for Swift, Kotlin, Java, Python,
+//! Kotlin Multiplatform, and the web, and with `diplomat` for C and C++)
+//! mirror these types and forward
 //! every call here, converting nothing and deciding nothing, so everything
 //! that can be wrong is in this crate, where Rust tests reach it. Values
 //! cross as records of text and integers: identifiers as their text, which

@@ -4,8 +4,9 @@ package eranos
  * A group's reads under one shared lock, so that they see no change in between: changes wait until the handle is closed.
  *
  * [ExpenseGroup.withRead] closes the handle when its block returns. A handle from [ExpenseGroup.read] holds the lock until [close], or
- * until the handle is collected; a blocking change on the thread that holds one waits for it forever, so close it first.
- * The reads never wait: the handle holds the lock they need.
+ * until the handle is collected; any blocking call of the group on the thread that holds one can wait forever, a change for the
+ * handle and a read behind a change another thread started, so close it first. The reads never wait: the handle holds the lock
+ * they need.
  */
 @Suppress("TooManyFunctions") // One function per read of the library: the class is its surface.
 public class ExpenseGroupReader internal constructor(

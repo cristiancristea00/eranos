@@ -1,11 +1,11 @@
 # eranos-uniffi-bindgen: the generators that turn the library of
-# eranos-uniffi into Swift, Kotlin, and Java, built on the `uniffi` release
+# eranos-uniffi into Swift, Kotlin, Java, and Python, built on the `uniffi` release
 # that builds the library, so the generated code reads its metadata as
 # written. A package of binaries only, so that no library build, and no lint
 # of the libraries for the mobile and wasm targets, compiles a generator.
 [package]
 name = "eranos-uniffi-bindgen"
-description = "The generators of the eranos bindings for Swift, Kotlin, and Java"
+description = "The generators of the eranos bindings for Swift, Kotlin, Java, and Python"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

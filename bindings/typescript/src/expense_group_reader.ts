@@ -36,7 +36,8 @@ import {
  * released.
  *
  * A handle holds the lock until {@link ExpenseGroupReader.release}, which a `using` declaration calls at the end of its scope;
- * the reads never wait, since the handle holds the lock they need.
+ * the reads never wait, since the handle holds the lock they need, and a synchronous call of the group while a handle is open
+ * fails as busy, since the page's one thread cannot wait for the handle.
  */
 export class ExpenseGroupReader implements Disposable {
     private constructor(

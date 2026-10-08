@@ -100,9 +100,11 @@ impl ExpenseGroupHandle {
     /// A read handle, which holds the shared lock until it is released or
     /// dropped, so that its reads see no change in between.
     ///
-    /// A synchronous change on the thread that holds a read handle waits for
-    /// the handle, which that thread cannot release meanwhile: release or
-    /// drop the handle first.
+    /// Any synchronous call on the thread that holds a read handle can wait
+    /// forever: a change waits for the handle, which that thread cannot
+    /// release meanwhile, and a read waits behind a change another thread
+    /// started, which the lock lets turn new reads away. Release or drop the
+    /// handle first.
     ///
     /// # Errors
     ///

@@ -1,4 +1,5 @@
-# eranos-uniffi: the UniFFI bindings of eranos for Swift, Kotlin, and Java.
+# eranos-uniffi: the UniFFI bindings of eranos for Swift, Kotlin, Java, Python,
+# and Kotlin Multiplatform.
 # It mirrors the binding core's records, enums, and error, wraps its group
 # handle, read handle, and cancellation in objects, and exports its value
 # helpers, each forwarding to the core. The web and KMP crates compile the
@@ -6,7 +7,7 @@
 # what UniFFI 0.29 accepts (docs/BINDINGS.md § 8).
 [package]
 name = "eranos-uniffi"
-description = "The UniFFI bindings of eranos for Swift, Kotlin, and Java"
+description = "The UniFFI bindings of eranos for Swift, Kotlin, Java, Python, and Kotlin Multiplatform"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -8,8 +8,9 @@ import java.util.Optional;
  * the handle is closed.
  *
  * <p>A handle holds the lock until {@link #close}, which a {@code try}-with-resources statement
- * calls, or until the handle is collected; a blocking change on the thread that holds one waits for
- * it forever, so close it first. The reads never wait: the handle holds the lock they need.
+ * calls, or until the handle is collected; any blocking call of the group on the thread that holds
+ * one can wait forever, a change for the handle and a read behind a change another thread started,
+ * so close it first. The reads never wait: the handle holds the lock they need.
  */
 public final class ExpenseGroupReader implements AutoCloseable {
     /** The generated read handle this one forwards to. */
