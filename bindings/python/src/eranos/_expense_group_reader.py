@@ -216,9 +216,9 @@ class ExpenseGroupReader:
         with library_errors():
             return optional(self._handle.member(member_id), member_of)
 
-    def is_archived(self, member_id: MemberId) -> bool:
+    def is_archived(self, member_id: MemberId) -> bool | None:
         """
-        Tell whether the member with the identifier member_id is archived: false for a member the group does not hold.
+        Tell whether the member with the identifier member_id is archived, if the group holds them.
 
         A read after the reader's release raises ``RuntimeError``. The library refuses an identifier that is not one with an ``IdError``.
 
@@ -226,7 +226,7 @@ class ExpenseGroupReader:
             member_id: The member's identifier.
 
         Returns:
-            Whether the member is archived.
+            Whether the member is archived, or none for a member the group does not hold.
 
         """
         with library_errors():

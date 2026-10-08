@@ -15,10 +15,10 @@
 #include "EranosExpenseGroupReaderOutcome.h"
 #include "EranosExpenseListOutcome.h"
 #include "EranosExpenseOutcome.h"
-#include "EranosFlagOutcome.h"
 #include "EranosFoundCategoryOutcome.h"
 #include "EranosFoundExpenseOutcome.h"
 #include "EranosFoundExpenseSharesOutcome.h"
+#include "EranosFoundFlagOutcome.h"
 #include "EranosFoundMemberOutcome.h"
 #include "EranosFoundMoneyOutcome.h"
 #include "EranosFoundTransferOutcome.h"
@@ -171,22 +171,23 @@ static inline void eranosDetailRunFoundExpenseSharesCallback(void const *const d
     callback->run(callback->context, error, expenseShares);
 }
 
-/// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the answer, or nullptr when the call failed,
-/// which points to a value that stays valid until the function returns. The callback destroys each object it receives.
-typedef struct EranosFlagCallback {
+/// What an asynchronous lookup reports to when it ends: the error, or nullptr when the call succeeded, and whether the member is archived, or nullptr
+/// when the call failed or found none, which points to a value that stays valid until the function returns: nullptr with no error means that no
+/// member has the identifier. The callback destroys each object it receives.
+typedef struct EranosFoundFlagCallback {
     /// What the caller passes back to itself.
     void *context;
     /// Called once with @p context and the outcome.
-    void (*run)(void *context, EranosError *error, bool const *answer);
-} EranosFlagCallback;
+    void (*run)(void *context, EranosError *error, bool const *archived);
+} EranosFoundFlagCallback;
 
 /// Reports @p outcome to the callback @p data points to, and destroys it.
-static inline void eranosDetailRunFlagCallback(void const *const data, EranosFlagOutcome *const outcome) {
-    EranosFlagCallback const *const callback = data;
-    EranosError *const error = EranosFlagOutcome_error(outcome);
-    EranosFlagOutcome_value_result const answer = EranosFlagOutcome_value(outcome);
-    EranosFlagOutcome_destroy(outcome);
-    callback->run(callback->context, error, answer.is_ok ? &answer.ok : nullptr);
+static inline void eranosDetailRunFoundFlagCallback(void const *const data, EranosFoundFlagOutcome *const outcome) {
+    EranosFoundFlagCallback const *const callback = data;
+    EranosError *const error = EranosFoundFlagOutcome_error(outcome);
+    EranosFoundFlagOutcome_value_result const archived = EranosFoundFlagOutcome_value(outcome);
+    EranosFoundFlagOutcome_destroy(outcome);
+    callback->run(callback->context, error, archived.is_ok ? &archived.ok : nullptr);
 }
 
 /// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the group, or nullptr when the call failed.
@@ -1183,20 +1184,19 @@ static inline void eranosExpenseGroupMemberAsync(EranosExpenseGroup const *const
     EranosExpenseGroup_member_async(group, eranosDetailView(id), cancellation, wrapped);
 }
 
-/// Whether the member with the identifier `id` is archived; `false` for an unknown member.
+/// Whether the member with the identifier `id` is archived. Writes it into @p archived when the group holds the member, and nothing otherwise:
+/// @p found false with no error means that no member has the identifier.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param archived Receives the archived on success
+/// @param found Receives whether the group holds the member, which is false when the call fails
+/// @param archived Receives whether the member is archived, when the group holds them
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, whose kind names the module
 ///   that refused the call, or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosExpenseGroupIsArchived(EranosExpenseGroup const *const group, char const *const id,
+[[nodiscard]] static inline EranosError *eranosExpenseGroupIsArchived(EranosExpenseGroup const *const group, char const *const id, bool *const found,
                                                                       bool *const archived) {
     EranosExpenseGroup_is_archived_result const result = EranosExpenseGroup_is_archived(group, eranosDetailView(id));
-    *archived = false;
-    if (result.is_ok) {
-        *archived = result.ok;
-    }
+    *found = result.is_ok && eranosDetailPresentBool(result.ok.is_ok, &result.ok.ok, archived);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -1210,10 +1210,10 @@ static inline void eranosExpenseGroupMemberAsync(EranosExpenseGroup const *const
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupIsArchivedAsync(EranosExpenseGroup const *const group, char const *const id,
-                                                     EranosCancellation const *const cancellation, EranosFlagCallback const *const callback) {
+                                                     EranosCancellation const *const cancellation, EranosFoundFlagCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_is_archived_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunFlagCallback,
+        .run_callback = eranosDetailRunFoundFlagCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_is_archived_async(group, eranosDetailView(id), cancellation, wrapped);

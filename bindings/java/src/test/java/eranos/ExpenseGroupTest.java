@@ -45,7 +45,7 @@ class ExpenseGroupTest {
         List<Member> members = group.members();
         assertEquals(List.of("Ana", "Bob"), members.stream().map(Member::firstName).toList());
         assertEquals(Optional.of(members.get(0)), group.member(flat.ana));
-        assertFalse(group.isArchived(flat.ana));
+        assertEquals(Optional.of(false), group.isArchived(flat.ana));
         assertEquals("Flat", group.name());
         assertEquals(Optional.of("Rent"), group.description());
         assertEquals(Optional.of(Language.parse("pt-PT")), group.language());
@@ -103,8 +103,8 @@ class ExpenseGroupTest {
     }
 
     /**
-     * A lookup of an identifier the group does not hold that found an entry would show an app an
-     * entry of another group.
+     * A lookup of an identifier the group does not hold that found an entry, or read a member it
+     * does not hold as archived or active, would show an app an entry of another group.
      */
     @Test
     void aLookupOfAnIdentifierTheGroupDoesNotHoldFindsNothing() throws EranosException {
@@ -114,12 +114,14 @@ class ExpenseGroupTest {
         List<Optional<?>> lookups =
                 List.of(
                         group.member(stranger.ana),
+                        group.isArchived(stranger.ana),
                         group.category(stranger.food),
                         group.expense(stranger.dinner),
                         group.expenseShares(stranger.dinner),
                         group.transfer(stranger.repayment),
                         group.transferAmount(stranger.repayment),
                         group.memberAsync(stranger.ana).join(),
+                        group.isArchivedAsync(stranger.ana).join(),
                         group.categoryAsync(stranger.food).join(),
                         group.expenseAsync(stranger.dinner).join(),
                         group.expenseSharesAsync(stranger.dinner).join(),
@@ -132,6 +134,7 @@ class ExpenseGroupTest {
             for (Optional<?> lookup :
                     List.of(
                             reader.member(stranger.ana),
+                            reader.isArchived(stranger.ana),
                             reader.category(stranger.food),
                             reader.expense(stranger.dinner),
                             reader.expenseShares(stranger.dinner),
@@ -147,7 +150,7 @@ class ExpenseGroupTest {
 
     /**
      * A blocking change that did not take effect, or took another, would leave the group other than
-     * the app changed it.
+     * the app changed it, and a member it removed would still read as archived or active.
      */
     @Test
     void everyBlockingChangeTakesEffect() throws EranosException {
@@ -158,10 +161,11 @@ class ExpenseGroupTest {
         assertEquals("Carol", group.replaceMember(renamed).firstName());
         assertEquals(Optional.of("Popa"), group.member(carol).orElseThrow().lastName());
         group.archiveMember(carol);
-        assertTrue(group.isArchived(carol));
+        assertEquals(Optional.of(true), group.isArchived(carol));
         group.unarchiveMember(carol);
-        assertFalse(group.isArchived(carol));
+        assertEquals(Optional.of(false), group.isArchived(carol));
         assertEquals(renamed, group.removeMember(carol));
+        assertEquals(Optional.empty(), group.isArchived(carol));
         EranosException.ExpenseGroup inUse =
                 assertThrows(
                         EranosException.ExpenseGroup.class, () -> group.removeMember(flat.ana));
@@ -221,7 +225,8 @@ class ExpenseGroupTest {
 
     /**
      * An asynchronous change that took effect another way than its blocking twin would change the
-     * group differently from a future.
+     * group differently from a future, and a member it removed would still read as archived or
+     * active.
      */
     @Test
     void everyAsyncChangeTakesEffectAsItsBlockingTwinDoes() throws EranosException {
@@ -233,10 +238,11 @@ class ExpenseGroupTest {
                 stored,
                 group.replaceMemberAsync(stored.toBuilder().lastName("Popa").build()).join());
         group.archiveMemberAsync(carol).join();
-        assertTrue(group.isArchived(carol));
+        assertEquals(Optional.of(true), group.isArchivedAsync(carol).join());
         group.unarchiveMemberAsync(carol).join();
-        assertFalse(group.isArchived(carol));
+        assertEquals(Optional.of(false), group.isArchivedAsync(carol).join());
         assertEquals(Optional.of("Popa"), group.removeMemberAsync(carol).join().lastName());
+        assertEquals(Optional.empty(), group.isArchivedAsync(carol).join());
 
         CategoryId travel = group.addCategoryAsync(new Category("Travel")).join();
         assertEquals(
@@ -378,6 +384,7 @@ class ExpenseGroupTest {
     void aReadHandleReadsAsTheGroupDoesUntilItIsClosed() throws EranosException {
         Flat flat = new Flat();
         ExpenseGroup group = flat.group;
+        group.archiveMember(flat.bob);
         ExpenseGroupReader reader = group.read();
         assertEquals(group.id(), reader.id());
         assertEquals(group.categories(), reader.categories());
@@ -389,7 +396,8 @@ class ExpenseGroupTest {
         assertEquals(group.summary(), reader.summary());
         assertEquals(group.members(), reader.members());
         assertEquals(group.member(flat.ana), reader.member(flat.ana));
-        assertFalse(reader.isArchived(flat.ana));
+        assertEquals(Optional.of(false), reader.isArchived(flat.ana));
+        assertEquals(Optional.of(true), reader.isArchived(flat.bob));
         assertEquals("Flat", reader.name());
         assertEquals(Optional.of("Rent"), reader.description());
         assertEquals(group.language(), reader.language());

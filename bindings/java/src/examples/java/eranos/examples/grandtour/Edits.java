@@ -309,7 +309,9 @@ final class Edits {
                 rows.add(
                         new StatusRow(
                                 member.firstName(),
-                                group.isArchived(member.id()) ? "archived" : "active",
+                                group.isArchived(member.id())
+                                        .map(archived -> archived ? "archived" : "active")
+                                        .orElse("not in the group"),
                                 found.orElseThrow().balance()));
             }
         }
@@ -332,6 +334,6 @@ final class Edits {
                 groupFailure(inUse)
                         .filter(ExpenseGroupFailure.MemberInUse.class::isInstance)
                         .isPresent());
-        check(!group.isArchived(people.dan()));
+        check(Optional.of(false).equals(group.isArchived(people.dan())));
     }
 }

@@ -18,7 +18,7 @@ pub mod ffi {
         EranosTransfer, EranosTransferList,
     };
     use crate::values::ffi::EranosMoney;
-    use diplomat_runtime::{DiplomatStr, DiplomatWrite};
+    use diplomat_runtime::{DiplomatOption, DiplomatStr, DiplomatWrite};
     use std::sync::{Arc, OnceLock, mpsc};
 
     /// A cancellation of asynchronous calls, which one cancellation can be given to several of.
@@ -834,16 +834,20 @@ pub mod ffi {
             );
         }
 
-        /// Whether the member with the identifier `id` is archived; `false` for an unknown member.
+        /// Whether the member with the identifier `id` is archived. `None` when it finds none.
         ///
         /// # Errors
         ///
         /// The library's refusal. [`EranosError`] of the kind `ExpenseGroup` with the failure
         /// `ExpenseGroupBusy` on wasm while a change holds the lock or waits for it.
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
+        pub fn is_archived(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<DiplomatOption<bool>, Box<EranosError>> {
             self.handle
                 .is_archived(&crate::text(id)?)
+                .map(DiplomatOption::from)
                 .map_err(crate::failed)
         }
 
@@ -855,7 +859,7 @@ pub mod ffi {
             &self,
             id: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosFlagOutcome>) + 'static,
+            callback: impl Fn(Box<EranosFoundFlagOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -869,7 +873,7 @@ pub mod ffi {
                         .map_err(crate::Failure::Library)
                 },
                 callback,
-                EranosFlagOutcome,
+                EranosFoundFlagOutcome,
             );
         }
 
@@ -1879,14 +1883,20 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// Whether the member with the identifier `id` is archived; `false` for an unknown member.
+        /// Whether the member with the identifier `id` is archived. `None` when it finds none.
         ///
         /// # Errors
         ///
         /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
-            self.0.is_archived(&crate::text(id)?).map_err(crate::failed)
+        pub fn is_archived(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<DiplomatOption<bool>, Box<EranosError>> {
+            self.0
+                .is_archived(&crate::text(id)?)
+                .map(DiplomatOption::from)
+                .map_err(crate::failed)
         }
 
         /// The group's name. Writes it into `write`.
@@ -2096,38 +2106,6 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns an answer, which its callback receives and
-    /// destroys.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosFlagOutcome(pub(crate) Result<bool, crate::Failure>);
-
-    impl EranosFlagOutcome {
-        /// Whether the call succeeded.
-        #[must_use]
-        pub const fn is_ok(&self) -> bool {
-            self.0.is_ok()
-        }
-
-        /// A copy of the call's failure, absent when it succeeded.
-        #[must_use]
-        pub fn error(&self) -> Option<Box<EranosError>> {
-            self.0
-                .as_ref()
-                .err()
-                .map(|failure| Box::new(EranosError::from(failure.clone())))
-        }
-
-        /// The answer, if the call succeeded.
-        #[must_use]
-        pub const fn value(&self) -> Option<bool> {
-            match &self.0 {
-                Ok(answer) => Some(*answer),
-                Err(_) => None,
-            }
-        }
-    }
-
     /// The outcome of an asynchronous call that returns a category it may not find, which its
     /// callback receives and destroys.
     #[diplomat::opaque]
@@ -2230,6 +2208,38 @@ pub mod ffi {
                 .ok()
                 .and_then(Option::as_ref)
                 .map(|value| Box::new(EranosExpenseShares(value.clone())))
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns an answer about something it may not find,
+    /// which its callback receives and destroys.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosFoundFlagOutcome(pub(crate) Result<Option<bool>, crate::Failure>);
+
+    impl EranosFoundFlagOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// The answer, if the call succeeded and found what it answers about.
+        #[must_use]
+        pub const fn value(&self) -> Option<bool> {
+            match &self.0 {
+                Ok(answer) => *answer,
+                Err(_) => None,
+            }
         }
     }
 

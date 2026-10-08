@@ -398,12 +398,12 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Member>, Error>>
     memberAsync(MemberId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Whether the member with the identifier id is archived; false for an unknown member. Blocks the calling thread while another call holds the
-    /// group's lock.
+    /// Whether the member with the identifier id is archived, or none when no member has the identifier. Blocks the calling thread while another
+    /// call holds the group's lock.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
-    [[nodiscard]] std::expected<bool, Error> isArchived(MemberId const &id) const noexcept;
+    [[nodiscard]] std::expected<std::optional<bool>, Error> isArchived(MemberId const &id) const noexcept;
 
     /// The asynchronous form of isArchived(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
     /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, and its future then holds an error of the
@@ -412,8 +412,8 @@ class ExpenseGroup final {
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
-    [[nodiscard]] std::future<std::expected<bool, Error>> isArchivedAsync(MemberId const &id,
-                                                                          Cancellation const *const cancellation = nullptr) const noexcept;
+    [[nodiscard]] std::future<std::expected<std::optional<bool>, Error>>
+    isArchivedAsync(MemberId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
     /// Adds member under their identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
     ///
@@ -1006,15 +1006,15 @@ inline std::future<std::expected<std::optional<Member>, Error>> ExpenseGroup::me
         [](detail::EranosFoundMemberOutcome const &done) noexcept { return detail::optionalRecord<Member>(done.value()); });
 }
 
-inline std::expected<bool, Error> ExpenseGroup::isArchived(MemberId const &id) const noexcept {
+inline std::expected<std::optional<bool>, Error> ExpenseGroup::isArchived(MemberId const &id) const noexcept {
     return detail::expectedOf(handle->is_archived(id.value()));
 }
 
-inline std::future<std::expected<bool, Error>> ExpenseGroup::isArchivedAsync(MemberId const &id,
-                                                                             Cancellation const *const cancellation) const noexcept {
-    return detail::launch<bool>(
+inline std::future<std::expected<std::optional<bool>, Error>> ExpenseGroup::isArchivedAsync(MemberId const &id,
+                                                                                            Cancellation const *const cancellation) const noexcept {
+    return detail::launch<std::optional<bool>>(
         [&](auto callback) noexcept { handle->is_archived_async(id.value(), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosFlagOutcome const &done) noexcept { return *done.value(); });
+        [](detail::EranosFoundFlagOutcome const &done) noexcept { return done.value(); });
 }
 
 inline std::expected<MemberId, Error> ExpenseGroup::addMember(Member const &member) noexcept {

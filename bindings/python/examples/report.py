@@ -176,3 +176,25 @@ def totals(member: MemberId, summary: Summary) -> MemberSummary | None:
 
     """
     return next((found for found in summary.members if found.member == member), None)
+
+
+def status(archived: bool | None) -> str:
+    """
+    Name where a member stands in a group from whether they are archived.
+
+    Args:
+        archived: Whether the member is archived, or none for a member the group does not hold.
+
+    Returns:
+        ``"archived"``, ``"active"``, or ``"not in the group"``.
+
+    """
+    match archived:
+        case True:
+            return 'archived'
+        case False:
+            return 'active'
+        case None:
+            return 'not in the group'
+        case _:
+            assert_never(archived)

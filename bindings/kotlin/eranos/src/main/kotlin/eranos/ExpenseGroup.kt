@@ -315,7 +315,7 @@ public class ExpenseGroup private constructor(
     public fun memberBlocking(id: MemberId): Member? = converting { handle.member(id.value)?.converted() }
 
     /**
-     * Whether the member with the identifier [id] is archived; `false` for a member the group does not hold.
+     * Whether the member with the identifier [id] is archived; `null` for a member the group does not hold.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [isArchivedBlocking] blocks instead.
@@ -323,17 +323,17 @@ public class ExpenseGroup private constructor(
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class, CancellationException::class)
-    public suspend fun isArchived(id: MemberId): Boolean = converting { handle.isArchivedAsync(id.value, null) }
+    public suspend fun isArchived(id: MemberId): Boolean? = converting { handle.isArchivedAsync(id.value, null) }
 
     /**
-     * Whether the member with the identifier [id] is archived; `false` for a member the group does not hold.
+     * Whether the member with the identifier [id] is archived; `null` for a member the group does not hold.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [isArchived] waits without blocking it.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
-    public fun isArchivedBlocking(id: MemberId): Boolean = converting { handle.isArchived(id.value) }
+    public fun isArchivedBlocking(id: MemberId): Boolean? = converting { handle.isArchived(id.value) }
 
     /**
      * Adds [member] under their identifier and returns the identifier.

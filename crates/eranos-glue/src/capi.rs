@@ -162,7 +162,14 @@ fn module(mut items: Vec<Named>, records: &BTreeSet<String>) -> syn::File {
             path: quote!(crate::values::ffi),
         },
         Import {
-            names: imported(&["DiplomatStr".to_owned(), "DiplomatWrite".to_owned()].into()),
+            names: imported(
+                &[
+                    "DiplomatOption".to_owned(),
+                    "DiplomatStr".to_owned(),
+                    "DiplomatWrite".to_owned(),
+                ]
+                .into(),
+            ),
             path: quote!(diplomat_runtime),
         },
         Import {

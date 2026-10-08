@@ -310,13 +310,14 @@ static void receiveUnit(void *const context, EranosError *const error) {
     finish(waiter);
 }
 
-/// Receives an answer, which @p answer points to until the function returns, or none.
-static void receiveFlag(void *const context, EranosError *const error, bool const *const answer) {
+/// Receives whether a member is archived, which @p archived points to until the function returns, or none, when the call failed or found
+/// no member.
+static void receiveFlag(void *const context, EranosError *const error, bool const *const archived) {
     Waiter *const waiter = context;
-    waiter->answered = nullptr != answer;
+    waiter->answered = nullptr != archived;
     waiter->error = error;
-    if (nullptr != answer) {
-        waiter->flag = *answer;
+    if (nullptr != archived) {
+        waiter->flag = *archived;
     }
     finish(waiter);
 }
@@ -1451,13 +1452,23 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
     EranosMember *member = nullptr;
     checkSucceeded(check, eranosExpenseGroupMember(flat.group, eranosTextData(flat.ana), &member), "the member by their identifier");
     checkThat(check, eranosMemberLastName(member, text) && isText(text, "Pop"), "as replaced");
-    bool archived = true;
+    bool found = false;
+    bool archived = false;
     checkSucceeded(check, eranosExpenseGroupArchiveMember(flat.group, eranosTextData(flat.bob)), "Bob is archived");
-    checkSucceeded(check, eranosExpenseGroupIsArchived(flat.group, eranosTextData(flat.bob), &archived), "and asked about");
-    checkThat(check, archived, "and is");
+    checkSucceeded(check, eranosExpenseGroupIsArchived(flat.group, eranosTextData(flat.bob), &found, &archived), "and asked about");
+    checkThat(check, found && archived, "and is");
+    EranosExpenseGroupReader *const reader = eranosExpenseGroupRead(flat.group);
+    found = false;
+    archived = false;
+    checkSucceeded(check, eranosExpenseGroupReaderIsArchived(reader, eranosTextData(flat.bob), &found, &archived),
+                   "and asked about through a read handle");
+    checkThat(check, found && archived, "and is there too");
+    eranosExpenseGroupReaderDestroy(reader);
     checkSucceeded(check, eranosExpenseGroupUnarchiveMember(flat.group, eranosTextData(flat.bob)), "Bob is back");
-    checkSucceeded(check, eranosExpenseGroupIsArchived(flat.group, eranosTextData(flat.bob), &archived), "and asked about");
-    checkThat(check, !archived, "and is not");
+    found = false;
+    archived = true;
+    checkSucceeded(check, eranosExpenseGroupIsArchived(flat.group, eranosTextData(flat.bob), &found, &archived), "and asked about");
+    checkThat(check, found && !archived, "and is not");
     EranosMember *removedMember = nullptr;
     checkSucceeded(check, eranosExpenseGroupRemoveMember(flat.group, eranosTextData(flat.bob), &removedMember), "Bob goes, once nothing names him");
     eranosMemberFirstName(removedMember, text);
@@ -1601,7 +1612,7 @@ static void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check *const che
 }
 
 /// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses
-/// it, in both forms, with the failure of the rule it breaks, and gives no object.
+/// it, in both forms, with the failure of the rule it breaks, and gives no object and no answer.
 static void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check *const check) {
     Flat const flat = flatOf();
     char letters[66] = {};
@@ -1627,9 +1638,11 @@ static void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check *const check) {
         EranosMember *member = nullptr;
         checkThat(check, isFailure(eranosExpenseGroupMember(flat.group, nobody, &member), ERANOS_ERROR_KIND_ID, failure) && nullptr == member,
                   "a member");
+        bool found = true;
         bool archived = true;
-        checkThat(check, isFailure(eranosExpenseGroupIsArchived(flat.group, nobody, &archived), ERANOS_ERROR_KIND_ID, failure) && !archived,
-                  "whether a member is archived");
+        checkThat(check,
+                  isFailure(eranosExpenseGroupIsArchived(flat.group, nobody, &found, &archived), ERANOS_ERROR_KIND_ID, failure) && !found && archived,
+                  "whether a member is archived, which gives no answer");
         EranosTransfer *transfer = nullptr;
         checkThat(check, isFailure(eranosExpenseGroupTransfer(flat.group, nobody, &transfer), ERANOS_ERROR_KIND_ID, failure) && nullptr == transfer,
                   "a transfer");
@@ -1653,6 +1666,10 @@ static void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check *const check) {
         eranosExpenseGroupMemberAsync(flat.group, nobody, nullptr, &memberCallback);
         await(&waiter);
         checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_ID, failure) && nullptr == waiter.object, "a member, asynchronously");
+        EranosFoundFlagCallback const archivedCallback = {waiting(&waiter), receiveFlag};
+        eranosExpenseGroupIsArchivedAsync(flat.group, nobody, nullptr, &archivedCallback);
+        await(&waiter);
+        checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_ID, failure) && !waiter.answered, "whether a member is archived, asynchronously");
         EranosFoundTransferCallback const transferCallback = {waiting(&waiter), receiveTransfer};
         eranosExpenseGroupTransferAsync(flat.group, nobody, nullptr, &transferCallback);
         await(&waiter);
@@ -1665,8 +1682,9 @@ static void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check *const check) {
     flatDestroy(flat);
 }
 
-/// A lookup that reported an error for an identifier nothing has, or gave an object for it, would make an app treat a deleted entry as a
-/// failure, or show one that is gone; each lookup, in every form, reports no error and gives no object.
+/// A lookup that reported an error for an identifier nothing has, or gave an object or an answer for it, would make an app treat a deleted
+/// entry as a failure, or show one that is gone, or a member who left as active; each lookup, in every form, reports no error and gives no
+/// object and no answer.
 static void aLookupOfAnIdentifierNothingHasReportsNoErrorAndNoObject(Check *const check) {
     Flat const flat = flatOf();
     char const *const unknown = "0199a000-0000-7000-8000-00000000ffff";
@@ -1684,6 +1702,10 @@ static void aLookupOfAnIdentifierNothingHasReportsNoErrorAndNoObject(Check *cons
     checkSucceeded(check, eranosExpenseGroupTransferAmount(flat.group, unknown, &amount), "a transfer's amount");
     checkThat(check, nullptr == category && nullptr == expense && nullptr == shares && nullptr == member && nullptr == transfer && nullptr == amount,
               "the group's lookups find none");
+    bool found = true;
+    bool archived = true;
+    checkSucceeded(check, eranosExpenseGroupIsArchived(flat.group, unknown, &found, &archived), "whether a member is archived");
+    checkThat(check, !found && archived, "which gives no answer");
     EranosExpenseGroupReader *const reader = eranosExpenseGroupRead(flat.group);
     checkSucceeded(check, eranosExpenseGroupReaderCategory(reader, unknown, &category), "a category, through a read handle");
     checkSucceeded(check, eranosExpenseGroupReaderExpense(reader, unknown, &expense), "an expense, through a read handle");
@@ -1693,6 +1715,10 @@ static void aLookupOfAnIdentifierNothingHasReportsNoErrorAndNoObject(Check *cons
     checkSucceeded(check, eranosExpenseGroupReaderTransferAmount(reader, unknown, &amount), "a transfer's amount, through a read handle");
     checkThat(check, nullptr == category && nullptr == expense && nullptr == shares && nullptr == member && nullptr == transfer && nullptr == amount,
               "the read handle's lookups find none");
+    found = true;
+    checkSucceeded(check, eranosExpenseGroupReaderIsArchived(reader, unknown, &found, &archived),
+                   "whether a member is archived, through a read handle");
+    checkThat(check, !found && archived, "which gives no answer there either");
     eranosExpenseGroupReaderDestroy(reader);
     Waiter waiter;
     EranosFoundCategoryCallback const categoryCallback = {waiting(&waiter), receiveCategory};
@@ -1711,6 +1737,10 @@ static void aLookupOfAnIdentifierNothingHasReportsNoErrorAndNoObject(Check *cons
     eranosExpenseGroupMemberAsync(flat.group, unknown, nullptr, &memberCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error && nullptr == waiter.object, "a member, asynchronously");
+    EranosFoundFlagCallback const archivedCallback = {waiting(&waiter), receiveFlag};
+    eranosExpenseGroupIsArchivedAsync(flat.group, unknown, nullptr, &archivedCallback);
+    await(&waiter);
+    checkThat(check, nullptr == waiter.error && !waiter.answered, "whether a member is archived, asynchronously");
     EranosFoundTransferCallback const transferCallback = {waiting(&waiter), receiveTransfer};
     eranosExpenseGroupTransferAsync(flat.group, unknown, nullptr, &transferCallback);
     await(&waiter);
@@ -2320,7 +2350,7 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     EranosUnitCallback const archiveCallback = {waiting(&waiter), receiveUnit};
     eranosExpenseGroupArchiveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &archiveCallback);
     await(&waiter);
-    EranosFlagCallback const archivedCallback = {waiting(&waiter), receiveFlag};
+    EranosFoundFlagCallback const archivedCallback = {waiting(&waiter), receiveFlag};
     eranosExpenseGroupIsArchivedAsync(flat.group, eranosTextData(carlaId), nullptr, &archivedCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error && waiter.answered && waiter.flag, "an archived member is archived");
@@ -2328,6 +2358,10 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     eranosExpenseGroupUnarchiveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &unarchiveCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error, "and comes back");
+    EranosFoundFlagCallback const activeCallback = {waiting(&waiter), receiveFlag};
+    eranosExpenseGroupIsArchivedAsync(flat.group, eranosTextData(carlaId), nullptr, &activeCallback);
+    await(&waiter);
+    checkThat(check, nullptr == waiter.error && waiter.answered && !waiter.flag, "an active member is not archived");
     EranosMemberCallback const removeMemberCallback = {waiting(&waiter), receiveMember};
     eranosExpenseGroupRemoveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &removeMemberCallback);
     await(&waiter);
@@ -2437,7 +2471,7 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE) && nullptr == waiter.text,
               "a call that returns text reports no text");
     eranosMemberDestroy(dan);
-    EranosFlagCallback const failingFlagCallback = {waiting(&waiter), receiveFlag};
+    EranosFoundFlagCallback const failingFlagCallback = {waiting(&waiter), receiveFlag};
     eranosExpenseGroupIsArchivedAsync(flat.group, " x", nullptr, &failingFlagCallback);
     await(&waiter);
     checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE) && !waiter.answered,
@@ -2486,8 +2520,9 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     checkSucceeded(check, eranosExpenseGroupReaderMembers(reader, &members), "the members");
     EranosMember *member = nullptr;
     checkSucceeded(check, eranosExpenseGroupReaderMember(reader, eranosTextData(flat.ana), &member), "a member");
+    bool found = false;
     bool archived = true;
-    checkSucceeded(check, eranosExpenseGroupReaderIsArchived(reader, eranosTextData(flat.ana), &archived), "whether a member is archived");
+    checkSucceeded(check, eranosExpenseGroupReaderIsArchived(reader, eranosTextData(flat.ana), &found, &archived), "whether a member is archived");
     EranosSettlementPlan *settlement = nullptr;
     checkSucceeded(check, eranosExpenseGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), "a settlement");
     EranosTransferList *transfers = nullptr;
@@ -2498,7 +2533,7 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     checkSucceeded(check, eranosExpenseGroupReaderTransferAmount(reader, eranosTextData(flat.repayment), &amount), "its amount");
     checkThat(check,
               2 == eranosCategoryListLength(categories) && nullptr != category && 1 == eranosExpenseListLength(expenses) && nullptr != expense &&
-                  nullptr != shares && nullptr != summary && 2 == eranosMemberListLength(members) && nullptr != member && !archived &&
+                  nullptr != shares && nullptr != summary && 2 == eranosMemberListLength(members) && nullptr != member && found && !archived &&
                   nullptr != settlement && 1 == eranosTransferListLength(transfers) && nullptr != transfer && isAmount(amount, 1'000, "EUR"),
               "every read sees the group");
     eranosExpenseGroupReaderRelease(reader);
@@ -2524,7 +2559,7 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
 }
 
 /// A read handle whose reads went on after its release would read a group whose later changes it no longer waits for; every
-/// read fails once the handle is released, and gives no object, no text, or false for a flag.
+/// read fails once the handle is released, and gives no object, no text, and no answer.
 static void everyReadOfAReleasedReaderFails(Check *const check) {
     Flat const flat = flatOf();
     EranosExpenseGroupReader *const reader = eranosExpenseGroupRead(flat.group);
@@ -2563,9 +2598,12 @@ static void everyReadOfAReleasedReaderFails(Check *const check) {
     checkThat(check,
               isKind(eranosExpenseGroupReaderMember(reader, eranosTextData(flat.ana), &member), ERANOS_ERROR_KIND_RELEASED) && nullptr == member,
               "a member");
+    bool found = true;
     bool archived = true;
-    checkThat(check, isKind(eranosExpenseGroupReaderIsArchived(reader, eranosTextData(flat.ana), &archived), ERANOS_ERROR_KIND_RELEASED) && !archived,
-              "whether a member is archived");
+    checkThat(check,
+              isKind(eranosExpenseGroupReaderIsArchived(reader, eranosTextData(flat.ana), &found, &archived), ERANOS_ERROR_KIND_RELEASED) && !found &&
+                  archived,
+              "whether a member is archived, which gives no answer");
     EranosSettlementPlan *settlement = nullptr;
     checkThat(check,
               isKind(eranosExpenseGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), ERANOS_ERROR_KIND_RELEASED) &&

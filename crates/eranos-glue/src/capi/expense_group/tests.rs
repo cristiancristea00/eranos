@@ -126,6 +126,8 @@ fn the_group_has_every_form_of_every_call_in_order() {
             "is_open_async",
             "latest_expense",
             "latest_expense_async",
+            "is_latest_itemised",
+            "is_latest_itemised_async",
             "summary",
             "summary_async",
             "add_expense",
@@ -150,7 +152,8 @@ fn the_group_has_every_form_of_every_call_in_order() {
 
 /// A synchronous form checks its text, lends a record or a list, converts a
 /// value, and passes an integer as it is; it writes text into a
-/// `DiplomatWrite`, and hands a record or a list over in an opaque object.
+/// `DiplomatWrite`, hands a record or a list over in an opaque object, and a
+/// lookup's flag in a `DiplomatOption`, which Diplomat lets a `Result` hold.
 /// The group's form of a call that cannot fail returns that answer itself,
 /// which `crate::waited` takes out of the core's `Result`, and a `Result`
 /// only when it takes text, which it checks.
@@ -185,8 +188,11 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
                 }
             },
             quote! {
-                pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
-                    self.handle.is_archived(&crate::text(id)?).map_err(crate::failed)
+                pub fn is_archived(&self, id: &DiplomatStr) -> Result<DiplomatOption<bool>, Box<EranosError>> {
+                    self.handle
+                        .is_archived(&crate::text(id)?)
+                        .map(DiplomatOption::from)
+                        .map_err(crate::failed)
                 }
             },
             quote! {
@@ -199,6 +205,12 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
                 #[must_use]
                 pub fn latest_expense(&self) -> Option<Box<EranosExpense>> {
                     crate::waited(self.handle.latest_expense()).map(|value| Box::new(EranosExpense(value)))
+                }
+            },
+            quote! {
+                #[must_use]
+                pub fn is_latest_itemised(&self) -> DiplomatOption<bool> {
+                    DiplomatOption::from(crate::waited(self.handle.is_latest_itemised()))
                 }
             },
             quote! {
@@ -496,7 +508,7 @@ fn every_form_says_how_it_fails() {
     assert_eq!(
         method(&reader, "is_archived").docs,
         format!(
-            "Whether the member with the identifier `id` is archived.\n\n# Errors\n\nThe library's refusal. {RELEASED} {INVALID_TEXT}"
+            "Whether the member with the identifier `id` is archived. `None` when it finds none.\n\n# Errors\n\nThe library's refusal. {RELEASED} {INVALID_TEXT}"
         )
     );
 }
@@ -518,16 +530,27 @@ fn the_read_handle_reads_through_itself() {
             "is_archived",
             "is_open",
             "latest_expense",
+            "is_latest_itemised",
             "summary",
         ]
     );
-    assert_eq!(
-        method(&reader, "is_archived").code,
-        printed(quote! {
-            pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
-                self.0.is_archived(&crate::text(id)?).map_err(crate::failed)
-            }
-        })
+    assert_written(
+        &reader,
+        &[
+            quote! {
+                pub fn is_archived(&self, id: &DiplomatStr) -> Result<DiplomatOption<bool>, Box<EranosError>> {
+                    self.0
+                        .is_archived(&crate::text(id)?)
+                        .map(DiplomatOption::from)
+                        .map_err(crate::failed)
+                }
+            },
+            quote! {
+                pub fn is_open(&self) -> Result<bool, Box<EranosError>> {
+                    self.0.is_open().map_err(crate::failed)
+                }
+            },
+        ],
     );
 }
 
@@ -543,6 +566,7 @@ fn each_kind_of_answer_has_its_outcome() {
         "EranosExpenseOutcome",
         "EranosFoundExpenseOutcome",
         "EranosFlagOutcome",
+        "EranosFoundFlagOutcome",
         "EranosExpenseGroupOutcome",
         "EranosExpenseGroupReaderOutcome",
         "EranosOptionalTextOutcome",
@@ -589,6 +613,20 @@ fn each_kind_of_answer_has_its_outcome() {
         .to_string()
     );
     assert_eq!(
+        held("EranosFlagOutcome"),
+        quote! {
+            pub struct EranosFlagOutcome(pub(crate) Result<bool, crate::Failure>);
+        }
+        .to_string()
+    );
+    assert_eq!(
+        held("EranosFoundFlagOutcome"),
+        quote! {
+            pub struct EranosFoundFlagOutcome(pub(crate) Result<Option<bool>, crate::Failure>);
+        }
+        .to_string()
+    );
+    assert_eq!(
         held("EranosExpenseListOutcome"),
         quote! {
             pub struct EranosExpenseListOutcome(pub(crate) Result<Vec<eranos_bindings::Expense>, crate::Failure>);
@@ -598,25 +636,13 @@ fn each_kind_of_answer_has_its_outcome() {
 }
 
 /// An outcome hands its answer over as the synchronous form does, absent
-/// when the call failed: a flag, text written into a `DiplomatWrite`, or a
-/// copy in an opaque object, absent too when a lookup found none; an outcome
-/// of nothing has no value.
+/// when the call failed: text written into a `DiplomatWrite`, or a copy in
+/// an opaque object, absent too when a lookup found none; an outcome of
+/// nothing has no value.
 #[test]
 fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
     let named = named();
     let value = |name: &str| method(&methods(&named[name]), "value").code;
-    assert_eq!(
-        value("EranosFlagOutcome"),
-        printed(quote! {
-            #[must_use]
-            pub const fn value(&self) -> Option<bool> {
-                match &self.0 {
-                    Ok(answer) => Some(*answer),
-                    Err(_) => None,
-                }
-            }
-        })
-    );
     assert_eq!(
         value("EranosTextOutcome"),
         printed(quote! {
@@ -679,14 +705,53 @@ fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
         ["is_ok", "error", "take"]
     );
     assert!(
-        named["EranosFlagOutcome"]
-            .to_string()
-            .contains("an asynchronous call that returns an answer")
-    );
-    assert!(
         named["EranosFoundExpenseOutcome"]
             .to_string()
             .contains("an asynchronous call that returns an expense it may not find")
+    );
+}
+
+/// A flag's outcome hands the answer over when the call succeeded, and a
+/// lookup's flag has an outcome of its own, which hands it over only when
+/// the call also found what it answers about; one outcome for both would
+/// tell a C caller that a member the group does not hold is active.
+#[test]
+fn a_lookup_s_flag_has_an_outcome_of_its_own() {
+    let named = named();
+    let value = |name: &str| method(&methods(&named[name]), "value").code;
+    assert_eq!(
+        value("EranosFlagOutcome"),
+        printed(quote! {
+            #[must_use]
+            pub const fn value(&self) -> Option<bool> {
+                match &self.0 {
+                    Ok(answer) => Some(*answer),
+                    Err(_) => None,
+                }
+            }
+        })
+    );
+    assert_eq!(
+        value("EranosFoundFlagOutcome"),
+        printed(quote! {
+            #[must_use]
+            pub const fn value(&self) -> Option<bool> {
+                match &self.0 {
+                    Ok(answer) => *answer,
+                    Err(_) => None,
+                }
+            }
+        })
+    );
+    assert!(
+        named["EranosFlagOutcome"]
+            .to_string()
+            .contains("an asynchronous call that returns an answer,")
+    );
+    assert!(
+        named["EranosFoundFlagOutcome"].to_string().contains(
+            "an asynchronous call that returns an answer about something it may not find"
+        )
     );
 }
 

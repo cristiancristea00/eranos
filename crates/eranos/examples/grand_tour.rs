@@ -1242,10 +1242,10 @@ fn comings_and_goings(group: &mut ExpenseGroup, people: &People) -> Result<(), B
     print_table(
         group.members().map(|member| StatusRow {
             name: member.first_name().to_owned(),
-            status: if group.is_archived(member.id()) {
-                "archived"
-            } else {
-                "active"
+            status: match group.is_archived(member.id()) {
+                Some(true) => "archived",
+                Some(false) => "active",
+                None => "not in the group",
             },
             balance: summary.member(member.id()).balance(),
         }),
@@ -1271,7 +1271,7 @@ fn comings_and_goings(group: &mut ExpenseGroup, people: &People) -> Result<(), B
     assert!(group.member(filip).is_none());
     assert_eq!(farewell, Err(ExpenseGroupError::ArchivedMember(dan)));
     assert!(matches!(in_use, Err(ExpenseGroupError::MemberInUse { .. })));
-    assert!(!group.is_archived(dan));
+    assert_eq!(group.is_archived(dan), Some(false));
     Ok(())
 }
 

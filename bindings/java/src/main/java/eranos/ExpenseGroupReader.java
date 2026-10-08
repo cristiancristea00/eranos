@@ -115,16 +115,16 @@ public final class ExpenseGroupReader implements AutoCloseable {
     }
 
     /**
-     * Whether the member with the identifier {@code id} is archived; {@code false} for a member the
-     * group does not hold.
+     * Whether the member with the identifier {@code id} is archived; empty for a member the group
+     * does not hold.
      *
      * @param id the identifier
-     * @return whether the member is archived
+     * @return whether the member is archived, if the group holds them
      * @throws EranosException.Id for an identifier that is not one
      * @throws IllegalStateException after {@link #close}
      */
-    public boolean isArchived(MemberId id) throws EranosException {
-        return Converting.call(() -> handle.isArchived(id.value()));
+    public Optional<Boolean> isArchived(MemberId id) throws EranosException {
+        return Converting.call(() -> Optional.ofNullable(handle.isArchived(id.value())));
     }
 
     /**

@@ -369,17 +369,22 @@ def test_a_member_in_use_is_not_removed(flat: Flat) -> None:
 def test_an_archived_member_joins_no_new_expense(flat: Flat) -> None:
     """An archived member who could join a new expense would owe money for a trip they left."""
     flat.group.archive_member(flat.bob)
-    assert flat.group.is_archived(flat.bob)
-    assert not flat.group.is_archived(flat.ana)
+    assert flat.group.is_archived(flat.bob) is True
+    assert flat.group.is_archived(flat.ana) is False
     with pytest.raises(ExpenseGroupError) as refused:
         flat.group.add_expense(flat.expense('Snack', flat.ana, (flat.ana, flat.bob)))
     assert refused.value.failure == ExpenseGroupError.ArchivedMember(member=flat.bob)
     flat.group.unarchive_member(flat.bob)
-    assert not flat.group.is_archived(flat.bob)
+    assert flat.group.is_archived(flat.bob) is False
     nobody = MemberId('0199a000-0000-7000-8000-00000000ffff')
     with pytest.raises(ExpenseGroupError) as unknown:
         flat.group.archive_member(nobody)
     assert unknown.value.failure == ExpenseGroupError.UnknownMember(member=nobody)
+
+
+def test_a_member_the_group_does_not_hold_is_neither_archived_nor_active(flat: Flat) -> None:
+    """A member the group does not hold who read as active would let an app offer, for a new expense, a member the group refuses."""
+    assert flat.group.is_archived(MemberId('0199a000-0000-7000-8000-00000000ffff')) is None
 
 
 def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:

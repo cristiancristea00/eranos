@@ -380,7 +380,7 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
         .unwrap();
     group.archive_member(carol).unwrap();
     group.archive_member(carol).unwrap();
-    assert!(group.is_archived(carol));
+    assert_eq!(group.is_archived(carol), Some(true));
     // New details keep her archived.
     let renamed = group
         .member(carol)
@@ -390,8 +390,7 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
         .build()
         .unwrap();
     group.replace_member(renamed).unwrap();
-    assert!(group.is_archived(carol));
-    assert!(!group.is_archived(MemberId::new("stranger").unwrap()));
+    assert_eq!(group.is_archived(carol), Some(true));
 
     // A new expense with Carol is refused.
     assert_unchanged(
@@ -1195,6 +1194,23 @@ fn only_members_are_archived_or_unarchived() {
     assert_unchanged(&mut group, &unknown, |group| {
         group.unarchive_member(stranger)
     });
+}
+
+/// Only a member the group holds is archived or active: answering `false`
+/// for a stranger would show an identifier the group does not hold as an
+/// active member.
+#[test]
+fn only_a_member_the_group_holds_is_archived_or_active() {
+    let Trip {
+        mut group,
+        ana,
+        carol,
+        ..
+    } = trip();
+    group.archive_member(carol).unwrap();
+    assert_eq!(group.is_archived(ana), Some(false));
+    assert_eq!(group.is_archived(carol), Some(true));
+    assert_eq!(group.is_archived(MemberId::new("stranger").unwrap()), None);
 }
 
 /// Amounts for the range tests, in euro cents: two of `LARGE` fit in an

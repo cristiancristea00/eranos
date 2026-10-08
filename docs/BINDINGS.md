@@ -342,9 +342,12 @@ trait of calls, through eranos-glue's generator, and lays them out with
 rustfmt. An outcome holds the call's failure or its answer, and hands the
 answer over, a flag's included, only when the call succeeded; it holds an
 `Option` only where the answer may be absent: optional text, and the
-record of a lookup, which has an outcome of its own,
+record or the flag of a lookup, which has an outcome of its own,
 `EranosFoundMemberOutcome` beside the `EranosMemberOutcome` of the calls
-that always return a member. The synchronous form of a call that the core
+that always return a member, and `EranosFoundFlagOutcome` for whether a
+member is archived, absent for an unknown one; the call's synchronous form
+gives a `DiplomatOption<bool>`, since Diplomat refuses an `Option`
+of a value inside a `Result`. The synchronous form of a call that the core
 marks as one that cannot fail returns its answer itself, and a `Result`
 only for the text it checks: the core refuses such a call only as busy, on
 wasm, for which the bridge is not built. A call that takes optional text
@@ -651,7 +654,10 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
 - A call the library can refuse returns the error, or nullptr on success,
   and gives its value through its last parameter, an object the caller
   destroys; an optional value returns whether there is one. A lookup by
-  identifier gives nullptr with no error when nothing has the identifier.
+  identifier gives nullptr with no error when nothing has the identifier;
+  whether a member is archived gives whether the group holds the member
+  through the parameter before the answer's, and writes the answer only
+  then (`eranosExpenseGroupIsArchived(group, id, &found, &archived)`).
   A group call that no argument can make fail, such as the group's name or
   its summary, returns its value, or writes its text into its last
   parameter, since it waits for the lock: only the WebAssembly build, for
@@ -677,10 +683,11 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   that receives the error or the value, which it owns; the struct stays
   valid until its function runs, once. The value is nullptr when the call
   failed, and a lookup's, whose struct is named for what it finds
-  (`EranosFoundMemberCallback`), also when it found nothing; a flag's
-  function receives a pointer to the answer, valid while it runs, or
-  nullptr. A trampoline for each kind of outcome reads the outcome,
-  destroys it, and calls the function.
+  (`EranosFoundMemberCallback`), also when it found nothing; whether a
+  member is archived reaches the function of `EranosFoundFlagCallback` as a
+  pointer to the answer, valid while it runs, or nullptr, also for a member
+  the group does not hold. A trampoline for each kind of outcome reads the
+  outcome, destroys it, and calls the function.
 - Every parameter the function does not change is `const`, the pointer
   itself included (`EranosExpenseGroup const *const group`), and a call that
   changes what later calls see takes its object as not `const`, though

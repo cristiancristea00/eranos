@@ -151,7 +151,9 @@ public final class Main {
                 rows.add(
                         new BalanceRow(
                                 member.firstName(),
-                                group.isArchived(member.id()) ? "archived" : "active",
+                                group.isArchived(member.id())
+                                        .map(archived -> archived ? "archived" : "active")
+                                        .orElse("not in the group"),
                                 found.orElseThrow().share(),
                                 found.orElseThrow().balance()));
             }

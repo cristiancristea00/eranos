@@ -120,10 +120,10 @@ fn print_balances(group: &ExpenseGroup) {
     print_table(
         group.members().map(|member| BalanceRow {
             name: member.first_name().to_owned(),
-            status: if group.is_archived(member.id()) {
-                "archived"
-            } else {
-                "active"
+            status: match group.is_archived(member.id()) {
+                Some(true) => "archived",
+                Some(false) => "active",
+                None => "not in the group",
             },
             consumed: summary.member(member.id()).share(),
             balance: summary.member(member.id()).balance(),

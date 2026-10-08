@@ -395,7 +395,8 @@ fn categories_change_alike_in_both_forms() {
     );
 }
 
-/// A member change's two forms would change the group differently.
+/// A member change's two forms would change the group differently, and a
+/// member either form removed would still read as archived or active.
 #[test]
 fn members_change_alike_in_both_forms() {
     let handle = flat().handle;
@@ -417,20 +418,34 @@ fn members_change_alike_in_both_forms() {
     handle.archive_member(&carol).unwrap();
     block_on(handle.archive_member_async(dan.clone(), None)).unwrap();
     assert_eq!(
-        [handle.is_archived(&carol), handle.is_archived(&dan)],
-        [Ok(true), Ok(true)]
+        [
+            handle.is_archived(&carol),
+            block_on(handle.is_archived_async(dan.clone(), None))
+        ],
+        [Ok(Some(true)), Ok(Some(true))]
     );
     handle.unarchive_member(&carol).unwrap();
     block_on(handle.unarchive_member_async(dan.clone(), None)).unwrap();
     assert_eq!(
-        [handle.is_archived(&carol), handle.is_archived(&dan)],
-        [Ok(false), Ok(false)]
+        [
+            handle.is_archived(&carol),
+            block_on(handle.is_archived_async(dan.clone(), None))
+        ],
+        [Ok(Some(false)), Ok(Some(false))]
     );
 
     assert_eq!(handle.remove_member(&carol), Ok(carol_popa));
     assert_eq!(
-        block_on(handle.remove_member_async(dan, None)),
+        block_on(handle.remove_member_async(dan.clone(), None)),
         Ok(dan_popa)
+    );
+    // A member the group no longer holds is neither archived nor active.
+    assert_eq!(
+        [
+            handle.is_archived(&carol),
+            block_on(handle.is_archived_async(dan, None))
+        ],
+        [Ok(None), Ok(None)]
     );
 }
 

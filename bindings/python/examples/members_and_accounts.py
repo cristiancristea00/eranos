@@ -32,7 +32,7 @@ from eranos import (
     UsernamePaymentAccountDetails,
     WholeExpenseSplit,
 )
-from examples.report import Row, print_lines, print_table, refusal, section, title, totals
+from examples.report import Row, print_lines, print_table, refusal, section, status, title, totals
 
 
 @final
@@ -195,7 +195,7 @@ def print_balances(group: ExpenseGroup) -> None:
         [
             BalanceRow(
                 name=member.first_name,
-                status='archived' if group.is_archived(member.id) else 'active',
+                status=status(group.is_archived(member.id)),
                 consumed=found.share,
                 balance=found.balance,
             )

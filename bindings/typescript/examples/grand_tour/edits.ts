@@ -19,7 +19,7 @@ import {
     createTransfer,
     formatBalance,
 } from '../../src/index.js';
-import { type Columns, message, printLines, printTable, refusal, section, totals } from '../report.js';
+import { type Columns, message, printLines, printTable, refusal, section, status, totals } from '../report.js';
 import { type Categories, type People, eur, name, october, printBalances, printEntries, refusalColumns, ron } from './tour.js';
 
 /** An entry and what an edit did to it, as the table of edits prints it. */
@@ -240,9 +240,7 @@ export function comingsAndGoings(group: ExpenseGroup, people: People): void {
         statusColumns,
         group.membersSync().flatMap((member) => {
             const found = totals(member.id, summary);
-            return undefined === found
-                ? []
-                : [{ name: member.firstName, status: group.isArchivedSync(member.id) ? 'archived' : 'active', balance: found.balance }];
+            return undefined === found ? [] : [{ name: member.firstName, status: status(group, member.id), balance: found.balance }];
         }),
         2,
     );
@@ -262,5 +260,5 @@ export function comingsAndGoings(group: ExpenseGroup, people: People): void {
     assert.ok(farewell instanceof ExpenseGroupError);
     assert.deepEqual(farewell.failure, { kind: 'archivedMember', member: people.dan });
     assert.ok(inUse instanceof ExpenseGroupError && 'memberInUse' === inUse.failure.kind);
-    assert.ok(!group.isArchivedSync(people.dan));
+    assert.equal(group.isArchivedSync(people.dan), false);
 }

@@ -17,6 +17,7 @@ use crate::{ExpenseGroupFailure, IdFailure};
 /// The group handle and the identifiers of an entry of every kind.
 struct Flat {
     ana: String,
+    bob: String,
     dinner: String,
     food: String,
     handle: ExpenseGroupHandle,
@@ -51,6 +52,7 @@ fn flat() -> Flat {
     let repayment = group.add_transfer(repayment).unwrap();
     Flat {
         ana: ana.to_string(),
+        bob: bob.to_string(),
         dinner: dinner.to_string(),
         food: food.to_string(),
         handle: ExpenseGroupHandle::from(group),
@@ -59,11 +61,13 @@ fn flat() -> Flat {
 }
 
 /// A read through the handle would answer another way than the same read
-/// through the group handle.
+/// through the group handle, or read a member the group does not hold as
+/// archived or active.
 #[test]
 fn every_read_through_the_handle_answers_as_the_group_does() {
     let flat = flat();
     let (handle, ana, dinner) = (&flat.handle, &flat.ana, &flat.dinner);
+    handle.archive_member(&flat.bob).unwrap();
     let reader = handle.read().unwrap();
     assert_eq!(reader.id(), handle.id());
     assert_eq!(reader.categories(), handle.categories());
@@ -76,6 +80,14 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
     assert_eq!(reader.members(), handle.members());
     assert_eq!(reader.member(ana), handle.member(ana));
     assert_eq!(reader.is_archived(ana), handle.is_archived(ana));
+    assert_eq!(
+        [
+            reader.is_archived(ana),
+            reader.is_archived(&flat.bob),
+            reader.is_archived("stranger"),
+        ],
+        [Ok(Some(false)), Ok(Some(true)), Ok(None)]
+    );
     assert_eq!(reader.name(), handle.name());
     for strategy in [
         SettlementStrategy::Adaptive,

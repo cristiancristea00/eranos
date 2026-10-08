@@ -52,7 +52,11 @@ def test_every_asynchronous_read_returns_what_its_synchronous_form_returns(flat:
 
 
 def test_every_asynchronous_change_of_an_entry_does_what_its_synchronous_form_does(flat: Flat) -> None:
-    """An asynchronous change that did otherwise than its synchronous form would leave an app's entries in another state."""
+    """
+    An asynchronous change that did otherwise than its synchronous form would leave an app's entries in another state.
+
+    A member it removed who still read as archived or active would stay on the app's list of members.
+    """
 
     async def changes() -> None:
         group = flat.group
@@ -74,10 +78,14 @@ def test_every_asynchronous_change_of_an_entry_does_what_its_synchronous_form_do
         maria = copy.replace(joined, first_name='Carla Maria')
         assert await group.replace_member_async(maria) == joined
         await group.archive_member_async(carla)
-        assert group.is_archived(carla)
+        assert group.is_archived(carla) is True
+        assert await group.is_archived_async(carla) is True
         await group.unarchive_member_async(carla)
-        assert not group.is_archived(carla)
+        assert group.is_archived(carla) is False
+        assert await group.is_archived_async(carla) is False
         assert await group.remove_member_async(carla) == maria
+        assert group.is_archived(carla) is None
+        assert await group.is_archived_async(carla) is None
         drinks = await group.add_category_async(Category.create(name='Drinks'))
         coffee = Category(id=drinks, name='Coffee')
         assert await group.replace_category_async(coffee) == Category(id=drinks, name='Drinks')
@@ -131,8 +139,13 @@ def test_an_asynchronous_call_reports_the_error_its_synchronous_form_raises(flat
 
 
 def test_a_reader_reads_the_group_until_it_is_released(flat: Flat) -> None:
-    """A read handle that let a change in, or read after its release, would show a report two states of one group."""
+    """
+    A read handle that let a change in, or read after its release, would show a report two states of one group.
+
+    One that read a member the group does not hold as active would list in the report a member the group refuses.
+    """
     group = flat.group
+    group.archive_member(flat.bob)
     with group.read() as reader:
         assert reader.id() == group.id()
         assert reader.name() == 'Flat'
@@ -148,7 +161,9 @@ def test_a_reader_reads_the_group_until_it_is_released(flat: Flat) -> None:
         assert reader.summary() == group.summary()
         assert reader.members() == group.members()
         assert reader.member(flat.ana) == group.member(flat.ana)
-        assert not reader.is_archived(flat.ana)
+        assert reader.is_archived(flat.ana) is False
+        assert reader.is_archived(flat.bob) is True
+        assert reader.is_archived(MemberId('0199a000-0000-7000-8000-00000000ffff')) is None
         assert reader.settlement(SettlementStrategy.DIRECT) == group.settlement(SettlementStrategy.DIRECT)
         assert reader.transfers() == group.transfers()
         assert reader.transfer(flat.repayment) == group.transfer(flat.repayment)

@@ -240,6 +240,14 @@ typedef struct StatusRow {
 /// Adds @p row to @p table, a table of statuses, its cells in the order of the table's headers.
 static void addStatusRow(Table *const table, StatusRow const *const row) { tableAdd(table, (Line const[]){row->name, row->status, row->balance}); }
 
+/// What a table says of a member's status: archived or active, as @p archived says, when @p held says that the group holds them.
+[[nodiscard]] static char const *statusOf(bool const held, bool const archived) {
+    if (!held) {
+        return "not in the group";
+    }
+    return archived ? "archived" : "active";
+}
+
 /// A row of the table of categories: a category, how many expenses it holds, and their total.
 typedef struct CategoryRow {
     /// Its name.
@@ -1790,14 +1798,15 @@ static void comingsAndGoings(EranosExpenseGroup *const group, People const *cons
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
         eranosMemberId(member, text);
+        bool held = false;
         bool archived = false;
-        must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &archived));
+        must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &held, &archived));
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         if (nullptr != found) {
             eranosMemberFirstName(member, text);
             addStatusRow(table, &(StatusRow){
                                     .name = textLine(text),
-                                    .status = lineOf("%s", archived ? "archived" : "active"),
+                                    .status = lineOf("%s", statusOf(held, archived)),
                                     .balance = balanceLine(eranosMemberSummaryBalance(found)),
                                 });
         }
@@ -1823,9 +1832,10 @@ static void comingsAndGoings(EranosExpenseGroup *const group, People const *cons
     EranosMember *gone = nullptr;
     must(eranosExpenseGroupMember(group, people->filip.text, &gone));
     check(nullptr == gone, "Filip is gone");
+    bool held = false;
     bool archived = true;
-    must(eranosExpenseGroupIsArchived(group, people->dan.text, &archived));
-    check(!archived, "Dan is active again");
+    must(eranosExpenseGroupIsArchived(group, people->dan.text, &held, &archived));
+    check(held && !archived, "Dan is active again");
     eranosTextDestroy(text);
     eranosMemberDestroy(removed);
 }

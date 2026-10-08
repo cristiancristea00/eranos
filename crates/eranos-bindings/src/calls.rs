@@ -116,10 +116,9 @@ trait ExpenseGroupCalls {
     #[read]
     fn member(&self, id: &str) -> Result<Option<Member>, EranosError>;
 
-    /// Whether the member with the identifier `id` is archived; `false` for an
-    /// unknown member.
+    /// Whether the member with the identifier `id` is archived.
     #[read]
-    fn is_archived(&self, id: &str) -> Result<bool, EranosError>;
+    fn is_archived(&self, id: &str) -> Result<Option<bool>, EranosError>;
 
     /// Adds `member` under their identifier, and returns the identifier.
     #[write]

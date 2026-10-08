@@ -6,7 +6,7 @@
 import Testing
 
 /// A read that answered another way than the group holds would show an app entries, totals,
-/// or plans the group does not have.
+/// or plans the group does not have, or a member it does not hold as archived or active.
 @Test
 func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     let flat = try Flat()
@@ -27,7 +27,7 @@ func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     let members = try group.members()
     #expect(members.map(\.firstName) == ["Ana", "Bob"])
     #expect(try group.member(withID: flat.ana) == members.first)
-    #expect(try !group.isArchived(flat.ana))
+    #expect(try false == group.isArchived(flat.ana))
     #expect(try "Flat" == group.name())
     #expect(try "Rent" == group.description())
     #expect(try "pt-PT" == group.language()?.description)
@@ -45,13 +45,15 @@ func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     let json = try group.save()
     #expect(try ExpenseGroup.load(json).save() == json)
     #expect(try nil == group.member(withID: Member.ID(rawValue: "nobody")))
+    #expect(try nil == group.isArchived(Member.ID(rawValue: "nobody")))
     #expect(throws: EranosError.id(.empty, detail: "an identifier must not be empty")) {
         try group.member(withID: Member.ID(rawValue: ""))
     }
 }
 
 /// An asynchronous read that answered another way than its synchronous twin would show an app
-/// one group from a background task and another from its main thread.
+/// one group from a background task and another from its main thread, and one that read a member
+/// the group does not hold as archived or active would show a member who is not there.
 @Test
 func everyAsynchronousReadAnswersAsItsSynchronousTwin() async throws {
     let flat = try Flat()
@@ -67,7 +69,8 @@ func everyAsynchronousReadAnswersAsItsSynchronousTwin() async throws {
     #expect(try await group.summary() == synchronous.summary)
     #expect(try await group.members() == synchronous.members)
     #expect(try await group.member(withID: flat.ana) == synchronous.members.first)
-    #expect(try await !group.isArchived(flat.ana))
+    #expect(try await false == group.isArchived(flat.ana))
+    #expect(try await nil == group.isArchived(Member.ID(rawValue: "nobody")))
     #expect(try await "Flat" == group.name())
     #expect(try await "Rent" == group.description())
     #expect(try await "pt-PT" == group.language()?.description)
@@ -106,7 +109,8 @@ private struct Snapshot {
 }
 
 /// A change to categories or members that did not take effect, or returned another entry than
-/// the one it replaced or removed, would leave an app showing a group that is not there.
+/// the one it replaced or removed, or a removed member who still read as archived or active,
+/// would leave an app showing a group that is not there.
 @Test
 func synchronousChangesToCategoriesAndMembersTakeEffect() throws {
     let flat = try Flat()
@@ -122,10 +126,11 @@ func synchronousChangesToCategoriesAndMembersTakeEffect() throws {
     popa.lastName = "Popa"
     #expect(try nil == group.replace(popa).lastName)
     try group.archive(carol)
-    #expect(try group.isArchived(carol))
+    #expect(try true == group.isArchived(carol))
     try group.unarchive(carol)
-    #expect(try !group.isArchived(carol))
+    #expect(try false == group.isArchived(carol))
     #expect(try "Popa" == group.remove(carol).lastName)
+    #expect(try nil == group.isArchived(carol))
     #expect(throws: EranosError.self) {
         try group.remove(flat.ana)
     }
@@ -168,7 +173,8 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
 }
 
 /// An asynchronous change that did not take effect, or took another effect than its synchronous
-/// twin, would leave the group in another state than the app asked for.
+/// twin, or a removed member who still read as archived or active, would leave the group in
+/// another state than the app asked for.
 @Test
 func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     let flat = try Flat()
@@ -184,9 +190,11 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     popa.lastName = "Popa"
     #expect(try await nil == group.replace(popa).lastName)
     try await group.archive(carol)
-    #expect(try await group.isArchived(carol))
+    #expect(try await true == group.isArchived(carol))
     try await group.unarchive(carol)
+    #expect(try await false == group.isArchived(carol))
     #expect(try await "Popa" == group.remove(carol).lastName)
+    #expect(try await nil == group.isArchived(carol))
 
     let lunch = try await group.add(flat.expense("Lunch", paidBy: flat.bob, sharedBy: [flat.ana, flat.bob]))
     var lateLunch = try #require(try await group.expense(withID: lunch))
@@ -245,12 +253,15 @@ func aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() async throws {
     }
 }
 
-/// A read handle that answered another way than the group, kept reading after its release, or
-/// kept the lock would show a report of a group that may have changed since.
+/// A read handle that answered another way than the group, or read a member the group does not
+/// hold as archived or active, would show a report of a group that is not there; one that kept
+/// reading after its release, or kept the lock, would show a report of a group that may have
+/// changed since.
 @Test
 func aReadHandleReadsAsTheGroupDoesUntilItIsReleased() throws {
     let flat = try Flat()
     let group = flat.group
+    try group.archive(flat.bob)
     let snapshot = try Snapshot(of: flat)
     let reader = try group.read()
     #expect(try reader.id() == snapshot.id)
@@ -263,7 +274,9 @@ func aReadHandleReadsAsTheGroupDoesUntilItIsReleased() throws {
     #expect(try reader.summary() == snapshot.summary)
     #expect(try reader.members() == snapshot.members)
     #expect(try reader.member(withID: flat.ana) == snapshot.members.first)
-    #expect(try !reader.isArchived(flat.ana))
+    #expect(try false == reader.isArchived(flat.ana))
+    #expect(try true == reader.isArchived(flat.bob))
+    #expect(try nil == reader.isArchived(Member.ID(rawValue: "nobody")))
     #expect(try "Flat" == reader.name())
     #expect(try "Rent" == reader.description())
     #expect(try "pt-PT" == reader.language()?.description)

@@ -250,7 +250,12 @@ internal fun comingsAndGoings(
             totals(member.id, summary)?.let { totals ->
                 StatusRow(
                     name = member.firstName,
-                    status = if (group.isArchivedBlocking(member.id)) "archived" else "active",
+                    status =
+                        when (group.isArchivedBlocking(member.id)) {
+                            true -> "archived"
+                            false -> "active"
+                            null -> "not in the group"
+                        },
                     balance = totals.balance,
                 )
             }
@@ -271,5 +276,5 @@ internal fun comingsAndGoings(
     check(null == group.memberBlocking(people.filip))
     check(ExpenseGroupFailure.ArchivedMember(people.dan) == (farewell as? EranosException.ExpenseGroup)?.failure)
     check((inUse as? EranosException.ExpenseGroup)?.failure is ExpenseGroupFailure.MemberInUse)
-    check(!group.isArchivedBlocking(people.dan))
+    check(false == group.isArchivedBlocking(people.dan))
 }

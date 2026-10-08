@@ -70,12 +70,12 @@ public final class ExpenseGroupReader: Sendable {
         try converting { try handle.member(id: id.rawValue).map(Member.init) }
     }
 
-    /// Whether the member with the identifier `id` is archived; false for a member the group does
+    /// Whether the member with the identifier `id` is archived; `nil` for a member the group does
     /// not hold.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
     ///   ``EranosError/released(detail:)`` after ``release()``.
-    public func isArchived(_ id: Member.ID) throws(EranosError) -> Bool {
+    public func isArchived(_ id: Member.ID) throws(EranosError) -> Bool? {
         try converting { try handle.isArchived(id: id.rawValue) }
     }
 

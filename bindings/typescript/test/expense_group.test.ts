@@ -108,18 +108,23 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal((await ExpenseGroup.load(json)).saveSync(), json);
     });
 
-    /** A lookup of an identifier the group does not hold that found an entry would show an app an entry of another group. */
+    /**
+     * A lookup of an identifier the group does not hold that found an entry, or that read the member as archived or active,
+     * would show an app an entry of another group.
+     */
     void it('finds nothing for an identifier the group does not hold', async () => {
         const flat = new Flat();
         const stranger = new Flat();
         const group = flat.group;
         assert.equal(group.memberSync(stranger.ana), undefined);
+        assert.equal(group.isArchivedSync(stranger.ana), undefined);
         assert.equal(group.categorySync(stranger.food), undefined);
         assert.equal(group.expenseSync(stranger.dinner), undefined);
         assert.equal(group.expenseSharesSync(stranger.dinner), undefined);
         assert.equal(group.transferSync(stranger.repayment), undefined);
         assert.equal(group.transferAmountSync(stranger.repayment), undefined);
         assert.equal(await group.member(stranger.ana), undefined);
+        assert.equal(await group.isArchived(stranger.ana), undefined);
         assert.equal(await group.category(stranger.food), undefined);
         assert.equal(await group.expense(stranger.dinner), undefined);
         assert.equal(await group.expenseShares(stranger.dinner), undefined);
@@ -128,6 +133,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         {
             using reader = group.readSync();
             assert.equal(reader.member(stranger.ana), undefined);
+            assert.equal(reader.isArchived(stranger.ana), undefined);
             assert.equal(reader.category(stranger.food), undefined);
             assert.equal(reader.expense(stranger.dinner), undefined);
             assert.equal(reader.expenseShares(stranger.dinner), undefined);
@@ -142,8 +148,9 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     });
 
     /**
-     * A synchronous change that did not take effect, or took another, or a description that kept the whitespace around it or
-     * stayed set when blank, would leave the group other than the app changed it.
+     * A synchronous change that did not take effect, or took another, a removed member that still read as archived or active,
+     * or a description that kept the whitespace around it or stayed set when blank, would leave the group other than the app
+     * changed it.
      */
     void it('takes every synchronous change into effect', () => {
         const flat = new Flat();
@@ -158,6 +165,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         group.unarchiveMemberSync(carol);
         assert.equal(group.isArchivedSync(carol), false);
         assert.equal(group.removeMemberSync(carol).lastName, 'Popa');
+        assert.equal(group.isArchivedSync(carol), undefined);
         assert.throws(
             () => group.removeMemberSync(flat.ana),
             (error: unknown) =>
@@ -204,7 +212,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
 
     /**
      * An asynchronous change that took effect another way than its synchronous twin would change the group differently from
-     * an asynchronous function.
+     * an asynchronous function, and a removed member that still read as archived or active would show one it does not hold.
      */
     void it('takes every asynchronous change into effect as its synchronous twin does', async () => {
         const flat = new Flat();
@@ -214,10 +222,11 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.ok(undefined !== stored);
         assert.deepEqual(await group.replaceMember({ ...stored, lastName: 'Popa' }), stored);
         await group.archiveMember(carol);
-        assert.equal(group.isArchivedSync(carol), true);
+        assert.equal(await group.isArchived(carol), true);
         await group.unarchiveMember(carol);
-        assert.equal(group.isArchivedSync(carol), false);
+        assert.equal(await group.isArchived(carol), false);
         assert.equal((await group.removeMember(carol)).lastName, 'Popa');
+        assert.equal(await group.isArchived(carol), undefined);
 
         const travel = await group.addCategory(createCategory({ name: 'Travel' }));
         assert.equal((await group.replaceCategory({ id: travel, name: 'Trips' })).name, 'Travel');
@@ -309,6 +318,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     void it('reads through a read handle as the group does until it is released', async () => {
         const flat = new Flat();
         const group = flat.group;
+        group.archiveMemberSync(flat.bob);
         const reader = group.readSync();
         assert.equal(reader.id(), group.idSync());
         assert.deepEqual(reader.categories(), group.categoriesSync());
@@ -321,6 +331,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.deepEqual(reader.members(), group.membersSync());
         assert.deepEqual(reader.member(flat.ana), group.memberSync(flat.ana));
         assert.equal(reader.isArchived(flat.ana), false);
+        assert.equal(reader.isArchived(flat.bob), true);
         assert.equal(reader.name(), 'Flat');
         assert.equal(reader.description(), 'Rent');
         assert.equal(reader.language()?.toString(), 'pt-PT');

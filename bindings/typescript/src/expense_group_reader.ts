@@ -152,14 +152,14 @@ export class ExpenseGroupReader implements Disposable {
     }
 
     /**
-     * Whether the member with the identifier `id` is archived; `false` for a member the group does not hold.
+     * Whether the member with the identifier `id` is archived; `undefined` for a member the group does not hold.
      *
      * @param id - The identifier
-     * @returns Whether the member is archived
+     * @returns Whether the member is archived, if the group holds them
      * @throws {@link IdError} for an identifier that is not one
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
      */
-    isArchived(id: MemberId): boolean {
+    isArchived(id: MemberId): boolean | undefined {
         return calling(() => this.handle.isArchived(id));
     }
 

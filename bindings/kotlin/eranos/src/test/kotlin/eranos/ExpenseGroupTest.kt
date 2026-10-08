@@ -10,7 +10,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -35,7 +34,7 @@ class ExpenseGroupTest {
         val members = group.membersBlocking()
         assertEquals(listOf("Ana", "Bob"), members.map { it.firstName })
         assertEquals(members[0], group.memberBlocking(flat.ana))
-        assertFalse(group.isArchivedBlocking(flat.ana))
+        assertEquals(false, group.isArchivedBlocking(flat.ana))
         val categories = group.categoriesBlocking()
         assertEquals(listOf("Uncategorised", "Food"), categories.map { it.name })
         assertEquals(categories[1], group.categoryBlocking(flat.food))
@@ -88,7 +87,8 @@ class ExpenseGroupTest {
         }
 
     /**
-     * A lookup of an identifier the group does not hold that found an entry would show an app an entry of another group.
+     * A lookup of an identifier the group does not hold that found an entry, or read such a member as archived or active,
+     * would show an app an entry or a member of another group.
      */
     @Test
     fun aLookupOfAnIdentifierTheGroupDoesNotHoldFindsNothing() =
@@ -97,12 +97,14 @@ class ExpenseGroupTest {
             val stranger = Flat()
             val group = flat.group
             assertNull(group.memberBlocking(stranger.ana))
+            assertNull(group.isArchivedBlocking(stranger.ana))
             assertNull(group.categoryBlocking(stranger.food))
             assertNull(group.expenseBlocking(stranger.dinner))
             assertNull(group.expenseSharesBlocking(stranger.dinner))
             assertNull(group.transferBlocking(stranger.repayment))
             assertNull(group.transferAmountBlocking(stranger.repayment))
             assertNull(group.member(stranger.ana))
+            assertNull(group.isArchived(stranger.ana))
             assertNull(group.category(stranger.food))
             assertNull(group.expense(stranger.dinner))
             assertNull(group.expenseShares(stranger.dinner))
@@ -110,6 +112,7 @@ class ExpenseGroupTest {
             assertNull(group.transferAmount(stranger.repayment))
             group.withReadBlocking { reader ->
                 assertNull(reader.member(stranger.ana))
+                assertNull(reader.isArchived(stranger.ana))
                 assertNull(reader.category(stranger.food))
                 assertNull(reader.expense(stranger.dinner))
                 assertNull(reader.expenseShares(stranger.dinner))
@@ -119,7 +122,10 @@ class ExpenseGroupTest {
             assertNull(ExpenseGroup("Trip", flat.euro).withRead { it.language() })
         }
 
-    /** A blocking change that did not take effect, or took another, would leave the group other than the app changed it. */
+    /**
+     * A blocking change that did not take effect, or took another, would leave the group other than the app changed it, and a
+     * member it removed that still read as archived or active would show an app a member the group no longer holds.
+     */
     @Test
     fun everyBlockingChangeTakesEffect() {
         val flat = Flat()
@@ -131,10 +137,11 @@ class ExpenseGroupTest {
         assertEquals("Carol", group.replaceBlocking(renamed).firstName)
         assertEquals("Popa", present(group.memberBlocking(carol)).lastName)
         group.archiveBlocking(carol)
-        assertTrue(group.isArchivedBlocking(carol))
+        assertEquals(true, group.isArchivedBlocking(carol))
         group.unarchiveBlocking(carol)
-        assertFalse(group.isArchivedBlocking(carol))
+        assertEquals(false, group.isArchivedBlocking(carol))
         assertEquals(renamed, group.removeBlocking(carol))
+        assertNull(group.isArchivedBlocking(carol))
         val inUse = assertThrows<EranosException.ExpenseGroup> { group.removeBlocking(flat.ana) }
         assertEquals(ExpenseGroupFailure.MemberInUse(flat.ana, listOf(flat.dinner), listOf(flat.repayment)), inUse.failure)
 
@@ -167,7 +174,8 @@ class ExpenseGroupTest {
 
     /**
      * A suspending change that took effect another way than its blocking twin would change the group differently from a
-     * coroutine.
+     * coroutine, and a member it removed that still read as archived or active would show an app a member the group no
+     * longer holds.
      */
     @Test
     fun everySuspendingChangeTakesEffectAsItsBlockingTwinDoes() =
@@ -178,10 +186,11 @@ class ExpenseGroupTest {
             val stored = present(group.member(carol))
             assertEquals(stored, group.replace(stored.copy(lastName = "Popa")))
             group.archive(carol)
-            assertTrue(group.isArchived(carol))
+            assertEquals(true, group.isArchived(carol))
             group.unarchive(carol)
-            assertFalse(group.isArchived(carol))
+            assertEquals(false, group.isArchived(carol))
             assertEquals("Popa", group.remove(carol).lastName)
+            assertNull(group.isArchived(carol))
 
             val travel = group.add(Category("Travel"))
             assertEquals("Travel", group.replace(present(group.category(travel)).copy(name = "Trips")).name)
@@ -269,6 +278,7 @@ class ExpenseGroupTest {
     fun aReadHandleReadsAsTheGroupDoesUntilItIsClosed() {
         val flat = Flat()
         val group = flat.group
+        group.archiveBlocking(flat.bob)
         val reader = group.readBlocking()
         assertEquals(group.idBlocking(), reader.id())
         assertEquals("Flat", reader.name())
@@ -278,7 +288,8 @@ class ExpenseGroupTest {
         assertEquals(group.saveBlocking(), reader.save())
         assertEquals(group.membersBlocking(), reader.members())
         assertEquals(group.memberBlocking(flat.ana), reader.member(flat.ana))
-        assertFalse(reader.isArchived(flat.ana))
+        assertEquals(false, reader.isArchived(flat.ana))
+        assertEquals(true, reader.isArchived(flat.bob))
         assertEquals(group.categoriesBlocking(), reader.categories())
         assertEquals(group.categoryBlocking(flat.food), reader.category(flat.food))
         assertEquals(group.expensesBlocking(), reader.expenses())

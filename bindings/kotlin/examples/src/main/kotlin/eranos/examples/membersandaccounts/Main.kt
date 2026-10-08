@@ -116,7 +116,12 @@ private fun printBalances(group: ExpenseGroup) {
             totals(member.id, summary)?.let { totals ->
                 BalanceRow(
                     name = member.firstName,
-                    status = if (group.isArchivedBlocking(member.id)) "archived" else "active",
+                    status =
+                        when (group.isArchivedBlocking(member.id)) {
+                            true -> "archived"
+                            false -> "active"
+                            null -> "not in the group"
+                        },
                     consumed = totals.share,
                     balance = totals.balance,
                 )

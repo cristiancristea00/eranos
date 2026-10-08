@@ -76,13 +76,13 @@ public class ExpenseGroupReader internal constructor(
     public fun member(id: MemberId): Member? = converting { handle.member(id.value)?.converted() }
 
     /**
-     * Whether the member with the identifier [id] is archived; `false` for a member the group does not hold.
+     * Whether the member with the identifier [id] is archived; `null` for a member the group does not hold.
      *
      * @throws EranosException.Id for an identifier that is not one.
      * @throws IllegalStateException after [close].
      */
     @Throws(EranosException::class)
-    public fun isArchived(id: MemberId): Boolean = converting { handle.isArchived(id.value) }
+    public fun isArchived(id: MemberId): Boolean? = converting { handle.isArchived(id.value) }
 
     /**
      * Every category: the built-in one first, then the others in identifier order, which is creation order for generated

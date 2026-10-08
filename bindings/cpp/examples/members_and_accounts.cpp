@@ -130,7 +130,9 @@ void printBalances(ExpenseGroup const &group) noexcept {
         auto const found = totalsOf(summary, member.id).value();
         rows.push_back({
             .name = member.firstName,
-            .status = must(group.isArchived(member.id)) ? "archived" : "active",
+            .status = must(group.isArchived(member.id))
+                          .transform([](bool const archived) noexcept { return archived ? "archived" : "active"; })
+                          .value_or("not in the group"),
             .consumed = found.share.toString(),
             .balance = toString(found.balance),
         });

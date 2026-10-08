@@ -91,12 +91,12 @@ class ExpenseGroupReader final {
     ///   module that refused it
     [[nodiscard]] std::expected<std::optional<Member>, Error> member(MemberId const &id) const noexcept;
 
-    /// Whether the member with the identifier id is archived; false for an unknown member.
+    /// Whether the member with the identifier id is archived, or none when no member has the identifier.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
     ///   module that refused it
-    [[nodiscard]] std::expected<bool, Error> isArchived(MemberId const &id) const noexcept;
+    [[nodiscard]] std::expected<std::optional<bool>, Error> isArchived(MemberId const &id) const noexcept;
 
     /// The group's name.
     ///
@@ -201,7 +201,7 @@ inline std::expected<std::optional<Member>, Error> ExpenseGroupReader::member(Me
     return detail::expectedOf(handle->member(id.value())).transform([](auto const &value) noexcept { return detail::optionalRecord<Member>(value); });
 }
 
-inline std::expected<bool, Error> ExpenseGroupReader::isArchived(MemberId const &id) const noexcept {
+inline std::expected<std::optional<bool>, Error> ExpenseGroupReader::isArchived(MemberId const &id) const noexcept {
     return detail::expectedOf(handle->is_archived(id.value()));
 }
 

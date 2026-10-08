@@ -21,7 +21,7 @@ import {
     createMember,
     formatBalance,
 } from '../src/index.js';
-import { type Columns, load, printLines, printTable, refusal, section, totals } from './report.js';
+import { type Columns, load, printLines, printTable, refusal, section, status, totals } from './report.js';
 
 /** A member with their contact and account details, as the table of members prints them. */
 interface MemberRow {
@@ -111,7 +111,7 @@ function printBalances(group: ExpenseGroup): void {
                 : [
                       {
                           name: member.firstName,
-                          status: group.isArchivedSync(member.id) ? 'archived' : 'active',
+                          status: status(group, member.id),
                           consumed: found.share,
                           balance: found.balance,
                       },

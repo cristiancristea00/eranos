@@ -7,7 +7,9 @@
 //! that of a call that always returns a record of its type, so that only
 //! the lookup's holds an `Option`. The group's synchronous form of a call
 //! that cannot fail returns its answer itself, which `crate::waited` takes
-//! out of the core's `Result`, and a `Result` only for text it checks.
+//! out of the core's `Result`, and a `Result` only for text it checks. A
+//! synchronous form hands a lookup's flag over as a `DiplomatOption`, since
+//! Diplomat refuses an `Option` of a value inside a `Result`.
 //!
 //! A call that takes optional text has a twin of each form that passes none,
 //! since C passes no absent text: `set_language` has `clear_language`. The
@@ -259,6 +261,15 @@ fn refusable(answer: &Answer, invocation: &TokenStream) -> Delivery {
                 write: None,
             }
         }
+        Answer::FoundFlag => Delivery {
+            body: quote! {
+                #invocation
+                    .map(DiplomatOption::from)
+                    .map_err(crate::failed)
+            },
+            output: quote!(DiplomatOption<bool>),
+            write: None,
+        },
         Answer::List(element) => {
             let list = list(element);
             Delivery {
@@ -310,9 +321,10 @@ fn refusable(answer: &Answer, invocation: &TokenStream) -> Delivery {
 }
 
 /// How the synchronous form of a call that cannot fail hands over `value`,
-/// the core's answer: a flag as it is, a record or a list in an opaque
-/// object, and text written into a `DiplomatWrite`, optional text with
-/// whether there is some.
+/// the core's answer: a flag as it is, a lookup's flag as a
+/// `DiplomatOption`, which the `Result` of a form that takes text can hold,
+/// a record or a list in an opaque object, and text written into a
+/// `DiplomatWrite`, optional text with whether there is some.
 fn waited(answer: &Answer, value: &TokenStream) -> Delivery {
     let write = Some(quote!(write: &mut DiplomatWrite));
     match answer {
@@ -329,6 +341,11 @@ fn waited(answer: &Answer, value: &TokenStream) -> Delivery {
                 write: None,
             }
         }
+        Answer::FoundFlag => Delivery {
+            body: quote!(DiplomatOption::from(#value)),
+            output: quote!(DiplomatOption<bool>),
+            write: None,
+        },
         Answer::List(element) => {
             let list = list(element);
             Delivery {
@@ -401,7 +418,7 @@ fn synchronous_doc(
     own: Option<&str>,
 ) -> TokenStream {
     let handed = match answer {
-        Answer::Found(_) => " `None` when it finds none.",
+        Answer::Found(_) | Answer::FoundFlag => " `None` when it finds none.",
         Answer::OptionalText => " Writes it into `write` when there is one, and nothing otherwise.",
         Answer::Text => " Writes it into `write`.",
         Answer::Flag | Answer::List(_) | Answer::Nothing | Answer::Record(_) => "",
@@ -515,6 +532,7 @@ fn outcome_name(answer: &Answer) -> Ident {
     match answer {
         Answer::Flag => format_ident!("EranosFlagOutcome"),
         Answer::Found(record) => format_ident!("EranosFound{record}Outcome"),
+        Answer::FoundFlag => format_ident!("EranosFoundFlagOutcome"),
         Answer::List(element) => format_ident!("Eranos{element}ListOutcome"),
         Answer::Nothing => format_ident!("EranosUnitOutcome"),
         Answer::OptionalText => format_ident!("EranosOptionalTextOutcome"),
@@ -525,7 +543,7 @@ fn outcome_name(answer: &Answer) -> Ident {
 
 /// The outcome of a call that answers `answer`, which holds the call's
 /// failure or a copy of its answer, in an `Option` only for an answer that
-/// may be absent: a lookup's record and optional text.
+/// may be absent: a lookup's record or flag, and optional text.
 fn outcome(answer: &Answer) -> Named {
     let name = outcome_name(answer);
     let Holding {
@@ -577,9 +595,9 @@ struct Holding {
 }
 
 /// What the outcome of a call that answers `answer` holds, and its method
-/// that hands a copy over, absent when the call failed: none for nothing,
-/// the flag, the text written into a `DiplomatWrite`, and a record or a list
-/// in an opaque object.
+/// that hands a copy over, absent when the call failed, and for a lookup
+/// when it found none: none for nothing, the flag, the text written into a
+/// `DiplomatWrite`, and a record or a list in an opaque object.
 fn holding(answer: &Answer) -> Holding {
     match answer {
         Answer::Flag => Holding {
@@ -597,6 +615,20 @@ fn holding(answer: &Answer) -> Holding {
             },
         },
         Answer::Found(record) => copied(record, true),
+        Answer::FoundFlag => Holding {
+            answer: quote!(Option<bool>),
+            returns: "an answer about something it may not find".to_owned(),
+            value: quote! {
+                #[doc = "The answer, if the call succeeded and found what it answers about."]
+                #[must_use]
+                pub const fn value(&self) -> Option<bool> {
+                    match &self.0 {
+                        Ok(answer) => *answer,
+                        Err(_) => None,
+                    }
+                }
+            },
+        },
         Answer::List(element) => {
             let list = list(element);
             Holding {

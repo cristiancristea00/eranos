@@ -161,20 +161,19 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Whether the member with the identifier `id` is archived; `false` for an unknown member.
+/// Whether the member with the identifier `id` is archived. Writes it into @p archived when the group holds the member, and nothing otherwise:
+/// @p found false with no error means that no member has the identifier.
 ///
 /// @param reader The group reader
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param archived Receives the archived on success
+/// @param found Receives whether the group holds the member, which is false when the call fails
+/// @param archived Receives whether the member is archived, when the group holds them
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: the library's refusal, such as one of the kind
 ///   ERANOS_ERROR_KIND_RELEASED after eranosExpenseGroupReaderRelease(), or one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderIsArchived(EranosExpenseGroupReader const *const reader, char const *const id,
-                                                                            bool *const archived) {
+                                                                            bool *const found, bool *const archived) {
     EranosExpenseGroupReader_is_archived_result const result = EranosExpenseGroupReader_is_archived(reader, eranosDetailView(id));
-    *archived = false;
-    if (result.is_ok) {
-        *archived = result.ok;
-    }
+    *found = result.is_ok && eranosDetailPresentBool(result.ok.is_ok, &result.ok.ok, archived);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

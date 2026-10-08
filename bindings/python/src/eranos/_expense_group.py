@@ -773,9 +773,9 @@ class ExpenseGroup:
         with library_errors():
             return optional(await self._generated().member_async(member_id, None), member_of)
 
-    def is_archived(self, member_id: MemberId) -> bool:
+    def is_archived(self, member_id: MemberId) -> bool | None:
         """
-        Tell whether the member with the identifier member_id is archived: false for a member the group does not hold.
+        Tell whether the member with the identifier member_id is archived, if the group holds them.
 
         It blocks the calling thread while another call holds the group's lock. The library refuses an identifier that is not one with an ``IdError``.
 
@@ -783,15 +783,15 @@ class ExpenseGroup:
             member_id: The member's identifier.
 
         Returns:
-            Whether the member is archived.
+            Whether the member is archived, or none for a member the group does not hold.
 
         """
         with library_errors():
             return self._generated().is_archived(member_id)
 
-    async def is_archived_async(self, member_id: MemberId) -> bool:
+    async def is_archived_async(self, member_id: MemberId) -> bool | None:
         """
-        Tell whether the member with the identifier member_id is archived: false for a member the group does not hold.
+        Tell whether the member with the identifier member_id is archived, if the group holds them.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what is_archived refuses.
@@ -800,7 +800,7 @@ class ExpenseGroup:
             member_id: The member's identifier.
 
         Returns:
-            Whether the member is archived.
+            Whether the member is archived, or none for a member the group does not hold.
 
         """
         with library_errors():

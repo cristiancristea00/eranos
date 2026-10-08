@@ -425,7 +425,7 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public final fun id-oxDQ1YM (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun idBlocking-3XV2ae8 ()Ljava/lang/String;
 	public final fun isArchived-m8VzULU (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun isArchivedBlocking-Ew0_zjs (Ljava/lang/String;)Z
+	public final fun isArchivedBlocking-Ew0_zjs (Ljava/lang/String;)Ljava/lang/Boolean;
 	public final fun language (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun languageBlocking ()Leranos/Language;
 	public final fun member-m8VzULU (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -663,7 +663,7 @@ public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
 	public final fun expenseShares-rZhyMcA (Ljava/lang/String;)Leranos/ExpenseShares;
 	public final fun expenses ()Ljava/util/List;
 	public final fun id-3XV2ae8 ()Ljava/lang/String;
-	public final fun isArchived-Ew0_zjs (Ljava/lang/String;)Z
+	public final fun isArchived-Ew0_zjs (Ljava/lang/String;)Ljava/lang/Boolean;
 	public final fun language ()Leranos/Language;
 	public final fun member-Ew0_zjs (Ljava/lang/String;)Leranos/Member;
 	public final fun members ()Ljava/util/List;

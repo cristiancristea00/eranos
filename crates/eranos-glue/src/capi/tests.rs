@@ -231,7 +231,7 @@ trait ExpenseGroupCalls {
 
     /// Whether the member with the identifier `id` is archived.
     #[read]
-    fn is_archived(&self, id: &str) -> Result<bool, EranosError>;
+    fn is_archived(&self, id: &str) -> Result<Option<bool>, EranosError>;
 
     /// Whether the group takes expenses.
     #[read]
@@ -242,6 +242,11 @@ trait ExpenseGroupCalls {
     #[read]
     #[infallible]
     fn latest_expense(&self) -> Result<Option<Expense>, EranosError>;
+
+    /// Whether the latest expense is itemised, if there is one.
+    #[read]
+    #[infallible]
+    fn is_latest_itemised(&self) -> Result<Option<bool>, EranosError>;
 
     /// The totals.
     #[read]
@@ -340,7 +345,7 @@ fn the_bridge_is_two_modules_that_import_what_they_name() {
                 EranosSummary, EranosTipDistribution
             };
             use crate::values::ffi::{EranosCalendarDate, EranosTextList};
-            use diplomat_runtime::{DiplomatStr, DiplomatWrite};
+            use diplomat_runtime::{DiplomatOption, DiplomatStr, DiplomatWrite};
             use std::sync::{Arc, OnceLock, mpsc};
         })
     );

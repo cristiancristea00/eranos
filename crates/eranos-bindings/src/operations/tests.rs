@@ -175,7 +175,7 @@ fn every_read_converts_what_the_group_holds() {
         operations::member(group, &flat.ana),
         Ok(Some(members[0].clone()))
     );
-    assert_eq!(operations::is_archived(group, &flat.ana), Ok(false));
+    assert_eq!(operations::is_archived(group, &flat.ana), Ok(Some(false)));
     assert_eq!(operations::name(group), "Flat");
     for strategy in [
         SettlementStrategy::Adaptive,
@@ -221,7 +221,7 @@ fn every_read_converts_what_the_group_holds() {
     assert_eq!(operations::member(group, &member.to_string()), Ok(None));
     assert_eq!(
         operations::is_archived(group, &member.to_string()),
-        Ok(false)
+        Ok(None)
     );
     assert_eq!(operations::transfer(group, &transfer.to_string()), Ok(None));
     assert_eq!(
@@ -506,9 +506,9 @@ fn members_change_through_the_records() {
     );
     assert_eq!(operations::member(group, &carol), Ok(Some(renamed.clone())));
     operations::archive_member(group, &carol).unwrap();
-    assert_eq!(operations::is_archived(group, &carol), Ok(true));
+    assert_eq!(operations::is_archived(group, &carol), Ok(Some(true)));
     operations::unarchive_member(group, &carol).unwrap();
-    assert_eq!(operations::is_archived(group, &carol), Ok(false));
+    assert_eq!(operations::is_archived(group, &carol), Ok(Some(false)));
 
     let nobody = MemberId::new("member-9").unwrap().to_string();
     let unknown = Member {

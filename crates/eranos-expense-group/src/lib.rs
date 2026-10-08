@@ -427,9 +427,25 @@ impl ExpenseGroup {
         self.members.get(&id).map(|record| &record.member)
     }
 
-    /// Whether the member is archived; `false` for an unknown member.
-    pub fn is_archived(&self, id: MemberId) -> bool {
-        self.members.get(&id).is_some_and(|record| record.archived)
+    /// Whether the member with this identifier is archived; `None` for a
+    /// member the group does not hold, as [`member`](Self::member) finds
+    /// none.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CurrencyCode, ExpenseGroup, Member, MemberId};
+    ///
+    /// let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR).build()?;
+    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
+    /// assert_eq!(group.is_archived(ana), Some(false));
+    /// group.archive_member(ana)?;
+    /// assert_eq!(group.is_archived(ana), Some(true));
+    /// assert_eq!(group.is_archived(MemberId::new("stranger")?), None);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn is_archived(&self, id: MemberId) -> Option<bool> {
+        self.members.get(&id).map(|record| record.archived)
     }
 
     /// Adds a member under its identifier.

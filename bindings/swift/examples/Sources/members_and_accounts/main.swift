@@ -91,7 +91,15 @@ func printBalances(_ group: ExpenseGroup) throws(EranosError) {
         guard let totals = totals(of: member.id, in: summary) else {
             continue
         }
-        rows.append(BalanceRow(name: member.firstName, status: try group.isArchived(member.id) ? "archived" : "active", consumed: totals.share, balance: totals.balance))
+        let status = switch try group.isArchived(member.id) {
+        case true?:
+            "archived"
+        case false?:
+            "active"
+        case nil:
+            "not in the group"
+        }
+        rows.append(BalanceRow(name: member.firstName, status: status, consumed: totals.share, balance: totals.balance))
     }
     printTable(rows, numbersFrom: 2)
 }

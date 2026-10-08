@@ -187,7 +187,15 @@ func comingsAndGoings(_ group: ExpenseGroup, _ people: People) throws(EranosErro
         guard let totals = totals(of: member.id, in: summary) else {
             continue
         }
-        rows.append(StatusRow(name: member.firstName, status: try group.isArchived(member.id) ? "archived" : "active", balance: totals.balance))
+        let status = switch try group.isArchived(member.id) {
+        case true?:
+            "archived"
+        case false?:
+            "active"
+        case nil:
+            "not in the group"
+        }
+        rows.append(StatusRow(name: member.firstName, status: status, balance: totals.balance))
     }
     printTable(rows, numbersFrom: 2)
     printTable(
@@ -210,5 +218,5 @@ func comingsAndGoings(_ group: ExpenseGroup, _ people: People) throws(EranosErro
         preconditionFailure("entries reference Dan")
     }
     let archived = try group.isArchived(people.dan)
-    precondition(!archived, "Dan is active again")
+    precondition(false == archived, "Dan is active again")
 }

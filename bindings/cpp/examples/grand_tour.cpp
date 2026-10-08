@@ -1075,7 +1075,9 @@ void comingsAndGoings(ExpenseGroup &group, People const &people) noexcept {
         if (found.has_value()) {
             rows.push_back({
                 .name = member.firstName,
-                .status = must(group.isArchived(member.id)) ? "archived" : "active",
+                .status = must(group.isArchived(member.id))
+                              .transform([](bool const archived) noexcept { return archived ? "archived" : "active"; })
+                              .value_or("not in the group"),
                 .balance = toString(found->balance),
             });
         }
@@ -1095,7 +1097,7 @@ void comingsAndGoings(ExpenseGroup &group, People const &people) noexcept {
     check(farewell.has_value() && Failure::EXPENSE_GROUP_ARCHIVED_MEMBER == farewell->failure() && people.dan == farewell->member(),
           "an archived member joins no expense");
     check(inUse.has_value() && Failure::EXPENSE_GROUP_MEMBER_IN_USE == inUse->failure(), "a referenced member stays");
-    check(!must(group.isArchived(people.dan)), "Dan is active again");
+    check(std::optional(false) == must(group.isArchived(people.dan)), "Dan is active again");
 }
 
 // 8. The summary.

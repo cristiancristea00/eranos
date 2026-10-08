@@ -59,6 +59,14 @@ static inline void eranosDetailFinish(EranosText *const text) {
 }
 
 /// Gives @p out the value @p value points to when @p isOk says there is one, reading it only then.
+[[nodiscard]] static inline bool eranosDetailPresentBool(bool const isOk, bool const *const value, bool *const out) {
+    if (isOk) {
+        *out = *value;
+    }
+    return isOk;
+}
+
+/// Gives @p out the value @p value points to when @p isOk says there is one, reading it only then.
 [[nodiscard]] static inline bool eranosDetailPresentInt32(bool const isOk, int32_t const *const value, int32_t *const out) {
     if (isOk) {
         *out = *value;

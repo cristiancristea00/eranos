@@ -153,7 +153,7 @@ fn a_group_round_trips_through_json() {
         );
     }
     // The archived member stays archived, and keeps her history.
-    assert!(loaded.is_archived(carol));
+    assert_eq!(loaded.is_archived(carol), Some(true));
     assert_eq!(serde_json::to_string(&loaded).unwrap(), text);
 }
 

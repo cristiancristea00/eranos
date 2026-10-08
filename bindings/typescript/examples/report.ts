@@ -84,6 +84,18 @@ export function names(group: ExpenseGroup, members: readonly MemberId[]): string
     return members.map((member) => group.memberSync(member)?.firstName ?? '?').join(', ');
 }
 
+/** The status of `member` in `group`: archived, active, or, for one the group does not hold, not in the group. */
+export function status(group: ExpenseGroup, member: MemberId): string {
+    switch (group.isArchivedSync(member)) {
+        case true:
+            return 'archived';
+        case false:
+            return 'active';
+        case undefined:
+            return 'not in the group';
+    }
+}
+
 /** Every member who shares the cost of `split`, once each, in the order of their identifiers. */
 export function participants(split: ExpenseSplit): MemberId[] {
     const members = 'itemised' === split.kind ? split.items.flatMap((item) => splitMembers(item.split)) : splitMembers(split.split);

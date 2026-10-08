@@ -174,8 +174,9 @@ pub(crate) fn member(group: &ExpenseGroup, id: &str) -> Result<Option<Member>, E
     Ok(group.member(id).map(Member::from_library))
 }
 
-/// Whether the member with the identifier `id` is archived.
-pub(crate) fn is_archived(group: &ExpenseGroup, id: &str) -> Result<bool, EranosError> {
+/// Whether the member with the identifier `id` is archived; `None` for a
+/// member the group does not hold.
+pub(crate) fn is_archived(group: &ExpenseGroup, id: &str) -> Result<Option<bool>, EranosError> {
     let id: MemberId = identifier(id)?;
     Ok(group.is_archived(id))
 }

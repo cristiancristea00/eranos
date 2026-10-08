@@ -583,7 +583,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Whether the member with the identifier `id` is archived; `false` for a member the group does not hold.
+     * Whether the member with the identifier `id` is archived; `undefined` for a member the group does not hold.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.isArchivedSync} does not wait.
@@ -592,23 +592,23 @@ export class ExpenseGroup implements Disposable {
      *
      * @param id - The identifier
      * @param options - The call's signal
-     * @returns A promise of whether the member is archived
+     * @returns A promise of whether the member is archived, if the group holds them
      */
-    async isArchived(id: MemberId, options?: CallOptions): Promise<boolean> {
+    async isArchived(id: MemberId, options?: CallOptions): Promise<boolean | undefined> {
         return await awaiting((signal) => this.handle.isArchivedAsync(id, undefined, signal), options);
     }
 
     /**
-     * Whether the member with the identifier `id` is archived; `false` for a member the group does not hold.
+     * Whether the member with the identifier `id` is archived; `undefined` for a member the group does not hold.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.isArchived} waits for it.
      *
      * @param id - The identifier
-     * @returns Whether the member is archived
+     * @returns Whether the member is archived, if the group holds them
      * @throws {@link IdError} for an identifier that is not one
      */
-    isArchivedSync(id: MemberId): boolean {
+    isArchivedSync(id: MemberId): boolean | undefined {
         return calling(() => this.handle.isArchived(id));
     }
 

@@ -172,6 +172,9 @@ pub(crate) enum Answer {
     Flag,
     /// A record, or none: `Option<T>`.
     Found(Ident),
+    /// Whether something holds, or none for what the call does not find:
+    /// `Option<bool>`.
+    FoundFlag,
     /// A list of records: `Vec<T>`.
     List(Ident),
     /// Nothing: `()`.
@@ -189,16 +192,19 @@ impl Answer {
     ///
     /// # Errors
     ///
-    /// As [`Value::of`], and for an answer that is not nothing, a flag,
-    /// optional text, a record or none, or a list of records.
+    /// As [`Value::of`], and for an answer that is not nothing, a flag or
+    /// none, optional text, a record or none, or a list of records.
     pub(crate) fn of(written: &Type, core: &Core) -> syn::Result<Self> {
         if let Type::Tuple(tuple) = written
             && tuple.elems.is_empty()
         {
             return Ok(Self::Nothing);
         }
-        if "bool" == written.to_token_stream().to_string() {
+        if flag(written) {
             return Ok(Self::Flag);
+        }
+        if argument(written, "Option").is_some_and(flag) {
+            return Ok(Self::FoundFlag);
         }
         let Value { crossing, optional } = Value::of(written, core)?;
         match (crossing, optional) {
@@ -216,7 +222,7 @@ impl Answer {
                 _,
             ) => Err(syn::Error::new_spanned(
                 written,
-                "a group call answers with nothing, a flag, text, optional text, a record, an optional record, or a list of records",
+                "a group call answers with nothing, a flag, an optional flag, text, optional text, a record, an optional record, or a list of records",
             )),
         }
     }
@@ -226,7 +232,7 @@ impl Answer {
         match self {
             Self::Found(name) | Self::Record(name) => Some(Crossing::Object(name.clone())),
             Self::List(element) => Some(Crossing::List(element.clone())),
-            Self::Flag | Self::Nothing | Self::OptionalText | Self::Text => None,
+            Self::Flag | Self::FoundFlag | Self::Nothing | Self::OptionalText | Self::Text => None,
         }
     }
 }
@@ -388,6 +394,11 @@ fn argument<'written>(written: &'written Type, name: &str) -> Option<&'written T
     } else {
         None
     }
+}
+
+/// Whether `written` is `bool`.
+fn flag(written: &Type) -> bool {
+    "bool" == written.to_token_stream().to_string()
 }
 
 /// The failure of a type the bridge cannot carry.

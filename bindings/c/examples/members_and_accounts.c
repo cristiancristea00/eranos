@@ -78,6 +78,14 @@ static void addBalanceRow(Table *const table, BalanceRow const *const row) {
     tableAdd(table, (Line const[]){row->name, row->status, row->consumed, row->balance});
 }
 
+/// What a table says of a member's status: archived or active, as @p archived says, when @p held says that the group holds them.
+[[nodiscard]] static char const *statusOf(bool const held, bool const archived) {
+    if (!held) {
+        return "not in the group";
+    }
+    return archived ? "archived" : "active";
+}
+
 /// A check of the library that writes the value it makes of a text, or refuses it.
 typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
@@ -173,14 +181,15 @@ static void printBalances(EranosExpenseGroup const *const group) {
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
         eranosMemberId(member, text);
+        bool held = false;
         bool archived = false;
-        must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &archived));
+        must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &held, &archived));
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         addBalanceRow(table, &(BalanceRow){
                                  .name = textLine(text),
-                                 .status = lineOf("%s", archived ? "archived" : "active"),
+                                 .status = lineOf("%s", statusOf(held, archived)),
                                  .consumed = moneyLine(eranosMemberSummaryShare(found)),
                                  .balance = balanceLine(eranosMemberSummaryBalance(found)),
                              });

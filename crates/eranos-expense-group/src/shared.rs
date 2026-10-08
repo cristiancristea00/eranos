@@ -180,8 +180,9 @@ impl SharedExpenseGroup {
         self.read_with(move |group| group.member(id).cloned())
     }
 
-    /// Whether the member is archived, as [`ExpenseGroup::is_archived`] says.
-    pub fn is_archived(&self, id: MemberId) -> impl Future<Output = bool> + Send + 'static {
+    /// Whether the member with this identifier is archived, or `None` for a
+    /// member the group does not hold, as [`ExpenseGroup::is_archived`] says.
+    pub fn is_archived(&self, id: MemberId) -> impl Future<Output = Option<bool>> + Send + 'static {
         self.read_with(move |group| group.is_archived(id))
     }
 

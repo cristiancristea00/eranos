@@ -503,23 +503,23 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Whether the member with the identifier {@code id} is archived; {@code false} for a member the
-     * group does not hold.
+     * Whether the member with the identifier {@code id} is archived; empty for a member the group
+     * does not hold.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #isArchivedAsync} waits without
      * blocking it.
      *
      * @param id the identifier
-     * @return whether the member is archived
+     * @return whether the member is archived, if the group holds them
      * @throws EranosException.Id for an identifier that is not one
      */
-    public boolean isArchived(MemberId id) throws EranosException {
-        return Converting.call(() -> handle.isArchived(id.value()));
+    public Optional<Boolean> isArchived(MemberId id) throws EranosException {
+        return Converting.call(() -> Optional.ofNullable(handle.isArchived(id.value())));
     }
 
     /**
-     * Whether the member with the identifier {@code id} is archived; {@code false} for a member the
-     * group does not hold.
+     * Whether the member with the identifier {@code id} is archived; empty for a member the group
+     * does not hold.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -527,10 +527,11 @@ public final class ExpenseGroup implements AutoCloseable {
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
      * @param id the identifier
-     * @return a future of whether the member is archived
+     * @return a future of whether the member is archived, if the group holds them
      */
-    public CompletableFuture<Boolean> isArchivedAsync(MemberId id) {
-        return Converting.future(handle.isArchivedAsync(id.value(), null), value -> value);
+    public CompletableFuture<Optional<Boolean>> isArchivedAsync(MemberId id) {
+        return Converting.future(
+                handle.isArchivedAsync(id.value(), null), value -> Optional.ofNullable(value));
     }
 
     /**

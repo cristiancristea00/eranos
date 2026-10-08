@@ -26,7 +26,7 @@ from eranos import (
     WholeExpenseSplit,
 )
 from examples.grand_tour.tour import Categories, People, RefusalRow, eur, name, october, print_balances, print_entries, ron
-from examples.report import Row, message, print_lines, print_table, refusal, section, totals
+from examples.report import Row, message, print_lines, print_table, refusal, section, status, totals
 
 
 @final
@@ -281,7 +281,7 @@ def comings_and_goings(group: ExpenseGroup, people: People) -> None:
     print_table(
         StatusRow,
         [
-            StatusRow(name=member.first_name, status='archived' if group.is_archived(found.member) else 'active', balance=found.balance)
+            StatusRow(name=member.first_name, status=status(group.is_archived(found.member)), balance=found.balance)
             for member in group.members()
             if (found := totals(member.id, summary)) is not None
         ],
@@ -304,4 +304,4 @@ def comings_and_goings(group: ExpenseGroup, people: People) -> None:
     assert farewell.failure == ExpenseGroupError.ArchivedMember(member=people.dan)
     assert isinstance(in_use, ExpenseGroupError)
     assert isinstance(in_use.failure, ExpenseGroupError.MemberInUse)
-    assert not group.is_archived(people.dan)
+    assert group.is_archived(people.dan) is False

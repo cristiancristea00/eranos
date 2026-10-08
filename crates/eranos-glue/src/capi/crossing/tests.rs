@@ -189,14 +189,15 @@ fn every_crossing_has_its_parameter_and_its_owned_value() {
     );
 }
 
-/// A call answers nothing, a flag, text, optional text, a record, an
-/// optional record, or a list of records, and nothing else.
+/// A call answers nothing, a flag, an optional flag, text, optional text, a
+/// record, an optional record, or a list of records, and nothing else.
 #[test]
-fn a_call_answers_one_of_seven_kinds() {
+fn a_call_answers_one_of_eight_kinds() {
     let core = core();
     let answer = |text: &str| Answer::of(&written(text), &core);
     assert_eq!(answer("()").unwrap(), Answer::Nothing);
     assert_eq!(answer("bool").unwrap(), Answer::Flag);
+    assert_eq!(answer("Option<bool>").unwrap(), Answer::FoundFlag);
     assert_eq!(answer("String").unwrap(), Answer::Text);
     assert_eq!(answer("Option<String>").unwrap(), Answer::OptionalText);
     assert_eq!(

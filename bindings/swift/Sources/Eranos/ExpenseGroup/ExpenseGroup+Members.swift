@@ -46,17 +46,17 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Whether the member with the identifier `id` is archived; false for a member the group does
+    /// Whether the member with the identifier `id` is archived; `nil` for a member the group does
     /// not hold.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one; on wasm,
     ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call holds the
     ///   lock.
-    func isArchived(_ id: Member.ID) throws(EranosError) -> Bool {
+    func isArchived(_ id: Member.ID) throws(EranosError) -> Bool? {
         try converting { try handle.isArchived(id: id.rawValue) }
     }
 
-    /// Whether the member with the identifier `id` is archived; false for a member the group does
+    /// Whether the member with the identifier `id` is archived; `nil` for a member the group does
     /// not hold.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
@@ -64,7 +64,7 @@ public extension ExpenseGroup {
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
     ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func isArchived(_ id: Member.ID) async throws(EranosError) -> Bool {
+    func isArchived(_ id: Member.ID) async throws(EranosError) -> Bool? {
         try await converting { [handle] cancellation in
             try await handle.isArchivedAsync(id: id.rawValue, cancellation: cancellation)
         }
