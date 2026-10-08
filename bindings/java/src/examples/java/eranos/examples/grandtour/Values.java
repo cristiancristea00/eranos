@@ -69,6 +69,10 @@ final class Values {
         Money nothing = new Money(0, CurrencyCode.of("RON"));
         Cost cost = new Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"));
         Cost doubled = new Cost.Converted(eur("20.00"), rate(cost));
+        // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+        Money fromDouble = Money.fromDouble(1.005, CurrencyCode.of("EUR"));
+        Optional<EranosException> notANumber =
+                refusal(() -> Money.fromDouble(Double.NaN, CurrencyCode.of("EUR")));
         System.out.println("Amounts are exact minor units in their currency:");
         printTable(
                 ValueRow.HEADERS,
@@ -79,6 +83,8 @@ final class Values {
                                 change + ", negative: " + (0 > change.minorUnits())),
                         new ValueRow("1.00 EUR + 1.00 RON", message(mixed)),
                         new ValueRow("1.005 EUR", message(refusal(() -> eur("1.005")))),
+                        new ValueRow("1.005 as a double, in EUR", fromDouble.toString()),
+                        new ValueRow("NaN as a double, in EUR", message(notANumber)),
                         new ValueRow("1500 JPY", yen + ", " + yen.minorUnits() + " minor units"),
                         new ValueRow("1234 minor units of BHD", dinars.toString()),
                         new ValueRow(
@@ -91,6 +97,8 @@ final class Values {
         check(eur("13.00").equals(total));
         check(-250 == change.minorUnits());
         check(mixed.isPresent());
+        check(eur("1.01").equals(fromDouble));
+        check(notANumber.isPresent());
         check("1.234 BHD".equals(dinars.toString()));
     }
 
@@ -98,6 +106,8 @@ final class Values {
         Percentage percentage = Percentage.parse("12.5");
         Parts parts = Parts.parse("1.5");
         ExchangeRate rate = ExchangeRate.parse("4.97650");
+        // 0.30000000000000004 as a double, which rounds to two decimal places.
+        Percentage sum = Percentage.fromDouble(0.1 + 0.2);
         System.out.println("Percentages, parts, and rates are exact decimals:");
         printTable(
                 ValueRow.HEADERS,
@@ -107,6 +117,7 @@ final class Values {
                                 percentage + ", " + percentage.basisPoints() + " basis points"),
                         new ValueRow("333 basis points", Percentage.ofBasisPoints(333).toString()),
                         new ValueRow("33.333%", message(refusal(() -> Percentage.parse("33.333")))),
+                        new ValueRow("0.1 + 0.2 as a double, a percentage", sum.toString()),
                         new ValueRow(
                                 "1.5 parts", parts + ", " + parts.hundredths() + " hundredths"),
                         new ValueRow("3 whole parts", Parts.ofHundredths(300).toString()),
@@ -117,6 +128,7 @@ final class Values {
                                 "a rate of 0", message(refusal(() -> ExchangeRate.parse("0"))))),
                 2);
         check(1_250 == percentage.basisPoints());
+        check(30 == sum.basisPoints());
         check(150 == parts.hundredths());
     }
 

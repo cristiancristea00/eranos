@@ -39,6 +39,22 @@ public final class Parts {
     }
 
     /**
+     * The parts of the double {@code value}: 1.005 is 1.01 parts.
+     *
+     * <p>The library writes the double in its shortest decimal form, rounds it half away from zero
+     * to two decimal places, and parses it.
+     *
+     * @param value the parts as a double: 0.5 for half a part
+     * @return the parts
+     * @throws EranosException.Money with {@link MoneyFailure.NotFinite} for NaN and the infinities,
+     *     and {@link MoneyFailure.InvalidParts} for a value that rounds to zero or below and one
+     *     whose hundredths do not fit an {@code int}
+     */
+    public static Parts fromDouble(double value) throws EranosException {
+        return Converting.call(() -> new Parts(Eranos.partsFromF64(value)));
+    }
+
+    /**
      * The parts of {@code hundredths}, a number the library gave.
      *
      * @param hundredths the parts in hundredths

@@ -36,6 +36,22 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
         self.init(money)
     }
 
+    /// The amount of the double `amount` in `currency`: 1.005 in EUR is 1.01 EUR.
+    ///
+    /// The library writes the double in its shortest decimal form, the shortest text that reads
+    /// back as the same double, rounds it half away from zero to the currency's decimal places,
+    /// and parses it. Rounding the text rather than the double keeps the cents the user typed:
+    /// the double nearest 1.005 lies below it, yet it is 1.01 EUR. Every language converts
+    /// through the library, so the same double is the same amount in each.
+    ///
+    /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/notFinite`` for NaN and the
+    ///   infinities, and ``MoneyFailure/overflow`` for an amount that does not fit in 64-bit minor
+    ///   units.
+    public init(amount: Double, currency: CurrencyCode) throws(EranosError) {
+        let money = try converting { try EranosGenerated.moneyFromF64(value: amount, code: currency.code) }
+        self.init(money)
+    }
+
     init(_ money: EranosGenerated.Money) {
         self.init(minorUnits: money.minorUnits, currency: CurrencyCode(money.currency))
     }

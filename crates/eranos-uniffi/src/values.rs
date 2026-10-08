@@ -51,6 +51,24 @@ pub(crate) fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> 
     eranos_bindings::money_parse(text, code)
 }
 
+/// The amount of the double `value` in the currency `code`: 1.005 in "EUR"
+/// is 1.01 EUR.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to the currency's decimal places, and parses it, so
+/// every binding gets the same amount from the same double.
+///
+/// # Errors
+///
+/// `MoneyFailure::UnknownCurrency`,
+/// `MoneyFailure::NotFinite` for NaN and the infinities, and
+/// `MoneyFailure::Overflow` for an amount that does not fit in 64-bit minor
+/// units.
+#[uniffi::export]
+pub(crate) fn money_from_f64(value: f64, code: &str) -> Result<Money, EranosError> {
+    eranos_bindings::money_from_f64(value, code)
+}
+
 /// The amount as the library writes it: "12.50 EUR".
 ///
 /// It writes the minor units with the decimal places the record's currency
@@ -95,6 +113,23 @@ pub(crate) fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::exchange_rate_parse(text)
 }
 
+/// The exchange rate of the double `value`, as the library writes it:
+/// 4.9765 is "4.9765".
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to 18 decimal places, and parses it, so the rate
+/// keeps the digits of that form: 25.5 is "25.5".
+///
+/// # Errors
+///
+/// `MoneyFailure::NotFinite` for NaN and the infinities, and
+/// `MoneyFailure::InvalidExchangeRate` for a value that is not positive at
+/// 18 decimal places or has more significant digits than fit in 64 bits.
+#[uniffi::export]
+pub(crate) fn exchange_rate_from_f64(value: f64) -> Result<String, EranosError> {
+    eranos_bindings::exchange_rate_from_f64(value)
+}
+
 /// `amount` converted at `rate` into the currency `code`, rounded to its
 /// minor unit, halves away from zero.
 ///
@@ -122,6 +157,23 @@ pub(crate) fn exchange_rate_convert(
 #[uniffi::export]
 pub(crate) fn percentage_parse(text: &str) -> Result<i32, EranosError> {
     eranos_bindings::percentage_parse(text)
+}
+
+/// The percentage of the double `value`, a number of per cent, in basis
+/// points: 12.345 is 1 235.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to two decimal places, and parses it: `0.1 + 0.2`,
+/// which is 0.30000000000000004 as a double, is 30.
+///
+/// # Errors
+///
+/// `MoneyFailure::NotFinite` for NaN and the infinities, and
+/// `MoneyFailure::InvalidPercentage` for a negative value and one whose
+/// basis points do not fit an `i32`.
+#[uniffi::export]
+pub(crate) fn percentage_from_f64(value: f64) -> Result<i32, EranosError> {
+    eranos_bindings::percentage_from_f64(value)
 }
 
 /// The percentage of `basis_points`, as the library writes it: "12.5%".
@@ -155,6 +207,21 @@ pub(crate) fn percentage_check(basis_points: i32) -> Result<(), EranosError> {
 #[uniffi::export]
 pub(crate) fn parts_parse(text: &str) -> Result<i32, EranosError> {
     eranos_bindings::parts_parse(text)
+}
+
+/// The parts of the double `value`, in hundredths: 1.005 is 101.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to two decimal places, and parses it.
+///
+/// # Errors
+///
+/// `MoneyFailure::NotFinite` for NaN and the infinities, and
+/// `MoneyFailure::InvalidParts` for a value that rounds to zero or below
+/// and one whose hundredths do not fit an `i32`.
+#[uniffi::export]
+pub(crate) fn parts_from_f64(value: f64) -> Result<i32, EranosError> {
+    eranos_bindings::parts_from_f64(value)
 }
 
 /// The parts of `hundredths`, as the library writes them: "0.5".

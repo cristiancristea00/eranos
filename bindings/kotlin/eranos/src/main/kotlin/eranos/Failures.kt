@@ -606,6 +606,9 @@ public sealed interface MoneyFailure {
     /** A percentage that is not a decimal number with at most two decimal places. */
     public data object InvalidPercentage : MoneyFailure
 
+    /** A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is. */
+    public data object NotFinite : MoneyFailure
+
     /** A number or a result that does not fit its range. */
     public data object Overflow : MoneyFailure
 }
@@ -620,6 +623,7 @@ internal fun GeneratedMoneyFailure.converted(): MoneyFailure =
         GeneratedMoneyFailure.InvalidExchangeRate -> MoneyFailure.InvalidExchangeRate
         GeneratedMoneyFailure.InvalidParts -> MoneyFailure.InvalidParts
         GeneratedMoneyFailure.InvalidPercentage -> MoneyFailure.InvalidPercentage
+        GeneratedMoneyFailure.NotFinite -> MoneyFailure.NotFinite
         GeneratedMoneyFailure.Overflow -> MoneyFailure.Overflow
     }
 

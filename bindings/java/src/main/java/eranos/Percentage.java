@@ -36,6 +36,23 @@ public final class Percentage {
     }
 
     /**
+     * The percentage of the double {@code value}, a number of per cent: 12.345 is 12.35 %.
+     *
+     * <p>The library writes the double in its shortest decimal form, rounds it half away from zero
+     * to two decimal places, and parses it: {@code 0.1 + 0.2}, which is 0.30000000000000004 as a
+     * double, is 0.3 %.
+     *
+     * @param value the percentage as a double: 12.5 for 12.5 %
+     * @return the percentage
+     * @throws EranosException.Money with {@link MoneyFailure.NotFinite} for NaN and the infinities,
+     *     and {@link MoneyFailure.InvalidPercentage} for a negative value and one whose basis
+     *     points do not fit an {@code int}
+     */
+    public static Percentage fromDouble(double value) throws EranosException {
+        return Converting.call(() -> new Percentage(Eranos.percentageFromF64(value)));
+    }
+
+    /**
      * The percentage of {@code basisPoints}, a number the library gave.
      *
      * @param basisPoints the percentage in basis points

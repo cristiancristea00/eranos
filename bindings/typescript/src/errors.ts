@@ -385,6 +385,10 @@ export type MoneyFailure =
           readonly kind: 'invalidPercentage';
       }
     | {
+          /** A number that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is. */
+          readonly kind: 'notFinite';
+      }
+    | {
           /** A number or a result that does not fit its range. */
           readonly kind: 'overflow';
       };
@@ -771,6 +775,8 @@ function convertedMoneyFailure(failure: internal.MoneyFailure): MoneyFailure {
             return { kind: 'invalidParts' };
         case internal.MoneyFailure_Tags.InvalidPercentage:
             return { kind: 'invalidPercentage' };
+        case internal.MoneyFailure_Tags.NotFinite:
+            return { kind: 'notFinite' };
         case internal.MoneyFailure_Tags.Overflow:
             return { kind: 'overflow' };
     }

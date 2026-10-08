@@ -187,6 +187,79 @@ fn amounts_beyond_the_i64_range_overflow() {
     );
 }
 
+fn euros_from_f64(value: f64) -> Result<Money, MoneyError> {
+    Money::from_f64(value, CurrencyCode::EUR)
+}
+
+/// Rounding the double itself would store 1.00 for 1.005 and 2.67 for
+/// 2.675, whose nearest doubles lie below them: an app that holds amounts
+/// as doubles would lose the cent its user typed.
+#[test]
+fn a_double_converts_from_its_shortest_decimal_form() {
+    assert_eq!(euros_from_f64(1.005), Ok(euros(101)));
+    assert_eq!(euros_from_f64(2.675), Ok(euros(268)));
+    assert_eq!(euros_from_f64(-2.675), Ok(euros(-268)));
+    // A carry runs through every nine.
+    assert_eq!(euros_from_f64(9.995), Ok(euros(1_000)));
+    // `0.1 + 0.2` is 0.30000000000000004 as a double.
+    assert_eq!(euros_from_f64(0.1 + 0.2), Ok(euros(30)));
+    assert_eq!(euros_from_f64(12.0), Ok(euros(1_200)));
+}
+
+/// A conversion that rounded every currency to cents would put yen and
+/// dinars off by powers of ten.
+#[test]
+fn a_double_rounds_to_its_currency_s_decimal_places() {
+    // No decimals.
+    assert_eq!(
+        Money::from_f64(1234.5, CurrencyCode::JPY),
+        Ok(Money::from_minor_units(1_235, CurrencyCode::JPY))
+    );
+    assert_eq!(
+        Money::from_f64(-1234.5, CurrencyCode::JPY),
+        Ok(Money::from_minor_units(-1_235, CurrencyCode::JPY))
+    );
+    // Three decimals.
+    assert_eq!(
+        Money::from_f64(1.0005, CurrencyCode::BHD),
+        Ok(Money::from_minor_units(1_001, CurrencyCode::BHD))
+    );
+    // Four decimals.
+    assert_eq!(
+        Money::from_f64(1.000_05, CurrencyCode::CLF),
+        Ok(Money::from_minor_units(10_001, CurrencyCode::CLF))
+    );
+}
+
+/// A zero that kept the sign of `-0.0` or of a tiny negative double would be
+/// refused or shown as a negative amount.
+#[test]
+fn a_double_that_rounds_to_zero_is_zero_without_a_sign() {
+    for value in [-0.0, -0.004, 5e-324, -5e-324, 1e-7] {
+        assert_eq!(euros_from_f64(value), Ok(euros(0)), "{value}");
+    }
+}
+
+/// A double written with an exponent would be refused as an invalid
+/// amount, and one past the range would wrap.
+#[test]
+fn large_doubles_convert_without_an_exponent_and_overflow_past_the_range() {
+    assert_eq!(euros_from_f64(1e15), Ok(euros(100_000_000_000_000_000)));
+    for value in [1e21, -1e21, f64::MAX] {
+        assert_eq!(euros_from_f64(value), Err(MoneyError::Overflow), "{value}");
+    }
+}
+
+/// NaN or an infinity, which a division by zero in an app gives, would
+/// otherwise reach the parser as `NaN` or `inf` and be reported as a
+/// malformed amount the user never typed.
+#[test]
+fn nan_and_the_infinities_are_not_amounts() {
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(euros_from_f64(value), Err(MoneyError::NotFinite), "{value}");
+    }
+}
+
 /// Amounts would be shown or saved without their decimals or currency.
 #[test]
 fn display_shows_the_decimal_amount_and_code() {

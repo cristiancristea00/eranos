@@ -42,6 +42,10 @@ pub enum MoneyError {
     /// places.
     #[error("invalid percentage: expected a number with at most 2 decimal places")]
     InvalidPercentage,
+    /// A double that is NaN or infinite, which no amount, percentage, number
+    /// of parts, or exchange rate is.
+    #[error("the number is not finite")]
+    NotFinite,
     /// A number or a result that does not fit its range.
     #[error("value out of range")]
     Overflow,
@@ -71,6 +75,9 @@ pub trait FromMoneyError: Sized {
     /// The value for [`MoneyError::InvalidPercentage`].
     fn invalid_percentage(message: String) -> Self;
 
+    /// The value for [`MoneyError::NotFinite`].
+    fn not_finite(message: String) -> Self;
+
     /// The value for [`MoneyError::Overflow`].
     fn overflow(message: String) -> Self;
 
@@ -91,6 +98,7 @@ pub trait FromMoneyError: Sized {
             MoneyError::InvalidExchangeRate => Self::invalid_exchange_rate(message),
             MoneyError::InvalidParts => Self::invalid_parts(message),
             MoneyError::InvalidPercentage => Self::invalid_percentage(message),
+            MoneyError::NotFinite => Self::not_finite(message),
             MoneyError::Overflow => Self::overflow(message),
         }
     }

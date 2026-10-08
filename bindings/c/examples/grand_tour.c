@@ -7,6 +7,7 @@
 #include "eranos.h"
 #include "report.h"
 
+#include <math.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -2340,6 +2341,18 @@ static void amounts(void) {
     int64_t unused = 0;
     Line const mixed = sumOf(eur("1.00"), ron("1.00"), &unused);
     Line const decimals = amountRefusal("1.005", "EUR");
+    EranosCurrencyDetails *euro = nullptr;
+    must(eranosCurrencyDetailsOf("EUR", &euro));
+    // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    EranosMoney *fromDouble = nullptr;
+    must(eranosMoneyCreateFromDouble(1.005, euro, &fromDouble));
+    int64_t const fromDoubleUnits = eranosMoneyMinorUnits(fromDouble);
+    Line const fromDoubleLine = moneyLine(fromDouble);
+    EranosMoney *notANumber = nullptr;
+    EranosError *const notFinite = eranosMoneyCreateFromDouble(NAN, euro, &notANumber);
+    check(isFailure(notFinite, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE) && nullptr == notANumber, "NaN is no amount");
+    Line const notFiniteLine = messageLine(notFinite);
+    eranosCurrencyDetailsDestroy(euro);
     EranosMoney *const yen = amountOf("1500", "JPY");
     int64_t const yenUnits = eranosMoneyMinorUnits(yen);
     Line const yenLine = moneyLine(yen);
@@ -2363,6 +2376,8 @@ static void amounts(void) {
                        });
     addValueRow(table, &(ValueRow){.input = lineOf("1.00 EUR + 1.00 RON"), .result = mixed});
     addValueRow(table, &(ValueRow){.input = lineOf("1.005 EUR"), .result = decimals});
+    addValueRow(table, &(ValueRow){.input = lineOf("1.005 as a double, in EUR"), .result = fromDoubleLine});
+    addValueRow(table, &(ValueRow){.input = lineOf("NaN as a double, in EUR"), .result = notFiniteLine});
     addValueRow(table, &(ValueRow){.input = lineOf("1500 JPY"), .result = lineOf("%s, %lld minor units", yenLine.text, (long long)yenUnits)});
     addValueRow(table, &(ValueRow){.input = lineOf("1234 minor units of BHD"), .result = dinarsLine});
     addValueRow(table, &(ValueRow){.input = lineOf("zero RON"), .result = lineOf("%s, zero: %s", nothingLine.text, zero ? "true" : "false")});
@@ -2374,6 +2389,7 @@ static void amounts(void) {
     check(1'300 == total, "12.34 EUR and 0.66 EUR make 13.00 EUR");
     check(-250 == changeUnits, "5.00 EUR less 7.50 EUR is -2.50 EUR");
     check(0 == strcmp(mixed.text, "cannot combine EUR and RON amounts"), "amounts in two currencies do not combine");
+    check(101 == fromDoubleUnits, "1.005 as a double is 1.01 EUR");
     check(0 == strcmp(dinarsLine.text, "1.234 BHD"), "a dinar has three decimal places");
     eranosCostDestroy(doubled);
     eranosTextDestroy(rate);
@@ -2408,6 +2424,9 @@ static void ratios(void) {
     Line const tooPrecise = messageLine(eranosPercentageParse("33.333", &unusedPoints));
     int32_t unusedHundredths = 0;
     Line const noParts = messageLine(eranosPartsParse("0", &unusedHundredths));
+    // 0.30000000000000004 as a double, which rounds to two decimal places.
+    int32_t sum = 0;
+    must(eranosPercentageFromDouble(0.1 + 0.2, &sum));
     EranosText *const rate = eranosTextCreate();
     Line const exchange = valueOr(eranosExchangeRateParse("4.97650", rate), rate);
     Line const noRate = messageLine(eranosExchangeRateParse("0", rate));
@@ -2419,6 +2438,7 @@ static void ratios(void) {
     addValueRow(table, &(ValueRow){.input = lineOf("12.5%%"), .result = lineOf("%s, %ld basis points", percentage.text, (long)basisPoints)});
     addValueRow(table, &(ValueRow){.input = lineOf("333 basis points"), .result = percentageLine(333)});
     addValueRow(table, &(ValueRow){.input = lineOf("33.333%%"), .result = tooPrecise});
+    addValueRow(table, &(ValueRow){.input = lineOf("0.1 + 0.2 as a double, a percentage"), .result = percentageLine(sum)});
     addValueRow(table, &(ValueRow){.input = lineOf("1.5 parts"), .result = lineOf("%s, %ld hundredths", parts.text, (long)hundredths)});
     addValueRow(table, &(ValueRow){.input = lineOf("3 whole parts"), .result = partsLine(300)});
     addValueRow(table, &(ValueRow){.input = lineOf("25 hundredths of a part"), .result = partsLine(25)});
@@ -2427,6 +2447,7 @@ static void ratios(void) {
     addValueRow(table, &(ValueRow){.input = lineOf("a rate of 0"), .result = noRate});
     tablePrint(table);
     check(1'250 == basisPoints, "12.5 % is 1250 basis points");
+    check(30 == sum, "0.1 + 0.2 as a double is 0.3 %");
     check(150 == hundredths, "1.5 parts are 150 hundredths");
 }
 

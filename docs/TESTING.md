@@ -190,7 +190,9 @@ would poll thousands of times.
 - No `#[ignore]`: a test that does not run protects nothing.
 - No `#[should_panic]`: the library returns errors; assert the error.
 - No snapshot tests: accepting a wrong change becomes one command away.
-- No floating point anywhere near money, in tests either.
+- No floating point anywhere near money, in tests either: a float appears
+  only as the input of a `from_f64` constructor, whose tests pin the
+  conversion.
 
 ## 5. Coverage
 

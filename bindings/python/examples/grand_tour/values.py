@@ -2,6 +2,7 @@
 
 import copy
 import dataclasses
+import math
 from typing import ClassVar, final, override
 
 from eranos import (
@@ -106,6 +107,9 @@ def _amounts() -> None:
     nothing = Money(0, CurrencyCode('RON'))
     cost = ConvertedCost(eur('10.00'), ExchangeRate('4.9765'))
     doubled = copy.replace(cost, amount=eur('20.00'))
+    # The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    from_double = Money.from_float(1.005, CurrencyCode('EUR'))
+    not_a_number = refusal(lambda: Money.from_float(math.nan, CurrencyCode('EUR')))
     print_lines('Amounts are exact minor units in their currency:')
     print_table(
         ValueRow,
@@ -114,6 +118,8 @@ def _amounts() -> None:
             ValueRow(input='5.00 EUR \N{MINUS SIGN} 7.50 EUR', result=f'{change}, negative: {_truth(change.minor_units < 0)}'),
             ValueRow(input='1.00 EUR + 1.00 RON', result=message(mixed)),
             ValueRow(input='1.005 EUR', result=message(refusal(lambda: eur('1.005')))),
+            ValueRow(input='1.005 as a double, in EUR', result=str(from_double)),
+            ValueRow(input='NaN as a double, in EUR', result=message(not_a_number)),
             ValueRow(input='1500 JPY', result=f'{yen}, {yen.minor_units} minor units'),
             ValueRow(input='1234 minor units of BHD', result=str(dinars)),
             ValueRow(input='zero RON', result=f'{nothing}, zero: {_truth(nothing.minor_units == 0)}'),
@@ -124,6 +130,8 @@ def _amounts() -> None:
     assert total == eur('13.00')
     assert change.minor_units == -250
     assert mixed is not None
+    assert from_double == eur('1.01')
+    assert not_a_number is not None
     assert str(dinars) == '1.234 BHD'
 
 
@@ -132,6 +140,8 @@ def _ratios() -> None:
     percentage = Percentage.parse('12.5')
     parts = Parts.parse('1.5')
     rate = ExchangeRate('4.97650')
+    # 0.30000000000000004 as a double, which rounds to two decimal places.
+    total = Percentage.from_float(0.1 + 0.2)
     print_lines('Percentages, parts, and rates are exact decimals:')
     print_table(
         ValueRow,
@@ -139,6 +149,7 @@ def _ratios() -> None:
             ValueRow(input='12.5%', result=f'{percentage}, {percentage.basis_points} basis points'),
             ValueRow(input='333 basis points', result=str(Percentage(333))),
             ValueRow(input='33.333%', result=message(refusal(lambda: Percentage.parse('33.333')))),
+            ValueRow(input='0.1 + 0.2 as a double, a percentage', result=str(total)),
             ValueRow(input='1.5 parts', result=f'{parts}, {parts.hundredths} hundredths'),
             ValueRow(input='3 whole parts', result=str(Parts(300))),
             ValueRow(input='25 hundredths of a part', result=str(Parts(25))),
@@ -149,6 +160,7 @@ def _ratios() -> None:
         2,
     )
     assert percentage.basis_points == 1_250
+    assert total.basis_points == 30
     assert parts.hundredths == 150
     assert Parts.parse('1').hundredths == 100
     # A rate keeps no trailing zero.

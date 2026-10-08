@@ -180,6 +180,24 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
+        /// The amount of the double `value` in `currency`, whose details come from the library, as
+        /// for `create`: 1.005 in EUR is 1.01 EUR. The library writes the double in its shortest
+        /// decimal form, rounds it half away from zero to the currency's decimal places, and parses
+        /// it, so every binding gets the same amount from the same double.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a value that is NaN or infinite, or an amount
+        /// out of range.
+        pub fn create_from_double(
+            value: f64,
+            currency: &EranosCurrencyDetails,
+        ) -> Result<Box<Self>, Box<EranosError>> {
+            eranos_bindings::money_from_f64(value, &currency.0.code)
+                .map(|money| Box::new(Self(money)))
+                .map_err(crate::failed)
+        }
+
         /// Writes the amount as the library does: "12.50 EUR".
         pub fn format(&self, write: &mut DiplomatWrite) {
             crate::write_text(write, &eranos_bindings::money_format(&self.0));
@@ -231,6 +249,20 @@ pub mod ffi {
             Ok(())
         }
 
+        /// Writes the exchange rate of the double `value` as the library writes it: 4.9765 is
+        /// "4.9765". The library writes the double in its shortest decimal form, rounds it half away
+        /// from zero to 18 decimal places, and parses it, so 25.5 is "25.5".
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a value that is NaN or infinite, or that is not a
+        /// positive rate at 18 decimal places.
+        pub fn from_double(value: f64, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = eranos_bindings::exchange_rate_from_f64(value).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
         /// The amount `amount` converted at the rate `rate` into the currency `currency`.
         ///
         /// # Errors
@@ -270,6 +302,18 @@ pub mod ffi {
             eranos_bindings::percentage_parse(&crate::text(text)?).map_err(crate::failed)
         }
 
+        /// The percentage of the double `value`, a number of per cent, in basis points: 12.345 is
+        /// 1235. The library writes the double in its shortest decimal form, rounds it half away
+        /// from zero to two decimal places, and parses it.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a value that is NaN or infinite, negative, or out
+        /// of range.
+        pub fn from_double(value: f64) -> Result<i32, Box<EranosError>> {
+            eranos_bindings::percentage_from_f64(value).map_err(crate::failed)
+        }
+
         /// Writes the percentage of `basis_points` basis points as the library does: "12.5%". It
         /// writes a negative number, which `check` refuses, the same way after a minus sign:
         /// "-12.5%".
@@ -301,6 +345,18 @@ pub mod ffi {
         /// kind `InvalidText` for text that is not UTF-8.
         pub fn parse(text: &DiplomatStr) -> Result<i32, Box<EranosError>> {
             eranos_bindings::parts_parse(&crate::text(text)?).map_err(crate::failed)
+        }
+
+        /// The parts of the double `value`, in hundredths: 1.005 is 101. The library writes the
+        /// double in its shortest decimal form, rounds it half away from zero to two decimal places,
+        /// and parses it.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a value that is NaN or infinite, rounds to zero
+        /// or below, or is out of range.
+        pub fn from_double(value: f64) -> Result<i32, Box<EranosError>> {
+            eranos_bindings::parts_from_f64(value).map_err(crate::failed)
         }
 
         /// Writes the parts of `hundredths` hundredths as the library does: "0.5". It writes zero

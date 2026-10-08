@@ -149,6 +149,39 @@ fn percentage_constants_are_zero_and_one_hundred() {
     assert!(Percentage::HUNDRED > percentage("99.99"));
 }
 
+/// A percentage held as a double would split by other basis points than
+/// the user typed: 12.345 % as 12.34 %, or `0.1 + 0.2` as a share that
+/// never adds up to 100 %.
+#[test]
+fn a_percentage_converts_from_a_double_rounded_to_two_places() {
+    assert_eq!(Percentage::from_f64(12.345), Ok(percentage("12.35")));
+    assert_eq!(Percentage::from_f64(0.1 + 0.2), Ok(percentage("0.3")));
+    assert_eq!(Percentage::from_f64(33.333), Ok(percentage("33.33")));
+    assert_eq!(Percentage::from_f64(100.0), Ok(Percentage::HUNDRED));
+    // A tiny negative double rounds to zero, which has no sign.
+    assert_eq!(Percentage::from_f64(-0.004), Ok(Percentage::ZERO));
+}
+
+/// A negative or huge double would become a percentage the parser refuses
+/// as text, and NaN would reach it as `NaN`.
+#[test]
+fn a_double_that_is_no_percentage_is_refused() {
+    for value in [-5.0, -0.005, 1e21] {
+        assert_eq!(
+            Percentage::from_f64(value),
+            Err(MoneyError::InvalidPercentage),
+            "{value}"
+        );
+    }
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(
+            Percentage::from_f64(value),
+            Err(MoneyError::NotFinite),
+            "{value}"
+        );
+    }
+}
+
 /// Parts typed in a split form would be refused or misread.
 #[test]
 fn parts_parse_to_hundredths() {
@@ -258,6 +291,30 @@ fn the_parts_writer_writes_any_hundredths_as_the_text_form_does() {
         format_hundredths(i64::MAX).to_string(),
         "92233720368547758.07"
     );
+}
+
+/// Parts held as doubles would split by other hundredths than the user
+/// typed, or a double that rounds to zero would let a member pay nothing.
+#[test]
+fn parts_convert_from_a_double_rounded_to_two_places() {
+    assert_eq!(Parts::from_f64(1.005), Ok(parts("1.01")));
+    assert_eq!(Parts::from_f64(0.5), Ok(parts("0.5")));
+    assert_eq!(Parts::from_f64(2.0), Ok(parts("2")));
+    // Zero, negative, and huge parts are refused as the parser refuses them.
+    for value in [0.004, 0.0, -0.0, -1.0, 1e21] {
+        assert_eq!(
+            Parts::from_f64(value),
+            Err(MoneyError::InvalidParts),
+            "{value}"
+        );
+    }
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(
+            Parts::from_f64(value),
+            Err(MoneyError::NotFinite),
+            "{value}"
+        );
+    }
 }
 
 /// Stored parts would load as a zero share or lose their value.

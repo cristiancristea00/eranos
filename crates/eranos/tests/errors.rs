@@ -114,6 +114,10 @@ fn money_errors() -> Vec<Expected<MoneyError>> {
             message: "invalid percentage: expected a number with at most 2 decimal places",
         },
         Expected {
+            error: MoneyError::NotFinite,
+            message: "the number is not finite",
+        },
+        Expected {
             error: MoneyError::Overflow,
             message: "value out of range",
         },

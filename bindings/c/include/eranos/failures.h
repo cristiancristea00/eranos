@@ -66,6 +66,8 @@ static constexpr EranosFailure ERANOS_FAILURE_MONEY_INVALID_EXCHANGE_RATE = Eran
 static constexpr EranosFailure ERANOS_FAILURE_MONEY_INVALID_PARTS = EranosFailure_MoneyInvalidParts;
 /// A percentage that is not a decimal number with at most two decimal places.
 static constexpr EranosFailure ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE = EranosFailure_MoneyInvalidPercentage;
+/// A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is.
+static constexpr EranosFailure ERANOS_FAILURE_MONEY_NOT_FINITE = EranosFailure_MoneyNotFinite;
 /// A number or a result that does not fit its range.
 static constexpr EranosFailure ERANOS_FAILURE_MONEY_OVERFLOW = EranosFailure_MoneyOverflow;
 /// A first name that is blank.

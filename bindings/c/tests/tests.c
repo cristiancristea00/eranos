@@ -5,6 +5,7 @@
 
 #include "eranos.h"
 
+#include <math.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -601,6 +602,35 @@ static void anAmountFormatsWithItsCurrencysDecimalPlaces(Check *const check) {
     eranosTextDestroy(text);
 }
 
+/// An app that holds amounts as doubles would get other cents from the C layer than the library rounds to, or an amount back from NaN, from an
+/// infinity, or from one past the range of 64-bit minor units.
+static void amountsConvertFromDoublesAsTheLibraryConvertsThem(Check *const check) {
+    EranosCurrencyDetails *const euro = currencyOf("EUR");
+    EranosMoney *money = nullptr;
+    checkSucceeded(check, eranosMoneyCreateFromDouble(1.005, euro, &money), "1.005 is an amount of euros");
+    checkThat(check, isAmount(money, 101, "EUR"), "1.005 EUR is 1.01 EUR, though the double nearest 1.005 lies below it");
+    EranosCurrencyDetails *const yen = currencyOf("JPY");
+    checkSucceeded(check, eranosMoneyCreateFromDouble(1'234.5, yen, &money), "1234.5 is an amount of yen");
+    checkThat(check, isAmount(money, 1'235, "JPY"), "which rounds half away from zero to the yen's whole units");
+    EranosError *const notFinite = eranosMoneyCreateFromDouble(NAN, euro, &money);
+    checkThat(check, holdsFailure(notFinite, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE) && nullptr == money,
+              "NaN is no amount, and gives none");
+    EranosText *const text = eranosTextCreate();
+    eranosErrorMessage(notFinite, text);
+    checkThat(check, isText(text, "the number is not finite"), "the message names the failure");
+    eranosErrorDestroy(notFinite);
+    checkThat(check,
+              isFailure(eranosMoneyCreateFromDouble(-INFINITY, euro, &money), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE) &&
+                  nullptr == money,
+              "nor is an infinity");
+    checkThat(check,
+              isFailure(eranosMoneyCreateFromDouble(1e21, euro, &money), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_OVERFLOW) && nullptr == money,
+              "nor an amount whose minor units do not fit 64 bits");
+    eranosTextDestroy(text);
+    eranosCurrencyDetailsDestroy(yen);
+    eranosCurrencyDetailsDestroy(euro);
+}
+
 /// A rate, a percentage, or a number of parts read otherwise than the library reads it would divide or convert otherwise
 /// than an app shows, and a check that took what the library refuses would let an app build a split that fails only when added.
 static void ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes(Check *const check) {
@@ -643,6 +673,44 @@ static void ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes(Check *c
     eranosPartsFormat(-50, text);
     checkThat(check, isText(text, "-0.5"), "and so is a negative one");
     eranosMoneyDestroy(lei);
+    eranosTextDestroy(text);
+}
+
+/// A rate, a percentage, or parts held as a double would become other digits in the C layer than in the library, a number too large for
+/// the layer's integers would wrap, and NaN or an infinity would come back as a value.
+static void ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem(Check *const check) {
+    EranosText *const text = eranosTextCreate();
+    checkSucceeded(check, eranosExchangeRateFromDouble(25.5, text), "a rate converts");
+    checkThat(check, isText(text, "25.5"), "and keeps the digits of the double's shortest form");
+    checkSucceeded(check, eranosExchangeRateFromDouble(0.1 + 0.2, text), "and so does the sum of two doubles");
+    checkThat(check, isText(text, "0.30000000000000004"), "with every digit, since a rate has 18 decimal places");
+    checkThat(check, isFailure(eranosExchangeRateFromDouble(0.0, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_EXCHANGE_RATE),
+              "a rate is positive");
+    checkThat(check, isFailure(eranosExchangeRateFromDouble(NAN, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE), "NaN is no rate");
+    checkThat(check, isFailure(eranosExchangeRateFromDouble(INFINITY, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
+              "nor is an infinity");
+    int32_t basisPoints = 0;
+    checkSucceeded(check, eranosPercentageFromDouble(0.1 + 0.2, &basisPoints), "a percentage converts");
+    checkThat(check, 30 == basisPoints, "0.1 + 0.2, which is 0.30000000000000004 as a double, is 0.3 %, 30 basis points");
+    checkThat(check,
+              isFailure(eranosPercentageFromDouble(-1.0, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE) &&
+                  0 == basisPoints,
+              "a negative percentage is not one, and gives none");
+    checkThat(check,
+              isFailure(eranosPercentageFromDouble(30'000'000.0, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE),
+              "nor is one whose basis points do not fit 32 bits");
+    checkThat(check, isFailure(eranosPercentageFromDouble(NAN, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE), "nor NaN");
+    checkThat(check, isFailure(eranosPercentageFromDouble(INFINITY, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
+              "nor an infinity");
+    int32_t hundredths = 0;
+    checkSucceeded(check, eranosPartsFromDouble(1.005, &hundredths), "parts convert");
+    checkThat(check, 101 == hundredths, "1.005 parts are 101 hundredths");
+    checkThat(check,
+              isFailure(eranosPartsFromDouble(0.004, &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS) && 0 == hundredths,
+              "0.004 rounds to no parts, which are not a number of parts, and gives none");
+    checkThat(check, isFailure(eranosPartsFromDouble(NAN, &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE), "nor is NaN");
+    checkThat(check, isFailure(eranosPartsFromDouble(-INFINITY, &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
+              "nor an infinity");
     eranosTextDestroy(text);
 }
 
@@ -2837,7 +2905,12 @@ int main(void) {
         {.body = anAmountParsesFormatsAndAdds, .name = "anAmountParsesFormatsAndAdds"},
         {.body = anAmountAndAFailureCarryTheirCurrencysDetails, .name = "anAmountAndAFailureCarryTheirCurrencysDetails"},
         {.body = anAmountFormatsWithItsCurrencysDecimalPlaces, .name = "anAmountFormatsWithItsCurrencysDecimalPlaces"},
+        {.body = amountsConvertFromDoublesAsTheLibraryConvertsThem, .name = "amountsConvertFromDoublesAsTheLibraryConvertsThem"},
         {.body = ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes, .name = "ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes"},
+        {
+            .body = ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem,
+            .name = "ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem",
+        },
         {.body = datesAndTimesAreCheckedAndWritten, .name = "datesAndTimesAreCheckedAndWritten"},
         {.body = contactsAndAccountsAreCheckedAndMadeCanonical, .name = "contactsAndAccountsAreCheckedAndMadeCanonical"},
         {.body = anIdentifierIsCheckedAndKeptAsItIsWritten, .name = "anIdentifierIsCheckedAndKeptAsItIsWritten"},

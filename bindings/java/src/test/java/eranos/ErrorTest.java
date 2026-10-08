@@ -29,7 +29,7 @@ class ErrorTest {
      */
     @Test
     void everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
-        assertEquals(64, CONVERSIONS.size());
+        assertEquals(65, CONVERSIONS.size());
         for (Conversion conversion : CONVERSIONS) {
             EranosException converted =
                     assertInstanceOf(
@@ -216,6 +216,10 @@ class ErrorTest {
                             new eranos.internal.EranosException.Money(
                                     new eranos.internal.MoneyFailure.InvalidPercentage(),
                                     "detail")),
+                    new Conversion(
+                            new MoneyFailure.NotFinite(),
+                            new eranos.internal.EranosException.Money(
+                                    new eranos.internal.MoneyFailure.NotFinite(), "detail")),
                     new Conversion(
                             new MoneyFailure.Overflow(),
                             new eranos.internal.EranosException.Money(

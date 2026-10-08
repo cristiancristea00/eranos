@@ -71,6 +71,9 @@ internal fun amounts() {
     val nothing = Money(0, CurrencyCode.of("RON"))
     val cost = Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"))
     val doubled = Cost.Converted(eur("20.00"), rate(cost))
+    // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    val fromDouble = Money.fromDouble(1.005, CurrencyCode.of("EUR"))
+    val notANumber = refusal { Money.fromDouble(Double.NaN, CurrencyCode.of("EUR")) }
     println("Amounts are exact minor units in their currency:")
     printTable(
         ValueRow.HEADERS,
@@ -79,6 +82,8 @@ internal fun amounts() {
             ValueRow("5.00 EUR − 7.50 EUR", "$change, negative: ${0L > change.minorUnits}"),
             ValueRow("1.00 EUR + 1.00 RON", message(mixed)),
             ValueRow("1.005 EUR", message(refusal { eur("1.005") })),
+            ValueRow("1.005 as a double, in EUR", "$fromDouble"),
+            ValueRow("NaN as a double, in EUR", message(notANumber)),
             ValueRow("1500 JPY", "$yen, ${yen.minorUnits} minor units"),
             ValueRow("1234 minor units of BHD", "$dinars"),
             ValueRow("zero RON", "$nothing, zero: ${0L == nothing.minorUnits}"),
@@ -89,6 +94,8 @@ internal fun amounts() {
     check(eur("13.00") == total)
     check(-250L == change.minorUnits)
     check(null != mixed)
+    check(eur("1.01") == fromDouble)
+    check(null != notANumber)
     check("1.234 BHD" == "$dinars")
 }
 
@@ -96,6 +103,8 @@ internal fun ratios() {
     val percentage = Percentage.parse("12.5")
     val parts = Parts.parse("1.5")
     val rate = ExchangeRate.parse("4.97650")
+    // 0.30000000000000004 as a double, which rounds to two decimal places.
+    val sum = Percentage.fromDouble(0.1 + 0.2)
     println("Percentages, parts, and rates are exact decimals:")
     printTable(
         ValueRow.HEADERS,
@@ -103,6 +112,7 @@ internal fun ratios() {
             ValueRow("12.5%", "$percentage, ${percentage.basisPoints} basis points"),
             ValueRow("333 basis points", "${Percentage.ofBasisPoints(333)}"),
             ValueRow("33.333%", message(refusal { Percentage.parse("33.333") })),
+            ValueRow("0.1 + 0.2 as a double, a percentage", "$sum"),
             ValueRow("1.5 parts", "$parts, ${parts.hundredths} hundredths"),
             ValueRow("3 whole parts", "${Parts.ofHundredths(300)}"),
             ValueRow("25 hundredths of a part", "${Parts.ofHundredths(25)}"),
@@ -113,6 +123,7 @@ internal fun ratios() {
         numbersFrom = 2,
     )
     check(1_250 == percentage.basisPoints)
+    check(30 == sum.basisPoints)
     check(150 == parts.hundredths)
 }
 

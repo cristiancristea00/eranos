@@ -56,6 +56,12 @@ public sealed interface MoneyFailure {
     /** A percentage that is not a decimal number with at most two decimal places. */
     record InvalidPercentage() implements MoneyFailure {}
 
+    /**
+     * A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange
+     * rate is.
+     */
+    record NotFinite() implements MoneyFailure {}
+
     /** A number or a result that does not fit its range. */
     record Overflow() implements MoneyFailure {}
 }

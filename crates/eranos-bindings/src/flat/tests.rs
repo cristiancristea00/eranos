@@ -898,6 +898,18 @@ fn flattenings() -> Vec<Flattening> {
         },
         Flattening {
             error: EranosError::Money {
+                failure: MoneyFailure::NotFinite,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::Money,
+                failure: Some(FailureKind::MoneyNotFinite),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
+            error: EranosError::Money {
                 failure: MoneyFailure::Overflow,
                 detail: DETAIL.to_owned(),
             },
@@ -1027,7 +1039,7 @@ fn flattenings() -> Vec<Flattening> {
 #[test]
 fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
     let flattenings = flattenings();
-    assert_eq!(flattenings.len(), 66);
+    assert_eq!(flattenings.len(), 67);
     for Flattening { error, flat } in &flattenings {
         assert_eq!(&FlatError::from(error), flat);
     }
@@ -1044,7 +1056,7 @@ fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
         .filter_map(|flattening| flattening.flat.payload.reason)
         .collect();
     assert_eq!(kinds.len(), 15);
-    assert_eq!(failures.len(), 58);
+    assert_eq!(failures.len(), 59);
     assert_eq!(reasons.len(), 6);
 }
 

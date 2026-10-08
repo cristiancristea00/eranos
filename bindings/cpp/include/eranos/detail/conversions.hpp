@@ -323,9 +323,12 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The amount of @p value, which the library made.
 [[nodiscard]] inline Money fromDetail(EranosMoney const &value) noexcept { return {value.minor_units(), currencyOf(value.currency())}; }
 
+/// The library's details that @p value keeps, which an amount in it crosses with.
+[[nodiscard]] inline EranosCurrencyDetails const &toDetail(CurrencyCode const &value) noexcept { return *value.fields.details; }
+
 /// The generated amount of @p value, with the details its currency keeps.
 [[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) noexcept {
-    return EranosMoney::create(value.minorUnits, *value.currency.fields.details);
+    return EranosMoney::create(value.minorUnits, toDetail(value.currency));
 }
 
 /// The rate written @p text, which the library wrote.

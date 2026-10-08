@@ -91,6 +91,8 @@ enum class Failure : std::uint8_t {
     MONEY_INVALID_PARTS,
     /// A percentage that is not a decimal number with at most two decimal places.
     MONEY_INVALID_PERCENTAGE,
+    /// A double that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is.
+    MONEY_NOT_FINITE,
     /// A number or a result that does not fit its range.
     MONEY_OVERFLOW,
     /// A first name that is blank.

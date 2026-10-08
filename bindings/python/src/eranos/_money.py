@@ -46,6 +46,28 @@ class Money:
         with _errors.library_errors():
             return money_of(generated.money_parse(text, currency.code))
 
+    @classmethod
+    def from_float(cls, value: float, currency: CurrencyCode) -> Money:
+        """
+        Convert the float value into an amount of currency, for an app that holds amounts as floats.
+
+        The library writes the float in its shortest decimal form, the shortest text that reads back as the same float, rounds
+        it half away from zero to the currency's decimal places, and parses it, so the same float is the same amount in every
+        language: ``1.005`` is 1.01 EUR, though the float nearest 1.005 lies below it. The library refuses NaN and the
+        infinities with ``MoneyError.NotFinite``, and an amount that does not fit in 64-bit minor units with
+        ``MoneyError.Overflow``, in a ``MoneyError``.
+
+        Args:
+            value: The amount, as a float.
+            currency: The currency.
+
+        Returns:
+            The amount.
+
+        """
+        with _errors.library_errors():
+            return money_of(generated.money_from_f64(value, currency.code))
+
     def plus(self, other: Money) -> Money:
         """
         Add other to this amount.

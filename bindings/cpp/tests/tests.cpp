@@ -17,6 +17,7 @@
 #include <expected>
 #include <functional>
 #include <future>
+#include <limits>
 #include <optional>
 #include <print>
 #include <string>
@@ -240,6 +241,22 @@ void amountsInOneCurrencyAddAndSubtract(Check &check) noexcept {
     check.that(isFailure(refusal(largest.plus(Money(1, euro))), ErrorKind::MONEY, Failure::MONEY_OVERFLOW), "a sum out of range");
 }
 
+/// An app that holds amounts as doubles would get other cents from the C++ layer than the library rounds to, or an amount back from NaN, from an
+/// infinity, or from one past the range of 64-bit minor units.
+void amountsConvertFromDoublesAsTheLibraryConvertsThem(Check &check) noexcept {
+    auto const euro = CurrencyCode::of("EUR").value();
+    auto const yen = CurrencyCode::of("JPY").value();
+    check.that(Money::fromDouble(1.005, euro) == Money(101, euro), "1.005 EUR is 1.01 EUR, though the double nearest 1.005 lies below it");
+    check.that(Money::fromDouble(1'234.5, yen) == Money(1'235, yen), "1234.5 JPY rounds half away from zero to the yen's whole units");
+    auto const notFinite = refusal(Money::fromDouble(std::numeric_limits<double>::quiet_NaN(), euro));
+    check.that(isFailure(notFinite, ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "NaN is no amount");
+    check.that(notFinite.has_value() && "the number is not finite" == notFinite.value().message(), "the message names the failure");
+    check.that(isFailure(refusal(Money::fromDouble(-std::numeric_limits<double>::infinity(), euro)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE),
+               "nor is an infinity");
+    check.that(isFailure(refusal(Money::fromDouble(1e21, euro)), ErrorKind::MONEY, Failure::MONEY_OVERFLOW),
+               "nor an amount whose minor units do not fit 64 bits");
+}
+
 /// A rate that parsed or converted otherwise than the library does would change the share of every converted expense.
 void aRateParsesAndConvertsAsTheLibraryDoes(Check &check) noexcept {
     auto const euro = CurrencyCode::of("EUR").value();
@@ -267,6 +284,31 @@ void percentagesAndPartsParseAndFormatAsTheLibraryDoes(Check &check) noexcept {
     checkValue(check, parts, Parts{50}, Parts{51}, "parts compare by hundredths");
     check.that(isFailure(refusal(Parts::parse("half")), ErrorKind::MONEY, Failure::MONEY_INVALID_PARTS), "a word is no number of parts");
     check.that("0" == Parts{0}.toString() && "-0.5" == Parts{-50}.toString(), "no parts and negative parts, which a call refuses, are written too");
+}
+
+/// A rate, a percentage, or parts held as a double would become other digits in the C++ layer than in the library, a number too large for the
+/// layer's integers would wrap, and NaN or an infinity would come back as a value.
+void ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem(Check &check) noexcept {
+    constexpr double NOT_A_NUMBER = std::numeric_limits<double>::quiet_NaN();
+    constexpr double INFINITE = std::numeric_limits<double>::infinity();
+    check.that("25.5" == ExchangeRate::fromDouble(25.5).value().toString(), "a rate keeps the digits of the double's shortest form");
+    check.that("0.30000000000000004" == ExchangeRate::fromDouble(0.1 + 0.2).value().toString(),
+               "with every digit of the sum of two doubles, since a rate has 18 decimal places");
+    check.that(isFailure(refusal(ExchangeRate::fromDouble(0.0)), ErrorKind::MONEY, Failure::MONEY_INVALID_EXCHANGE_RATE), "a rate is positive");
+    check.that(isFailure(refusal(ExchangeRate::fromDouble(NOT_A_NUMBER)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "NaN is no rate");
+    check.that(isFailure(refusal(ExchangeRate::fromDouble(INFINITE)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor is an infinity");
+    check.that(Percentage::fromDouble(0.1 + 0.2) == Percentage{30}, "0.1 + 0.2, which is 0.30000000000000004 as a double, is 0.3 %");
+    check.that(isFailure(refusal(Percentage::fromDouble(-1.0)), ErrorKind::MONEY, Failure::MONEY_INVALID_PERCENTAGE),
+               "a negative percentage is not one");
+    check.that(isFailure(refusal(Percentage::fromDouble(30'000'000.0)), ErrorKind::MONEY, Failure::MONEY_INVALID_PERCENTAGE),
+               "nor is one whose basis points do not fit 32 bits");
+    check.that(isFailure(refusal(Percentage::fromDouble(NOT_A_NUMBER)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor NaN");
+    check.that(isFailure(refusal(Percentage::fromDouble(INFINITE)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor an infinity");
+    check.that(Parts::fromDouble(1.005) == Parts{101}, "1.005 parts are 101 hundredths");
+    check.that(isFailure(refusal(Parts::fromDouble(0.004)), ErrorKind::MONEY, Failure::MONEY_INVALID_PARTS),
+               "0.004 rounds to no parts, which are not a number of parts");
+    check.that(isFailure(refusal(Parts::fromDouble(NOT_A_NUMBER)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor is NaN");
+    check.that(isFailure(refusal(Parts::fromDouble(-INFINITE)), ErrorKind::MONEY, Failure::MONEY_NOT_FINITE), "nor an infinity");
 }
 
 /// A date or a time the calendar does not have, taken, would date an expense on a day that never was.
@@ -1050,8 +1092,13 @@ constexpr std::array TESTS = {
     Test{.name = "anAmountAndAFailureCarryTheirCurrencysDetails", .body = anAmountAndAFailureCarryTheirCurrencysDetails},
     Test{.name = "anAmountFormatsWithItsCurrencysDecimalPlaces", .body = anAmountFormatsWithItsCurrencysDecimalPlaces},
     Test{.name = "amountsInOneCurrencyAddAndSubtract", .body = amountsInOneCurrencyAddAndSubtract},
+    Test{.name = "amountsConvertFromDoublesAsTheLibraryConvertsThem", .body = amountsConvertFromDoublesAsTheLibraryConvertsThem},
     Test{.name = "aRateParsesAndConvertsAsTheLibraryDoes", .body = aRateParsesAndConvertsAsTheLibraryDoes},
     Test{.name = "percentagesAndPartsParseAndFormatAsTheLibraryDoes", .body = percentagesAndPartsParseAndFormatAsTheLibraryDoes},
+    Test{
+        .name = "ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem",
+        .body = ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem,
+    },
     Test{.name = "datesAndTimesAreCheckedWhenMade", .body = datesAndTimesAreCheckedWhenMade},
     Test{.name = "contactsAndAccountsAreCheckedAndMadeCanonical", .body = contactsAndAccountsAreCheckedAndMadeCanonical},
     Test{.name = "everyIdentifierComparesAndHashesByItsText", .body = everyIdentifierComparesAndHashesByItsText},

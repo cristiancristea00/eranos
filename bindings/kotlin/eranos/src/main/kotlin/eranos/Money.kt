@@ -2,6 +2,7 @@ package eranos
 
 import eranos.internal.moneyAdd
 import eranos.internal.moneyFormat
+import eranos.internal.moneyFromF64
 import eranos.internal.moneyParse
 import eranos.internal.moneySubtract
 
@@ -48,7 +49,7 @@ public class Money(
     /** The amount as the library writes it: "12.50 EUR". */
     override fun toString(): String = moneyFormat(generated)
 
-    /** The parsing of an amount from its text. */
+    /** The parsing of an amount from its text, and its conversion from a double. */
     public companion object {
         /**
          * The amount written [text] in [currency]: "12.50", "12.5", or "-3".
@@ -61,6 +62,21 @@ public class Money(
             text: String,
             currency: CurrencyCode,
         ): Money = converting { moneyParse(text, currency.code).converted() }
+
+        /**
+         * The amount of the double [value] in [currency]: 1.005 in EUR is 1.01 EUR.
+         *
+         * The library writes the double in its shortest decimal form, rounds it half away from zero to the currency's
+         * decimal places, and parses it, so every language gets the same amount from the same double.
+         *
+         * @throws EranosException.Money with [MoneyFailure.NotFinite] for NaN and the infinities, and [MoneyFailure.Overflow]
+         *   for an amount that does not fit in 64-bit minor units.
+         */
+        @Throws(EranosException::class)
+        public fun fromDouble(
+            value: Double,
+            currency: CurrencyCode,
+        ): Money = converting { moneyFromF64(value, currency.code).converted() }
     }
 }
 

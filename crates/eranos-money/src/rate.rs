@@ -4,6 +4,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::allocation::divide_rounding_half_away;
+use crate::decimal;
 use crate::error::MoneyError;
 use crate::{CurrencyCode, Money};
 
@@ -87,6 +88,36 @@ impl ExchangeRate {
             })
             .ok_or(MoneyError::InvalidExchangeRate)?;
         Self::from_decimal(mantissa, scale)
+    }
+
+    /// Converts the double `value` into an exchange rate, for an app that
+    /// holds rates as doubles.
+    ///
+    /// The double is written in its shortest decimal form, rounded half away
+    /// from zero to 18 decimal places, and parsed by [`parse`](Self::parse),
+    /// as [`Money::from_f64`] converts an amount. A rate keeps every digit of
+    /// that form up to the 18th place and no more: 4.9765 is 4.9765, and
+    /// `0.1 + 0.2` is 0.30000000000000004, the digits of the double.
+    ///
+    /// # Errors
+    ///
+    /// - [`MoneyError::NotFinite`] when `value` is NaN or infinite.
+    /// - [`MoneyError::InvalidExchangeRate`] when the rounded value is not
+    ///   positive or has more significant digits than fit in 64 bits.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::ExchangeRate;
+    ///
+    /// assert_eq!(ExchangeRate::from_f64(4.9765)?, ExchangeRate::parse("4.9765")?);
+    /// assert_eq!(ExchangeRate::from_f64(25.5)?.scale(), 1);
+    /// assert!(ExchangeRate::from_f64(0.0).is_err());
+    /// # Ok::<(), eranos::error::MoneyError>(())
+    /// ```
+    pub fn from_f64(value: f64) -> Result<Self, MoneyError> {
+        let text = decimal::rounded(value, MAX_SCALE).ok_or(MoneyError::NotFinite)?;
+        Self::parse(&text)
     }
 
     /// The digits of the rate without the decimal point: 49765 for 4.9765.

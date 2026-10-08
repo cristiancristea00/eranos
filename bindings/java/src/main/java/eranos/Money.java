@@ -39,6 +39,24 @@ public record Money(long minorUnits, CurrencyCode currency) {
     }
 
     /**
+     * The amount of the double {@code value} in {@code currency}: 1.005 in EUR is 1.01 EUR.
+     *
+     * <p>The library writes the double in its shortest decimal form, rounds it half away from zero
+     * to the currency's decimal places, and parses it, so every language gets the same amount from
+     * the same double. The double nearest 1.005 lies below it, but its shortest form is 1.005,
+     * which rounds up.
+     *
+     * @param value the amount as a double
+     * @param currency the currency
+     * @return the amount
+     * @throws EranosException.Money with {@link MoneyFailure.NotFinite} for NaN and the infinities,
+     *     and {@link MoneyFailure.Overflow} for an amount that does not fit in 64-bit minor units
+     */
+    public static Money fromDouble(double value, CurrencyCode currency) throws EranosException {
+        return Converting.call(() -> converted(Eranos.moneyFromF64(value, currency.code())));
+    }
+
+    /**
      * The amount the generated code holds as {@code money}.
      *
      * @param money the generated amount

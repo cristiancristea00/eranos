@@ -250,6 +250,7 @@ public final class eranos/ExchangeRate {
 }
 
 public final class eranos/ExchangeRate$Companion {
+	public final fun fromDouble (D)Leranos/ExchangeRate;
 	public final fun parse (Ljava/lang/String;)Leranos/ExchangeRate;
 }
 
@@ -965,6 +966,7 @@ public final class eranos/Money {
 }
 
 public final class eranos/Money$Companion {
+	public final fun fromDouble (DLeranos/CurrencyCode;)Leranos/Money;
 	public final fun parse (Ljava/lang/String;Leranos/CurrencyCode;)Leranos/Money;
 }
 
@@ -1008,6 +1010,13 @@ public final class eranos/MoneyFailure$InvalidPercentage : eranos/MoneyFailure {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class eranos/MoneyFailure$NotFinite : eranos/MoneyFailure {
+	public static final field INSTANCE Leranos/MoneyFailure$NotFinite;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class eranos/MoneyFailure$Overflow : eranos/MoneyFailure {
 	public static final field INSTANCE Leranos/MoneyFailure$Overflow;
 	public fun equals (Ljava/lang/Object;)Z
@@ -1040,6 +1049,7 @@ public final class eranos/Parts {
 }
 
 public final class eranos/Parts$Companion {
+	public final fun fromDouble (D)Leranos/Parts;
 	public final fun ofHundredths (I)Leranos/Parts;
 	public final fun parse (Ljava/lang/String;)Leranos/Parts;
 }
@@ -1115,6 +1125,7 @@ public final class eranos/Percentage {
 }
 
 public final class eranos/Percentage$Companion {
+	public final fun fromDouble (D)Leranos/Percentage;
 	public final fun ofBasisPoints (I)Leranos/Percentage;
 	public final fun parse (Ljava/lang/String;)Leranos/Percentage;
 }

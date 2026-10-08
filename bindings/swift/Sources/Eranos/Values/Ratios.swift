@@ -13,6 +13,20 @@ public struct ExchangeRate: Hashable, Sendable, CustomStringConvertible {
         description = try converting { try EranosGenerated.exchangeRateParse(text: text) }
     }
 
+    /// The rate of the double `value`: 4.9765 is "4.9765".
+    ///
+    /// The library writes the double in its shortest decimal form, rounds it half away from zero
+    /// to 18 decimal places, and parses it, as ``Money/init(amount:currency:)`` converts an
+    /// amount, so the rate keeps the digits of that form: 25.5 is "25.5", and `0.1 + 0.2` is
+    /// "0.30000000000000004".
+    ///
+    /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/notFinite`` for NaN and the
+    ///   infinities, and ``MoneyFailure/invalidExchangeRate`` for a value that is not positive at
+    ///   18 decimal places or has more significant digits than fit in 64 bits.
+    public init(_ value: Double) throws(EranosError) {
+        description = try converting { try EranosGenerated.exchangeRateFromF64(value: value) }
+    }
+
     /// The rate the library wrote as `text`.
     init(known text: String) {
         description = text
@@ -58,6 +72,19 @@ public struct Percentage: Hashable, Sendable, CustomStringConvertible {
         basisPoints = try converting { try EranosGenerated.percentageParse(text: text) }
     }
 
+    /// The percentage of the double `value`, a number of per cent: 12.345 is 12.35 %.
+    ///
+    /// The library writes the double in its shortest decimal form, rounds it half away from zero
+    /// to two decimal places, and parses it, as ``Money/init(amount:currency:)`` converts an
+    /// amount: `0.1 + 0.2`, which is 0.30000000000000004 as a double, is 0.3 %.
+    ///
+    /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/notFinite`` for NaN and the
+    ///   infinities, and ``MoneyFailure/invalidPercentage`` for a negative value and one whose
+    ///   basis points do not fit an `Int32`.
+    public init(_ value: Double) throws(EranosError) {
+        basisPoints = try converting { try EranosGenerated.percentageFromF64(value: value) }
+    }
+
     /// The percentage of `basisPoints`, a number the library gave.
     init(known basisPoints: Int32) {
         self.basisPoints = basisPoints
@@ -90,6 +117,19 @@ public struct Parts: Hashable, Sendable, CustomStringConvertible {
     ///   that is not a positive decimal with at most two decimal places.
     public init(parsing text: String) throws(EranosError) {
         hundredths = try converting { try EranosGenerated.partsParse(text: text) }
+    }
+
+    /// The parts of the double `value`: 1.005 is 1.01 parts.
+    ///
+    /// The library writes the double in its shortest decimal form, rounds it half away from zero
+    /// to two decimal places, and parses it, as ``Money/init(amount:currency:)`` converts an
+    /// amount.
+    ///
+    /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/notFinite`` for NaN and the
+    ///   infinities, and ``MoneyFailure/invalidParts`` for a value that rounds to zero or below,
+    ///   as 0.004 does, and one whose hundredths do not fit an `Int32`.
+    public init(_ value: Double) throws(EranosError) {
+        hundredths = try converting { try EranosGenerated.partsFromF64(value: value) }
     }
 
     /// The parts of `hundredths`, a number the library gave.

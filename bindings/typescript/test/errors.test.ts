@@ -155,6 +155,11 @@ const conversions: readonly Conversion[] = [
         failure: { kind: 'invalidPercentage' },
     },
     {
+        generated: new internal.EranosError.Money({ failure: new internal.MoneyFailure.NotFinite(), detail: 'detail' }),
+        type: MoneyError,
+        failure: { kind: 'notFinite' },
+    },
+    {
         generated: new internal.EranosError.Money({ failure: new internal.MoneyFailure.Overflow(), detail: 'detail' }),
         type: MoneyError,
         failure: { kind: 'overflow' },
@@ -479,7 +484,7 @@ void describe('the conversions of every failure the generated code can report', 
      * app another failure than the library's.
      */
     void it('converts every failure of the generated code to its module and failure', () => {
-        assert.equal(conversions.length, 64);
+        assert.equal(conversions.length, 65);
         for (const conversion of conversions) {
             const converted = convertedError(conversion.generated);
             assert.ok(converted instanceof conversion.type);

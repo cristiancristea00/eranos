@@ -332,6 +332,22 @@ cannot be removed.
   forms of `CalendarDate` and `TimeOfDay` write through eranos-calendar's
   `format_calendar_date` and `format_time_of_day`, which take any `i32`
   ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)).
+- **Doubles.** Apps hold amounts, percentages, parts, and rates as doubles,
+  so `Money`, `Percentage`, `Parts`, and `ExchangeRate` each have a
+  `from_f64`, and every binding calls it, so the same double is the same
+  value in every language. It writes the double as std's `Display` does,
+  the shortest decimal that reads back as the same double and never with an
+  exponent, rounds that text half away from zero to the type's places (the
+  currency's, 2, 2, and 18), where the first dropped digit decides, and
+  parses the result with the type's own parser, so a double meets the
+  checks typed text meets. Rounding the text rather than the double keeps
+  what the user typed: the double nearest 1.005 lies below it, so
+  `(value * 100.0).round()` gives 1.00 EUR where `from_f64` gives 1.01. A
+  rate keeps the digits of the shortest form up to its 18th place: 25.5 has
+  scale 1, and `0.1 + 0.2` keeps its 17 decimal places. NaN and the
+  infinities are refused as `MoneyError::NotFinite`, and a result of zero
+  has no sign. Beyond the conversion's `is_finite` and `to_string`, no code
+  of the library reads a float: the glue hands the double on untouched.
 - **Allocation.** Every division is `allocate(total, weights, rotation)`:
   each part is `total × weight / Σ weights` rounded down, and the leftover
   units go one each to the largest remainders (the Hamilton method), so the

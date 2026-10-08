@@ -305,6 +305,95 @@ fn percentages_and_parts_parse_and_format_as_the_library_does() {
     }
 }
 
+/// The money failure `failure`, with the library's message for `error`.
+fn money_failure(failure: MoneyFailure, error: MoneyError) -> EranosError {
+    EranosError::Money {
+        failure,
+        detail: error.to_string(),
+    }
+}
+
+/// An app that holds amounts as doubles would get other cents in a binding
+/// than the library rounds to, or an amount back from NaN, from one past the
+/// range, or in an unknown currency.
+#[test]
+fn amounts_convert_from_doubles_as_the_library_converts_them() {
+    assert_eq!(money_from_f64(1.005, "EUR"), Ok(euros(101)));
+    assert_eq!(money_from_f64(-2.675, "RON"), Ok(lei(-268)));
+    assert!(is_unknown_currency(&money_from_f64(1.0, "XYZ")));
+    assert_eq!(
+        money_from_f64(f64::NAN, "EUR"),
+        Err(money_failure(
+            MoneyFailure::NotFinite,
+            MoneyError::NotFinite
+        ))
+    );
+    assert_eq!(
+        money_from_f64(1e21, "EUR"),
+        Err(money_failure(MoneyFailure::Overflow, MoneyError::Overflow))
+    );
+}
+
+/// A rate, a percentage, or parts held as a double would become other digits
+/// in a binding than in the library, a number too large for the bindings'
+/// integers would wrap, or NaN would come back as a value.
+#[test]
+fn rates_and_ratios_convert_from_doubles_as_the_library_converts_them() {
+    assert_eq!(exchange_rate_from_f64(25.5).as_deref(), Ok("25.5"));
+    assert_eq!(
+        exchange_rate_from_f64(0.1 + 0.2).as_deref(),
+        Ok("0.30000000000000004")
+    );
+    assert_eq!(
+        exchange_rate_from_f64(0.0),
+        Err(money_failure(
+            MoneyFailure::InvalidExchangeRate,
+            MoneyError::InvalidExchangeRate
+        ))
+    );
+
+    assert_eq!(percentage_from_f64(0.1 + 0.2), Ok(30));
+    assert_eq!(percentage_from_f64(12.345), Ok(1_235));
+    // Above 21 474 836.47 %, the basis points no longer fit an i32.
+    for value in [-1.0, 30_000_000.0] {
+        assert_eq!(
+            percentage_from_f64(value),
+            Err(money_failure(
+                MoneyFailure::InvalidPercentage,
+                MoneyError::InvalidPercentage
+            )),
+            "{value}"
+        );
+    }
+
+    assert_eq!(parts_from_f64(1.005), Ok(101));
+    for value in [0.004, 30_000_000.0] {
+        assert_eq!(
+            parts_from_f64(value),
+            Err(money_failure(
+                MoneyFailure::InvalidParts,
+                MoneyError::InvalidParts
+            )),
+            "{value}"
+        );
+    }
+
+    let not_finite = money_failure(MoneyFailure::NotFinite, MoneyError::NotFinite);
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(
+            exchange_rate_from_f64(value),
+            Err(not_finite.clone()),
+            "{value}"
+        );
+        assert_eq!(
+            percentage_from_f64(value),
+            Err(not_finite.clone()),
+            "{value}"
+        );
+        assert_eq!(parts_from_f64(value), Err(not_finite.clone()), "{value}");
+    }
+}
+
 /// A binding would show a percentage or parts otherwise than the library
 /// writes them, or, holding a number the library refuses, would fail to show
 /// it, or fall back to a text of its own.

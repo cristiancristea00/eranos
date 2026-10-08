@@ -30,6 +30,27 @@ class ExchangeRate(CheckedText):
         with library_errors():
             super().__init__(generated.exchange_rate_parse(text))
 
+    @classmethod
+    def from_float(cls, value: float) -> ExchangeRate:
+        """
+        Convert the float value into an exchange rate, for an app that holds rates as floats.
+
+        The library writes the float in its shortest decimal form, rounds it half away from zero to 18 decimal places, and
+        parses it, as ``Money.from_float`` converts an amount, so the rate keeps every digit of that form up to the 18th
+        place: ``25.5`` is ``"25.5"``, and ``0.1 + 0.2`` is ``"0.30000000000000004"``. The library refuses NaN and the
+        infinities with ``MoneyError.NotFinite``, and a value that is not positive at 18 decimal places or has more
+        significant digits than fit in 64 bits with ``MoneyError.InvalidExchangeRate``, in a ``MoneyError``.
+
+        Args:
+            value: The rate, as a float.
+
+        Returns:
+            The rate.
+
+        """
+        with library_errors():
+            return cls(generated.exchange_rate_from_f64(value))
+
     def convert(self, amount: Money, currency: CurrencyCode) -> Money:
         """
         Convert amount at this rate into currency, rounded to its minor unit, halves away from zero.
@@ -84,6 +105,27 @@ class Percentage:
         with library_errors():
             return cls(generated.percentage_parse(text))
 
+    @classmethod
+    def from_float(cls, value: float) -> Percentage:
+        """
+        Convert the float value, a number of per cent, into a percentage, for an app that holds percentages as floats.
+
+        The library writes the float in its shortest decimal form, rounds it half away from zero to two decimal places, and
+        parses it, as ``Money.from_float`` converts an amount: ``12.345`` is 12.35 %, and ``0.1 + 0.2``, which is
+        0.30000000000000004 as a float, is 0.3 %. The library refuses NaN and the infinities with ``MoneyError.NotFinite``,
+        and a negative value or one whose basis points do not fit in 32 bits with ``MoneyError.InvalidPercentage``, in a
+        ``MoneyError``.
+
+        Args:
+            value: The percentage, as a float number of per cent.
+
+        Returns:
+            The percentage.
+
+        """
+        with library_errors():
+            return cls(generated.percentage_from_f64(value))
+
     @override
     def __str__(self) -> str:
         """
@@ -131,6 +173,26 @@ class Parts:
         """
         with library_errors():
             return cls(generated.parts_parse(text))
+
+    @classmethod
+    def from_float(cls, value: float) -> Parts:
+        """
+        Convert the float value into parts, for an app that holds parts as floats.
+
+        The library writes the float in its shortest decimal form, rounds it half away from zero to two decimal places, and
+        parses it, as ``Money.from_float`` converts an amount: ``1.005`` is 1.01 parts. The library refuses NaN and the
+        infinities with ``MoneyError.NotFinite``, and a value that rounds to zero or below, as ``0.004`` does, or whose
+        hundredths do not fit in 32 bits with ``MoneyError.InvalidParts``, in a ``MoneyError``.
+
+        Args:
+            value: The parts, as a float.
+
+        Returns:
+            The parts.
+
+        """
+        with library_errors():
+            return cls(generated.parts_from_f64(value))
 
     @override
     def __str__(self) -> str:

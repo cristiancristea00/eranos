@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <format>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <print>
 #include <string>
@@ -1363,6 +1364,9 @@ void amounts() noexcept {
     Money const nothing(0, must(CurrencyCode::of("RON")));
     ConvertedCost const cost{.amount = eur("10.00"), .rate = must(ExchangeRate::parse("4.9765"))};
     ConvertedCost const doubled{.amount = eur("20.00"), .rate = cost.rate};
+    // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    auto const fromDouble = must(Money::fromDouble(1.005, must(CurrencyCode::of("EUR"))));
+    auto const notANumber = refusal(Money::fromDouble(std::numeric_limits<double>::quiet_NaN(), must(CurrencyCode::of("EUR"))));
     printLine("Amounts are exact minor units in their currency:");
     printTable<ValueRow>(
         {
@@ -1373,6 +1377,8 @@ void amounts() noexcept {
             },
             {.input = "1.00 EUR + 1.00 RON", .result = message(mixed)},
             {.input = "1.005 EUR", .result = message(refusal(Money::parse("1.005", must(CurrencyCode::of("EUR")))))},
+            {.input = "1.005 as a double, in EUR", .result = fromDouble.toString()},
+            {.input = "NaN as a double, in EUR", .result = message(notANumber)},
             {.input = "1500 JPY", .result = std::format("{}, {} minor units", yen.toString(), yen.minorUnits)},
             {.input = "1234 minor units of BHD", .result = dinars.toString()},
             {.input = "zero RON", .result = std::format("{}, zero: {}", nothing.toString(), (0 == nothing.minorUnits ? "true" : "false"))},
@@ -1385,6 +1391,8 @@ void amounts() noexcept {
     check(eur("13.00") == sumOf, "12.34 EUR and 0.66 EUR make 13.00 EUR");
     check(-250 == change.minorUnits, "5.00 EUR less 7.50 EUR is -2.50 EUR");
     check(mixed.has_value(), "amounts in two currencies do not combine");
+    check(eur("1.01") == fromDouble, "1.005 as a double is 1.01 EUR");
+    check(notANumber.has_value(), "NaN is no amount");
     check("1.234 BHD" == dinars.toString(), "a dinar has three decimal places");
 }
 
@@ -1393,12 +1401,15 @@ void ratios() noexcept {
     auto const percentage = must(Percentage::parse("12.5"));
     auto const parts = must(Parts::parse("1.5"));
     auto const exchange = must(ExchangeRate::parse("4.97650"));
+    // 0.30000000000000004 as a double, which rounds to two decimal places.
+    auto const sum = must(Percentage::fromDouble(0.1 + 0.2));
     printLine("Percentages, parts, and rates are exact decimals:");
     printTable<ValueRow>(
         {
             {.input = "12.5%", .result = std::format("{}, {} basis points", percentage.toString(), percentage.basisPoints)},
             {.input = "333 basis points", .result = Percentage{333}.toString()},
             {.input = "33.333%", .result = message(refusal(Percentage::parse("33.333")))},
+            {.input = "0.1 + 0.2 as a double, a percentage", .result = sum.toString()},
             {.input = "1.5 parts", .result = std::format("{}, {} hundredths", parts.toString(), parts.hundredths)},
             {.input = "3 whole parts", .result = Parts{300}.toString()},
             {.input = "25 hundredths of a part", .result = Parts{25}.toString()},
@@ -1408,6 +1419,7 @@ void ratios() noexcept {
         },
         2);
     check(1'250 == percentage.basisPoints, "12.5 % is 1250 basis points");
+    check(30 == sum.basisPoints, "0.1 + 0.2 as a double is 0.3 %");
     check(150 == parts.hundredths, "1.5 parts are 150 hundredths");
 }
 

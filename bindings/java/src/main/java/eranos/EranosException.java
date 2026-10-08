@@ -608,6 +608,7 @@ public abstract sealed class EranosException extends Exception
             case eranos.internal.MoneyFailure.InvalidParts _ -> new MoneyFailure.InvalidParts();
             case eranos.internal.MoneyFailure.InvalidPercentage _ ->
                     new MoneyFailure.InvalidPercentage();
+            case eranos.internal.MoneyFailure.NotFinite _ -> new MoneyFailure.NotFinite();
             case eranos.internal.MoneyFailure.Overflow _ -> new MoneyFailure.Overflow();
         };
     }

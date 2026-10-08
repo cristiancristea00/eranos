@@ -315,6 +315,11 @@ class MoneyError(EranosError):
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
+    class NotFinite:
+        """A float that is NaN or infinite, which no amount, percentage, number of parts, or exchange rate is."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
     class Overflow:
         """A number or a result that does not fit its range."""
 
@@ -340,6 +345,7 @@ type MoneyFailure = (
     | MoneyError.InvalidExchangeRate
     | MoneyError.InvalidParts
     | MoneyError.InvalidPercentage
+    | MoneyError.NotFinite
     | MoneyError.Overflow
 )
 """What ``MoneyError`` can report: a class per failure, with what it holds."""
@@ -862,6 +868,7 @@ _MONEY_FAILURES: dict[type[object], Callable[[Any], MoneyFailure]] = {
     generated.MoneyFailure.INVALID_EXCHANGE_RATE: lambda _: MoneyError.InvalidExchangeRate(),
     generated.MoneyFailure.INVALID_PARTS: lambda _: MoneyError.InvalidParts(),
     generated.MoneyFailure.INVALID_PERCENTAGE: lambda _: MoneyError.InvalidPercentage(),
+    generated.MoneyFailure.NOT_FINITE: lambda _: MoneyError.NotFinite(),
     generated.MoneyFailure.OVERFLOW: lambda _: MoneyError.Overflow(),
 }
 

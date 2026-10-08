@@ -25,6 +25,20 @@
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
+/// Writes the exchange rate of the double @p value as the library writes it: 4.9765 is "4.9765". The library writes the double in its shortest
+/// decimal form, rounds it half away from zero to 18 decimal places, and parses it, so the rate keeps the digits of that form: 25.5 is "25.5".
+///
+/// @param value The rate, as a double
+/// @param exchangeRate Receives the exchange rate, replacing what it held
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a value
+///   that is NaN or infinite, or that is not a positive rate at 18 decimal places
+[[nodiscard]] static inline EranosError *eranosExchangeRateFromDouble(double const value, EranosText *const exchangeRate) {
+    eranosDetailClear(exchangeRate);
+    EranosExchangeRate_from_double_result const result = EranosExchangeRate_from_double(value, exchangeRate);
+    eranosDetailFinish(exchangeRate);
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
 /// The amount `amount` converted at the rate `rate` into the currency `currency`.
 ///
 /// @param rate The rate, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -49,6 +63,19 @@
 ///   is not a number of parts, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosPartsParse(char const *const text, int32_t *const hundredths) {
     EranosParts_parse_result const result = EranosParts_parse(eranosDetailView(text));
+    *hundredths = result.is_ok ? result.ok : 0;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The parts of the double @p value, in hundredths: 1.005 is 101. The library writes the double in its shortest decimal form, rounds it half away
+/// from zero to two decimal places, and parses it.
+///
+/// @param value The parts, as a double
+/// @param hundredths Receives the hundredths on success
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a value
+///   that is NaN or infinite, rounds to zero or below, or is out of range
+[[nodiscard]] static inline EranosError *eranosPartsFromDouble(double const value, int32_t *const hundredths) {
+    EranosParts_from_double_result const result = EranosParts_from_double(value);
     *hundredths = result.is_ok ? result.ok : 0;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -82,6 +109,20 @@ static inline void eranosPartsFormat(int32_t const hundredths, EranosText *const
 ///   is not a percentage, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosPercentageParse(char const *const text, int32_t *const basisPoints) {
     EranosPercentage_parse_result const result = EranosPercentage_parse(eranosDetailView(text));
+    *basisPoints = result.is_ok ? result.ok : 0;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The percentage of the double @p value, a number of per cent, in basis points: 12.345 is 1235. The library writes the double in its shortest
+/// decimal form, rounds it half away from zero to two decimal places, and parses it, so `0.1 + 0.2`, which is 0.30000000000000004 as a double, is
+/// 30.
+///
+/// @param value The percentage, as a double
+/// @param basisPoints Receives the basis points on success
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a value
+///   that is NaN or infinite, negative, or out of range
+[[nodiscard]] static inline EranosError *eranosPercentageFromDouble(double const value, int32_t *const basisPoints) {
+    EranosPercentage_from_double_result const result = EranosPercentage_from_double(value);
     *basisPoints = result.is_ok ? result.ok : 0;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }

@@ -1598,6 +1598,10 @@ fn amounts() -> Result<(), Box<dyn Error>> {
     let dinars = Money::from_minor_units(1_234, CurrencyCode::BHD);
     let nothing = Money::zero(CurrencyCode::RON);
     let cost = eur("10.00")?.at(ExchangeRate::parse("4.9765")?);
+    // The double nearest 1.005 lies just below it; its shortest form, 1.005,
+    // is what rounds.
+    let from_double = Money::from_f64(1.005, CurrencyCode::EUR)?;
+    let not_a_number = Money::from_f64(f64::NAN, CurrencyCode::EUR);
     println!("Amounts are exact minor units in their currency:");
     print_table(
         [
@@ -1616,6 +1620,14 @@ fn amounts() -> Result<(), Box<dyn Error>> {
             ValueRow {
                 input: "1.005 EUR",
                 result: message(&Money::parse("1.005", CurrencyCode::EUR)),
+            },
+            ValueRow {
+                input: "1.005 as a double, in EUR",
+                result: from_double.to_string(),
+            },
+            ValueRow {
+                input: "NaN as a double, in EUR",
+                result: message(&not_a_number),
             },
             ValueRow {
                 input: "1500 JPY",
@@ -1644,6 +1656,8 @@ fn amounts() -> Result<(), Box<dyn Error>> {
     assert_eq!(total, eur("13.00")?);
     assert_eq!(change.minor_units(), -250);
     assert!(mixed.is_err());
+    assert_eq!(from_double, eur("1.01")?);
+    assert!(not_a_number.is_err());
     assert_eq!(dinars.to_string(), "1.234 BHD");
     Ok(())
 }
@@ -1652,6 +1666,8 @@ fn ratios() -> Result<(), Box<dyn Error>> {
     let percentage = Percentage::parse("12.5")?;
     let parts = Parts::parse("1.5")?;
     let rate = ExchangeRate::parse("4.97650")?;
+    // 0.30000000000000004 as a double, which rounds to two decimal places.
+    let sum = Percentage::from_f64(0.1 + 0.2)?;
     println!("Percentages, parts, and rates are exact decimals:");
     print_table(
         [
@@ -1666,6 +1682,10 @@ fn ratios() -> Result<(), Box<dyn Error>> {
             ValueRow {
                 input: "33.333%",
                 result: message(&Percentage::parse("33.333")),
+            },
+            ValueRow {
+                input: "0.1 + 0.2 as a double, a percentage",
+                result: sum.to_string(),
             },
             ValueRow {
                 input: "1.5 parts",
@@ -1695,6 +1715,7 @@ fn ratios() -> Result<(), Box<dyn Error>> {
         2,
     );
     assert_eq!(percentage.basis_points(), 1_250);
+    assert_eq!(sum.basis_points(), 30);
     assert_eq!(parts.hundredths(), 150);
     assert_eq!(Parts::ONE.hundredths(), 100);
     // A rate keeps no trailing zero: 4.97650 is 49765 at scale 4.

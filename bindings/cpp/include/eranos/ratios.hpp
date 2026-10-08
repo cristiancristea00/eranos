@@ -37,6 +37,14 @@ class ExchangeRate final {
     ///   is not UTF-8
     [[nodiscard]] static std::expected<ExchangeRate, Error> parse(std::string_view const text) noexcept;
 
+    /// The rate of the double @p value: 4.9765 is "4.9765". The library writes the double in its shortest decimal form, rounds it half away from
+    /// zero to 18 decimal places, and parses it, so the rate keeps the digits of that form: 25.5 is "25.5".
+    ///
+    /// @param value The rate, as a double
+    /// @return The rate, or an error of the kind ErrorKind::MONEY for a value that is NaN or infinite, or that is not a positive rate at 18 decimal
+    ///   places
+    [[nodiscard]] static std::expected<ExchangeRate, Error> fromDouble(double const value) noexcept;
+
     /// @p amount converted at this rate into @p currency.
     ///
     /// @param amount The amount to convert
@@ -73,6 +81,13 @@ struct Percentage final {
     ///   is not UTF-8
     [[nodiscard]] static std::expected<Percentage, Error> parse(std::string_view const text) noexcept;
 
+    /// The percentage of the double @p value, a number of per cent: 12.345 is 12.35 %. The library writes the double in its shortest decimal form,
+    /// rounds it half away from zero to two decimal places, and parses it, so 0.1 + 0.2, which is 0.30000000000000004 as a double, is 0.3 %.
+    ///
+    /// @param value The percentage, as a double
+    /// @return The percentage, or an error of the kind ErrorKind::MONEY for a value that is NaN or infinite, negative, or out of range
+    [[nodiscard]] static std::expected<Percentage, Error> fromDouble(double const value) noexcept;
+
     /// The basis points: 10000 for 100 %.
     std::int32_t basisPoints{};
 
@@ -99,6 +114,13 @@ struct Parts final {
     ///   is not UTF-8
     [[nodiscard]] static std::expected<Parts, Error> parse(std::string_view const text) noexcept;
 
+    /// The parts of the double @p value: 1.005 is 1.01 parts, 101 hundredths. The library writes the double in its shortest decimal form, rounds it
+    /// half away from zero to two decimal places, and parses it.
+    ///
+    /// @param value The parts, as a double
+    /// @return The parts, or an error of the kind ErrorKind::MONEY for a value that is NaN or infinite, rounds to zero or below, or is out of range
+    [[nodiscard]] static std::expected<Parts, Error> fromDouble(double const value) noexcept;
+
     /// The hundredths: 100 for one part.
     std::int32_t hundredths{};
 
@@ -120,6 +142,10 @@ inline std::expected<ExchangeRate, Error> ExchangeRate::parse(std::string_view c
     return detail::expectedOf(detail::EranosExchangeRate::parse(text)).transform(detail::exchangeRateOf);
 }
 
+inline std::expected<ExchangeRate, Error> ExchangeRate::fromDouble(double const value) noexcept {
+    return detail::expectedOf(detail::EranosExchangeRate::from_double(value)).transform(detail::exchangeRateOf);
+}
+
 inline std::expected<Money, Error> ExchangeRate::convert(Money const &amount, CurrencyCode const &currency) const noexcept {
     return detail::expectedOf(detail::EranosExchangeRate::convert(text, *detail::toDetail(amount), currency.code()))
         .transform([](auto const &converted) noexcept { return detail::fromDetail(*converted); });
@@ -131,10 +157,22 @@ inline std::expected<Percentage, Error> Percentage::parse(std::string_view const
     });
 }
 
+inline std::expected<Percentage, Error> Percentage::fromDouble(double const value) noexcept {
+    return detail::expectedOf(detail::EranosPercentage::from_double(value)).transform([](std::int32_t const basisPoints) noexcept {
+        return Percentage{basisPoints};
+    });
+}
+
 inline std::string Percentage::toString() const noexcept { return detail::EranosPercentage::format(basisPoints); }
 
 inline std::expected<Parts, Error> Parts::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosParts::parse(text)).transform([](std::int32_t const hundredths) noexcept { return Parts{hundredths}; });
+}
+
+inline std::expected<Parts, Error> Parts::fromDouble(double const value) noexcept {
+    return detail::expectedOf(detail::EranosParts::from_double(value)).transform([](std::int32_t const hundredths) noexcept {
+        return Parts{hundredths};
+    });
 }
 
 inline std::string Parts::toString() const noexcept { return detail::EranosParts::format(hundredths); }

@@ -23,6 +23,23 @@ public final class ExchangeRate {
     }
 
     /**
+     * The rate of the double {@code value}: 4.9765 is "4.9765".
+     *
+     * <p>The library writes the double in its shortest decimal form, rounds it half away from zero
+     * to 18 decimal places, and parses it, so the rate keeps the digits of that form: 25.5 is
+     * "25.5", and {@code 0.1 + 0.2} is "0.30000000000000004".
+     *
+     * @param value the rate as a double
+     * @return the rate
+     * @throws EranosException.Money with {@link MoneyFailure.NotFinite} for NaN and the infinities,
+     *     and {@link MoneyFailure.InvalidExchangeRate} for a value that is not positive at 18
+     *     decimal places or has more significant digits than fit in 64 bits
+     */
+    public static ExchangeRate fromDouble(double value) throws EranosException {
+        return Converting.call(() -> new ExchangeRate(Eranos.exchangeRateFromF64(value)));
+    }
+
+    /**
      * The rate the library wrote as {@code text}.
      *
      * @param text the rate's text

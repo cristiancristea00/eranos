@@ -26,7 +26,7 @@ namespace eranos {
 namespace detail {
 
 [[nodiscard]] inline CurrencyCode currencyOf(std::unique_ptr<EranosCurrencyDetails> details) noexcept;
-[[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) noexcept;
+[[nodiscard]] inline EranosCurrencyDetails const &toDetail(CurrencyCode const &value) noexcept;
 
 } // namespace detail
 
@@ -86,7 +86,7 @@ class CurrencyCode final {
 
   private:
     friend CurrencyCode detail::currencyOf(std::unique_ptr<detail::EranosCurrencyDetails> details) noexcept;
-    friend std::unique_ptr<detail::EranosMoney> detail::toDetail(Money const &value) noexcept;
+    friend detail::EranosCurrencyDetails const &detail::toDetail(CurrencyCode const &value) noexcept;
 
     /// What the library knows of the currency, and the library's details it read them from, which an amount in the currency crosses with.
     struct Fields final {

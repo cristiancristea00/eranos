@@ -19,6 +19,7 @@ pub mod allocation;
 mod amount;
 mod cost;
 mod currency_code;
+mod decimal;
 mod error;
 mod rate;
 mod ratio;

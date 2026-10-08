@@ -37,6 +37,14 @@ struct Money final {
     ///   text that is not UTF-8
     [[nodiscard]] static std::expected<Money, Error> parse(std::string_view const text, CurrencyCode const &currency) noexcept;
 
+    /// The amount of the double @p value in @p currency: 1.005 in EUR is 1.01 EUR. The library writes the double in its shortest decimal form,
+    /// rounds it half away from zero to the currency's decimal places, and parses it, so every binding gets the same amount from the same double.
+    ///
+    /// @param value The amount, as a double
+    /// @param currency The currency
+    /// @return The amount, or an error of the kind ErrorKind::MONEY for a value that is NaN or infinite, or an amount out of range
+    [[nodiscard]] static std::expected<Money, Error> fromDouble(double const value, CurrencyCode const &currency) noexcept;
+
     /// The amount in minor units: cents for the euro, none for the yen.
     std::int64_t minorUnits;
 
@@ -77,6 +85,12 @@ namespace detail {
 
 inline std::expected<Money, Error> Money::parse(std::string_view const text, CurrencyCode const &currency) noexcept {
     return detail::expectedOf(detail::EranosMoney::parse(text, currency.code())).transform([](auto const &amount) noexcept {
+        return detail::fromDetail(*amount);
+    });
+}
+
+inline std::expected<Money, Error> Money::fromDouble(double const value, CurrencyCode const &currency) noexcept {
+    return detail::expectedOf(detail::EranosMoney::create_from_double(value, detail::toDetail(currency))).transform([](auto const &amount) noexcept {
         return detail::fromDetail(*amount);
     });
 }

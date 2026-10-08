@@ -150,6 +150,50 @@ class ValuesTest {
     }
 
     /**
+     * An app that holds amounts, percentages, parts, or rates as doubles would get other cents or digits in Kotlin than the
+     * library rounds to, or a value back from NaN, an infinity, or a number out of range.
+     */
+    @Test
+    fun amountsRatiosAndRatesConvertFromDoublesAsTheLibraryDoes() {
+        val euro = CurrencyCode.of("EUR")
+        val lei = CurrencyCode.of("RON")
+        // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+        assertEquals(Money(101, euro), Money.fromDouble(1.005, euro))
+        assertEquals("1.01 EUR", Money.fromDouble(1.005, euro).toString())
+        assertEquals(Money(-268, lei), Money.fromDouble(-2.675, lei))
+        assertEquals("1235 JPY", Money.fromDouble(1234.5, CurrencyCode.of("JPY")).toString())
+        assertEquals(30, Percentage.fromDouble(0.1 + 0.2).basisPoints)
+        assertEquals(1_235, Percentage.fromDouble(12.345).basisPoints)
+        assertEquals(101, Parts.fromDouble(1.005).hundredths)
+        assertEquals("25.5", ExchangeRate.fromDouble(25.5).toString())
+        assertEquals("0.30000000000000004", ExchangeRate.fromDouble(0.1 + 0.2).toString())
+
+        val overflow = assertThrows<EranosException.Money> { Money.fromDouble(1e21, euro) }
+        assertEquals(MoneyFailure.Overflow, overflow.failure)
+        val negative = assertThrows<EranosException.Money> { Percentage.fromDouble(-1.0) }
+        assertEquals(MoneyFailure.InvalidPercentage, negative.failure)
+        val roundedToZero = assertThrows<EranosException.Money> { Parts.fromDouble(0.004) }
+        assertEquals(MoneyFailure.InvalidParts, roundedToZero.failure)
+        val zero = assertThrows<EranosException.Money> { ExchangeRate.fromDouble(0.0) }
+        assertEquals(MoneyFailure.InvalidExchangeRate, zero.failure)
+
+        val conversions: List<(Double) -> Any> =
+            listOf(
+                { value -> Money.fromDouble(value, euro) },
+                { value -> Percentage.fromDouble(value) },
+                { value -> Parts.fromDouble(value) },
+                { value -> ExchangeRate.fromDouble(value) },
+            )
+        for (value in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            for (conversion in conversions) {
+                val refused = assertThrows<EranosException.Money> { conversion(value) }
+                assertEquals(MoneyFailure.NotFinite, refused.failure)
+                assertEquals("the number is not finite", refused.message)
+            }
+        }
+    }
+
+    /**
      * A date or a time read or written another way than the library's, or one that does not exist, would put an entry on
      * another day.
      */

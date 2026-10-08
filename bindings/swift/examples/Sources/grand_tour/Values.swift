@@ -28,6 +28,9 @@ func amounts() throws(EranosError) {
     let nothing = Money(minorUnits: 0, currency: try CurrencyCode(code: "RON"))
     let cost = Cost.converted(try eur("10.00"), rate: try ExchangeRate(parsing: "4.9765"))
     let doubled = Cost.converted(try eur("20.00"), rate: try rate(of: cost))
+    // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    let fromDouble = try Money(amount: 1.005, currency: CurrencyCode(code: "EUR"))
+    let notANumber = Result { () throws(EranosError) in try Money(amount: .nan, currency: CurrencyCode(code: "EUR")) }
     print("Amounts are exact minor units in their currency:")
     printTable(
         [
@@ -35,6 +38,8 @@ func amounts() throws(EranosError) {
             ValueRow(input: "5.00 EUR − 7.50 EUR", result: "\(change), negative: \(0 > change.minorUnits)"),
             ValueRow(input: "1.00 EUR + 1.00 RON", result: message(mixed)),
             ValueRow(input: "1.005 EUR", result: message(Result { () throws(EranosError) in try eur("1.005") })),
+            ValueRow(input: "1.005 as a double, in EUR", result: "\(fromDouble)"),
+            ValueRow(input: "NaN as a double, in EUR", result: message(notANumber)),
             ValueRow(input: "1500 JPY", result: "\(yen), \(yen.minorUnits) minor units"),
             ValueRow(input: "1234 minor units of BHD", result: "\(dinars)"),
             ValueRow(input: "zero RON", result: "\(nothing), zero: \(0 == nothing.minorUnits)"),
@@ -47,6 +52,10 @@ func amounts() throws(EranosError) {
     guard case .failure = mixed else {
         preconditionFailure("amounts in two currencies do not add up")
     }
+    expect(try eur("1.01"), fromDouble, "the amount of 1.005 as a double")
+    guard case .failure = notANumber else {
+        preconditionFailure("NaN is no amount")
+    }
     expect("1.234 BHD", dinars.description, "the dinars")
 }
 
@@ -54,12 +63,15 @@ func ratios() throws(EranosError) {
     let percentage = try Percentage(parsing: "12.5")
     let parts = try Parts(parsing: "1.5")
     let rate = try ExchangeRate(parsing: "4.97650")
+    // 0.30000000000000004 as a double, which rounds to two decimal places.
+    let sum = try Percentage(0.1 + 0.2)
     print("Percentages, parts, and rates are exact decimals:")
     printTable(
         [
             ValueRow(input: "12.5%", result: "\(percentage), \(percentage.basisPoints) basis points"),
             ValueRow(input: "333 basis points", result: "\(try Percentage(basisPoints: 333))"),
             ValueRow(input: "33.333%", result: message(Result { () throws(EranosError) in try Percentage(parsing: "33.333") })),
+            ValueRow(input: "0.1 + 0.2 as a double, a percentage", result: "\(sum)"),
             ValueRow(input: "1.5 parts", result: "\(parts), \(parts.hundredths) hundredths"),
             ValueRow(input: "3 whole parts", result: "\(try Parts(hundredths: 300))"),
             ValueRow(input: "25 hundredths of a part", result: "\(try Parts(hundredths: 25))"),
@@ -70,6 +82,7 @@ func ratios() throws(EranosError) {
         numbersFrom: 2
     )
     precondition(1_250 == percentage.basisPoints, "the percentage in basis points")
+    precondition(30 == sum.basisPoints, "the percentage of 0.1 + 0.2 in basis points")
     precondition(150 == parts.hundredths, "the parts in hundredths")
 }
 

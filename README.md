@@ -94,11 +94,14 @@ flowchart LR
 
 </details>
 
-- **Money is exact.** Amounts are whole minor units, never floats, and
-  every division hands out its leftover cents by the largest-remainder
-  method, so the parts always add up. Ties rotate with the expense's
-  identifier, so the extra cent of an even split does not always land on
-  the same person, and a synced expense divides identically on every device.
+- **Money is exact.** Amounts are whole minor units, never stored or
+  computed as floats: a double an app holds is converted once, on the way
+  in, from its shortest decimal form, so 1.005 is 1.01 EUR in every
+  language. Every division hands out its leftover cents by the
+  largest-remainder method, so the parts always add up. Ties rotate with
+  the expense's identifier, so the extra cent of an even split does not
+  always land on the same person, and a synced expense divides identically
+  on every device.
 - **Every currency, one ledger.** An expense in another currency than the
   group's has a converted cost, with an exchange rate fixed when it is
   entered; it is converted once, exactly, into the group currency. A plain

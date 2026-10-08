@@ -42,6 +42,23 @@ export class Money {
     }
 
     /**
+     * The amount of the number `value` in `currency`: 1.005 in EUR is 1.01 EUR.
+     *
+     * The library writes the number in its shortest decimal form, rounds it half away from zero to the currency's decimal
+     * places, and parses it, so every language gets the same amount from the same double. Rounding the text rather than the
+     * number keeps the cents the user typed: the double nearest 1.005 lies below it.
+     *
+     * @param value - The amount as a number
+     * @param currency - The currency
+     * @returns The amount
+     * @throws {@link MoneyError} with the failure `notFinite` for NaN and the infinities, and `overflow` for an amount that
+     *   does not fit in 64-bit minor units
+     */
+    static fromNumber(value: number, currency: CurrencyCode): Money {
+        return Money.converted(calling(() => internal.moneyFromF64(value, currency.code)));
+    }
+
+    /**
      * The amount the generated code holds as `money`.
      *
      * @internal

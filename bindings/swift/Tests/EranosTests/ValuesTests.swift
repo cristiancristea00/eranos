@@ -113,6 +113,67 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     }
 }
 
+/// An app that holds amounts as doubles would get other cents in Swift than the library rounds
+/// to, another currency's decimal places, or an amount back from NaN, an infinity, or a number
+/// past the range.
+@Test
+func amountsConvertFromDoublesAsTheLibraryConvertsThem() throws {
+    let euro = try CurrencyCode(code: "EUR")
+    // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    #expect(try Money(amount: 1.005, currency: euro) == Money(minorUnits: 101, currency: euro))
+    #expect(try Money(amount: -2.675, currency: euro) == Money(minorUnits: -268, currency: euro))
+    #expect(try "1235 JPY" == Money(amount: 1_234.5, currency: CurrencyCode(code: "JPY")).description)
+    for value in [Double.nan, .infinity, -.infinity] {
+        #expect(throws: EranosError.money(.notFinite, detail: "the number is not finite")) {
+            try Money(amount: value, currency: euro)
+        }
+    }
+    #expect(throws: EranosError.money(.overflow, detail: "value out of range")) {
+        try Money(amount: 1e21, currency: euro)
+    }
+}
+
+/// A rate, a percentage, or parts held as a double would become other digits in Swift than in
+/// the library, a number too large for the layer's integers would wrap, or NaN or an infinity
+/// would come back as a value.
+@Test
+func ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem() throws {
+    #expect(try "25.5" == ExchangeRate(25.5).description)
+    #expect(try "0.30000000000000004" == ExchangeRate(0.1 + 0.2).description)
+    #expect(throws: EranosError.money(.invalidExchangeRate, detail: "invalid exchange rate: expected a positive number with at most 18 decimal places")) {
+        try ExchangeRate(0)
+    }
+
+    #expect(try 30 == Percentage(0.1 + 0.2).basisPoints)
+    #expect(try 1_235 == Percentage(12.345).basisPoints)
+    // Above 21 474 836.47 %, the basis points no longer fit an `Int32`.
+    for value in [-1.0, 30_000_000.0] {
+        #expect(throws: EranosError.money(.invalidPercentage, detail: "invalid percentage: expected a number with at most 2 decimal places")) {
+            try Percentage(value)
+        }
+    }
+
+    #expect(try 101 == Parts(1.005).hundredths)
+    for value in [0.004, 30_000_000.0] {
+        #expect(throws: EranosError.money(.invalidParts, detail: "invalid parts: expected a positive number with at most 2 decimal places")) {
+            try Parts(value)
+        }
+    }
+
+    let notFinite = EranosError.money(.notFinite, detail: "the number is not finite")
+    for value in [Double.nan, .infinity, -.infinity] {
+        #expect(throws: notFinite) {
+            try ExchangeRate(value)
+        }
+        #expect(throws: notFinite) {
+            try Percentage(value)
+        }
+        #expect(throws: notFinite) {
+            try Parts(value)
+        }
+    }
+}
+
 /// A date or a time read or written another way than the library's, or one that does not exist,
 /// would put an entry on another day.
 @Test

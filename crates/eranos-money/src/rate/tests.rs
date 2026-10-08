@@ -169,6 +169,48 @@ fn from_decimal_validates_and_normalises() {
     assert_eq!(ExchangeRate::from_decimal(10, 0), Ok(rate("10")));
 }
 
+/// A rate held as a double would convert at other digits than the double
+/// holds: padded to 18 places, cut short, or rounded at the wrong place.
+#[test]
+fn a_rate_converts_from_a_double_keeping_its_shortest_digits() {
+    assert_eq!(ExchangeRate::from_f64(4.9765), Ok(rate("4.9765")));
+    // A short fraction keeps its scale.
+    let half = ExchangeRate::from_f64(25.5).unwrap();
+    assert_eq!(half.mantissa(), 255);
+    assert_eq!(half.scale(), 1);
+    // Every digit of `0.1 + 0.2`, 0.30000000000000004, stays.
+    let sum = ExchangeRate::from_f64(0.1 + 0.2).unwrap();
+    assert_eq!(sum.mantissa(), 30_000_000_000_000_004);
+    assert_eq!(sum.scale(), 17);
+    assert_eq!(ExchangeRate::from_f64(1e-7), Ok(rate("0.0000001")));
+    // The 19th decimal place rounds into the 18th.
+    assert_eq!(
+        ExchangeRate::from_f64(5e-19),
+        Ok(rate("0.000000000000000001"))
+    );
+}
+
+/// A double that is no rate, zero, negative, rounding to zero at 18
+/// places, or too large for the mantissa, would reach conversions; NaN
+/// would reach the parser as `NaN`.
+#[test]
+fn a_double_that_is_no_rate_is_refused() {
+    for value in [0.0, -0.0, -1.5, 1e-19, 1e20] {
+        assert_eq!(
+            ExchangeRate::from_f64(value),
+            Err(MoneyError::InvalidExchangeRate),
+            "{value}"
+        );
+    }
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(
+            ExchangeRate::from_f64(value),
+            Err(MoneyError::NotFinite),
+            "{value}"
+        );
+    }
+}
+
 /// Saved or shown rates would lose digits or gain a wrong decimal point.
 #[test]
 fn display_writes_the_exact_decimal() {

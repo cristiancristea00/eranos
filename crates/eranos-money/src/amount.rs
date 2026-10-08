@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use crate::decimal;
 use crate::error::MoneyError;
 use crate::{Cost, CurrencyCode, ExchangeRate};
 
@@ -110,6 +111,40 @@ impl Money {
         let signed = if negative { -magnitude } else { magnitude };
         let minor_units = i64::try_from(signed).map_err(|_| MoneyError::Overflow)?;
         Ok(Self::from_minor_units(minor_units, currency))
+    }
+
+    /// Converts the double `value` into an amount of `currency`, for an app
+    /// that holds amounts as doubles.
+    ///
+    /// The double is written in its shortest decimal form, the shortest
+    /// text that reads back as the same double, rounded half away from zero
+    /// to the currency's decimal places, and parsed by [`parse`](Self::parse).
+    /// Rounding the text rather than the double keeps the cents the user
+    /// typed: the double nearest 1.005 lies below it, yet 1.005 EUR is
+    /// 1.01 EUR. Every binding converts through this function, so the same
+    /// double is the same amount in every language.
+    ///
+    /// # Errors
+    ///
+    /// - [`MoneyError::NotFinite`] when `value` is NaN or infinite.
+    /// - [`MoneyError::Overflow`] when the rounded amount does not fit in
+    ///   64-bit minor units.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CurrencyCode, Money};
+    ///
+    /// assert_eq!(Money::from_f64(1.005, CurrencyCode::EUR)?.to_string(), "1.01 EUR");
+    /// assert_eq!(Money::from_f64(-2.675, CurrencyCode::EUR)?.minor_units(), -268);
+    /// assert_eq!(Money::from_f64(1234.5, CurrencyCode::JPY)?.to_string(), "1235 JPY");
+    /// assert!(Money::from_f64(f64::NAN, CurrencyCode::EUR).is_err());
+    /// # Ok::<(), eranos::error::MoneyError>(())
+    /// ```
+    pub fn from_f64(value: f64, currency: CurrencyCode) -> Result<Self, MoneyError> {
+        let text =
+            decimal::rounded(value, currency.decimal_places()).ok_or(MoneyError::NotFinite)?;
+        Self::parse(&text, currency)
     }
 
     /// The amount in minor units: 1234 for 12.34 EUR.

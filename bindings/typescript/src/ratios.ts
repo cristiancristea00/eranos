@@ -29,6 +29,21 @@ export class ExchangeRate {
     }
 
     /**
+     * The rate of the number `value`: 4.9765 is "4.9765".
+     *
+     * The library writes the number in its shortest decimal form, rounds it half away from zero to 18 decimal places, and
+     * parses it, so the rate keeps the digits of that form: 25.5 is "25.5", and `0.1 + 0.2` is "0.30000000000000004".
+     *
+     * @param value - The rate as a number
+     * @returns The rate
+     * @throws {@link MoneyError} with the failure `notFinite` for NaN and the infinities, and `invalidExchangeRate` for a
+     *   number that is not positive at 18 decimal places or has more significant digits than fit in 64 bits
+     */
+    static fromNumber(value: number): ExchangeRate {
+        return new ExchangeRate(calling(() => internal.exchangeRateFromF64(value)));
+    }
+
+    /**
      * The rate the library wrote as `text`.
      *
      * @internal
@@ -103,6 +118,21 @@ export class Percentage {
     }
 
     /**
+     * The percentage of the number `value`, a number of per cent: 12.345 is 12.35 %.
+     *
+     * The library writes the number in its shortest decimal form, rounds it half away from zero to two decimal places, and
+     * parses it: `0.1 + 0.2`, which is 0.30000000000000004 as a double, is 0.3 %.
+     *
+     * @param value - The percentage as a number of per cent
+     * @returns The percentage
+     * @throws {@link MoneyError} with the failure `notFinite` for NaN and the infinities, and `invalidPercentage` for a
+     *   negative number and one above 21 474 836.47 %, whose basis points do not fit a 32-bit integer
+     */
+    static fromNumber(value: number): Percentage {
+        return new Percentage(calling(() => internal.percentageFromF64(value)));
+    }
+
+    /**
      * The percentage of `basisPoints`, a number the library gave.
      *
      * @internal
@@ -162,6 +192,21 @@ export class Parts {
      */
     static parse(text: string): Parts {
         return new Parts(calling(() => internal.partsParse(text)));
+    }
+
+    /**
+     * The parts of the number `value`: 1.005 is 1.01 parts.
+     *
+     * The library writes the number in its shortest decimal form, rounds it half away from zero to two decimal places, and
+     * parses it.
+     *
+     * @param value - The parts as a number
+     * @returns The parts
+     * @throws {@link MoneyError} with the failure `notFinite` for NaN and the infinities, and `invalidParts` for a number that
+     *   rounds to zero or below and one above 21 474 836.47 parts, whose hundredths do not fit a 32-bit integer
+     */
+    static fromNumber(value: number): Parts {
+        return new Parts(calling(() => internal.partsFromF64(value)));
     }
 
     /**

@@ -4,7 +4,12 @@
 use std::fmt;
 use std::str::FromStr;
 
+use crate::decimal;
 use crate::error::MoneyError;
+
+/// The decimal places of a percentage, in per cent, and of parts: both are
+/// stored in hundredths.
+const PLACES: u8 = 2;
 
 /// A percentage with two decimal places, stored as basis points (1 % = 100).
 ///
@@ -56,6 +61,36 @@ impl Percentage {
         parse_hundredths(number)
             .map(Self)
             .ok_or(MoneyError::InvalidPercentage)
+    }
+
+    /// Converts the double `value`, a number of per cent, into a
+    /// percentage, for an app that holds percentages as doubles.
+    ///
+    /// The double is written in its shortest decimal form, rounded half away
+    /// from zero to two decimal places, and parsed by [`parse`](Self::parse),
+    /// as [`Money::from_f64`](crate::Money::from_f64) converts an amount:
+    /// 12.345 is 12.35 %, and `0.1 + 0.2`, which is 0.30000000000000004 as a
+    /// double, is 0.3 %.
+    ///
+    /// # Errors
+    ///
+    /// - [`MoneyError::NotFinite`] when `value` is NaN or infinite.
+    /// - [`MoneyError::InvalidPercentage`] when the rounded value is
+    ///   negative or does not fit in 32-bit basis points.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::Percentage;
+    ///
+    /// assert_eq!(Percentage::from_f64(12.345)?.basis_points(), 1235);
+    /// assert_eq!(Percentage::from_f64(0.1 + 0.2)?.to_string(), "0.3%");
+    /// assert!(Percentage::from_f64(-5.0).is_err());
+    /// # Ok::<(), eranos::error::MoneyError>(())
+    /// ```
+    pub fn from_f64(value: f64) -> Result<Self, MoneyError> {
+        let text = decimal::rounded(value, PLACES).ok_or(MoneyError::NotFinite)?;
+        Self::parse(&text)
     }
 
     /// The percentage in basis points: 3333 for 33.33 %.
@@ -145,6 +180,35 @@ impl Parts {
         Self::from_hundredths(hundredths)
     }
 
+    /// Converts the double `value` into parts, for an app that holds parts
+    /// as doubles.
+    ///
+    /// The double is written in its shortest decimal form, rounded half away
+    /// from zero to two decimal places, and parsed by [`parse`](Self::parse),
+    /// as [`Money::from_f64`](crate::Money::from_f64) converts an amount:
+    /// 1.005 is 1.01 parts.
+    ///
+    /// # Errors
+    ///
+    /// - [`MoneyError::NotFinite`] when `value` is NaN or infinite.
+    /// - [`MoneyError::InvalidParts`] when the rounded value is not positive,
+    ///   as 0.004 rounds to zero, or does not fit in 32-bit hundredths.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::Parts;
+    ///
+    /// assert_eq!(Parts::from_f64(1.005)?.hundredths(), 101);
+    /// assert_eq!(Parts::from_f64(0.5)?.to_string(), "0.5");
+    /// assert!(Parts::from_f64(0.004).is_err());
+    /// # Ok::<(), eranos::error::MoneyError>(())
+    /// ```
+    pub fn from_f64(value: f64) -> Result<Self, MoneyError> {
+        let text = decimal::rounded(value, PLACES).ok_or(MoneyError::NotFinite)?;
+        Self::parse(&text)
+    }
+
     /// The parts in hundredths: 150 for 1.5 parts, as `u32::from(parts)`
     /// also gives.
     #[must_use]
@@ -189,7 +253,7 @@ fn parse_hundredths(text: &str) -> Option<u32> {
         None => (text, "00"),
     };
     let is_digits = |part: &str| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit());
-    if !is_digits(whole) || !is_digits(fraction) || 2 < fraction.len() {
+    if !is_digits(whole) || !is_digits(fraction) || usize::from(PLACES) < fraction.len() {
         return None;
     }
     let padding = if 1 == fraction.len() { "0" } else { "" };

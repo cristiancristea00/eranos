@@ -224,6 +224,43 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assertRefused(() => Parts.parse('half'), MoneyError);
     });
 
+    /**
+     * An app that holds amounts, rates, percentages, or parts as numbers would get other cents or digits in this package than
+     * the library converts them to, or a value back from NaN, from an infinity, or from a number out of range.
+     */
+    void it('converts numbers to amounts, rates, percentages, and parts as the library does', () => {
+        const euro = CurrencyCode.of('EUR');
+        const yen = CurrencyCode.of('JPY');
+        // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+        assert.ok(Money.fromNumber(1.005, euro).equals(new Money(101n, euro)));
+        assert.ok(Money.fromNumber(-2.675, euro).equals(new Money(-268n, euro)));
+        assert.ok(Money.fromNumber(1_234.5, yen).equals(new Money(1_235n, yen)));
+        assertRefused(() => Money.fromNumber(1e21, euro), MoneyError, { kind: 'overflow' }, 'value out of range');
+
+        assert.equal(ExchangeRate.fromNumber(25.5).toString(), '25.5');
+        assert.equal(ExchangeRate.fromNumber(0.1 + 0.2).toString(), '0.30000000000000004');
+        assertRefused(() => ExchangeRate.fromNumber(0), MoneyError, { kind: 'invalidExchangeRate' });
+
+        assert.equal(Percentage.fromNumber(0.1 + 0.2).basisPoints, 30);
+        assert.equal(Percentage.fromNumber(12.345).basisPoints, 1_235);
+        assertRefused(() => Percentage.fromNumber(-1), MoneyError, { kind: 'invalidPercentage' });
+        // Above 21 474 836.47 %, the basis points no longer fit the bindings' 32-bit integers.
+        assertRefused(() => Percentage.fromNumber(30_000_000), MoneyError, { kind: 'invalidPercentage' });
+
+        assert.equal(Parts.fromNumber(1.005).hundredths, 101);
+        assertRefused(() => Parts.fromNumber(0.004), MoneyError, { kind: 'invalidParts' });
+        assertRefused(() => Parts.fromNumber(30_000_000), MoneyError, { kind: 'invalidParts' });
+
+        const notFinite = { kind: 'notFinite' };
+        const message = 'the number is not finite';
+        for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+            assertRefused(() => Money.fromNumber(value, euro), MoneyError, notFinite, message);
+            assertRefused(() => ExchangeRate.fromNumber(value), MoneyError, notFinite, message);
+            assertRefused(() => Percentage.fromNumber(value), MoneyError, notFinite, message);
+            assertRefused(() => Parts.fromNumber(value), MoneyError, notFinite, message);
+        }
+    });
+
     /** A date or a time read or written another way than the library's, or one that does not exist, would put an entry on another day. */
     void it('reads and writes dates and times as the library does', () => {
         const date = CalendarDate.of(2026, 9, 23);

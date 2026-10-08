@@ -467,6 +467,8 @@ pub enum MoneyFailure {
     InvalidParts,
     /// [`MoneyError::InvalidPercentage`].
     InvalidPercentage,
+    /// [`MoneyError::NotFinite`].
+    NotFinite,
     /// [`MoneyError::Overflow`].
     Overflow,
 }
@@ -657,6 +659,13 @@ impl FromMoneyError for EranosError {
     fn invalid_percentage(message: String) -> Self {
         Self::Money {
             failure: MoneyFailure::InvalidPercentage,
+            detail: message,
+        }
+    }
+
+    fn not_finite(message: String) -> Self {
+        Self::Money {
+            failure: MoneyFailure::NotFinite,
             detail: message,
         }
     }

@@ -68,6 +68,9 @@ function amounts(): void {
     const nothing = new Money(0n, CurrencyCode.of('RON'));
     const cost: Cost = { kind: 'converted', amount: eur('10.00'), rate: ExchangeRate.parse('4.9765') };
     const doubled: Cost = { kind: 'converted', amount: eur('20.00'), rate: rate(cost) };
+    // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    const fromDouble = Money.fromNumber(1.005, CurrencyCode.of('EUR'));
+    const notANumber = refusal(() => Money.fromNumber(Number.NaN, CurrencyCode.of('EUR')));
     printLines('Amounts are exact minor units in their currency:');
     printTable(
         valueColumns,
@@ -76,6 +79,8 @@ function amounts(): void {
             { input: '5.00 EUR − 7.50 EUR', result: `${change.toString()}, negative: ${String(0n > change.minorUnits)}` },
             { input: '1.00 EUR + 1.00 RON', result: message(mixed) },
             { input: '1.005 EUR', result: message(refusal(() => eur('1.005'))) },
+            { input: '1.005 as a double, in EUR', result: fromDouble.toString() },
+            { input: 'NaN as a double, in EUR', result: message(notANumber) },
             { input: '1500 JPY', result: `${yen.toString()}, ${String(yen.minorUnits)} minor units` },
             { input: '1234 minor units of BHD', result: dinars.toString() },
             { input: 'zero RON', result: `${nothing.toString()}, zero: ${String(0n === nothing.minorUnits)}` },
@@ -89,6 +94,8 @@ function amounts(): void {
     assert.ok(eur('13.00').equals(total));
     assert.equal(change.minorUnits, -250n);
     assert.ok(undefined !== mixed);
+    assert.ok(eur('1.01').equals(fromDouble));
+    assert.ok(undefined !== notANumber);
     assert.equal(dinars.toString(), '1.234 BHD');
 }
 
@@ -96,6 +103,8 @@ function ratios(): void {
     const percentage = Percentage.parse('12.5');
     const parts = Parts.parse('1.5');
     const exchange = ExchangeRate.parse('4.97650');
+    // 0.30000000000000004 as a double, which rounds to two decimal places.
+    const sum = Percentage.fromNumber(0.1 + 0.2);
     printLines('Percentages, parts, and rates are exact decimals:');
     printTable(
         valueColumns,
@@ -103,6 +112,7 @@ function ratios(): void {
             { input: '12.5%', result: `${percentage.toString()}, ${String(percentage.basisPoints)} basis points` },
             { input: '333 basis points', result: Percentage.ofBasisPoints(333).toString() },
             { input: '33.333%', result: message(refusal(() => Percentage.parse('33.333'))) },
+            { input: '0.1 + 0.2 as a double, a percentage', result: sum.toString() },
             { input: '1.5 parts', result: `${parts.toString()}, ${String(parts.hundredths)} hundredths` },
             { input: '3 whole parts', result: Parts.ofHundredths(300).toString() },
             { input: '25 hundredths of a part', result: Parts.ofHundredths(25).toString() },
@@ -113,6 +123,7 @@ function ratios(): void {
         2,
     );
     assert.equal(percentage.basisPoints, 1_250);
+    assert.equal(sum.basisPoints, 30);
     assert.equal(parts.hundredths, 150);
 }
 

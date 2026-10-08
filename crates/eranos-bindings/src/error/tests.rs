@@ -155,6 +155,17 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
+            let error = MoneyError::NotFinite;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Money {
+                    failure: MoneyFailure::NotFinite,
+                    detail: message,
+                },
+            }
+        },
+        {
             let error = MoneyError::Overflow;
             let message = error.to_string();
             Conversion {
@@ -771,7 +782,7 @@ fn conversions() -> Vec<Conversion> {
 #[test]
 fn every_failure_of_the_library_converts_to_its_case() {
     let conversions = conversions();
-    assert_eq!(conversions.len(), 58);
+    assert_eq!(conversions.len(), 59);
     for Conversion {
         converted,
         expected,

@@ -75,6 +75,27 @@ pub fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> {
     )?))
 }
 
+/// The amount of the double `value` in the currency `code`: 1.005 in "EUR"
+/// is 1.01 EUR.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to the currency's decimal places, and parses it, so
+/// every binding gets the same amount from the same double.
+///
+/// # Errors
+///
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency),
+/// [`MoneyFailure::NotFinite`](crate::MoneyFailure::NotFinite) for NaN and
+/// the infinities, and
+/// [`MoneyFailure::Overflow`](crate::MoneyFailure::Overflow) for an amount
+/// that does not fit in 64-bit minor units.
+pub fn money_from_f64(value: f64, code: &str) -> Result<Money, EranosError> {
+    Ok(Money::from_library(library::Money::from_f64(
+        value,
+        currency(code)?,
+    )?))
+}
+
 /// The amount as the library writes it: "12.50 EUR".
 ///
 /// It writes the minor units with the decimal places the record's currency
@@ -127,6 +148,24 @@ pub fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
     Ok(exchange_rate(text)?.to_string())
 }
 
+/// The exchange rate of the double `value`, as the library writes it:
+/// 4.9765 is "4.9765".
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to 18 decimal places, and parses it, so the rate
+/// keeps the digits of that form: 25.5 is "25.5".
+///
+/// # Errors
+///
+/// [`MoneyFailure::NotFinite`](crate::MoneyFailure::NotFinite) for NaN and
+/// the infinities, and
+/// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate)
+/// for a value that is not positive at 18 decimal places or has more
+/// significant digits than fit in 64 bits.
+pub fn exchange_rate_from_f64(value: f64) -> Result<String, EranosError> {
+    Ok(library::ExchangeRate::from_f64(value)?.to_string())
+}
+
 /// `amount` converted at `rate` into the currency `code`, rounded to its
 /// minor unit, halves away from zero.
 ///
@@ -151,8 +190,24 @@ pub fn exchange_rate_convert(rate: &str, amount: &Money, code: &str) -> Result<M
 ///
 /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage).
 pub fn percentage_parse(text: &str) -> Result<i32, EranosError> {
-    let basis_points = library::Percentage::parse(text)?.basis_points();
-    Ok(i32::try_from(basis_points).map_err(|_| MoneyError::InvalidPercentage)?)
+    basis_points(library::Percentage::parse(text)?)
+}
+
+/// The percentage of the double `value`, a number of per cent, in basis
+/// points: 12.345 is 1 235.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to two decimal places, and parses it: `0.1 + 0.2`,
+/// which is 0.30000000000000004 as a double, is 30.
+///
+/// # Errors
+///
+/// [`MoneyFailure::NotFinite`](crate::MoneyFailure::NotFinite) for NaN and
+/// the infinities, and
+/// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
+/// for a negative value and one whose basis points do not fit an `i32`.
+pub fn percentage_from_f64(value: f64) -> Result<i32, EranosError> {
+    basis_points(library::Percentage::from_f64(value)?)
 }
 
 /// The percentage of `basis_points`, as the library writes it: "12.5%".
@@ -184,8 +239,23 @@ pub fn percentage_check(basis_points: i32) -> Result<(), EranosError> {
 ///
 /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts).
 pub fn parts_parse(text: &str) -> Result<i32, EranosError> {
-    let hundredths = library::Parts::parse(text)?.hundredths();
-    Ok(i32::try_from(hundredths).map_err(|_| MoneyError::InvalidParts)?)
+    hundredths(library::Parts::parse(text)?)
+}
+
+/// The parts of the double `value`, in hundredths: 1.005 is 101.
+///
+/// The library writes the double in its shortest decimal form, rounds it
+/// half away from zero to two decimal places, and parses it.
+///
+/// # Errors
+///
+/// [`MoneyFailure::NotFinite`](crate::MoneyFailure::NotFinite) for NaN and
+/// the infinities, and
+/// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for a
+/// value that rounds to zero or below and one whose hundredths do not fit
+/// an `i32`.
+pub fn parts_from_f64(value: f64) -> Result<i32, EranosError> {
+    hundredths(library::Parts::from_f64(value)?)
 }
 
 /// The parts of `hundredths`, as the library writes them: "0.5".
@@ -209,6 +279,28 @@ pub fn parts_format(hundredths: i32) -> String {
 pub fn parts_check(hundredths: i32) -> Result<(), EranosError> {
     parts(hundredths)?;
     Ok(())
+}
+
+/// The basis points of `percentage`, as the bindings' 32-bit signed
+/// integers hold them.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
+/// above 21 474 836.47 %, whose basis points do not fit an `i32`.
+fn basis_points(percentage: library::Percentage) -> Result<i32, EranosError> {
+    Ok(i32::try_from(percentage.basis_points()).map_err(|_| MoneyError::InvalidPercentage)?)
+}
+
+/// The hundredths of `parts`, as the bindings' 32-bit signed integers hold
+/// them.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) above
+/// 21 474 836.47 parts, whose hundredths do not fit an `i32`.
+fn hundredths(parts: library::Parts) -> Result<i32, EranosError> {
+    Ok(i32::try_from(parts.hundredths()).map_err(|_| MoneyError::InvalidParts)?)
 }
 
 // --- Dates and times ---------------------------------------------------------

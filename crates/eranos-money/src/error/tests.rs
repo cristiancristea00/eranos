@@ -80,6 +80,14 @@ impl FromMoneyError for ConvertedMoneyError {
         }
     }
 
+    fn not_finite(message: String) -> Self {
+        Self {
+            method: "not_finite",
+            held: String::new(),
+            message,
+        }
+    }
+
     fn overflow(message: String) -> Self {
         Self {
             method: "overflow",
@@ -132,6 +140,11 @@ fn every_failure_of_money_error_converts_through_the_method_of_its_variant() {
         Case {
             error: MoneyError::InvalidPercentage,
             method: "invalid_percentage",
+            held: String::new(),
+        },
+        Case {
+            error: MoneyError::NotFinite,
+            method: "not_finite",
             held: String::new(),
         },
         Case {

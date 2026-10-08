@@ -1,5 +1,7 @@
 """Check the values the library checks and writes: identifiers, currencies, amounts, ratios, dates, times, contacts, and accounts."""
 
+import functools
+import math
 import uuid
 from collections.abc import Callable
 
@@ -254,6 +256,44 @@ def calendar_failure(make: Callable[[], object]) -> object:
     with pytest.raises(CalendarError) as refused:
         make()
     return refused.value.failure
+
+
+def test_an_amount_converts_from_a_float_as_the_library_converts_it() -> None:
+    """An app that holds amounts as floats would get other cents than the library rounds to, or an amount from NaN, an infinity, or past the range."""
+    euro = CurrencyCode('EUR')
+    lei = CurrencyCode('RON')
+    yen = CurrencyCode('JPY')
+    # The float nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+    price = Money.from_float(1.005, euro)
+    assert price == Money(101, euro)
+    assert str(price) == '1.01 EUR'
+    assert Money.from_float(-2.675, lei) == Money(-268, lei)
+    assert Money.from_float(1234.5, yen) == Money(1235, yen)
+    # A float parameter also takes an int, as PEP 484 allows.
+    assert Money.from_float(12, euro) == Money(1200, euro)
+    assert money_failure(lambda: Money.from_float(math.nan, euro)) == MoneyError.NotFinite()
+    assert money_failure(lambda: Money.from_float(math.inf, euro)) == MoneyError.NotFinite()
+    assert money_failure(lambda: Money.from_float(-math.inf, euro)) == MoneyError.NotFinite()
+    assert money_failure(lambda: Money.from_float(1e21, euro)) == MoneyError.Overflow()
+
+
+def test_rates_percentages_and_parts_convert_from_floats_as_the_library_converts_them() -> None:
+    """A rate, a percentage, or parts held as a float would get other digits than the library's, wrap past the core's integers, or come from NaN."""
+    assert ExchangeRate.from_float(25.5) == ExchangeRate('25.5')
+    assert str(ExchangeRate.from_float(0.1 + 0.2)) == '0.30000000000000004'
+    assert money_failure(lambda: ExchangeRate.from_float(0.0)) == MoneyError.InvalidExchangeRate()
+    assert Percentage.from_float(0.1 + 0.2) == Percentage(30)
+    assert Percentage.from_float(12.345) == Percentage(1235)
+    assert money_failure(lambda: Percentage.from_float(-1.0)) == MoneyError.InvalidPercentage()
+    # Above 21 474 836.47 %, the basis points no longer fit in 32 bits.
+    assert money_failure(lambda: Percentage.from_float(30_000_000.0)) == MoneyError.InvalidPercentage()
+    assert Parts.from_float(1.005) == Parts(101)
+    assert money_failure(lambda: Parts.from_float(0.004)) == MoneyError.InvalidParts()
+    assert money_failure(lambda: Parts.from_float(30_000_000.0)) == MoneyError.InvalidParts()
+    converters: tuple[Callable[[float], object], ...] = (ExchangeRate.from_float, Percentage.from_float, Parts.from_float)
+    for convert in converters:
+        for value in (math.nan, math.inf, -math.inf):
+            assert money_failure(functools.partial(convert, value)) == MoneyError.NotFinite(), value
 
 
 def test_percentages_parts_dates_and_times_print_as_the_library_writes_them() -> None:

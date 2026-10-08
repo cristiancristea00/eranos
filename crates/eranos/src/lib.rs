@@ -47,13 +47,30 @@
 //!
 //! # Money is exact
 //!
-//! Amounts are whole numbers of minor units ([`Money`]), never floats. Every
-//! division, whether a [`Split`] among members, a [`TipRule`], an [`ExpenseItem`] of an
-//! itemised bill, or a conversion at an [`ExchangeRate`], hands out its
-//! leftover minor units by the largest-remainder method, so the parts always
-//! add up to the whole. Ties rotate with the expense's identifier: over many
-//! expenses, the extra cent of an even split does not always land on the
-//! same person, and a synced expense splits the same way on every device.
+//! Amounts are whole numbers of minor units ([`Money`]), never stored or
+//! computed as floats. An app that holds amounts, percentages, parts, or
+//! rates as doubles converts each once, on the way in, with
+//! [`Money::from_f64`] or the `from_f64` of [`Percentage`], [`Parts`], and
+//! [`ExchangeRate`], which round the double's shortest decimal form half
+//! away from zero: 1.005 is 1.01 EUR, though the double nearest 1.005 lies
+//! below it. Every division, whether a [`Split`] among members, a
+//! [`TipRule`], an [`ExpenseItem`] of an itemised bill, or a conversion at an
+//! [`ExchangeRate`], hands out its leftover minor units by the
+//! largest-remainder method, so the parts always add up to the whole. Ties
+//! rotate with the expense's identifier: over many expenses, the extra cent
+//! of an even split does not always land on the same person, and a synced
+//! expense splits the same way on every device.
+//!
+//! ```
+//! use eranos::{CurrencyCode, Money, Percentage};
+//!
+//! let price = Money::from_f64(1.005, CurrencyCode::EUR)?;
+//! assert_eq!(price, Money::parse("1.01", CurrencyCode::EUR)?);
+//! // `0.1 + 0.2` is 0.30000000000000004 as a double: 0.3 %.
+//! assert_eq!(Percentage::from_f64(0.1 + 0.2)?.basis_points(), 30);
+//! assert!(Money::from_f64(f64::NAN, CurrencyCode::EUR).is_err());
+//! # Ok::<(), eranos::error::MoneyError>(())
+//! ```
 //!
 //! # Consistency and caching
 //!

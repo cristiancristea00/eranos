@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 import java.util.Set;
@@ -184,6 +185,75 @@ class ValuesTest {
             assertEquals(new MoneyFailure.InvalidParts(), refused.failure());
         }
         assertThrows(EranosException.Money.class, () -> Parts.parse("half"));
+    }
+
+    /** The failure of the money module that {@code call} throws. */
+    private static MoneyFailure moneyFailure(Executable call) {
+        return assertThrows(EranosException.Money.class, call).failure();
+    }
+
+    /**
+     * An app that holds amounts as doubles would get other cents in Java than the library rounds
+     * to, or an amount back from NaN, from an infinity, or from a value past the range.
+     */
+    @Test
+    void amountsConvertFromDoublesAsTheLibraryConvertsThem() throws EranosException {
+        CurrencyCode euro = CurrencyCode.of("EUR");
+        CurrencyCode lei = CurrencyCode.of("RON");
+        CurrencyCode yen = CurrencyCode.of("JPY");
+        // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
+        Money rounded = Money.fromDouble(1.005, euro);
+        assertEquals(new Money(101, euro), rounded);
+        assertEquals("1.01 EUR", rounded.toString());
+        assertEquals(new Money(-268, lei), Money.fromDouble(-2.675, lei));
+        assertEquals(new Money(1_235, yen), Money.fromDouble(1_234.5, yen));
+        EranosException.Money notANumber =
+                assertThrows(EranosException.Money.class, () -> Money.fromDouble(Double.NaN, euro));
+        assertEquals(new MoneyFailure.NotFinite(), notANumber.failure());
+        assertEquals("the number is not finite", notANumber.getMessage());
+        assertEquals(
+                new MoneyFailure.NotFinite(),
+                moneyFailure(() -> Money.fromDouble(Double.NEGATIVE_INFINITY, euro)));
+        assertEquals(new MoneyFailure.Overflow(), moneyFailure(() -> Money.fromDouble(1e21, euro)));
+    }
+
+    /**
+     * A rate, a percentage, or parts held as a double would become other digits in Java than in the
+     * library, a number too large for the layer's integers would wrap, or NaN or an infinity would
+     * come back as a value.
+     */
+    @Test
+    void ratesAndRatiosConvertFromDoublesAsTheLibraryConvertsThem() throws EranosException {
+        assertEquals(ExchangeRate.parse("25.5"), ExchangeRate.fromDouble(25.5));
+        assertEquals("0.30000000000000004", ExchangeRate.fromDouble(0.1 + 0.2).toString());
+        assertEquals(
+                new MoneyFailure.InvalidExchangeRate(),
+                moneyFailure(() -> ExchangeRate.fromDouble(0.0)));
+
+        assertEquals(30, Percentage.fromDouble(0.1 + 0.2).basisPoints());
+        assertEquals(1_235, Percentage.fromDouble(12.345).basisPoints());
+        // Above 21 474 836.47 %, the basis points do not fit an int.
+        for (double value : List.of(-1.0, 30_000_000.0)) {
+            assertEquals(
+                    new MoneyFailure.InvalidPercentage(),
+                    moneyFailure(() -> Percentage.fromDouble(value)));
+        }
+
+        assertEquals(101, Parts.fromDouble(1.005).hundredths());
+        for (double value : List.of(0.004, 30_000_000.0)) {
+            assertEquals(
+                    new MoneyFailure.InvalidParts(), moneyFailure(() -> Parts.fromDouble(value)));
+        }
+
+        for (double value :
+                List.of(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            assertEquals(
+                    new MoneyFailure.NotFinite(),
+                    moneyFailure(() -> ExchangeRate.fromDouble(value)));
+            assertEquals(
+                    new MoneyFailure.NotFinite(), moneyFailure(() -> Percentage.fromDouble(value)));
+            assertEquals(new MoneyFailure.NotFinite(), moneyFailure(() -> Parts.fromDouble(value)));
+        }
     }
 
     /**

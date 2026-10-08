@@ -93,6 +93,9 @@ pub mod ffi {
         MoneyInvalidParts,
         /// A percentage that is not a decimal number with at most two decimal places.
         MoneyInvalidPercentage,
+        /// A double that is NaN or infinite, which no amount, percentage, number of parts, or
+        /// exchange rate is.
+        MoneyNotFinite,
         /// A number or a result that does not fit its range.
         MoneyOverflow,
         /// A first name that is blank.

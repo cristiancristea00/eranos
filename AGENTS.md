@@ -224,8 +224,14 @@ test in `crates/xtask` checks every root.
   SwiftLint that ask for the opposite are off. Python writes the constant
   last, as PEP 8 writes `value is None`, and Ruff's `SIM300` refuses the
   other order.
-- **Money is never a float.** Amounts are `i64` minor units; every division
-  goes through `eranos_money::allocation::allocate`, every conversion through
+- **Amounts are never floats.** They are never stored or computed as floats:
+  a float is converted once, on the way in, from its shortest decimal form,
+  and amounts are `i64` minor units. A double becomes an amount, a
+  percentage, parts, or a rate only through the `from_f64` of `Money`,
+  `Percentage`, `Parts`, or `ExchangeRate`, which every binding calls: it
+  rounds the double's shortest round-trip text half away from zero to the
+  type's places and parses it. Every division goes through
+  `eranos_money::allocation::allocate`, every conversion through
   `ExchangeRate::convert`, and every percentage through
   `allocation::apply_basis_points`, so parts always add up and rounding is
   the documented rule (largest remainder; half away from zero).

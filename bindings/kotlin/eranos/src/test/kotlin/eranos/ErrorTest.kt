@@ -18,7 +18,7 @@ class ErrorTest {
      */
     @Test
     fun everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
-        assertEquals(64, conversions.size)
+        assertEquals(65, conversions.size)
         for (conversion in conversions) {
             val converted = assertInstanceOf(EranosException::class.java, conversion.generated.converted())
             assertEquals(conversion.failure, converted.failure())
@@ -179,6 +179,10 @@ private val conversions: List<Conversion> =
         Conversion(
             failure = MoneyFailure.InvalidPercentage,
             generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.InvalidPercentage, "detail"),
+        ),
+        Conversion(
+            failure = MoneyFailure.NotFinite,
+            generated = eranos.internal.EranosException.Money(eranos.internal.MoneyFailure.NotFinite, "detail"),
         ),
         Conversion(
             failure = MoneyFailure.Overflow,

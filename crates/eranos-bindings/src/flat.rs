@@ -240,6 +240,8 @@ pub enum FailureKind {
     MoneyInvalidParts,
     /// [`MoneyFailure::InvalidPercentage`].
     MoneyInvalidPercentage,
+    /// [`MoneyFailure::NotFinite`].
+    MoneyNotFinite,
     /// [`MoneyFailure::Overflow`].
     MoneyOverflow,
     /// [`MemberFailure::EmptyFirstName`].
@@ -698,6 +700,7 @@ fn money(failure: &MoneyFailure) -> FlatFailure {
         }
         MoneyFailure::InvalidParts => FlatFailure::new(FailureKind::MoneyInvalidParts),
         MoneyFailure::InvalidPercentage => FlatFailure::new(FailureKind::MoneyInvalidPercentage),
+        MoneyFailure::NotFinite => FlatFailure::new(FailureKind::MoneyNotFinite),
         MoneyFailure::Overflow => FlatFailure::new(FailureKind::MoneyOverflow),
     }
 }

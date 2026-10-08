@@ -356,6 +356,10 @@ public enum MoneyFailure: Sendable, Hashable {
     /// A percentage that is not a decimal number with at most two decimal places.
     case invalidPercentage
 
+    /// A double that is NaN or infinite, which no amount, percentage, number of parts, or
+    /// exchange rate is.
+    case notFinite
+
     /// A number or a result that does not fit its range.
     case overflow
 }
@@ -377,6 +381,8 @@ extension MoneyFailure {
             self = .invalidParts
         case .invalidPercentage:
             self = .invalidPercentage
+        case .notFinite:
+            self = .notFinite
         case .overflow:
             self = .overflow
         }

@@ -119,6 +119,10 @@ private let conversions: [Conversion] = [
         generated: .Money(failure: .invalidPercentage, detail: "detail")
     ),
     Conversion(
+        expected: .money(.notFinite, detail: "detail"),
+        generated: .Money(failure: .notFinite, detail: "detail")
+    ),
+    Conversion(
         expected: .money(.overflow, detail: "detail"),
         generated: .Money(failure: .overflow, detail: "detail")
     ),
@@ -317,7 +321,7 @@ private let conversions: [Conversion] = [
 /// the library's.
 @Test
 func everyFailureOfTheGeneratedCodeConvertsToItsCase() {
-    #expect(67 == conversions.count)
+    #expect(68 == conversions.count)
     for conversion in conversions {
         let error = Eranos.EranosError(conversion.generated)
         #expect(error == conversion.expected)
