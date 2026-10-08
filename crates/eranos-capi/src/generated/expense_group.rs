@@ -345,12 +345,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let category = Ok(category.0.clone());
+            let category = category.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .add_category_async(category?, cancellation)
+                        .add_category_async(category, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -387,12 +387,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let category = Ok(category.0.clone());
+            let category = category.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .replace_category_async(category?, cancellation)
+                        .replace_category_async(category, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -507,12 +507,12 @@ pub mod ffi {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
             let currency = crate::decoded(currency);
-            let rates = Ok(rates.0.clone());
+            let rates = rates.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .change_currency_async(currency?, rates?, cancellation)
+                        .change_currency_async(currency?, rates, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -669,12 +669,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let expense = Ok(expense.0.clone());
+            let expense = expense.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .add_expense_async(expense?, cancellation)
+                        .add_expense_async(expense, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -714,12 +714,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let expense = Ok(expense.0.clone());
+            let expense = expense.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .replace_expense_async(expense?, cancellation)
+                        .replace_expense_async(expense, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -952,12 +952,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let member = Ok(member.0.clone());
+            let member = member.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .add_member_async(member?, cancellation)
+                        .add_member_async(member, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -1000,12 +1000,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let member = Ok(member.0.clone());
+            let member = member.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .replace_member_async(member?, cancellation)
+                        .replace_member_async(member, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -1231,12 +1231,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let strategy = Ok(strategy.into());
+            let strategy = strategy.into();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .settlement_async(strategy?, cancellation)
+                        .settlement_async(strategy, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -1397,12 +1397,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let transfer = Ok(transfer.0.clone());
+            let transfer = transfer.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .add_transfer_async(transfer?, cancellation)
+                        .add_transfer_async(transfer, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -1442,12 +1442,12 @@ pub mod ffi {
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let transfer = Ok(transfer.0.clone());
+            let transfer = transfer.0.clone();
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .replace_transfer_async(transfer?, cancellation)
+                        .replace_transfer_async(transfer, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },

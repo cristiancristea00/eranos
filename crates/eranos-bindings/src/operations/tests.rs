@@ -236,25 +236,13 @@ struct RefusedText {
     failure: IdFailure,
 }
 
-/// A call given text that is not an identifier would read or change another
-/// entry, or answer as if no entry had it.
-#[test]
-fn every_call_by_identifier_refuses_text_that_is_not_one() {
-    let calls: [fn(&mut ExpenseGroup, &str) -> Option<EranosError>; 13] = [
-        |group, id| operations::category(group, id).err(),
-        |group, id| operations::remove_category(group, id).err(),
-        |group, id| operations::expense(group, id).err(),
-        |group, id| operations::expense_shares(group, id).err(),
-        |group, id| operations::remove_expense(group, id).err(),
-        |group, id| operations::member(group, id).err(),
-        |group, id| operations::is_archived(group, id).err(),
-        |group, id| operations::archive_member(group, id).err(),
-        |group, id| operations::unarchive_member(group, id).err(),
-        |group, id| operations::remove_member(group, id).err(),
-        |group, id| operations::transfer(group, id).err(),
-        |group, id| operations::transfer_amount(group, id).err(),
-        |group, id| operations::remove_transfer(group, id).err(),
-    ];
+/// A call over the group given text, alone or in a record, that answers its
+/// refusal, if any.
+type CallWithText = fn(&mut ExpenseGroup, &str) -> Option<EranosError>;
+
+/// Asserts that each of `calls` refuses every kind of text that is not an
+/// identifier with its failure, and leaves the group as it was.
+fn assert_every_call_refuses_text_that_is_not_an_identifier(calls: &[CallWithText]) {
     let refused = [
         RefusedText {
             text: String::new(),
@@ -288,6 +276,79 @@ fn every_call_by_identifier_refuses_text_that_is_not_one() {
         }
     }
     assert_eq!(flat.group, before);
+}
+
+/// A call given text that is not an identifier would read or change another
+/// entry, or answer as if no entry had it.
+#[test]
+fn every_call_by_identifier_refuses_text_that_is_not_one() {
+    assert_every_call_refuses_text_that_is_not_an_identifier(&[
+        |group, id| operations::category(group, id).err(),
+        |group, id| operations::remove_category(group, id).err(),
+        |group, id| operations::expense(group, id).err(),
+        |group, id| operations::expense_shares(group, id).err(),
+        |group, id| operations::remove_expense(group, id).err(),
+        |group, id| operations::member(group, id).err(),
+        |group, id| operations::is_archived(group, id).err(),
+        |group, id| operations::archive_member(group, id).err(),
+        |group, id| operations::unarchive_member(group, id).err(),
+        |group, id| operations::remove_member(group, id).err(),
+        |group, id| operations::transfer(group, id).err(),
+        |group, id| operations::transfer_amount(group, id).err(),
+        |group, id| operations::remove_transfer(group, id).err(),
+    ]);
+}
+
+/// A category named Travel with the identifier `id`.
+fn category_with_id(id: &str) -> Category {
+    Category {
+        id: id.to_owned(),
+        ..new_category("Travel")
+    }
+}
+
+/// An expense with the identifier `id` that a member the group does not
+/// hold paid and shares alone.
+fn expense_with_id(id: &str) -> Expense {
+    let member = identifier_generate();
+    Expense {
+        id: id.to_owned(),
+        ..new_expense("Lunch", &member, &[&member])
+    }
+}
+
+/// A member named Carol with the identifier `id`.
+fn member_with_id(id: &str) -> Member {
+    Member {
+        id: id.to_owned(),
+        ..new_member("Carol")
+    }
+}
+
+/// A transfer with the identifier `id` between two members the group does
+/// not hold.
+fn transfer_with_id(id: &str) -> Transfer {
+    Transfer {
+        id: id.to_owned(),
+        ..new_transfer(&identifier_generate(), &identifier_generate(), 500)
+    }
+}
+
+/// An addition or a replacement given a record whose identifier is text
+/// that is not one would reach the group under another identifier, or be
+/// refused as an unknown entry instead of for its identifier.
+#[test]
+fn a_record_whose_identifier_is_not_one_is_refused() {
+    assert_every_call_refuses_text_that_is_not_an_identifier(&[
+        |group, id| operations::add_category(group, &category_with_id(id)).err(),
+        |group, id| operations::replace_category(group, &category_with_id(id)).err(),
+        |group, id| operations::add_expense(group, &expense_with_id(id)).err(),
+        |group, id| operations::replace_expense(group, &expense_with_id(id)).err(),
+        |group, id| operations::add_member(group, &member_with_id(id)).err(),
+        |group, id| operations::replace_member(group, &member_with_id(id)).err(),
+        |group, id| operations::add_transfer(group, &transfer_with_id(id)).err(),
+        |group, id| operations::replace_transfer(group, &transfer_with_id(id)).err(),
+    ]);
 }
 
 /// A category change would add a second category under an identifier the

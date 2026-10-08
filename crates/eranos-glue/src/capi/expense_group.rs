@@ -460,8 +460,12 @@ fn synchronous_doc(
 }
 
 /// The asynchronous `form` of `call`, which answers `answer`: it prepares
-/// its parameters before it runs, so the caller's objects are not needed
-/// after it returns, and reports text that is not UTF-8 to its callback.
+/// its parameters before it runs, text decoded, a value converted, and a
+/// record or a list copied, while an integer moves into the call as it is,
+/// so the caller's objects are not needed after it returns; and it reports
+/// text that is not UTF-8 to its callback. Only text can fail its
+/// preparation, so only text is passed with `?`: a `?` on a value prepared
+/// in `Ok` would be a branch that never runs.
 fn asynchronous(call: &Call, answer: &Answer, form: &Form<'_>) -> TokenStream {
     let method = format_ident!("{}_async", form.name);
     let core_name = format_ident!("{}_async", call.name);
@@ -469,27 +473,32 @@ fn asynchronous(call: &Call, answer: &Answer, form: &Form<'_>) -> TokenStream {
     let parameters = taken
         .iter()
         .map(|argument| argument.crossing.parameter(&argument.parameter.name));
-    let prepared = taken.iter().map(|argument| {
+    let prepared = taken.iter().filter_map(|argument| {
         let name = &argument.parameter.name;
         let value = match &argument.crossing {
-            Crossing::Choice(_) | Crossing::Plain(_) => quote!(Ok(#name.into())),
-            Crossing::Integer(_) => quote!(Ok(#name)),
+            Crossing::Choice(_) | Crossing::Plain(_) => quote!(#name.into()),
+            Crossing::Integer(_) => return None,
             Crossing::List(_) | Crossing::Object(_) | Crossing::TextList => {
-                quote!(Ok(#name.0.clone()))
+                quote!(#name.0.clone())
             }
             Crossing::Text => quote!(crate::decoded(#name)),
         };
-        quote!(let #name = #value;)
+        Some(quote!(let #name = #value;))
     });
     let arguments = form.arguments.iter().map(|argument| {
         argument.as_ref().map_or_else(
             || quote!(None),
             |argument| {
                 let name = &argument.parameter.name;
-                if matches!(argument.parameter.kind, Kind::OptionalText) {
-                    quote!(Some(#name?))
-                } else {
+                let value = if Crossing::Text == argument.crossing {
                     quote!(#name?)
+                } else {
+                    quote!(#name)
+                };
+                if matches!(argument.parameter.kind, Kind::OptionalText) {
+                    quote!(Some(#value))
+                } else {
+                    value
                 }
             },
         )

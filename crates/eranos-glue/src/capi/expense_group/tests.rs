@@ -124,6 +124,8 @@ fn the_group_has_every_form_of_every_call_in_order() {
             "is_archived_async",
             "is_open",
             "is_open_async",
+            "has_expense_named",
+            "has_expense_named_async",
             "latest_expense",
             "latest_expense_async",
             "is_latest_itemised",
@@ -155,8 +157,7 @@ fn the_group_has_every_form_of_every_call_in_order() {
 /// `DiplomatWrite`, hands a record or a list over in an opaque object, and a
 /// lookup's flag in a `DiplomatOption`, which Diplomat lets a `Result` hold.
 /// The group's form of a call that cannot fail returns that answer itself,
-/// which `crate::waited` takes out of the core's `Result`, and a `Result`
-/// only when it takes text, which it checks.
+/// which `crate::waited` takes out of the core's `Result`.
 #[test]
 fn a_synchronous_form_lends_the_core_its_parameters() {
     let named = named();
@@ -232,12 +233,6 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
                 }
             },
             quote! {
-                pub fn set_note(&self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
-                    crate::waited(self.handle.set_note(&crate::text(note)?));
-                    Ok(())
-                }
-            },
-            quote! {
                 pub fn set_language(&self, language: &DiplomatStr, count: i32) -> Result<(), Box<EranosError>> {
                     self.handle
                         .set_language(Some(&crate::text(language)?), count)
@@ -252,6 +247,31 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
             quote! {
                 pub fn move_to(&self, date: EranosCalendarDate, distribution: EranosTipDistribution) -> Result<(), Box<EranosError>> {
                     self.handle.move_to(date.into(), distribution.into()).map_err(crate::failed)
+                }
+            },
+        ],
+    );
+}
+
+/// The group's form of a call that cannot fail returns a `Result` all the
+/// same when it takes text, which it checks, with its answer or with
+/// nothing; one that returned the answer alone would pass bytes that are not
+/// UTF-8 on to the core.
+#[test]
+fn a_form_that_cannot_fail_but_takes_text_checks_it() {
+    let named = named();
+    assert_written(
+        &methods(&named["EranosExpenseGroup"]),
+        &[
+            quote! {
+                pub fn has_expense_named(&self, name: &DiplomatStr) -> Result<bool, Box<EranosError>> {
+                    Ok(crate::waited(self.handle.has_expense_named(&crate::text(name)?)))
+                }
+            },
+            quote! {
+                pub fn set_note(&self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
+                    crate::waited(self.handle.set_note(&crate::text(note)?));
+                    Ok(())
                 }
             },
         ],
@@ -316,7 +336,9 @@ fn an_asynchronous_read_checks_its_text_before_it_returns() {
 }
 
 /// An asynchronous form copies or converts every other parameter before it
-/// returns, so it reads none of its caller's objects after.
+/// returns, so it reads none of its caller's objects after, and passes it
+/// without `?`: only the check of text can fail, and a `?` on any other
+/// parameter would be a branch of the bridge that never runs.
 #[test]
 fn an_asynchronous_change_prepares_its_parameters_before_it_returns() {
     let named = named();
@@ -333,13 +355,13 @@ fn an_asynchronous_change_prepares_its_parameters_before_it_returns() {
                 ) {
                     let handle = self.handle.clone();
                     let cancellation = cancellation.map(EranosCancellation::shared);
-                    let members = Ok(members.0.clone());
-                    let items = Ok(items.0.clone());
+                    let members = members.0.clone();
+                    let items = items.0.clone();
                     crate::spawn(
                         &self.jobs,
                         async move {
                             handle
-                                .set_members_async(members?, items?, cancellation)
+                                .set_members_async(members, items, cancellation)
                                 .await
                                 .map_err(crate::Failure::Library)
                         },
@@ -381,13 +403,13 @@ fn an_asynchronous_change_prepares_its_parameters_before_it_returns() {
                 ) {
                     let handle = self.handle.clone();
                     let cancellation = cancellation.map(EranosCancellation::shared);
-                    let date = Ok(date.into());
-                    let distribution = Ok(distribution.into());
+                    let date = date.into();
+                    let distribution = distribution.into();
                     crate::spawn(
                         &self.jobs,
                         async move {
                             handle
-                                .move_to_async(date?, distribution?, cancellation)
+                                .move_to_async(date, distribution, cancellation)
                                 .await
                                 .map_err(crate::Failure::Library)
                         },
@@ -419,12 +441,11 @@ fn an_asynchronous_twin_passes_no_optional_text() {
                     let handle = self.handle.clone();
                     let cancellation = cancellation.map(EranosCancellation::shared);
                     let language = crate::decoded(language);
-                    let count = Ok(count);
                     crate::spawn(
                         &self.jobs,
                         async move {
                             handle
-                                .set_language_async(Some(language?), count?, cancellation)
+                                .set_language_async(Some(language?), count, cancellation)
                                 .await
                                 .map_err(crate::Failure::Library)
                         },
@@ -442,12 +463,11 @@ fn an_asynchronous_twin_passes_no_optional_text() {
                 ) {
                     let handle = self.handle.clone();
                     let cancellation = cancellation.map(EranosCancellation::shared);
-                    let count = Ok(count);
                     crate::spawn(
                         &self.jobs,
                         async move {
                             handle
-                                .set_language_async(None, count?, cancellation)
+                                .set_language_async(None, count, cancellation)
                                 .await
                                 .map_err(crate::Failure::Library)
                         },
@@ -529,6 +549,7 @@ fn the_read_handle_reads_through_itself() {
             "description",
             "is_archived",
             "is_open",
+            "has_expense_named",
             "latest_expense",
             "is_latest_itemised",
             "summary",

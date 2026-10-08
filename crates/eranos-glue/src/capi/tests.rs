@@ -279,6 +279,11 @@ trait ExpenseGroupCalls {
     #[infallible]
     fn is_open(&self) -> Result<bool, EranosError>;
 
+    /// Whether an expense is named `name`.
+    #[read]
+    #[infallible]
+    fn has_expense_named(&self, name: &str) -> Result<bool, EranosError>;
+
     /// The latest expense, if there is one.
     #[read]
     #[infallible]

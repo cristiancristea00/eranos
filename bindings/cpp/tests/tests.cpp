@@ -1230,6 +1230,7 @@ void everyKindOfAsynchronousCallReportsItsCancellation(Check &check) noexcept {
     auto const reportsIt = [](std::optional<Error> const &error) noexcept { return isFailure(error, ErrorKind::CANCELLED, std::nullopt); };
     check.that(reportsIt(refusal(flat.group.categoriesAsync(&cancelled).get())), "the categories");
     check.that(reportsIt(refusal(flat.group.categoryAsync(flat.food, &cancelled).get())), "a category");
+    check.that(reportsIt(refusal(flat.group.currencyAsync(&cancelled).get())), "the currency");
     check.that(reportsIt(refusal(flat.group.expensesAsync(&cancelled).get())), "the expenses");
     check.that(reportsIt(refusal(flat.group.expenseAsync(flat.dinner, &cancelled).get())), "an expense");
     check.that(reportsIt(refusal(flat.group.expenseSharesAsync(flat.dinner, &cancelled).get())), "an expense's shares");
