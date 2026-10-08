@@ -111,16 +111,13 @@ fn actions(
 
 /// The actions that build the libraries with identifiers that count up, in
 /// `sequential`'s target directory, that the ports of `languages` run on:
-/// eranos-uniffi's for the packages over it, and eranos-kmp's, eranos-web's,
-/// and eranos-capi's for theirs.
+/// eranos-uniffi's for the packages over it, the Kotlin Multiplatform
+/// package's included, and eranos-web's and eranos-capi's for theirs.
 fn libraries(sequential: &Metadata, languages: &[Language]) -> Vec<Action> {
     let ported = |language| languages.contains(&language);
     let mut steps = Vec::new();
     if languages.iter().any(|language| language.reads_uniffi()) {
         steps.push(library(sequential));
-    }
-    if ported(Language::Kmp) {
-        steps.push(multiplatform_library(sequential));
     }
     if ported(Language::Web) {
         steps.push(web::sequential_library(sequential));
@@ -305,24 +302,6 @@ pub(crate) fn library(sequential: &Metadata) -> Step {
             "sequential-ids",
         ],
         "the host library of eranos-uniffi, with identifiers that count up",
-    )
-    .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
-}
-
-/// The step that builds eranos-kmp's library for the host, with
-/// identifiers that count up, into `sequential`'s target directory, where
-/// the Kotlin Multiplatform ports find it.
-#[must_use]
-pub(crate) fn multiplatform_library(sequential: &Metadata) -> Step {
-    Step::cargo(
-        &[
-            "build",
-            "--package",
-            "eranos-kmp",
-            "--features",
-            "sequential-ids",
-        ],
-        "the host library of eranos-kmp, with identifiers that count up",
     )
     .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
 }

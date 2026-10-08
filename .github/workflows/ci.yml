@@ -265,19 +265,19 @@ jobs:
       # other leaves out, so the report merges both runs. The UniFFI glue and
       # its generators have no Rust tests: the foreign tests measure the glue,
       # eranos-web compiles the sources of eranos-uniffi for WebAssembly,
-      # which stable Rust cannot measure, eranos-kmp compiles them again for
-      # gobley, and the C and C++ tests measure eranos-capi. The glue's proc
-      # macros run inside the compiler, only when a crate that invokes them
-      # compiles; eranos-glue's tests measure what they call.
+      # which stable Rust cannot measure, and the C and C++ tests measure
+      # eranos-capi. The glue's proc macros run inside the compiler, only
+      # when a crate that invokes them compiles; eranos-glue's tests measure
+      # what they call.
       - run: >-
           cargo llvm-cov --no-report --workspace --all-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
-          --exclude eranos-web --exclude eranos-kmp --exclude eranos-capi
+          --exclude eranos-web --exclude eranos-capi
           --exclude eranos-glue-macros
       - run: >-
           cargo llvm-cov --no-report --workspace --no-default-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
-          --exclude eranos-web --exclude eranos-kmp --exclude eranos-capi
+          --exclude eranos-web --exclude eranos-capi
           --exclude eranos-glue-macros
       # The runs build the proc macros instrumented all the same, as a
       # dependency of the crates they test, and a report that kept their files
@@ -362,15 +362,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2.9.2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      # The Kotlin Multiplatform package's Gradle 9.0 runs on JDK 21, which the
-      # gates find through JAVA_HOME_21; JDK 25, installed last, becomes
-      # JAVA_HOME, which the Kotlin and Java packages build and test with.
-      - id: jdk-21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: temurin
-          java-version: 21
-          set-default: false
+      # JDK 25 becomes JAVA_HOME, which the Kotlin, Kotlin Multiplatform, and
+      # Java packages build and test with.
       - uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
@@ -424,8 +417,6 @@ jobs:
           cargo install --locked --git https://github.com/jhugman/uniffi-bindgen-react-native --tag 0.31.0-6 uniffi-bindgen-react-native
           cargo install --locked --git https://github.com/wasm-bindgen/wasm-bindgen --tag 0.2.114 wasm-bindgen-cli
       - run: cargo xtask gates
-        env:
-          JAVA_HOME_21: ${{ steps.jdk-21.outputs.path }}
       # The gates build the C and C++ packages with clang, over libstdc++
       # here and libc++ on macOS; GCC 14, which the image carries, compiles
       # their tests too, so the headers keep to the C23 and the C++23 that
@@ -460,12 +451,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2.9.2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - id: jdk-21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: temurin
-          java-version: 21
-          set-default: false
       - uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
@@ -500,8 +485,6 @@ jobs:
         with:
           tool: cargo-llvm-cov@0.9.1
       - run: cargo xtask gates
-        env:
-          JAVA_HOME_21: ${{ steps.jdk-21.outputs.path }}
       - run: cargo xtask coverage
       - name: Export the report
         run: cargo llvm-cov report --ignore-filename-regex eranos-glue-macros/ --html --output-dir target/coverage-bindings

@@ -1,6 +1,6 @@
 //! The gates of the Kotlin Multiplatform package: the shared layer's tests on
-//! the JVM against gobley's bindings, the libraries of every target, and the
-//! package's build scripts; and the steps that build and run the Kotlin
+//! the JVM against the package's bindings, the libraries of every target, and
+//! the package's build scripts; and the steps that build and run the Kotlin
 //! package's ports of the examples on the package's JVM target. The Kotlin
 //! package's gates lint, document, and measure the layer's sources and the
 //! ports', which this package compiles unchanged.
@@ -10,13 +10,14 @@ use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use crate::Failure;
 use crate::gates::Metadata;
 use crate::jvm::{self, Jvm};
+use crate::kotlin::JDK;
 use crate::plan::{Action, Phase};
 use crate::process::{Runner, Step};
 
 /// The Kotlin Multiplatform project, from the workspace root.
 const PROJECT: &str = "bindings/kmp";
 
-/// The Kotlin package's ports, compiled here over gobley's bindings:
+/// The Kotlin package's ports, compiled here over the package's bindings:
 /// gathered by the examples' `ports` task, each a `MainKt` whose library JNA
 /// loads.
 pub(crate) const JVM: Jvm = Jvm {
@@ -24,31 +25,17 @@ pub(crate) const JVM: Jvm = Jvm {
     language: "Kotlin Multiplatform",
     library_path: "jna.library.path",
     ports: "bindings/kmp/examples/build/ports",
-    strict_native_access: false,
 };
 
-/// The environment variable that names the JDK 21 that Gradle 9.0 runs on:
-/// the last Gradle on which the project's Android plugin builds without a
-/// deprecation warning, and which runs on JDK 24 at the latest.
-pub(crate) const JDK: &str = "JAVA_HOME_21";
-
 /// The environment variables the gates need: the Android SDK, which holds
-/// the NDK and the platform, and the JDK that [`JDK`] names.
+/// the NDK and the platform, and the JDK that [`JDK`] names, the Kotlin
+/// package's.
 pub(crate) const VARIABLES: [&str; 2] = ["ANDROID_HOME", JDK];
 
-/// The Apple targets of the package, as Kotlin names them: those that
-/// Kotlin/Native, gobley, and rustup's standard libraries all have, but for
-/// macOS on `x86_64`, which Kotlin deprecates.
-pub(crate) const APPLE_TARGETS: [&str; 8] = [
-    "IosArm64",
-    "IosSimulatorArm64",
-    "IosX64",
-    "MacosArm64",
-    "TvosArm64",
-    "TvosSimulatorArm64",
-    "WatchosDeviceArm64",
-    "WatchosSimulatorArm64",
-];
+/// The Apple targets of the package, as Kotlin names them: those the
+/// package's `UniFFI` plugin builds for.
+pub(crate) const APPLE_TARGETS: [&str; 4] =
+    ["IosArm64", "IosSimulatorArm64", "IosX64", "MacosArm64"];
 
 /// The Kotlin Multiplatform package's gates, in order; the Apple targets
 /// compile only where the machine builds for Apple platforms.
@@ -66,8 +53,9 @@ pub(crate) fn actions(runner: &impl Runner) -> Result<Vec<Action>, Failure> {
 /// The actions that run the layer's tests on the JVM, build the Android
 /// libraries and, when `apple`, compile the layer for every Apple target,
 /// each Gradle run on the JDK at `jdk` and with deprecations as errors, and
-/// check the format of the build scripts. gobley's plugins build the library
-/// for each target, adding its Rust target first, and generate the bindings.
+/// check the format of the build scripts. The package's `UniFFI` plugin builds
+/// the library for each target, adding its Rust target first, and generates
+/// the bindings.
 #[must_use]
 pub(crate) fn checks(jdk: &str, apple: bool) -> Vec<Action> {
     let mut compiled = Vec::new();
@@ -78,7 +66,10 @@ pub(crate) fn checks(jdk: &str, apple: bool) -> Vec<Action> {
                 .map(|target| format!(":eranos:compileKotlin{target}")),
         );
     }
-    let mut libraries = vec![":generated:assembleDebug", ":eranos:assembleDebug"];
+    let mut libraries = vec![
+        ":generated:bundleAndroidMainAar",
+        ":eranos:bundleAndroidMainAar",
+    ];
     libraries.extend(compiled.iter().map(String::as_str));
     vec![
         Action::run(
@@ -112,16 +103,17 @@ fn gradle(jdk: &str, tasks: &[&str], name: &str) -> Step {
 }
 
 /// The step that compiles the Kotlin package's ports of the examples against
-/// gobley's bindings and gathers them, with every library they run with,
-/// into one directory, Gradle running on the JDK at `jdk`.
+/// the package's bindings and gathers them, with every library they run
+/// with, into one directory, Gradle running on the JDK at `jdk`.
 #[must_use]
 pub(crate) fn ports(jdk: &str) -> Step {
     gradle(jdk, &[":examples:ports"], "the Kotlin Multiplatform ports")
 }
 
 /// The step that runs the Kotlin Multiplatform port of `example` on the
-/// `java` of the JDK at `jdk`, JNA loading eranos-kmp's library from
-/// `sequential`'s target directory before the one gobley embeds.
+/// `java` of the JDK at `jdk`, JNA loading eranos-uniffi's library from
+/// `sequential`'s target directory, since the ports' directory holds no
+/// library of its own.
 #[must_use]
 pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
     jvm::port(&JVM, example, jdk, sequential)
@@ -143,12 +135,14 @@ pub(crate) fn formats() -> Vec<Action> {
 }
 
 /// The actions that build the Kotlin Multiplatform packages an app consumes
-/// into their directory of the packages, cleared first: gobley's release
-/// libraries of the Android ABIs in both Android libraries in release, and
-/// the JVM's JARs beside eranos-kmp's host library in release, which JNA
-/// loads from the directory `jna.library.path` names; gobley's own JAR of
-/// the host library is its debug one. An Apple target's layer reaches an app
-/// through a publication, which the packages leave to the app's build.
+/// into their directory of the packages, cleared first: the release
+/// libraries of the Android ABIs in both Android libraries, built with the
+/// plugin's release property, and the JVM's JARs beside eranos-uniffi's host
+/// library in release, which JNA loads from the directory
+/// `jna.library.path` names; the JARs are built without the property, under
+/// which the plugin would build the library for every desktop, with
+/// toolchains the host lacks. An Apple target's layer reaches an app through
+/// a publication, which the packages leave to the app's build.
 ///
 /// # Errors
 ///
@@ -167,19 +161,26 @@ pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<A
             gradle(
                 &jdk,
                 &[
-                    ":generated:assembleRelease",
-                    ":eranos:assembleRelease",
-                    ":generated:jvmJar",
-                    ":eranos:jvmJar",
+                    "-PreleaseBuild=true",
+                    ":generated:bundleAndroidMainAar",
+                    ":eranos:bundleAndroidMainAar",
                 ],
-                "the Kotlin Multiplatform packages",
+                "the Kotlin Multiplatform packages' Android libraries",
+            ),
+        ),
+        Action::run(
+            Phase::Package,
+            gradle(
+                &jdk,
+                &[":generated:jvmJar", ":eranos:jvmJar"],
+                "the Kotlin Multiplatform packages' JVM JARs",
             ),
         ),
         Action::run(
             Phase::Package,
             Step::cargo(
-                &["build", "--release", "--package", "eranos-kmp"],
-                "the host library of eranos-kmp, in release",
+                &["build", "--release", "--package", "eranos-uniffi"],
+                "the host library of eranos-uniffi, in release",
             ),
         ),
         Action::run(
@@ -194,12 +195,12 @@ pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<A
             Phase::Package,
             Step::new(
                 &[
-                    &format!("{PROJECT}/generated/build/outputs/aar/generated-release.aar"),
-                    &format!("{PROJECT}/eranos/build/outputs/aar/eranos-release.aar"),
+                    &format!("{PROJECT}/generated/build/outputs/aar/generated.aar"),
+                    &format!("{PROJECT}/eranos/build/outputs/aar/eranos.aar"),
                     &format!("{PROJECT}/generated/build/libs/generated-jvm.jar"),
                     &format!("{PROJECT}/eranos/build/libs/eranos-jvm.jar"),
                     &format!(
-                        "{}/release/{DLL_PREFIX}eranos_kmp{DLL_SUFFIX}",
+                        "{}/release/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}",
                         metadata.target_directory
                     ),
                     &package,

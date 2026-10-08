@@ -1,16 +1,16 @@
 // The Kotlin package's ports of the examples, compiled from its sources for
-// the JVM against gobley's bindings: each prints the same report as its Rust
-// example, which `cargo xtask gates` compares byte for byte, run on the
-// library of eranos-kmp whose identifiers count up.
+// the JVM against the package's bindings: each prints the same report as its
+// Rust example, which `cargo xtask gates` compares byte for byte, run on the
+// library of eranos-uniffi whose identifiers count up.
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
 
-// Compiled by JDK 21 for JVM 17, as the layer is, with warnings as errors.
+// Compiled by JDK 25 for JVM 17, as the layer is, with warnings as errors.
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
     compilerOptions {
         allWarningsAsErrors.set(true)
     }

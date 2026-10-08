@@ -24,7 +24,6 @@ pub(crate) const JVM: Jvm = Jvm {
     language: "Java",
     library_path: "java.library.path",
     ports: "bindings/java/build/ports",
-    strict_native_access: true,
 };
 
 /// The Java package's gates, in order: the generated Java in a cleared

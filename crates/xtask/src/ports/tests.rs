@@ -66,19 +66,18 @@ fn reference(example: &str, report: &str) -> Reference {
 /// A port that ran on the gates' glue would print identifiers the Rust
 /// example does not, and one that ran before its library was built would
 /// print nothing; the glue whose identifiers count up is built first, with
-/// eranos-kmp's, eranos-web's, and eranos-capi's libraries, its sources
-/// generated from it, the Swift ports run on a copy of the package over it
-/// only where the machine builds for Apple platforms, and the Kotlin ones on
-/// every machine, on the JDK's `java`, JNA loading that library, then again
-/// over gobley's bindings, on the JDK 21's, JNA loading eranos-kmp's, then
-/// the Java ones, on the JDK's `java`, which loads that library itself, the
+/// eranos-web's and eranos-capi's libraries, its sources generated from it,
+/// the Swift ports run on a copy of the package over it only where the
+/// machine builds for Apple platforms, and the Kotlin ones on every machine,
+/// on the JDK's `java`, JNA loading that library, then again over the Kotlin
+/// Multiplatform package's bindings, JNA loading the same library, then the
+/// Java ones, on the JDK's `java`, which loads that library itself, the
 /// TypeScript ones, on Node, in a copy of the package over the WebAssembly
 /// build of the glue, whose generator's settings the ports write, the C and
 /// the C++ ones, each language's built into a directory of its own, then
 /// run, and last the Python ones, in a copy of the package over that
-/// library. The Kotlin and Java ports refuse native access the command
-/// line does not grant, as the Java tests do; JDK 21's launcher has no such
-/// option.
+/// library. The JVM ports refuse native access the command line does not
+/// grant, as the Java tests do.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -93,7 +92,6 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         run(&mut recorder, &metadata, &references, &LANGUAGES).unwrap();
         let mut expected = vec![
             library(&sequential()),
-            multiplatform_library(&sequential()),
             web::sequential_library(&sequential()),
             capi::sequential_library(&sequential()),
         ];
@@ -108,9 +106,9 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         expected.push(kotlin::ports(&metadata));
         expected.push(kotlin::port("quickstart", "/JAVA_HOME", &sequential()));
         expected.push(kotlin::port("persistence", "/JAVA_HOME", &sequential()));
-        expected.push(kmp::ports("/JAVA_HOME_21"));
-        expected.push(kmp::port("quickstart", "/JAVA_HOME_21", &sequential()));
-        expected.push(kmp::port("persistence", "/JAVA_HOME_21", &sequential()));
+        expected.push(kmp::ports("/JAVA_HOME"));
+        expected.push(kmp::port("quickstart", "/JAVA_HOME", &sequential()));
+        expected.push(kmp::port("persistence", "/JAVA_HOME", &sequential()));
         expected.push(java::ports(&metadata));
         expected.push(java::port("quickstart", "/JAVA_HOME", &sequential()));
         expected.push(java::port("persistence", "/JAVA_HOME", &sequential()));
@@ -166,14 +164,10 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
          -cp bindings/java/build/ports/* eranos.examples.restaurantbill.Main"
     );
     assert_eq!(
-        multiplatform_library(&sequential()).command_line(),
-        "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-kmp --features sequential-ids"
-    );
-    assert_eq!(
-        kmp::port("grand_tour", "/JAVA_HOME_21", &sequential()).command_line(),
-        "/JAVA_HOME_21/bin/java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 \
-         -Djna.library.path=/eranos/target/sequential/debug -cp bindings/kmp/examples/build/ports/* \
-         eranos.examples.grandtour.MainKt"
+        kmp::port("grand_tour", "/JAVA_HOME", &sequential()).command_line(),
+        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED --illegal-native-access=deny \
+         -Dstdout.encoding=UTF-8 -Djna.library.path=/eranos/target/sequential/debug \
+         -cp bindings/kmp/examples/build/ports/* eranos.examples.grandtour.MainKt"
     );
     assert_eq!(
         kotlin::port("split_methods", "/JAVA_HOME", &sequential()).command_line(),
@@ -279,7 +273,6 @@ fn a_failure_stops_the_ports_where_it_happens() {
     let references = [reference("quickstart", METADATA)];
     for failing in [
         library(&sequential()),
-        multiplatform_library(&sequential()),
         gates::generators(&sequential())[0].clone(),
         swift::copy(&sequential())[0].clone(),
         swift::examples(&sequential())[2].clone(),
@@ -287,8 +280,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
         port("Swift", "quickstart", "/programs"),
         kotlin::ports(&metadata),
         kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
-        kmp::ports("/JAVA_HOME_21"),
-        kmp::port("quickstart", "/JAVA_HOME_21", &sequential()),
+        kmp::ports("/JAVA_HOME"),
+        kmp::port("quickstart", "/JAVA_HOME", &sequential()),
         java::ports(&metadata),
         java::port("quickstart", "/JAVA_HOME", &sequential()),
         web::sequential_library(&sequential()),
@@ -319,7 +312,6 @@ fn a_failure_stops_the_ports_where_it_happens() {
         blocked.steps,
         [
             library(&sequential()),
-            multiplatform_library(&sequential()),
             web::sequential_library(&sequential()),
             capi::sequential_library(&sequential()),
         ]
@@ -351,12 +343,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
             variables: &["JAVA_HOME"],
         },
         Unset {
-            missing: "JAVA_HOME_21",
-            variables: &["JAVA_HOME", "ANDROID_HOME"],
-        },
-        Unset {
             missing: "LLVM_HOME",
-            variables: &["JAVA_HOME", "ANDROID_HOME", "JAVA_HOME_21"],
+            variables: &["JAVA_HOME", "ANDROID_HOME"],
         },
     ] {
         let mut unnamed = Recorder::new();
@@ -391,7 +379,6 @@ fn the_ports_of_one_language_read_its_variables_and_build_its_libraries() {
     run(&mut python, &metadata, &references, &[Language::Python]).unwrap();
     assert_eq!(python.steps[0], library(&sequential()));
     for other in [
-        multiplatform_library(&sequential()),
         web::sequential_library(&sequential()),
         capi::sequential_library(&sequential()),
     ] {

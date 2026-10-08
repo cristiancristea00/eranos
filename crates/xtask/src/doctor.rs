@@ -4,7 +4,7 @@
 
 use crate::Failure;
 use crate::process::{Runner, Step};
-use crate::{capi, kmp, kotlin, web};
+use crate::{capi, kotlin, web};
 
 /// Where a machine gets a tool.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -135,16 +135,11 @@ struct Directory {
 }
 
 /// The directories the gates read from variables.
-const DIRECTORIES: [Directory; 4] = [
+const DIRECTORIES: [Directory; 3] = [
     Directory {
         variable: kotlin::JDK,
         program: "bin/java",
         entry: "brew \"openjdk@25\"",
-    },
-    Directory {
-        variable: kmp::JDK,
-        program: "bin/java",
-        entry: "brew \"openjdk@21\"",
     },
     Directory {
         variable: "ANDROID_HOME",

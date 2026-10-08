@@ -74,10 +74,11 @@ facade's edges only the one to the group. Above the facade,
 traits, on the twelve internal crates, whose edges the graph leaves out.
 `eranos-uniffi` mirrors it for UniFFI, and `eranos-uniffi-bindgen`, a
 package of binaries with no edge in the workspace, holds the generators
-that read the UniFFI library. `eranos-web` and `eranos-kmp` compile the
-source files of `eranos-uniffi`, which they include by path, on other UniFFI
-releases, for WebAssembly and for gobley, so neither has an edge to
-`eranos-uniffi`. `eranos-capi` exports the binding core through Diplomat,
+that read the UniFFI library. `eranos-web` compiles the source files of
+`eranos-uniffi`, which it includes by path, on another UniFFI release, for
+WebAssembly, so it has no edge to `eranos-uniffi`; the Kotlin Multiplatform
+package's plugin reads `eranos-uniffi` itself. `eranos-capi` exports the
+binding core through Diplomat,
 whose `diplomat-tool` generates a C API and C++ classes from its bridge.
 The binding core lists its group calls once, in a trait, from which the
 proc macros of `eranos-glue-macros` write the group handle's and the read
@@ -89,7 +90,6 @@ which `cargo xtask generate` writes into eranos-capi's sources.
 flowchart TD
     UNIFFI["eranos-uniffi<br/>UniFFI mirrors; ExpenseGroup, ExpenseGroupReader,<br/>Cancellation; value functions"]
     WEB["eranos-web<br/>the sources of eranos-uniffi,<br/>built for WebAssembly"]
-    KMP["eranos-kmp<br/>the sources of eranos-uniffi,<br/>built for gobley"]
     CAPI["eranos-capi<br/>the Diplomat bridge for C and C++;<br/>EranosExpenseGroup, its worker, callbacks"]
     BINDINGS["eranos-bindings<br/>records, EranosError, ExpenseGroupHandle,<br/>ExpenseGroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
@@ -109,10 +109,8 @@ flowchart TD
     GLUE["eranos-glue<br/>the model of the group calls;<br/>the code written from it"]
     UNIFFI --> BINDINGS
     WEB --> BINDINGS
-    KMP --> BINDINGS
     UNIFFI --> MACROS
     WEB --> MACROS
-    KMP --> MACROS
     CAPI --> BINDINGS
     BINDINGS --> FACADE
     BINDINGS --> MACROS
@@ -153,8 +151,6 @@ flowchart TD
  │                        functions                                            │
  │ eranos-web             the sources of eranos-uniffi on UniFFI 0.31, built   │
  │                        for WebAssembly                                      │
- │ eranos-kmp             the sources of eranos-uniffi on UniFFI 0.29, built   │
- │                        for gobley                                           │
  │ eranos-capi            the Diplomat bridge for C and C++: opaque records,   │
  │                        EranosExpenseGroup with its worker thread, the       │
  │                        callbacks                                            │
@@ -204,7 +200,6 @@ flowchart TD
 | `eranos-uniffi-bindgen`  | the generators `uniffi-bindgen`, for Swift, Kotlin, and Python, and `uniffi-bindgen-java`, which read the library of eranos-uniffi                                                                                                       | uniffi, uniffi-bindgen-java                                                                                            |
 | `eranos-uniffi`          | the `uniffi` copies of the core's records, enums, and error, stamped from their mirrors; the `ExpenseGroup`, `ExpenseGroupReader`, and `Cancellation` objects, their calls stamped from the core's table; the value helpers as functions | eranos-bindings, eranos-glue-macros; uniffi                                                                            |
 | `eranos-web`             | the source files of eranos-uniffi, compiled on UniFFI 0.31.2 for WebAssembly, with the runtime of uniffi-bindgen-react-native's `wasm2` flavour                                                                                          | eranos-bindings, eranos-glue-macros; uniffi, and for WebAssembly uniffi-runtime-wasm, wasm-bindgen, and uuid with `js` |
-| `eranos-kmp`             | the source files of eranos-uniffi, compiled on UniFFI 0.29.4 for gobley's Kotlin Multiplatform bindings                                                                                                                                  | eranos-bindings, eranos-glue-macros; uniffi                                                                            |
 | `eranos-capi`            | the Diplomat bridge for C and C++: an opaque object per record, list, and enum with data, the C-like enums, `EranosError`, `EranosExpenseGroup`, `EranosExpenseGroupReader`, `EranosCancellation`, and the outcomes of the callbacks     | eranos-bindings; diplomat, diplomat-runtime                                                                            |
 | `eranos-bindings`        | the records and enums every binding exposes, `EranosError` and its `FlatError`, `IbanReason`, `NewExpenseGroup`, `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, the value helpers; the trait that lists the group calls     | `eranos` with `serde`, the twelve internal crates for their conversion traits, and eranos-glue-macros; serde_json      |
 | `eranos`                 | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                                              | the twelve crates below                                                                                                |

@@ -60,7 +60,7 @@ fn the_rust_tests_run_then_every_foreign_suite_on_the_instrumented_glue_then_the
 #[test]
 fn the_rust_runs_start_clean_and_leave_the_glue_out() {
     let lines: Vec<String> = rust().iter().map(Step::command_line).collect();
-    let excluded = "--exclude eranos-capi --exclude eranos-glue-macros --exclude eranos-kmp --exclude eranos-uniffi \
+    let excluded = "--exclude eranos-capi --exclude eranos-glue-macros --exclude eranos-uniffi \
                     --exclude eranos-uniffi-bindgen --exclude eranos-web";
     assert_eq!(
         lines,

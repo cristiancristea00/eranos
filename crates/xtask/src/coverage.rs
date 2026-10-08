@@ -6,9 +6,9 @@
 //! C++, and Python tests load, each writing the coverage of the glue it
 //! runs. The glue
 //! has no Rust tests: it forwards every call to the binding core, which the
-//! Rust tests measure. eranos-web and eranos-kmp compile the glue's sources
-//! again, for WebAssembly, which stable Rust cannot measure, and for gobley,
-//! which builds its own library, so the report has neither.
+//! Rust tests measure. eranos-web compiles the glue's sources again, for
+//! WebAssembly, which stable Rust cannot measure, so the report leaves it
+//! out.
 
 use std::path::PathBuf;
 
@@ -22,10 +22,9 @@ use crate::{capi, java, kotlin, python, swift};
 /// compiler, only when a crate that invokes them compiles, so a cached
 /// build would leave them unrun; eranos-glue's tests measure what they
 /// call.
-pub(crate) const GLUE: [&str; 6] = [
+pub(crate) const GLUE: [&str; 5] = [
     "eranos-capi",
     "eranos-glue-macros",
-    "eranos-kmp",
     "eranos-uniffi",
     "eranos-uniffi-bindgen",
     "eranos-web",

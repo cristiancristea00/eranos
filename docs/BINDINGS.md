@@ -13,7 +13,7 @@ layer is tested.
 | Swift                | `bindings/swift`, the SwiftPM package `Eranos`                      | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen`                  | iOS and iPadOS 17, macOS 14, Mac Catalyst 17, tvOS 17, watchOS 10, and visionOS 1 |
 | Kotlin               | `bindings/kotlin`, the Gradle modules `eranos` and `eranos-android` | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen`                  | Android from API level 26, on four ABIs, and the JVM from release 17              |
 | Java                 | `bindings/java`, the JPMS module `eranos`                           | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen-java`             | JDK 25 and later                                                                  |
-| Kotlin Multiplatform | `bindings/kmp`                                                      | `eranos-kmp` on UniFFI 0.29.4, gobley 0.3.7                         | the JVM, Android, and eight Apple targets                                         |
+| Kotlin Multiplatform | `bindings/kmp`                                                      | `eranos-uniffi` on UniFFI 0.32.2, the UniFFI plugin of Ubique 1.3.0 | the JVM, Android, and four Apple targets                                          |
 | TypeScript           | `bindings/typescript`, the npm package `eranos`                     | `eranos-web` on UniFFI 0.31.2, uniffi-bindgen-react-native 0.31.0-6 | browsers, and Node 24 and later                                                   |
 | C                    | `bindings/c`, `eranos.h`                                            | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C23                                                                               |
 | C++                  | `bindings/cpp`, `eranos.hpp`                                        | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C++23                                                                             |
@@ -47,9 +47,9 @@ layer is tested.
 `eranos-bindings` holds, in plain Rust, everything the bindings expose.
 The glue crates beside it mirror its types and forward every call to it,
 converting nothing and deciding nothing, so every rule a binding applies
-is tested in Rust: `eranos-uniffi` for Swift, Kotlin, Java, and Python,
-`eranos-web` for browsers and Node, `eranos-kmp` for Kotlin Multiplatform,
-and `eranos-capi` for C and C++. Each package puts a hand-written layer
+is tested in Rust: `eranos-uniffi` for Swift, Kotlin, Java, Python, and
+Kotlin Multiplatform, `eranos-web` for browsers and Node, and `eranos-capi`
+for C and C++. Each package puts a hand-written layer
 over the code its generator writes, and apps see only the layer; the
 generated code is internal to every package.
 
@@ -64,7 +64,6 @@ flowchart TD
     CPP["bindings/cpp<br/>C++"]
     PYTHON["bindings/python<br/>Python"]
     UNIFFI["eranos-uniffi<br/>the glue, on UniFFI 0.32.2"]
-    KMP["eranos-kmp<br/>eranos-uniffi's sources on UniFFI 0.29.4"]
     WEB["eranos-web<br/>eranos-uniffi's sources on UniFFI 0.31.2"]
     CAPI["eranos-capi<br/>the Diplomat bridge, on Diplomat 0.16.1"]
     BINDINGS["eranos-bindings<br/>records, EranosError, FlatError,<br/>ExpenseGroupHandle, ExpenseGroupReader, Cancellation"]
@@ -72,14 +71,13 @@ flowchart TD
     SWIFT --> UNIFFI
     KOTLIN --> UNIFFI
     JAVA --> UNIFFI
-    KMPPACKAGE --> KMP
+    KMPPACKAGE --> UNIFFI
     KMPPACKAGE -.->|the Kotlin package's layer| KOTLIN
     TYPESCRIPT --> WEB
     C --> CAPI
     CPP --> CAPI
     PYTHON --> UNIFFI
     UNIFFI --> BINDINGS
-    KMP --> BINDINGS
     WEB --> BINDINGS
     CAPI --> BINDINGS
     BINDINGS --> FACADE
@@ -93,7 +91,7 @@ flowchart TD
  │ bindings/swift       Swift, on eranos-uniffi                             │
  │ bindings/kotlin      Kotlin, for Android and the JVM, on eranos-uniffi   │
  │ bindings/java        Java, on eranos-uniffi                              │
- │ bindings/kmp         Kotlin Multiplatform, on eranos-kmp, with the       │
+ │ bindings/kmp         Kotlin Multiplatform, on eranos-uniffi, with the    │
  │                      Kotlin package's layer                              │
  │ bindings/typescript  TypeScript, for browsers and Node, on eranos-web    │
  │ bindings/c           C, on eranos-capi                                   │
@@ -101,7 +99,6 @@ flowchart TD
  │ bindings/python      Python, on eranos-uniffi                            │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-uniffi        the glue, on UniFFI 0.32.2                          │
- │ eranos-kmp           eranos-uniffi's sources on UniFFI 0.29.4            │
  │ eranos-web           eranos-uniffi's sources on UniFFI 0.31.2            │
  │ eranos-capi          the Diplomat bridge, on Diplomat 0.16.1             │
  ├──────────────────────────────────────────────────────────────────────────┤
@@ -377,9 +374,9 @@ the calls, with the core's documentation, its links as code spans; the
 constructors, `read`, and `release` are written by hand. It exports the
 value helpers as functions and the asynchronous load as
 `load_expense_group_async`. Its three source files are compiled by
-`eranos-web` as well, against UniFFI 0.31.2, and by `eranos-kmp`, against
-0.29.4: they keep to what 0.29 accepts, and every release compiles them and
-the code the macros stamp in them. `uniffi.toml` names the generated Swift
+`eranos-web` as well, against UniFFI 0.31.2: they keep to what 0.31
+accepts, and both releases compile them and the code the macros stamp in
+them. `uniffi.toml` names the generated Swift
 module `EranosGenerated` and the generated Kotlin and Java package
 `eranos.internal`, and the generated Python module keeps the namespace's
 name, `eranos`, which the Python package holds as `eranos._internal.eranos`:
@@ -396,11 +393,10 @@ tool the generator runs to write the glue beside the module. On
 `wasm-unstable-single-threaded` feature, which drops the `Send` and `Sync`
 bounds a target without threads has no use for.
 
-`eranos-kmp` builds the same glue for Kotlin Multiplatform, the same way:
-it includes the three source files and compiles them against UniFFI 0.29.4,
-the release whose metadata gobley 0.3.7's generator reads, as a shared
-library for the JVM and Android, whose metadata the generator reads too,
-and as a static library that each Apple target links.
+The Kotlin Multiplatform package builds `eranos-uniffi` itself, through
+its UniFFI plugin, as a shared library for the JVM and Android, whose
+metadata the plugin's generator reads, and as a static library that each
+Apple target links ([§ 9](#kotlin-multiplatform)).
 
 `eranos-capi` is the glue for C and C++, a bridge that Diplomat's macro
 turns into C functions and that `diplomat-tool` reads to write a C header
@@ -609,9 +605,10 @@ its code. The layer follows the Kotlin library guidelines:
   currency, and in a failure, is a `CurrencyCode` built from the
   `CurrencyDetails` it crosses with, never looked up by its code, so an
   amount prints with the decimal places the library sent, and an amount
-  crosses back with the details its currency holds. uniffi-bindgen and
-  gobley both write the `u8` of decimal places as a `UByte`, and Kotlin's
-  unsigned types are invisible from Java, so `decimalPlaces` is an `Int`.
+  crosses back with the details its currency holds. uniffi-bindgen and the
+  Kotlin Multiplatform package's generator both write the `u8` of decimal
+  places as a `UByte`, and Kotlin's unsigned types are invisible from Java,
+  so `decimalPlaces` is an `Int`.
 - A failure the library reports throws `EranosException`, a subclass per
   module holding the module's failure (`ExpenseGroupFailure.MemberInUse`)
   and the library's message. A call the program should not make throws the
@@ -816,26 +813,28 @@ Prettier, ESLint, and `tsc` check it with the layer.
 ### Kotlin Multiplatform
 
 `bindings/kmp` is the Kotlin Multiplatform package: a Gradle build of two
-modules on gobley's plugins. `generated` holds the Kotlin that gobley's
-generator writes from `eranos-kmp`, in `eranos.internal`, beside the library
-that gobley's Cargo plugin builds for each target: the host's for the JVM,
-the four ABIs' for Android, and a static library for each of the eight Apple
-targets that Kotlin/Native, gobley, and rustup's standard libraries all
-have, but for macOS on x86_64, which Kotlin deprecates (iOS, its simulator
-on arm64 and x86_64, macOS on arm64, tvOS and watchOS, and their arm64
-simulators). `eranos` compiles the Kotlin package's layer from its sources,
-unchanged, as common code, over `generated` as an implementation detail, so
-one layer serves both packages. `generated` ships its own shrinker rules for
-JNA, which keep JNA's classes and the generated package, and turns gobley's
-off, since they never reach an app. gobley 0.3.7 supports the Android plugin
-8, not 9, and the Android plugin 8 calls an internal API that Gradle 9.6
-drops and a notation that Gradle 9.1 deprecates, so this build alone runs
-Gradle 9.0, on JDK 21, since Gradle 9.0 runs on JDK 24 at the latest; its
-Kotlin is the Kotlin package's 2.4.20. gobley's plugin installs its
-generator, `gobley-uniffi-bindgen` 0.3.7, into the build directory with a
-`cargo install` that passes no `--locked`, so the generator's dependencies
-resolve when it installs. Its module `examples` compiles the Kotlin
-package's ports of the examples, from their sources, for the JVM target.
+modules on the UniFFI plugin of Ubique, `ch.ubique.uniffi.plugin` 1.3.0,
+which reads UniFFI 0.32 metadata, so the package builds `eranos-uniffi`
+itself, with no crate of its own. `generated` holds the Kotlin that the
+plugin's generator writes from the host's library, in `eranos.internal`,
+beside the library the plugin builds for each target: the host's for the
+JVM, the ABIs' for Android, and a static library for each of the four
+Apple targets the plugin supports, iOS, its simulator on arm64 and x86_64,
+and macOS on arm64; it supports neither tvOS nor watchOS, which the Swift
+package covers. `eranos` compiles the Kotlin package's layer from its
+sources, unchanged, as common code, over `generated` as an implementation
+detail, so one layer serves both packages. `generated` ships its own
+shrinker rules for JNA, which keep JNA's classes and the generated package,
+through the Android plugin's consumer keep rules. The build runs the
+Gradle, the Android plugin, and the Kotlin of the Kotlin package, on the
+same JDK, and the Android plugin's library plugin for Kotlin Multiplatform,
+whose runtime asks for Android API level 37 to compile against. The plugin
+installs its generator, `uniffi-bindgen-kotlin-multiplatform`, into the
+build directory with `cargo install --locked` from the plugin's own release
+tag, and the generator reads the crate's metadata through `cargo`, which it
+finds on `PATH` or through `CARGO`. Its module `examples` compiles the
+Kotlin package's ports of the examples, from their sources, for the JVM
+target.
 
 ### C
 
@@ -1187,7 +1186,7 @@ TypeScript package with uniffi-bindgen-react-native, and checks the
 package's format, lints it, type-checks it, tests it, documents it, and
 builds its bundle, on Node 24, the oldest the package supports. Then it runs
 the Kotlin package's tests on the Kotlin Multiplatform package's JVM target,
-against gobley's bindings, builds that package's Android libraries, and, on
+against its bindings, builds that package's Android libraries, and, on
 macOS, compiles its layer for every Apple target. Then it builds
 `eranos-capi`'s static library, generates the C and the C++ headers from its
 bridge with `diplomat-tool`, and, for each package, builds its tests with
@@ -1199,8 +1198,8 @@ as `uv.lock` pins them, and checks the package's format, lints it,
 type-checks it, tests it and holds every line and branch of its layer
 covered, and documents it, on Python 3.14, the oldest the package
 supports. Last, it builds eranos-uniffi's host library with
-`sequential-ids` into `target/sequential`, and eranos-kmp's, eranos-web's,
-and eranos-capi's beside it, generates the UniFFI sources, and runs every
+`sequential-ids` into `target/sequential`, and eranos-web's and
+eranos-capi's beside it, generates the UniFFI sources, and runs every
 port: on macOS the Swift ports, on a copy of the Swift package over the
 first library, the Kotlin ports on the JVM, over the Kotlin package's
 bindings and over the Kotlin Multiplatform package's, the Java ports, the

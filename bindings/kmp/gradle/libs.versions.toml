@@ -1,15 +1,11 @@
-# Every version the Kotlin Multiplatform package builds with, pinned. gobley
-# 0.3.7 supports the Android plugin 8 and not 9; Gradle 9.6 and later drop an
-# API the Android plugin 8 calls, and Gradle 9.1 and later deprecate a
-# notation it uses, so this project runs Gradle 9.0, on JDK 21, since Gradle
-# 9.0 runs on JDK 24 at the latest (docs/BINDINGS.md § 9).
+# Every version the Kotlin Multiplatform package builds with, pinned.
 
 [versions]
-android = "8.13.2"
+android = "9.4.1"
 coroutines = "1.11.0"
-gobley = "0.3.7"
 junit = "6.1.3"
 kotlin = "2.4.20"
+uniffi = "1.3.0"
 
 [libraries]
 coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -19,8 +15,6 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 
 [plugins]
-android-library = { id = "com.android.library", version.ref = "android" }
-gobley-cargo = { id = "dev.gobley.cargo", version.ref = "gobley" }
-gobley-uniffi = { id = "dev.gobley.uniffi", version.ref = "gobley" }
-kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
+android-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "android" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+uniffi = { id = "ch.ubique.uniffi.plugin", version.ref = "uniffi" }

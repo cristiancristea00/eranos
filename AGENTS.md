@@ -120,12 +120,12 @@ It runs these, in this order, and stops at the first that fails:
     with warnings as errors, and the bundle with its declarations, all in
     `bindings/typescript`
 16. `sh gradlew --warning-mode=fail :eranos:jvmTest`, with `ANDROID_HOME`
-    set and `JAVA_HOME_21` naming the JDK 21 that the Kotlin Multiplatform
-    package's Gradle 9.0 runs on, then the rest of that package: the two
-    Android libraries and, on macOS, the layer compiled for its eight Apple
-    targets, every Gradle run with `--warning-mode=fail`, and ktlint on the
-    build scripts, all in `bindings/kmp`; the first runs the Kotlin
-    package's tests on the JVM against gobley's bindings
+    and `JAVA_HOME` set, then the rest of the Kotlin Multiplatform package:
+    the two Android libraries and, on macOS, the layer compiled for its
+    four Apple targets, every Gradle run with `--warning-mode=fail`, and
+    ktlint on the build scripts, all in `bindings/kmp`; the first runs the
+    Kotlin package's tests on the JVM against the bindings the package's
+    UniFFI plugin generates
 17. `cargo build --package eranos-capi`, with `LLVM_HOME` naming the LLVM
     whose clang, llvm-profdata, llvm-cov, clang-format, and clang-tidy the C
     and C++ packages' gates run, then each package in turn, in `bindings/c`
@@ -146,7 +146,7 @@ It runs these, in this order, and stops at the first that fails:
     warnings as errors, all in `bindings/python`
 19. `cargo build --package eranos-uniffi --features sequential-ids`, into
     `target/sequential`, the host library whose identifiers count up as the
-    examples' do, and beside it eranos-kmp's, eranos-web's for WebAssembly,
+    examples' do, and beside it eranos-web's for WebAssembly,
     and eranos-capi's static library, then the ports: the UniFFI sources
     generated from the first into `target/sequential/uniffi`; on macOS, the
     Swift package copied into `target/sequential/swift` over an
@@ -154,8 +154,9 @@ It runs these, in this order, and stops at the first that fails:
     port run; the Kotlin ports gathered by `:examples:ports` in
     `bindings/kotlin`, each run on the `java` of `JAVA_HOME`, JNA loading
     that library; the same ports gathered again in `bindings/kmp`, over
-    gobley's bindings, each run on the `java` of `JAVA_HOME_21`, JNA loading
-    eranos-kmp's; the Java ports gathered by `ports` in `bindings/java`,
+    the Kotlin Multiplatform package's bindings, each run the same way, JNA
+    loading that library too; the Java ports gathered by `ports` in
+    `bindings/java`,
     compiled with `-Xlint:all -Werror` and Error Prone, each run on the
     `java` of `JAVA_HOME`, which loads the first library; the TypeScript
     package copied into `target/sequential/typescript`, its TypeScript
@@ -455,9 +456,10 @@ every call, both written, with the read handle's reads, by the proc macros
 of `eranos-glue-macros` and `eranos-glue` from one trait that lists the
 calls. `eranos-uniffi` mirrors it for Swift, Kotlin, Java, and Python
 through UniFFI, whose generators are the binaries of
-`eranos-uniffi-bindgen`; `eranos-web` and `eranos-kmp` compile the same
-sources on the UniFFI releases that uniffi-bindgen-react-native and gobley
-read, for WebAssembly and for Kotlin Multiplatform; `eranos-capi` exports it
+`eranos-uniffi-bindgen`; `eranos-web` compiles the same sources on the
+UniFFI release that uniffi-bindgen-react-native reads, for WebAssembly, and
+the Kotlin Multiplatform package's plugin reads `eranos-uniffi` itself;
+`eranos-capi` exports it
 through Diplomat, which generates a C API and C++ classes from its bridge,
 most of which `cargo xtask generate` writes from the core's records and
 calls. Each language's package in `bindings/` puts a hand-written layer over

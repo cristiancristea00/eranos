@@ -228,7 +228,7 @@ eranos/
 │   ├── c/                      the C package, a header over the C API Diplomat generates
 │   ├── cpp/                    the C++ package, a header-only layer over Diplomat's C++ classes
 │   ├── java/                   the Java package, over the UniFFI glue
-│   ├── kmp/                    the Kotlin Multiplatform package, over the glue gobley generates
+│   ├── kmp/                    the Kotlin Multiplatform package, over the glue its UniFFI plugin generates
 │   ├── kotlin/                 the Kotlin package for Android and the JVM, over the UniFFI glue
 │   ├── python/                 the Python package, over the UniFFI glue
 │   ├── swift/                  the Swift package for Apple platforms, over the UniFFI glue
@@ -255,7 +255,6 @@ eranos/
 │   ├── eranos-glue/            the model of the group calls and records, and the glue written from it
 │   ├── eranos-glue-macros/     the proc macros the binding core and the UniFFI glue invoke
 │   ├── eranos-capi/            the bindings for C and C++, through Diplomat
-│   ├── eranos-kmp/             the bindings for Kotlin Multiplatform, through UniFFI and gobley
 │   ├── eranos-uniffi/          the bindings for Swift, Kotlin, Java, and Python, through UniFFI
 │   ├── eranos-uniffi-bindgen/  UniFFI's generators for those languages
 │   ├── eranos-web/             the bindings for browsers and Node, through UniFFI and WebAssembly

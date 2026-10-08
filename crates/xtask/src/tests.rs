@@ -227,7 +227,6 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     let sequential = metadata.inner(ports::DIRECTORY);
     let mut steps = vec![
         ports::library(&sequential),
-        ports::multiplatform_library(&sequential),
         web::sequential_library(&sequential),
         capi::sequential_library(&sequential),
     ];
@@ -245,10 +244,9 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
         ["quickstart", "persistence"]
             .map(|example| kotlin::port(example, "/JAVA_HOME", &sequential)),
     );
-    steps.push(kmp::ports("/JAVA_HOME_21"));
+    steps.push(kmp::ports("/JAVA_HOME"));
     steps.extend(
-        ["quickstart", "persistence"]
-            .map(|example| kmp::port(example, "/JAVA_HOME_21", &sequential)),
+        ["quickstart", "persistence"].map(|example| kmp::port(example, "/JAVA_HOME", &sequential)),
     );
     steps.push(java::ports(metadata));
     steps.extend(
@@ -333,8 +331,8 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     packages.extend(plan::steps(&web::checks()));
     packages.extend(plan::steps(&web::package()));
     let mut elsewhere_packages = packages.clone();
-    packages.extend(plan::steps(&kmp::checks("/JAVA_HOME_21", true)));
-    elsewhere_packages.extend(plan::steps(&kmp::checks("/JAVA_HOME_21", false)));
+    packages.extend(plan::steps(&kmp::checks("/JAVA_HOME", true)));
+    elsewhere_packages.extend(plan::steps(&kmp::checks("/JAVA_HOME", false)));
     packages.extend(last_packages(&metadata));
     elsewhere_packages.extend(last_packages(&metadata));
     packages.extend(ported(&metadata, true));

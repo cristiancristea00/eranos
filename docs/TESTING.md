@@ -60,7 +60,7 @@ every command.
 | Kotlin               | `bindings/kotlin/eranos/src/test/kotlin/`                   | the `eranos` package, and the generated code's values      | `./gradlew :eranos:test`, in `bindings/kotlin`           |
 | Java                 | `bindings/java/src/test/java/eranos/`                       | the `eranos` package, and the generated code's values      | `./gradlew test`, in `bindings/java`                     |
 | TypeScript           | `bindings/typescript/test/*.test.ts`                        | the package's entry point, and the generated code's values | `npm test`, in `bindings/typescript`                     |
-| Kotlin Multiplatform | the Kotlin suite, `bindings/kotlin/eranos/src/test/kotlin/` | the `eranos` package over gobley's bindings, on the JVM    | `./gradlew :eranos:jvmTest`, in `bindings/kmp`           |
+| Kotlin Multiplatform | the Kotlin suite, `bindings/kotlin/eranos/src/test/kotlin/` | the `eranos` package over the package's bindings, on the JVM | `./gradlew :eranos:jvmTest`, in `bindings/kmp`           |
 | C                    | `bindings/c/tests/tests.c`                                  | the `eranos.h` layer, and Diplomat's C API beneath it      | `build/tests`, in `bindings/c`, once built               |
 | C++                  | `bindings/cpp/tests/tests.cpp`                              | the `eranos.hpp` layer, and Diplomat's classes beneath it  | `build/tests`, in `bindings/cpp`, once built             |
 | Python               | `bindings/python/tests/test_*.py`                           | the `eranos` package, and the generated module's values    | `uv run pytest`, in `bindings/python`                    |
@@ -91,8 +91,8 @@ Swift ports run on macOS, on a copy of the Swift package over the host
 library, since the identifiers of the package's own XCFramework are random;
 the Kotlin and Java ports run on every machine, on the JVM, loading that
 library from `target/sequential/debug`, and the Kotlin ones again on the
-Kotlin Multiplatform package's JVM target, over gobley's bindings, where JNA
-loads eranos-kmp's library, built beside it, before the one gobley embeds.
+Kotlin Multiplatform package's JVM target, over the package's bindings,
+where JNA loads the same library.
 The TypeScript ports run on Node, in a copy of the TypeScript package whose
 generated TypeScript comes from eranos-web built with the feature for
 WebAssembly, since wasm-bindgen's glue follows the module it is written for.
@@ -238,9 +238,8 @@ as one that cannot fail has no failure branch to leave unrun: the core
 refuses such a call only on wasm, for which the bridge is not built. Only
 the Swift layer passes the UniFFI glue a `Cancellation`, so a run off
 macOS, where the Swift tests do not run, reports its two methods unrun.
-eranos-web and eranos-kmp compile eranos-uniffi's sources again and are
-not measured: stable Rust does not measure WebAssembly, and gobley builds
-its own library.
+eranos-web compiles eranos-uniffi's sources again, for WebAssembly, which
+stable Rust does not measure, so it is not measured.
 
 The suites cover every line, region, and function. Keeping it that way
 follows three rules:
@@ -285,8 +284,8 @@ themselves, and JaCoCo leaves those methods out; the classes that write
 theirs out go through the same `assertValue`.
 
 The Kotlin Multiplatform package runs the Kotlin layer's tests on its JVM
-target, against gobley's bindings, and measures nothing: its layer is the
-Kotlin package's, whose coverage Kover holds.
+target, against the package's bindings, and measures nothing: its layer is
+the Kotlin package's, whose coverage Kover holds.
 
 The TypeScript layer's tests hold it to every line, branch, function, and
 statement, which c8 reads from Node's coverage and enforces through

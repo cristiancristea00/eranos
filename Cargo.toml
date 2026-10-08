@@ -7,11 +7,11 @@
 # crates/eranos-glue-macros write from one list, crates/eranos-uniffi
 # mirrors it for UniFFI,
 # crates/eranos-uniffi-bindgen holds UniFFI's generators, and crates/eranos-web
-# and crates/eranos-kmp compile eranos-uniffi's sources for the web and for
-# Kotlin Multiplatform (docs/BINDINGS.md). The repository's automation is
-# crates/xtask, run as `cargo xtask`. Every third-party version is pinned
-# here, and the members say `{ workspace = true }`, but for the UniFFI
-# releases of eranos-web and eranos-kmp, which their own manifests pin.
+# compiles eranos-uniffi's sources for the web (docs/BINDINGS.md). The
+# repository's automation is crates/xtask, run as `cargo xtask`. Every
+# third-party version is pinned here, and the members say
+# `{ workspace = true }`, but for the UniFFI release of eranos-web, which its
+# own manifest pins.
 
 [workspace]
 resolver = "3"
@@ -28,7 +28,6 @@ members = [
     "crates/eranos-glue",
     "crates/eranos-glue-macros",
     "crates/eranos-expense-group",
-    "crates/eranos-kmp",
     "crates/eranos-ledger",
     "crates/eranos-member",
     "crates/eranos-money",

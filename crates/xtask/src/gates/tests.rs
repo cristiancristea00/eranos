@@ -692,7 +692,7 @@ fn a_failure_to_build_clear_or_generate_stops_the_generators() {
 /// variable, whichever package needs it.
 #[test]
 fn a_missing_variable_stops_the_gates_before_the_examples() {
-    for missing in ["ANDROID_HOME", "JAVA_HOME", "JAVA_HOME_21", "LLVM_HOME"] {
+    for missing in ["ANDROID_HOME", "JAVA_HOME", "LLVM_HOME"] {
         let mut recorder = Recorder::new();
         recorder.variables.retain(|name| missing != *name);
         let failure = run(&mut recorder, Part::Every).unwrap_err();
@@ -714,7 +714,7 @@ fn a_failing_package_stops_the_gates_at_its_step() {
         crate::kotlin::libraries()[0].clone(),
         crate::java::sources(&metadata)[0].clone(),
         crate::web::node(),
-        plan::steps(&crate::kmp::checks("/JAVA_HOME_21", true))[0].clone(),
+        plan::steps(&crate::kmp::checks("/JAVA_HOME", true))[0].clone(),
         crate::capi::library(),
         ports::library(&metadata.inner(ports::DIRECTORY)),
     ] {

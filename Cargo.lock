@@ -618,15 +618,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eranos-kmp"
-version = "0.8.0"
-dependencies = [
- "eranos-bindings",
- "eranos-glue-macros",
- "uniffi 0.29.4",
-]
-
-[[package]]
 name = "eranos-ledger"
 version = "0.8.0"
 dependencies = [
@@ -1882,12 +1873,6 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
 name = "siphasher"
-version = "0.3.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b58827f4464d87d377d175e90bf58eb00fd8716ff0a62f80356b5e61555d0d"
-
-[[package]]
-name = "siphasher"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ee5873ec9cce0195efcb7a4e9507a04cd49aec9c83d0389df45b1ef7ba2e649"
@@ -2105,15 +2090,6 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "toml"
 version = "0.9.12+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf92845e79fc2e2def6a5d828f0801e29a2f8acc037becc5ab08595c7d5e9863"
@@ -2201,18 +2177,6 @@ checksum = "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254"
 
 [[package]]
 name = "uniffi"
-version = "0.29.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6d968cb62160c11f2573e6be724ef8b1b18a277aededd17033f8a912d73e2b4"
-dependencies = [
- "anyhow",
- "uniffi_core 0.29.4",
- "uniffi_macros 0.29.4",
- "uniffi_pipeline 0.29.4",
-]
-
-[[package]]
-name = "uniffi"
 version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46eefd5468602930da46b1f49d3448c6dfc2e81295f93120f23f8174fd70267f"
@@ -2295,18 +2259,6 @@ dependencies = [
 
 [[package]]
 name = "uniffi_core"
-version = "0.29.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2d990b553d6b9a7ee9c3ae71134674739913d52350b56152b0e613595bb5a6f"
-dependencies = [
- "anyhow",
- "bytes",
- "once_cell",
- "static_assertions",
-]
-
-[[package]]
-name = "uniffi_core"
 version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eec017b112701681f6fbbe5d92014b5c468eb0b177a94389de03ceec40665095"
@@ -2327,19 +2279,6 @@ dependencies = [
  "bytes",
  "once_cell",
  "static_assertions",
-]
-
-[[package]]
-name = "uniffi_internal_macros"
-version = "0.29.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04f4f224becf14885c10e6e400b95cc4d1985738140cb194ccc2044563f8a56b"
-dependencies = [
- "anyhow",
- "indexmap",
- "proc-macro2",
- "quote",
- "syn 2.0.119",
 ]
 
 [[package]]
@@ -2366,23 +2305,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "uniffi_macros"
-version = "0.29.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b481d385af334871d70904e6a5f129be7cd38c18fcf8dd8fd1f646b426a56d58"
-dependencies = [
- "camino",
- "fs-err 2.11.0",
- "once_cell",
- "proc-macro2",
- "quote",
- "serde",
- "syn 2.0.119",
- "toml 0.5.11",
- "uniffi_meta 0.29.4",
 ]
 
 [[package]]
@@ -2421,24 +2343,12 @@ dependencies = [
 
 [[package]]
 name = "uniffi_meta"
-version = "0.29.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10f817868a3b171bb7bf259e882138d104deafde65684689b4694c846d322491"
-dependencies = [
- "anyhow",
- "siphasher 0.3.11",
- "uniffi_internal_macros 0.29.4",
- "uniffi_pipeline 0.29.4",
-]
-
-[[package]]
-name = "uniffi_meta"
 version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58d5b94fc92803d21b2928bd15c6f06e57609b95caf98ea561c99cda1b6d2a25"
 dependencies = [
  "anyhow",
- "siphasher 1.0.3",
+ "siphasher",
  "uniffi_internal_macros 0.31.2",
  "uniffi_pipeline 0.31.2",
 ]
@@ -2450,22 +2360,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af0c88664a9cb9559856f5a250283c9708923b303170e2e5c7db8f4ad65e9459"
 dependencies = [
  "anyhow",
- "siphasher 1.0.3",
+ "siphasher",
  "uniffi_internal_macros 0.32.2",
  "uniffi_pipeline 0.32.2",
-]
-
-[[package]]
-name = "uniffi_pipeline"
-version = "0.29.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b147e133ad7824e32426b90bc41fda584363563f2ba747f590eca1fd6fd14e6"
-dependencies = [
- "anyhow",
- "heck",
- "indexmap",
- "tempfile",
- "uniffi_internal_macros 0.29.4",
 ]
 
 [[package]]

@@ -3,18 +3,18 @@
 // as errors. It depends on the generated code as an implementation detail,
 // so no generated type reaches an app. The Kotlin package's gates lint,
 // document, and measure the same sources; here their tests run on the JVM
-// against gobley's bindings.
+// against the plugin's bindings.
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
 }
 
-// Compiled by JDK 21 for JVM 17, the oldest the package runs on, for the
-// targets of the generated module.
+// Compiled for JVM 17, the oldest the package runs on, for the targets of
+// the generated module.
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
     explicitApi()
     compilerOptions {
         allWarningsAsErrors.set(true)
@@ -27,7 +27,10 @@ kotlin {
             useJUnitPlatform()
         }
     }
-    androidTarget {
+    android {
+        namespace = "eranos"
+        compileSdk = 37
+        minSdk = 26
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
@@ -36,10 +39,6 @@ kotlin {
     iosSimulatorArm64()
     iosX64()
     macosArm64()
-    tvosArm64()
-    tvosSimulatorArm64()
-    watchosDeviceArm64()
-    watchosSimulatorArm64()
     sourceSets {
         commonMain {
             kotlin.srcDir("../../kotlin/eranos/src/main/kotlin")
@@ -57,17 +56,5 @@ kotlin {
                 runtimeOnly(libs.junit.launcher)
             }
         }
-    }
-}
-
-android {
-    namespace = "eranos"
-    compileSdk = 36
-    defaultConfig {
-        minSdk = 26
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 }

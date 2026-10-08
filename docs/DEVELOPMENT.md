@@ -33,14 +33,12 @@ and the test suites in [TESTING.md](TESTING.md).
   when one is, after checking every one.
 - **Paths**: the JDKs, Node 24, and LLVM are keg-only, and the Android
   tools look for their SDK; the gates run the TypeScript package on the
-  `node` first on `PATH`, and stop unless it is Node 24, the Kotlin
-  Multiplatform package's Gradle on the JDK that `JAVA_HOME_21` names, and
-  the C and C++ packages' compilers and linters from the LLVM that
-  `LLVM_HOME` names, since Xcode's clang has no clang-tidy:
+  `node` first on `PATH`, and stop unless it is Node 24, and the C and C++
+  packages' compilers and linters from the LLVM that `LLVM_HOME` names,
+  since Xcode's clang has no clang-tidy:
 
   ```sh
   export JAVA_HOME="$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
-  export JAVA_HOME_21="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
   export ANDROID_HOME="$(brew --prefix)/share/android-commandlinetools"
   export LLVM_HOME="$(brew --prefix llvm)"
   export PATH="$(brew --prefix node@24)/bin:$LLVM_HOME/bin:$PATH"
@@ -109,7 +107,7 @@ reads them:
 | `swift`  | a copy of the Swift package over an `XCFramework` of the library for every Apple target, which an app adds as a local package                                                                    |
 | `kotlin` | both Android libraries, their ABIs' libraries inside, and the JVM's JARs beside the host library, which JNA loads from the directory `jna.library.path` names                                    |
 | `java`   | the JAR beside the host library, which the JVM loads from the directory `java.library.path` names                                                                                                |
-| `kmp`    | the Kotlin Multiplatform package's Android libraries and JVM JARs beside eranos-kmp's host library; an Apple target's layer reaches an app through a publication, which the packages do not make |
+| `kmp`    | the Kotlin Multiplatform package's Android libraries and JVM JARs beside the host library; an Apple target's layer reaches an app through a publication, which the packages do not make        |
 | `web`    | the npm package's tarball, which `npm install` takes                                                                                                                                             |
 | `c`      | `lib`, the static and the shared library, the latter named by the run path on macOS, and `c` and `cpp`, each package's `include` and `generated`, which an app builds with as the tests do       |
 | `python` | the wheel for the host, which maturin builds from `pyproject.toml` and `pip install` takes                                                                                                       |
@@ -157,9 +155,9 @@ package needs before the examples run, and stop there when one is not set. They 
 the same JDK, and the TypeScript package on Node 24: the library for
 `wasm32-unknown-unknown`, then its TypeScript, which
 uniffi-bindgen-react-native generates into the package. Then they build
-the Kotlin Multiplatform package on the JDK 21 that `JAVA_HOME_21` names,
-where gobley's plugins build the library for each target and generate its
-bindings, and then eranos-capi's static library, from which Diplomat
+the Kotlin Multiplatform package, whose UniFFI plugin builds the library
+for each target and generates its bindings, and then eranos-capi's static
+library, from which Diplomat
 generates each of the C and C++ packages' headers, whose tests the LLVM
 that `LLVM_HOME` names builds under the sanitizers and measures. Last,
 they check the Python package over its generated module, beside which
@@ -168,7 +166,7 @@ directory: `uv sync --locked` installs the tools that `uv.lock` pins into
 the package's `.venv`, on the system's Python 3.14 or, where there is
 none, one that uv downloads, and `uv run --locked` runs each. Then
 they build eranos-uniffi's host library again, with `sequential-ids`, into
-`target/sequential`, and eranos-kmp's and eranos-capi's beside it, and run
+`target/sequential`, and eranos-capi's beside it, and run
 the ports of the examples: on macOS the Swift ones, on a copy of the Swift
 package, and on every machine the Kotlin ones, on the JVM, over the Kotlin
 package's bindings and over the Kotlin Multiplatform package's, the Java
@@ -244,17 +242,17 @@ npm run format                                                                  
 node --import tsx examples/settling_up.ts                                          # one port, on the package's module, whose identifiers are random
 ```
 
-In `bindings/kmp`, where gobley's plugins build the library and generate
-the bindings themselves, on the JDK 21. The package compiles the Kotlin
-package's layer from its sources, so a recipe's step for the Kotlin layer
-covers both packages:
+In `bindings/kmp`, where the package's UniFFI plugin builds the library
+and generates the bindings itself, on the same JDK; its bindgen reads the
+crate's metadata through `cargo`, which it finds on `PATH` or through
+`CARGO`. The package compiles the Kotlin package's layer from its sources,
+so a recipe's step for the Kotlin layer covers both packages:
 
 ```sh
-export JAVA_HOME="$JAVA_HOME_21"                 # Gradle 9.0 runs on JDK 24 at the latest
-./gradlew :eranos:jvmTest                        # the Kotlin tests on the JVM, against gobley's bindings
-./gradlew :eranos:assembleDebug                  # the layer's Android library
+./gradlew :eranos:jvmTest                        # the Kotlin tests on the JVM, against the package's bindings
+./gradlew :eranos:bundleAndroidMainAar           # the layer's Android library
 ./gradlew :eranos:compileKotlinIosSimulatorArm64 # the layer for one Apple target
-./gradlew :examples:ports                        # the Kotlin ports on gobley's bindings, in examples/build/ports
+./gradlew :examples:ports                        # the Kotlin ports on the package's bindings, in examples/build/ports
 ```
 
 In `bindings/cpp`, once `cargo build -p eranos-capi` wrote the static
@@ -738,18 +736,17 @@ rather than missed, so its total would still read 100 %. The Rust runs
 leave out the glue crates, which have no Rust tests: the glue forwards
 every call to the binding core, which the Rust tests cover. `eranos-web`
 compiles the glue's sources for WebAssembly, which stable Rust cannot
-measure, and `eranos-kmp` compiles them again for gobley, which builds its
-own library, so the report has neither. CI's coverage job runs the Rust
-part alone, as these commands do:
+measure, so the report leaves it out. CI's coverage job runs the Rust part
+alone, as these commands do:
 
 ```sh
 cargo llvm-cov clean --workspace      # drop earlier runs
 # Sequential IDs and serde, then clock-based IDs, without the glue crates:
 cargo llvm-cov --no-report --workspace --all-features \
-    --exclude eranos-capi --exclude eranos-glue-macros --exclude eranos-kmp \
+    --exclude eranos-capi --exclude eranos-glue-macros \
     --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
 cargo llvm-cov --no-report --workspace --no-default-features \
-    --exclude eranos-capi --exclude eranos-glue-macros --exclude eranos-kmp \
+    --exclude eranos-capi --exclude eranos-glue-macros \
     --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
 cargo llvm-cov report --ignore-filename-regex eranos-glue-macros/ --summary-only
 ```
@@ -821,7 +818,7 @@ nothing: it is a report.
 - **`UnsatisfiedLinkError: Unable to load library 'eranos_uniffi'`**: the
   Kotlin tests found no host library; `cargo build --package
   eranos-uniffi` writes it into `target/debug`.
-- **`ANDROID_HOME is not set`**, **`JAVA_HOME_21 is not set`**, or
+- **`ANDROID_HOME is not set`**, **`JAVA_HOME is not set`**, or
   **`LLVM_HOME is not set`** from the gates, or `SDK location not found`
   from Gradle: export the variables of [§ 1](#1-prerequisites);
   `cargo xtask doctor` names every one that is missing.
@@ -837,7 +834,7 @@ nothing: it is a report.
   `swift run --package-path target/sequential/swift/examples <example>`,
   the Kotlin or the Java command of [§ 2](#2-building-and-testing) with
   `target/sequential/debug` as the library's path, the Kotlin one from
-  `bindings/kotlin` or, with the JDK 21's `java`, from `bindings/kmp`, the
+  `bindings/kotlin` or from `bindings/kmp`, the
   TypeScript command in `target/sequential/typescript`, the Python one in
   `target/sequential/python`, or the C or C++ commands with
   `target/sequential/debug/liberanos_capi.a` prints the

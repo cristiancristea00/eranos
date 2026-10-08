@@ -20,12 +20,6 @@ cargo "cargo-mutants"
 # (docs/DEVELOPMENT.md § 1).
 brew "openjdk@25"
 
-# The JDK the Kotlin Multiplatform package's Gradle runs on. Its Gradle 9.0,
-# the last on which the Android plugin that gobley supports builds without a
-# deprecation warning, runs on JDKs 17 to 24, and 21 is the long-term release
-# among them. Keg-only: JAVA_HOME_21 points at it (docs/DEVELOPMENT.md § 1).
-brew "openjdk@21"
-
 # The Node LTS the web package is tested on. Keg-only, so it sits beside
 # any other Node.
 brew "node@24"

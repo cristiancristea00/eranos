@@ -21,7 +21,6 @@ pub(crate) const JVM: Jvm = Jvm {
     language: "Kotlin",
     library_path: "jna.library.path",
     ports: "bindings/kotlin/examples/build/ports",
-    strict_native_access: true,
 };
 
 /// Every Android ABI the package ships, as the NDK names them.

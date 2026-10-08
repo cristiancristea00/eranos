@@ -626,8 +626,9 @@ fn every_package_is_built_in_release_where_an_app_takes_it() {
         },
         ReleaseLines {
             found: &[
-                "cd bindings/kmp && JAVA_HOME='/JAVA_HOME_21' sh gradlew --warning-mode=fail :generated:assembleRelease :eranos:assembleRelease :generated:jvmJar :eranos:jvmJar",
-                "cargo build --release --package eranos-kmp",
+                "cd bindings/kmp && JAVA_HOME='/JAVA_HOME' sh gradlew --warning-mode=fail -PreleaseBuild=true :generated:bundleAndroidMainAar :eranos:bundleAndroidMainAar",
+                "cd bindings/kmp && JAVA_HOME='/JAVA_HOME' sh gradlew --warning-mode=fail :generated:jvmJar :eranos:jvmJar",
+                "cargo build --release --package eranos-uniffi",
             ],
             release: kmp::release(&runner, &metadata).unwrap(),
         },
