@@ -217,8 +217,9 @@ pub mod ffi {
 
         /// The asynchronous form of `id`: it runs on the group's worker thread, in the order of the
         /// calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops the
-        /// call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
+        /// call at its next yield, or at once while it waits for the lock, or, while the call is
+        /// queued behind earlier calls, when its turn comes, and reports the kind `Cancelled`,
+        /// leaving the group as it was.
         pub fn id_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -249,7 +250,8 @@ pub mod ffi {
         /// The asynchronous form of `categories`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn categories_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -289,8 +291,9 @@ pub mod ffi {
 
         /// The asynchronous form of `category`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn category_async(
             &self,
             id: &DiplomatStr,
@@ -336,7 +339,8 @@ pub mod ffi {
         /// The asynchronous form of `add_category`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn add_category_async(
             &self,
             category: &EranosCategory,
@@ -378,7 +382,8 @@ pub mod ffi {
         /// The asynchronous form of `replace_category`: it runs on the group's worker thread, in
         /// the order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn replace_category_async(
             &self,
             category: &EranosCategory,
@@ -422,7 +427,8 @@ pub mod ffi {
         /// The asynchronous form of `remove_category`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn remove_category_async(
             &self,
             id: &DiplomatStr,
@@ -453,8 +459,9 @@ pub mod ffi {
 
         /// The asynchronous form of `currency`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn currency_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -496,7 +503,8 @@ pub mod ffi {
         /// The asynchronous form of `change_currency`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn change_currency_async(
             &self,
             currency: &DiplomatStr,
@@ -529,8 +537,9 @@ pub mod ffi {
 
         /// The asynchronous form of `expenses`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn expenses_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -570,8 +579,9 @@ pub mod ffi {
 
         /// The asynchronous form of `expense`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn expense_async(
             &self,
             id: &DiplomatStr,
@@ -615,7 +625,8 @@ pub mod ffi {
         /// The asynchronous form of `expense_shares`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn expense_shares_async(
             &self,
             id: &DiplomatStr,
@@ -660,7 +671,8 @@ pub mod ffi {
         /// The asynchronous form of `add_expense`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn add_expense_async(
             &self,
             expense: &EranosExpense,
@@ -705,7 +717,8 @@ pub mod ffi {
         /// The asynchronous form of `replace_expense`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn replace_expense_async(
             &self,
             expense: &EranosExpense,
@@ -748,7 +761,8 @@ pub mod ffi {
         /// The asynchronous form of `remove_expense`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn remove_expense_async(
             &self,
             id: &DiplomatStr,
@@ -779,8 +793,9 @@ pub mod ffi {
 
         /// The asynchronous form of `summary`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn summary_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -810,8 +825,9 @@ pub mod ffi {
 
         /// The asynchronous form of `members`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn members_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -851,8 +867,9 @@ pub mod ffi {
 
         /// The asynchronous form of `member`: it runs on the group's worker thread, in the order of
         /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
-        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
+        /// the call at its next yield, or at once while it waits for the lock, or, while the call
+        /// is queued behind earlier calls, when its turn comes, and reports the kind `Cancelled`,
+        /// leaving the group as it was.
         pub fn member_async(
             &self,
             id: &DiplomatStr,
@@ -895,7 +912,8 @@ pub mod ffi {
         /// The asynchronous form of `is_archived`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn is_archived_async(
             &self,
             id: &DiplomatStr,
@@ -943,7 +961,8 @@ pub mod ffi {
         /// The asynchronous form of `add_member`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn add_member_async(
             &self,
             member: &EranosMember,
@@ -991,7 +1010,8 @@ pub mod ffi {
         /// The asynchronous form of `replace_member`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn replace_member_async(
             &self,
             member: &EranosMember,
@@ -1030,7 +1050,8 @@ pub mod ffi {
         /// The asynchronous form of `archive_member`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn archive_member_async(
             &self,
             id: &DiplomatStr,
@@ -1069,7 +1090,8 @@ pub mod ffi {
         /// The asynchronous form of `unarchive_member`: it runs on the group's worker thread, in
         /// the order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn unarchive_member_async(
             &self,
             id: &DiplomatStr,
@@ -1112,7 +1134,8 @@ pub mod ffi {
         /// The asynchronous form of `remove_member`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn remove_member_async(
             &self,
             id: &DiplomatStr,
@@ -1142,8 +1165,9 @@ pub mod ffi {
 
         /// The asynchronous form of `name`: it runs on the group's worker thread, in the order of
         /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
-        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
+        /// the call at its next yield, or at once while it waits for the lock, or, while the call
+        /// is queued behind earlier calls, when its turn comes, and reports the kind `Cancelled`,
+        /// leaving the group as it was.
         pub fn name_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -1179,8 +1203,9 @@ pub mod ffi {
 
         /// The asynchronous form of `set_name`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn set_name_async(
             &self,
             name: &DiplomatStr,
@@ -1222,7 +1247,8 @@ pub mod ffi {
         /// The asynchronous form of `settlement`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn settlement_async(
             &self,
             strategy: EranosSettlementStrategy,
@@ -1253,8 +1279,9 @@ pub mod ffi {
 
         /// The asynchronous form of `transfers`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn transfers_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -1294,8 +1321,9 @@ pub mod ffi {
 
         /// The asynchronous form of `transfer`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn transfer_async(
             &self,
             id: &DiplomatStr,
@@ -1339,7 +1367,8 @@ pub mod ffi {
         /// The asynchronous form of `transfer_amount`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn transfer_amount_async(
             &self,
             id: &DiplomatStr,
@@ -1388,7 +1417,8 @@ pub mod ffi {
         /// The asynchronous form of `add_transfer`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn add_transfer_async(
             &self,
             transfer: &EranosTransfer,
@@ -1433,7 +1463,8 @@ pub mod ffi {
         /// The asynchronous form of `replace_transfer`: it runs on the group's worker thread, in
         /// the order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn replace_transfer_async(
             &self,
             transfer: &EranosTransfer,
@@ -1476,7 +1507,8 @@ pub mod ffi {
         /// The asynchronous form of `remove_transfer`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn remove_transfer_async(
             &self,
             id: &DiplomatStr,
@@ -1508,7 +1540,8 @@ pub mod ffi {
         /// The asynchronous form of `description`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn description_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -1550,7 +1583,8 @@ pub mod ffi {
         /// The asynchronous form of `set_description`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn set_description_async(
             &self,
             description: &DiplomatStr,
@@ -1576,7 +1610,8 @@ pub mod ffi {
         /// The asynchronous form of `clear_description`: it runs on the group's worker thread, in
         /// the order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn clear_description_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -1605,8 +1640,9 @@ pub mod ffi {
 
         /// The asynchronous form of `language`: it runs on the group's worker thread, in the order
         /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
         pub fn language_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -1653,7 +1689,8 @@ pub mod ffi {
         /// The asynchronous form of `set_language`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn set_language_async(
             &self,
             language: &DiplomatStr,
@@ -1679,7 +1716,8 @@ pub mod ffi {
         /// The asynchronous form of `clear_language`: it runs on the group's worker thread, in the
         /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
+        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
+        /// kind `Cancelled`, leaving the group as it was.
         pub fn clear_language_async(
             &self,
             cancellation: Option<&EranosCancellation>,
@@ -1707,8 +1745,9 @@ pub mod ffi {
 
         /// The asynchronous form of `save`: it runs on the group's worker thread, in the order of
         /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
-        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
+        /// the call at its next yield, or at once while it waits for the lock, or, while the call
+        /// is queued behind earlier calls, when its turn comes, and reports the kind `Cancelled`,
+        /// leaving the group as it was.
         pub fn save_async(
             &self,
             cancellation: Option<&EranosCancellation>,

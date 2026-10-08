@@ -230,10 +230,12 @@ every line and function of eranos-capi's bridge, whose generated modules
 are files like any other: eranos-glue's tests measure the generator that
 writes them, and a test of xtask holds the committed files to what it
 writes. The objects' methods and the copies of the core's items that the
-glue's macros stamp are not in the report, as the core's forms are not. One
-kind of the bridge's regions stays unrun: the check that a text parameter
+glue's macros stamp are not in the report, as the core's forms are not. Two
+kinds of the bridge's regions stay unrun: the check that a text parameter
 is UTF-8, which only a call given other bytes takes and which would need a
-test for each function. The synchronous form of a call that the core marks
+test for each function, and the end of the process after a job of the
+worker thread panicked, which the library, which does not panic, never
+reaches. The synchronous form of a call that the core marks
 as one that cannot fail has no failure branch to leave unrun: the core
 refuses such a call only on wasm, for which the bridge is not built. Only
 the Swift layer passes the UniFFI glue a `Cancellation`, so a run off

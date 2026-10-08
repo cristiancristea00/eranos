@@ -117,10 +117,19 @@ fn worker() -> mpsc::Sender<Job> {
     let (sender, receiver) = mpsc::channel::<Job>();
     thread::spawn(move || {
         for job in receiver {
-            job();
+            guarded(job);
         }
     });
     sender
+}
+
+/// Runs `job`, and ends the process if it panics: the library does not
+/// panic, so a panic is a defect of the bindings, and a thread that ended
+/// on one would leave every later job unrun and its callbacks waiting.
+fn guarded(job: impl FnOnce()) {
+    if std::panic::catch_unwind(std::panic::AssertUnwindSafe(job)).is_err() {
+        std::process::abort();
+    }
 }
 
 /// Runs `future` on the worker thread of `jobs`, starting it on the first
@@ -152,9 +161,11 @@ pub(crate) fn run<Value: 'static, Outcome: 'static>(
 ) {
     let completion = Completion(callback);
     thread::spawn(move || {
-        // The whole completion moves, not its field, which is not `Send`.
-        let completion = completion;
-        (completion.0)(Box::new(outcome(eranos::cooperative::block_on(future))));
+        guarded(move || {
+            // The whole completion moves, not its field, which is not `Send`.
+            let completion = completion;
+            (completion.0)(Box::new(outcome(eranos::cooperative::block_on(future))));
+        });
     });
 }
 

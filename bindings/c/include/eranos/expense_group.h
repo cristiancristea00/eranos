@@ -683,8 +683,8 @@ static inline void eranosExpenseGroupId(EranosExpenseGroup const *const group, E
 }
 
 /// The asynchronous form of eranosExpenseGroupId(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -709,8 +709,8 @@ static inline void eranosExpenseGroupIdAsync(EranosExpenseGroup const *const gro
 }
 
 /// The asynchronous form of eranosExpenseGroupCategories(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -742,8 +742,8 @@ static inline void eranosExpenseGroupCategoriesAsync(EranosExpenseGroup const *c
 }
 
 /// The asynchronous form of eranosExpenseGroupCategory(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -776,8 +776,8 @@ static inline void eranosExpenseGroupCategoryAsync(EranosExpenseGroup const *con
 }
 
 /// The asynchronous form of eranosExpenseGroupAddCategory(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param category The category
@@ -809,8 +809,8 @@ static inline void eranosExpenseGroupAddCategoryAsync(EranosExpenseGroup *const 
 }
 
 /// The asynchronous form of eranosExpenseGroupReplaceCategory(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param category The category
@@ -843,8 +843,8 @@ static inline void eranosExpenseGroupReplaceCategoryAsync(EranosExpenseGroup *co
 }
 
 /// The asynchronous form of eranosExpenseGroupRemoveCategory(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -870,8 +870,8 @@ static inline void eranosExpenseGroupRemoveCategoryAsync(EranosExpenseGroup *con
 }
 
 /// The asynchronous form of eranosExpenseGroupCurrency(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -901,8 +901,8 @@ static inline void eranosExpenseGroupCurrencyAsync(EranosExpenseGroup const *con
 }
 
 /// The asynchronous form of eranosExpenseGroupChangeCurrency(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param currency The currency, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -930,8 +930,8 @@ static inline void eranosExpenseGroupChangeCurrencyAsync(EranosExpenseGroup *con
 }
 
 /// The asynchronous form of eranosExpenseGroupExpenses(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -963,8 +963,8 @@ static inline void eranosExpenseGroupExpensesAsync(EranosExpenseGroup const *con
 }
 
 /// The asynchronous form of eranosExpenseGroupExpense(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -997,8 +997,8 @@ static inline void eranosExpenseGroupExpenseAsync(EranosExpenseGroup const *cons
 }
 
 /// The asynchronous form of eranosExpenseGroupExpenseShares(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1032,8 +1032,8 @@ static inline void eranosExpenseGroupExpenseSharesAsync(EranosExpenseGroup const
 }
 
 /// The asynchronous form of eranosExpenseGroupAddExpense(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param expense The expense
@@ -1065,8 +1065,8 @@ static inline void eranosExpenseGroupAddExpenseAsync(EranosExpenseGroup *const g
 }
 
 /// The asynchronous form of eranosExpenseGroupReplaceExpense(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param expense The expense
@@ -1098,8 +1098,8 @@ static inline void eranosExpenseGroupReplaceExpenseAsync(EranosExpenseGroup *con
 }
 
 /// The asynchronous form of eranosExpenseGroupRemoveExpense(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1125,8 +1125,8 @@ static inline void eranosExpenseGroupRemoveExpenseAsync(EranosExpenseGroup *cons
 }
 
 /// The asynchronous form of eranosExpenseGroupSummary(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1151,8 +1151,8 @@ static inline void eranosExpenseGroupSummaryAsync(EranosExpenseGroup const *cons
 }
 
 /// The asynchronous form of eranosExpenseGroupMembers(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1184,8 +1184,8 @@ static inline void eranosExpenseGroupMembersAsync(EranosExpenseGroup const *cons
 }
 
 /// The asynchronous form of eranosExpenseGroupMember(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1219,8 +1219,8 @@ static inline void eranosExpenseGroupMemberAsync(EranosExpenseGroup const *const
 }
 
 /// The asynchronous form of eranosExpenseGroupIsArchived(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1253,8 +1253,8 @@ static inline void eranosExpenseGroupIsArchivedAsync(EranosExpenseGroup const *c
 }
 
 /// The asynchronous form of eranosExpenseGroupAddMember(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param member The member
@@ -1286,8 +1286,8 @@ static inline void eranosExpenseGroupAddMemberAsync(EranosExpenseGroup *const gr
 }
 
 /// The asynchronous form of eranosExpenseGroupReplaceMember(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param member The member
@@ -1316,8 +1316,8 @@ static inline void eranosExpenseGroupReplaceMemberAsync(EranosExpenseGroup *cons
 }
 
 /// The asynchronous form of eranosExpenseGroupArchiveMember(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1346,8 +1346,8 @@ static inline void eranosExpenseGroupArchiveMemberAsync(EranosExpenseGroup *cons
 }
 
 /// The asynchronous form of eranosExpenseGroupUnarchiveMember(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1379,8 +1379,8 @@ static inline void eranosExpenseGroupUnarchiveMemberAsync(EranosExpenseGroup *co
 }
 
 /// The asynchronous form of eranosExpenseGroupRemoveMember(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1408,8 +1408,8 @@ static inline void eranosExpenseGroupName(EranosExpenseGroup const *const group,
 }
 
 /// The asynchronous form of eranosExpenseGroupName(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1437,8 +1437,8 @@ static inline void eranosExpenseGroupNameAsync(EranosExpenseGroup const *const g
 }
 
 /// The asynchronous form of eranosExpenseGroupSetName(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param name The name, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1470,8 +1470,8 @@ static inline void eranosExpenseGroupSetNameAsync(EranosExpenseGroup *const grou
 }
 
 /// The asynchronous form of eranosExpenseGroupSettlement(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param strategy The strategy
@@ -1498,8 +1498,8 @@ static inline void eranosExpenseGroupSettlementAsync(EranosExpenseGroup const *c
 }
 
 /// The asynchronous form of eranosExpenseGroupTransfers(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1531,8 +1531,8 @@ static inline void eranosExpenseGroupTransfersAsync(EranosExpenseGroup const *co
 }
 
 /// The asynchronous form of eranosExpenseGroupTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1565,8 +1565,8 @@ static inline void eranosExpenseGroupTransferAsync(EranosExpenseGroup const *con
 }
 
 /// The asynchronous form of eranosExpenseGroupTransferAmount(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1600,8 +1600,8 @@ static inline void eranosExpenseGroupTransferAmountAsync(EranosExpenseGroup cons
 }
 
 /// The asynchronous form of eranosExpenseGroupAddTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param transfer The transfer
@@ -1633,8 +1633,8 @@ static inline void eranosExpenseGroupAddTransferAsync(EranosExpenseGroup *const 
 }
 
 /// The asynchronous form of eranosExpenseGroupReplaceTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param transfer The transfer
@@ -1667,8 +1667,8 @@ static inline void eranosExpenseGroupReplaceTransferAsync(EranosExpenseGroup *co
 }
 
 /// The asynchronous form of eranosExpenseGroupRemoveTransfer(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param id The id, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1699,8 +1699,8 @@ static inline void eranosExpenseGroupRemoveTransferAsync(EranosExpenseGroup *con
 }
 
 /// The asynchronous form of eranosExpenseGroupDescription(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
-/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
+/// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1733,8 +1733,8 @@ static inline void eranosExpenseGroupDescriptionAsync(EranosExpenseGroup const *
 static inline void eranosExpenseGroupClearDescription(EranosExpenseGroup *const group) { EranosExpenseGroup_clear_description(group); }
 
 /// The asynchronous form of eranosExpenseGroupSetDescription(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param description The description, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1752,8 +1752,8 @@ static inline void eranosExpenseGroupSetDescriptionAsync(EranosExpenseGroup *con
 }
 
 /// The asynchronous form of eranosExpenseGroupClearDescription(): it runs on the group's worker thread, in the order of the calls, and reports its
-/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
-/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
+/// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1783,8 +1783,8 @@ static inline void eranosExpenseGroupClearDescriptionAsync(EranosExpenseGroup *c
 }
 
 /// The asynchronous form of eranosExpenseGroupLanguage(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1860,8 +1860,8 @@ static inline void eranosExpenseGroupSave(EranosExpenseGroup const *const group,
 }
 
 /// The asynchronous form of eranosExpenseGroupSave(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none
@@ -1886,8 +1886,8 @@ static inline void eranosExpenseGroupSaveAsync(EranosExpenseGroup const *const g
 }
 
 /// The asynchronous form of eranosExpenseGroupRead(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
-/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind
-/// ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
 /// @param cancellation A cancellation for the call, or nullptr for none

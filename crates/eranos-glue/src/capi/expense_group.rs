@@ -505,7 +505,7 @@ fn asynchronous(call: &Call, answer: &Answer, form: &Form<'_>) -> TokenStream {
     });
     let outcome = outcome_name(answer);
     let documentation = doc(&[&format!(
-        "The asynchronous form of `{}`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the kind `Cancelled`, leaving the group as it was.",
+        "The asynchronous form of `{}`: it runs on the group's worker thread, in the order of the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind earlier calls, when its turn comes, and reports the kind `Cancelled`, leaving the group as it was.",
         form.name
     )]);
     quote! {
