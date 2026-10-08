@@ -5,7 +5,7 @@ public enum TipDistribution {
     /** In proportion to each participant's share of the amount. */
     PROPORTIONAL,
 
-    /** The same for every participant. */
+    /** The same for every participant with a share of the amount above zero. */
     EQUAL;
 
     /**

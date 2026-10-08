@@ -217,7 +217,7 @@ class TipDistribution(enum.Enum):
     """In proportion to each participant's share of the amount."""
 
     EQUAL = enum.auto()
-    """The same for every participant."""
+    """The same for every participant with a share of the amount above zero."""
 
 
 @final

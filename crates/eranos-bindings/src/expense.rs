@@ -290,7 +290,7 @@ impl FromTipValue for TipValue {
 pub enum TipDistribution {
     /// In proportion to each participant's share of the amount.
     Proportional,
-    /// The same for every participant.
+    /// The same for every participant with a share of the amount above zero.
     Equal,
 }
 

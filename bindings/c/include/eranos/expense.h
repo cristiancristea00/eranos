@@ -39,7 +39,7 @@ typedef enum EranosTipDistribution EranosTipDistribution;
 
 /// In proportion to each participant's share of the amount.
 static constexpr EranosTipDistribution ERANOS_TIP_DISTRIBUTION_PROPORTIONAL = EranosTipDistribution_Proportional;
-/// The same for every participant.
+/// The same for every participant with a share of the amount above zero.
 static constexpr EranosTipDistribution ERANOS_TIP_DISTRIBUTION_EQUAL = EranosTipDistribution_Equal;
 
 /// The kind of a expense split. The values of EranosExpenseSplitKind, by the names of the C layer.

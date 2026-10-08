@@ -334,7 +334,7 @@ public enum TipDistribution: Hashable, Sendable, CaseIterable {
     /// In proportion to each participant's share of the amount.
     case proportional
 
-    /// The same for every participant.
+    /// The same for every participant with a share of the amount above zero.
     case equal
 
     var generated: EranosGenerated.TipDistribution {

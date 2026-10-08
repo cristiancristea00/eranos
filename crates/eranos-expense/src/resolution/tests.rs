@@ -178,6 +178,38 @@ fn an_equal_tip_ignores_the_shares() {
     );
 }
 
+/// An equal tip is shared only by the participants with a share of the
+/// amount: a member whose share rounds to zero would otherwise pay a part of
+/// the tip on an amount they pay nothing of.
+#[test]
+fn an_equal_tip_skips_a_participant_whose_share_rounds_to_zero() {
+    let (ana, bob, carol) = (member(1), member(2), member(3));
+    let sweets = Expense::builder(
+        "Sweets",
+        eur(2),
+        ana,
+        Split::equal([ana, bob, carol]),
+        day(),
+    )
+    .tip(TipRule::fixed(eur(2)).distributed(TipDistribution::Equal))
+    .build()
+    .unwrap();
+    let resolved = resolve_expense(&identified(&sweets, entry(1)), CurrencyCode::EUR).unwrap();
+    let untipped = sweets.to_builder().tip(TipRule::NONE).build().unwrap();
+    let base = resolve_expense(&identified(&untipped, entry(1)), CurrencyCode::EUR).unwrap();
+
+    // The 0.02 is a cent each for Bob and Carol, and Ana's share rounds to
+    // zero; the 0.02 tip is a cent each for Bob and Carol too.
+    assert_eq!(
+        rows(&base),
+        vec![row(ana, 2, 0), row(bob, 0, 1), row(carol, 0, 1)]
+    );
+    assert_eq!(
+        rows(&resolved),
+        vec![row(ana, 4, 0), row(bob, 0, 2), row(carol, 0, 2)]
+    );
+}
+
 /// Items divide by their own splits and the tip follows the item subtotals,
 /// so a member pays only for what they had.
 #[test]
@@ -250,6 +282,31 @@ fn a_free_line_divides_to_zeros() {
 
     // Ana consumed the bread and its whole proportional tip; Bob, who paid
     // the 2.10, consumed nothing.
+    assert_eq!(rows(&resolved), vec![row(ana, 0, 210), row(bob, 210, 0)]);
+    assert_eq!(resolved.debts, vec![debt(ana, bob, 210)]);
+}
+
+/// An equal tip skips a member who shares only a free line: the line costs
+/// them nothing, so a part of the tip would be all they paid for it.
+#[test]
+fn an_equal_tip_skips_a_member_who_shares_only_a_free_line() {
+    let (ana, bob) = (member(1), member(2));
+    // 0.4 of a cent rounds to zero.
+    let mint = ExpenseItem::builder("Mint", eur(1), [ana, bob])
+        .quantity(Quantity::parse("0.4").unwrap())
+        .build()
+        .unwrap();
+    let bread = ExpenseItem::builder("Bread", eur(200), [ana])
+        .build()
+        .unwrap();
+    let bill = Expense::itemised_builder("Market", eur(200), bob, [mint, bread], day())
+        .tip(TipRule::fixed(eur(10)).distributed(TipDistribution::Equal))
+        .build()
+        .unwrap();
+    let resolved = resolve_expense(&identified(&bill, entry(1)), CurrencyCode::EUR).unwrap();
+
+    // Ana consumed the bread and the whole tip; Bob, who paid the 2.10,
+    // consumed nothing.
     assert_eq!(rows(&resolved), vec![row(ana, 0, 210), row(bob, 210, 0)]);
     assert_eq!(resolved.debts, vec![debt(ana, bob, 210)]);
 }
@@ -557,6 +614,40 @@ proptest! {
             prop_assert_eq!(nets.get(&member).copied().unwrap_or(0), paid - share);
         }
         prop_assert!(resolved.debts.iter().all(|debt| 0 < debt.amount && debt.members.from != debt.members.to));
+    }
+
+    /// An equal tip goes to every participant with a share of the amount, as
+    /// evenly as the minor unit allows, and to no other: a member whose share
+    /// rounds to zero would otherwise pay a tip on nothing, and two members
+    /// with a share would tip different amounts.
+    #[test]
+    fn an_equal_tip_reaches_exactly_the_participants_with_a_share(
+        amount in 1_i64..1_000,
+        participant_parts in proptest::collection::vec(1_u32..1_000, 1..6),
+        tip_basis_points in 1_u32..3_000,
+        id in IDENTIFIER,
+    ) {
+        let expense = identified(
+            &random_expense(amount, &participant_parts, &[100], Some(tip_basis_points), true, None),
+            ExpenseId::new(&id).unwrap(),
+        );
+        let untipped = expense.to_builder().tip(TipRule::NONE).build().unwrap();
+        let tipped = rows(&resolve_expense(&expense, CurrencyCode::EUR).unwrap());
+        let base = rows(&resolve_expense(&untipped, CurrencyCode::EUR).unwrap());
+        let mut portions = Vec::new();
+        for (with_tip, without_tip) in tipped.iter().zip(&base) {
+            if 0 < without_tip.share {
+                portions.push(with_tip.share - without_tip.share);
+            } else {
+                prop_assert_eq!(with_tip.share, 0);
+            }
+        }
+        // A positive amount leaves at least one participant a share.
+        prop_assert!(!portions.is_empty());
+        prop_assert_eq!(portions.iter().sum::<i64>(), expense.tip_amount().minor_units());
+        let most = portions.iter().max().copied().unwrap_or_default();
+        let least = portions.iter().min().copied().unwrap_or_default();
+        prop_assert!(1 >= most - least);
     }
 }
 

@@ -34,7 +34,11 @@ tests pin, so a change to the rounding counts as breaking, and a toolchain
 that wrote another form would fail the tests rather than change a stored
 cent ([ARCHITECTURE § 4](ARCHITECTURE.md#4-money-and-rounding)). So is an
 item's line total, its unit price times its quantity rounded half away
-from zero, which the shares of an itemised expense divide.
+from zero, which the shares of an itemised expense divide, and so are the
+participants a tip is allocated among: an equal tip goes to those whose
+base share is positive, so a member whose share rounds to zero, or who
+shares only free lines, tips nothing
+([ARCHITECTURE § 5](ARCHITECTURE.md#5-resolving-an-entry)).
 
 The internal crates (`eranos-core` to `eranos-expense-group`) are outside
 the contract on their own: they are not published, they take the workspace's

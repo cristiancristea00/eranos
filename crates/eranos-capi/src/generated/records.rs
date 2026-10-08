@@ -2106,7 +2106,7 @@ pub mod ffi {
     pub enum EranosTipDistribution {
         /// In proportion to each participant's share of the amount.
         Proportional,
-        /// The same for every participant.
+        /// The same for every participant with a share of the amount above zero.
         Equal,
     }
 

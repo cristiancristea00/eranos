@@ -293,9 +293,10 @@ exactly 10 000), or `Amounts` (summing exactly to what is divided). An
 its own split; its line total is the unit price times the quantity,
 rounded half away from zero, and the line totals must add up to the
 amount. A **tip** is fixed or a percentage of the amount,
-added on top, and shared `Proportional`ly (by consumption) or `Equal`ly. A
-**transfer** is money one member paid another, with a cost like an
-expense's.
+added on top, and shared `Proportional`ly (by consumption) or `Equal`ly
+among the participants with a share above zero
+([§ 5](#5-resolving-an-entry)). A **transfer** is money one member paid
+another, with a cost like an expense's.
 
 **Archived members** keep their history and balance and may send and
 receive transfers, but cannot join a new expense; a replacement may keep an
@@ -395,7 +396,7 @@ Resolution produces the entry's shares in the group currency:
 ```mermaid
 flowchart TD
     BASE["1. Base shares, entry currency<br/>whole: one allocation<br/>itemised: one per line, summed per member"]
-    TIP["2. Tip<br/>fixed, or amount × rate rounded half up;<br/>allocated by base share or equally"]
+    TIP["2. Tip<br/>fixed, or amount × rate rounded half up;<br/>allocated by base share, or equally<br/>among the positive base shares"]
     PAYERS["3. Payers<br/>the payer split divides amount + tip"]
     CONVERT{"4. Entry currency<br/>= group currency?"}
     REALLOCATE["Convert the total once;<br/>re-allocate shares and payments<br/>from the converted total"]
@@ -415,6 +416,7 @@ flowchart TD
                  ▼
  2. Tip           fixed, or amount × rate (half up);
                   allocated by base share, or equally
+                  among the positive base shares
                  │
                  ▼
  3. Payers        the payer split divides amount + tip
@@ -429,6 +431,12 @@ flowchart TD
 ```
 
 </details>
+
+An **equal tip** is allocated with a weight of one for each participant
+whose base share is positive and zero for the others, so a member whose
+share rounds to zero, or who shares only free lines, tips nothing. The base
+shares add up to the amount, which `build` keeps positive, so at least one
+weight is one; `allocate` would count all-zero weights as equal.
 
 Converting the total once and re-dividing it keeps both sides exact: the
 converted shares and the converted payments each add up to the converted

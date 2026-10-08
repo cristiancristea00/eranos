@@ -161,7 +161,9 @@ pub enum TipDistribution {
     /// ordered more tips more.
     #[default]
     Proportional,
-    /// The same for every participant.
+    /// The same for every participant with a share of the amount above zero:
+    /// one whose share rounds to zero, such as a member who shares only a
+    /// free line, tips nothing.
     Equal,
 }
 
