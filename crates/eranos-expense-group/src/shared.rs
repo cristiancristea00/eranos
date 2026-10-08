@@ -147,6 +147,11 @@ impl SharedExpenseGroup {
         self.write_with(move |group| group.set_description(description))
     }
 
+    /// Clears the description, as [`ExpenseGroup::clear_description`] does.
+    pub fn clear_description(&self) -> impl Future<Output = ()> + Send + 'static {
+        self.write_with(ExpenseGroup::clear_description)
+    }
+
     // --- Language ------------------------------------------------------------
 
     /// The language, if set, as [`ExpenseGroup::language`] returns it.

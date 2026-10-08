@@ -466,11 +466,11 @@ impl Expense {
         let tip = self.tip.to_library()?;
         let time = self.time.map(TimeOfDay::to_library).transpose()?;
         let category = identifier(&self.category)?;
-        Ok(builder
-            .tip(tip)
-            .time(time)
-            .category(category)
-            .description(self.description.clone().unwrap_or_default()))
+        let builder = builder.tip(tip).time(time).category(category);
+        Ok(match &self.description {
+            Some(description) => builder.description(description.as_str()),
+            None => builder.clear_description(),
+        })
     }
 }
 

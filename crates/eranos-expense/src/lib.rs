@@ -566,9 +566,17 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Sets the description; blank text clears it.
+    /// Sets the description, trimmed; blank text leaves it absent, as
+    /// [`clear_description`](Self::clear_description) does.
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    /// Clears the description, which [`description`](Self::description)
+    /// sets.
+    pub fn clear_description(mut self) -> Self {
+        self.description = None;
         self
     }
 

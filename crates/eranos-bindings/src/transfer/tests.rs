@@ -209,6 +209,30 @@ fn a_replacement_keeps_the_identifier_and_takes_every_field() {
     }
 }
 
+/// A transfer to add or a replacement whose note is absent or blank would
+/// read back with an empty note instead of none, a replacement would keep
+/// the stored one, or a note would keep stray whitespace.
+#[test]
+fn an_absent_or_blank_note_reads_back_absent() {
+    let stored = repayment().to_new().unwrap();
+    for note in [None, Some(" ".to_owned())] {
+        let record = Transfer {
+            note,
+            ..repayment()
+        };
+        let added = Transfer::from_library(&record.to_new().unwrap());
+        assert_eq!(added.note, None);
+        let replaced = Transfer::from_library(&record.replacing(&stored).unwrap());
+        assert_eq!(replaced.note, None);
+    }
+    let padded = Transfer {
+        note: Some(" Cash\n".to_owned()),
+        ..payment()
+    };
+    let added = Transfer::from_library(&padded.to_new().unwrap());
+    assert_eq!(added.note.as_deref(), Some("Cash"));
+}
+
 /// A transfer to add would lose the identifier its app gives it, its own or
 /// a generated one, or take one the rules refuse.
 #[test]

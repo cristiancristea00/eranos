@@ -5,6 +5,7 @@ package eranos
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -259,6 +260,42 @@ class EntriesTest {
         val storedTravel = present(flat.group.categoryBlocking(trip))
         assertEquals(travel, storedTravel)
         assertValue(storedTravel, storedTravel.copy(), storedTravel.copy(name = "Trips"))
+    }
+
+    /**
+     * An expense's description, a member's last name, or a transfer's note, absent or blank, that read back as text, that a
+     * replacement without it left as it was stored, or that kept the whitespace around it would show an app text nobody gave
+     * the entry.
+     */
+    @Test
+    fun anAbsentOrBlankTextReadsBackAbsent() {
+        val flat = Flat()
+        val group = flat.group
+        for (text in listOf(null, " ")) {
+            val lunch = flat.expense("Lunch", flat.ana, listOf(flat.ana))
+            assertNull(present(group.expenseBlocking(group.addBlocking(lunch.copy(description = text)))).description)
+            group.replaceBlocking(lunch.copy(description = "Lunch out"))
+            group.replaceBlocking(lunch.copy(description = text))
+            assertNull(present(group.expenseBlocking(lunch.id)).description)
+
+            val carol = Member("Carol")
+            assertNull(present(group.memberBlocking(group.addBlocking(carol.copy(lastName = text)))).lastName)
+            group.replaceBlocking(carol.copy(lastName = "Popa"))
+            group.replaceBlocking(carol.copy(lastName = text))
+            assertNull(present(group.memberBlocking(carol.id)).lastName)
+
+            val cash = Transfer(flat.bob, flat.ana, Cost.Local(flat.euros(500)), flat.day)
+            assertNull(present(group.transferBlocking(group.addBlocking(cash.copy(note = text)))).note)
+            group.replaceBlocking(cash.copy(note = "Cash"))
+            group.replaceBlocking(cash.copy(note = text))
+            assertNull(present(group.transferBlocking(cash.id)).note)
+        }
+        val taxi = flat.expense("Taxi", flat.bob, listOf(flat.bob)).copy(description = " To the airport\n")
+        assertEquals("To the airport", present(group.expenseBlocking(group.addBlocking(taxi))).description)
+        val dan = Member("Dan", lastName = "\tPopescu ")
+        assertEquals("Popescu", present(group.memberBlocking(group.addBlocking(dan))).lastName)
+        val change = Transfer(flat.ana, flat.bob, Cost.Local(flat.euros(100)), flat.day, note = " Change\n")
+        assertEquals("Change", present(group.transferBlocking(group.addBlocking(change))).note)
     }
 
     /**

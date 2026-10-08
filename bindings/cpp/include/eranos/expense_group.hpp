@@ -652,7 +652,7 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<std::string>, Error>>
     descriptionAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Sets the description; blank text clears it. Blocks the calling thread while another call holds the group's lock.
+    /// Sets the description, trimmed, or clears it when the text is blank. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @param description The description
     /// @return Nothing, or an error of the kind ErrorKind::INVALID_TEXT for text that is not UTF-8
@@ -790,10 +790,11 @@ inline std::future<std::expected<ExpenseGroup, Error>> ExpenseGroup::loadAsync(s
         [](detail::EranosExpenseGroupOutcome &done) noexcept { return ExpenseGroup(done.take()); });
 }
 
-inline void ExpenseGroup::clearDescription() noexcept { static_cast<void>(detail::waited(handle->set_description(""))); }
+inline void ExpenseGroup::clearDescription() noexcept { handle->clear_description(); }
 
 inline std::future<std::expected<void, Error>> ExpenseGroup::clearDescriptionAsync(Cancellation const *const cancellation) noexcept {
-    return setDescriptionAsync("", cancellation);
+    return detail::launch<void>([&](auto callback) noexcept { handle->clear_description_async(detail::handleOf(cancellation), std::move(callback)); },
+                                detail::finished);
 }
 
 inline void ExpenseGroup::setLanguage(Language const &language) noexcept {

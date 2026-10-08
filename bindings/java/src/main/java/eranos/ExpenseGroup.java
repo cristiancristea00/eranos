@@ -292,7 +292,8 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Sets the group's description; blank text clears it.
+     * Sets the group's description, trimmed; blank text clears it, as {@link #clearDescription}
+     * does.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #setDescriptionAsync} waits
      * without blocking it.
@@ -300,11 +301,13 @@ public final class ExpenseGroup implements AutoCloseable {
      * @param description the new description
      */
     public void setDescription(String description) {
+        Objects.requireNonNull(description, "description");
         Converting.runUnfailing(() -> handle.setDescription(description));
     }
 
     /**
-     * Sets the group's description; blank text clears it.
+     * Sets the group's description, trimmed; blank text clears it, as {@link
+     * #clearDescriptionAsync} does.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -313,21 +316,22 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return a future of the call's end
      */
     public CompletableFuture<Void> setDescriptionAsync(String description) {
+        Objects.requireNonNull(description, "description");
         return Converting.future(handle.setDescriptionAsync(description, null), _ -> null);
     }
 
     /**
-     * Clears the group's description.
+     * Clears the group's description, which {@link #setDescription} sets.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #clearDescriptionAsync} waits
      * without blocking it.
      */
     public void clearDescription() {
-        Converting.runUnfailing(() -> handle.setDescription(""));
+        Converting.runUnfailing(() -> handle.setDescription(null));
     }
 
     /**
-     * Clears the group's description.
+     * Clears the group's description, which {@link #setDescriptionAsync} sets.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -335,7 +339,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return a future of the call's end
      */
     public CompletableFuture<Void> clearDescriptionAsync() {
-        return Converting.future(handle.setDescriptionAsync("", null), _ -> null);
+        return Converting.future(handle.setDescriptionAsync(null, null), _ -> null);
     }
 
     /**

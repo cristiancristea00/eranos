@@ -672,7 +672,8 @@ fn transfers_change_through_the_records() {
 }
 
 /// The name, description, or language would change to text the library
-/// refuses, or a blank description or an absent language would stay set.
+/// refuses, a description would keep stray whitespace, or a blank or absent
+/// description or an absent language would stay set.
 #[test]
 fn the_name_description_and_language_change_through_text() {
     let mut flat = flat();
@@ -688,12 +689,15 @@ fn the_name_description_and_language_change_through_text() {
     ));
     assert_eq!(operations::name(group), "Home");
 
-    operations::set_description(group, "Rent and food");
+    operations::set_description(group, Some(" Rent and food\n"));
     assert_eq!(
         operations::description(group).as_deref(),
         Some("Rent and food")
     );
-    operations::set_description(group, " ");
+    operations::set_description(group, Some(" "));
+    assert_eq!(operations::description(group), None);
+    operations::set_description(group, Some("Rent"));
+    operations::set_description(group, None);
     assert_eq!(operations::description(group), None);
 
     operations::set_language(group, Some("pt-pt")).unwrap();

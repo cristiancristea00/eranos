@@ -1468,14 +1468,22 @@ pub mod ffi {
             );
         }
 
-        /// Sets the description; blank text clears it.
+        /// Sets the description, trimmed, or clears it when there is none or the text is blank.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_description(&self, description: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            crate::waited(self.handle.set_description(&crate::text(description)?));
+            crate::waited(
+                self.handle
+                    .set_description(Some(&crate::text(description)?)),
+            );
             Ok(())
+        }
+
+        /// The form of `set_description` that passes no `description`.
+        pub fn clear_description(&self) {
+            crate::waited(self.handle.set_description(None));
         }
 
         /// The asynchronous form of `set_description`: it runs on the group's worker thread, in the
@@ -1495,7 +1503,31 @@ pub mod ffi {
                 &self.jobs,
                 async move {
                     handle
-                        .set_description_async(description?, cancellation)
+                        .set_description_async(Some(description?), cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// The asynchronous form of `clear_description`: it runs on the group's worker thread, in
+        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn clear_description_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .set_description_async(None, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },

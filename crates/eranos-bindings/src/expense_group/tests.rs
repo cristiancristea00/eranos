@@ -220,9 +220,9 @@ fn busy() -> ExpenseGroupHandle {
 /// every binding's executor needs.
 const fn assert_send_and_static<Call: Future + Send + 'static>(_call: &Call) {}
 
-/// A new group would drop what it starts with, its identifier included, or
-/// start from an identifier, a currency, a name, or a language the library
-/// refuses.
+/// A new group would drop what it starts with, its identifier included,
+/// keep a blank description, or start from an identifier, a currency, a
+/// name, or a language the library refuses.
 #[test]
 fn a_new_group_takes_what_it_starts_with() {
     let named = ExpenseGroupHandle::new(&NewExpenseGroup {
@@ -246,6 +246,12 @@ fn a_new_group_takes_what_it_starts_with() {
     .unwrap();
     assert_eq!(plain.description(), Ok(None));
     assert_eq!(plain.language(), Ok(None));
+    let blank = ExpenseGroupHandle::new(&NewExpenseGroup {
+        description: Some(" ".to_owned()),
+        ..new_group()
+    })
+    .unwrap();
+    assert_eq!(blank.description(), Ok(None));
 
     let refusals = [
         NewExpenseGroup {
@@ -500,7 +506,8 @@ fn transfers_change_alike_in_both_forms() {
 }
 
 /// A change of the name, the description, or the language would take
-/// effect in one form only.
+/// effect in one form only, or a blank or absent description would stay
+/// set.
 #[test]
 fn the_name_description_and_language_change_alike_in_both_forms() {
     let handle = flat().handle;
@@ -509,9 +516,13 @@ fn the_name_description_and_language_change_alike_in_both_forms() {
     block_on(handle.set_name_async("House".to_owned(), None)).unwrap();
     assert_eq!(handle.name(), Ok("House".to_owned()));
 
-    handle.set_description("Bills").unwrap();
+    handle.set_description(Some("Bills")).unwrap();
     assert_eq!(handle.description(), Ok(Some("Bills".to_owned())));
-    block_on(handle.set_description_async(String::new(), None)).unwrap();
+    block_on(handle.set_description_async(None, None)).unwrap();
+    assert_eq!(handle.description(), Ok(None));
+    block_on(handle.set_description_async(Some("Rent".to_owned()), None)).unwrap();
+    assert_eq!(handle.description(), Ok(Some("Rent".to_owned())));
+    handle.set_description(Some(" ")).unwrap();
     assert_eq!(handle.description(), Ok(None));
 
     handle.set_language(Some("ro")).unwrap();

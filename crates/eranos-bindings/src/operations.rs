@@ -309,9 +309,13 @@ pub(crate) fn description(group: &ExpenseGroup) -> Option<String> {
     group.description().map(str::to_owned)
 }
 
-/// Sets the description; blank text clears it.
-pub(crate) fn set_description(group: &mut ExpenseGroup, description: &str) {
-    group.set_description(description);
+/// Sets the description, trimmed, or clears it when there is none or the
+/// text is blank.
+pub(crate) fn set_description(group: &mut ExpenseGroup, description: Option<&str>) {
+    match description {
+        Some(description) => group.set_description(description),
+        None => group.clear_description(),
+    }
 }
 
 // --- Language ----------------------------------------------------------------

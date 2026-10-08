@@ -43,28 +43,36 @@ from eranos import (
 
 
 def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
-    """A group whose details did not change as asked would show an app a name or a language the user replaced."""
+    """
+    A group whose details did not change as asked would show an app a name, a description, or a language the user replaced.
+
+    A description is trimmed, and none or blank text clears it, so the group never holds an empty one.
+    """
     assert flat.group.id()
     assert flat.group.name() == 'Flat'
     assert flat.group.currency() == flat.euro
     assert flat.group.description() == 'Rent'
     assert flat.group.language() == Language('pt-PT')
     flat.group.set_name('Home')
-    flat.group.set_description('Rent and bills')
+    flat.group.set_description(' Rent and bills\n')
     flat.group.set_language(Language('ro-RO'))
     assert flat.group.name() == 'Home'
     assert flat.group.description() == 'Rent and bills'
     assert flat.group.language() == Language('ro-RO')
-    flat.group.set_description('')
+    flat.group.set_description(None)
     flat.group.set_language(None)
     assert flat.group.description() is None
     assert flat.group.language() is None
+    flat.group.set_description('Rent')
+    flat.group.set_description(' ')
+    assert flat.group.description() is None
     with pytest.raises(ExpenseGroupError) as blank:
         flat.group.set_name(' ')
     assert blank.value.failure == ExpenseGroupError.EmptyName()
-    with ExpenseGroup.create('Trip', flat.euro) as trip:
+    with ExpenseGroup.create('Trip', flat.euro) as trip, ExpenseGroup.create('Trip', flat.euro, description=' ') as blank_description:
         assert trip.description() is None
         assert trip.language() is None
+        assert blank_description.description() is None
     with pytest.raises(ExpenseGroupError) as nameless:
         ExpenseGroup.create(' ', flat.euro)
     assert nameless.value.failure == ExpenseGroupError.EmptyName()

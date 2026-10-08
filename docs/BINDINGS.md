@@ -132,7 +132,13 @@ flowchart TD
   record: an expense's `category` and `tip` read back as the library
   holds them, the built-in category's identifier and the no-tip rule (0 %
   shared proportionally) when the expense has no other, and a record to
-  add or replace sets them as given.
+  add or replace sets them as given. A value the domain makes optional is
+  optional, never an empty stand-in: an expense's description, a member's
+  last name, and a transfer's note are optional text, which a replacement
+  without it clears; so are a new group's description and language; and
+  the group's `set_description` and `set_language` take optional text,
+  none clearing the value. Text is trimmed, and blank text reads back
+  absent.
 - **Identity is given or generated.** Every entry and every new group
   carries an identifier from the moment it is made: the app's own, any
   text the library accepts, such as the key of its store, or a generated
@@ -341,7 +347,11 @@ record of a lookup, which has an outcome of its own,
 that always return a member. The synchronous form of a call that the core
 marks as one that cannot fail returns its answer itself, and a `Result`
 only for the text it checks: the core refuses such a call only as busy, on
-wasm, for which the bridge is not built. The generator's templates hold
+wasm, for which the bridge is not built. A call that takes optional text
+has a twin of each form that passes none, since C passes no absent text,
+named `clear_` for its `set_`: `clear_description` returns nothing, and
+`clear_language` a `Result`, as `set_language` does, since the core marks
+only the description's call `#[infallible]`. The generator's templates hold
 what the core cannot say: the group's constructors and read handle, the
 cancellation, and the methods of a record that are not a field's, such as an
 expense's total. A test of xtask fails while a committed file holds other

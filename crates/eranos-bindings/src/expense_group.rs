@@ -59,12 +59,14 @@ impl ExpenseGroupHandle {
     pub fn new(group: &NewExpenseGroup) -> Result<Self, EranosError> {
         let id: ExpenseGroupId = identifier(&group.id)?;
         let language = group.language.as_deref().map(Language::parse).transpose()?;
-        let group =
+        let builder =
             ExpenseGroup::builder_with_id(id, group.name.clone(), currency(&group.currency)?)
-                .description(group.description.clone().unwrap_or_default())
-                .language(language)
-                .build()?;
-        Ok(Self::from(group))
+                .language(language);
+        let builder = match &group.description {
+            Some(description) => builder.description(description.as_str()),
+            None => builder,
+        };
+        Ok(Self::from(builder.build()?))
     }
 
     /// The group saved as `json`, loaded through the same checks as the

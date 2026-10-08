@@ -167,9 +167,16 @@ impl MemberBuilder {
         self
     }
 
-    /// Sets the last name; blank text clears it.
+    /// Sets the last name, trimmed; blank text leaves it absent, as
+    /// [`clear_last_name`](Self::clear_last_name) does.
     pub fn last_name(mut self, last_name: impl Into<String>) -> Self {
         self.last_name = Some(last_name.into());
+        self
+    }
+
+    /// Clears the last name, which [`last_name`](Self::last_name) sets.
+    pub fn clear_last_name(mut self) -> Self {
+        self.last_name = None;
         self
     }
 

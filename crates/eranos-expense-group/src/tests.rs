@@ -161,6 +161,28 @@ fn a_new_group_starts_empty() {
     );
 }
 
+/// A new group's description would keep stray whitespace, or a description
+/// set before a clear, or after it, would end up otherwise than the last
+/// call says.
+#[test]
+fn a_new_group_description_is_trimmed_and_the_last_call_wins() {
+    let builder = || ExpenseGroup::builder("Lisbon", CurrencyCode::EUR);
+    let described = builder().description("  Weekend \n").build().unwrap();
+    assert_eq!(described.description(), Some("Weekend"));
+    let set_after = builder()
+        .clear_description()
+        .description("Weekend")
+        .build()
+        .unwrap();
+    assert_eq!(set_after.description(), Some("Weekend"));
+    let cleared_after = builder()
+        .description("Weekend")
+        .clear_description()
+        .build()
+        .unwrap();
+    assert_eq!(cleared_after.description(), None);
+}
+
 /// A group from an app's own store would get another identifier than its
 /// key, two groups would share a generated one, or a builder would keep its
 /// identifier when it is given another.
@@ -284,11 +306,15 @@ fn details_change_in_place() {
     assert_eq!(group.name(), "Porto");
     assert_eq!(group.description(), Some("Weekend"));
     assert_eq!(group.language().map(Language::as_str), Some("en"));
-    // Clearing works, and a blank name is refused.
+    // Clearing works, with blank text or by name, and a blank name is
+    // refused.
     group.set_description("");
     group.set_language(None);
     assert_eq!(group.description(), None);
     assert_eq!(group.language(), None);
+    group.set_description("Weekend");
+    group.clear_description();
+    assert_eq!(group.description(), None);
     assert!(group.set_name(" ").is_err());
     assert_eq!(group.name(), "Porto");
     assert_eq!(*group.summary(), summary);

@@ -293,6 +293,32 @@ def test_replacing_an_entry_keeps_its_identifier_and_returns_it_as_it_was(flat: 
     assert added.value.failure == ExpenseGroupError.DuplicateExpense(expense=flat.dinner)
 
 
+def test_optional_text_reads_back_trimmed_and_absent_when_left_out_or_blank(flat: Flat) -> None:
+    """
+    Optional text read back padded, empty, or as it was before a replacement without it would show an app text the user never entered or removed.
+
+    The optional text of an entry is an expense's description, a member's last name, and a transfer's note; the group trims each, and holds
+    none for text left out or blank.
+    """
+    dinner, ana, repayment = flat.group.expense(flat.dinner), flat.group.member(flat.ana), flat.group.transfer(flat.repayment)
+    assert dinner is not None
+    assert ana is not None
+    assert repayment is not None
+    for text in (None, ' '):
+        flat.group.add_expense(copy.replace(flat.expense('Lunch', flat.ana, (flat.ana,)), description=text))
+        flat.group.add_member(Member.create(first_name='Carla', last_name=text))
+        flat.group.add_transfer(Transfer.create(sender=flat.ana, receiver=flat.bob, cost=LocalCost(flat.euros(100)), date=flat.day, note=text))
+        flat.group.replace_expense(copy.replace(dinner, description=' Soup\n'))
+        flat.group.replace_member(copy.replace(ana, last_name=' Pop\n'))
+        flat.group.replace_transfer(copy.replace(repayment, note=' Coins\n'))
+        assert flat.group.replace_expense(copy.replace(dinner, description=text)).description == 'Soup'
+        assert flat.group.replace_member(copy.replace(ana, last_name=text)).last_name == 'Pop'
+        assert flat.group.replace_transfer(copy.replace(repayment, note=text)).note == 'Coins'
+        assert {expense.description for expense in flat.group.expenses()} == {None}
+        assert {member.last_name for member in flat.group.members()} == {None}
+        assert {transfer.note for transfer in flat.group.transfers()} == {None}
+
+
 def test_replacing_an_entry_the_group_does_not_hold_is_refused(flat: Flat) -> None:
     """A replace that added an entry the group does not hold would bring back, through an app's stale edit, an entry another device removed."""
     snack = flat.expense('Snack', flat.ana, (flat.ana,))

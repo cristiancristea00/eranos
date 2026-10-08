@@ -90,6 +90,28 @@ fn the_last_name_is_trimmed_and_blank_clears_it() {
     assert_eq!(cleared_last_name_member.last_name(), None);
 }
 
+/// An app could remove a last name only by passing blank text, or a last
+/// name set before the clear, or after it, would end up otherwise than the
+/// last call says.
+#[test]
+fn clearing_the_last_name_removes_it_and_the_last_call_wins() {
+    let cleared = ana().to_builder().clear_last_name().build().unwrap();
+    assert_eq!(cleared.last_name(), None);
+    assert_eq!(cleared.first_name(), "Ana");
+    let set_after = Member::builder("Ana")
+        .clear_last_name()
+        .last_name("Popescu")
+        .build()
+        .unwrap();
+    assert_eq!(set_after.last_name(), Some("Popescu"));
+    let cleared_after = Member::builder("Ana")
+        .last_name("Popescu")
+        .clear_last_name()
+        .build()
+        .unwrap();
+    assert_eq!(cleared_after.last_name(), None);
+}
+
 /// Contact details could not be added, or not removed once added.
 #[test]
 fn email_and_phone_are_set_and_cleared_with_none() {

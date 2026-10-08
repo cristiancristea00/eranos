@@ -250,6 +250,27 @@ fn a_replacement_keeps_the_identifier_and_takes_every_detail() {
     }
 }
 
+/// A member to add or a replacement whose last name is absent or blank
+/// would read back with an empty last name instead of none, a replacement
+/// would keep the stored one, or a last name would keep stray whitespace.
+#[test]
+fn an_absent_or_blank_last_name_reads_back_absent() {
+    let stored = ana().to_new().unwrap();
+    for last_name in [None, Some(" ".to_owned())] {
+        let record = Member { last_name, ..ana() };
+        let added = Member::from_library(&record.to_new().unwrap());
+        assert_eq!(added.last_name, None);
+        let replaced = Member::from_library(&record.replacing(&stored).unwrap());
+        assert_eq!(replaced.last_name, None);
+    }
+    let padded = Member {
+        last_name: Some(" Popescu ".to_owned()),
+        ..bob()
+    };
+    let added = Member::from_library(&padded.to_new().unwrap());
+    assert_eq!(added.last_name.as_deref(), Some("Popescu"));
+}
+
 /// A category would lose the identifier its app gives it, reach the group
 /// with an identifier the rules refuse or a blank name, or, renamed, keep
 /// another identifier.

@@ -51,6 +51,9 @@ import {
     expenseMembers,
     expenseTipAmount,
     expenseTotal,
+    generateExpenseId,
+    generateMemberId,
+    generateTransferId,
     memberId,
     parseCategoryId,
     parseExpenseId,
@@ -342,6 +345,51 @@ void describe('the expenses, members, categories, and transfers', () => {
         assert.equal(flat.group.addCategorySync(travel), travel.id);
         assert.deepEqual(flat.group.categorySync(travel.id), travel);
         assert.deepEqual(CalendarDate.of(2026, 1, 1).toString(), '2026-01-01');
+    });
+
+    /**
+     * A last name, a description, or a note that read back as empty text when it was left out or blank, that a replace
+     * without it kept, or that kept the whitespace around it, would show an app a detail it never gave.
+     */
+    void it('reads back a left-out or blank last name, description, or note as absent, and the rest trimmed', () => {
+        const flat = new Flat();
+        const group = flat.group;
+
+        const carol = createMember({ firstName: 'Carol' });
+        group.addMemberSync({ ...carol, lastName: ' Popa\n' });
+        assert.deepEqual(group.memberSync(carol.id), { ...carol, lastName: 'Popa' });
+        for (const member of [carol, { ...carol, lastName: ' ' }]) {
+            group.replaceMemberSync({ ...carol, lastName: 'Popa' });
+            group.replaceMemberSync(member);
+            assert.deepEqual(group.memberSync(carol.id), carol);
+            const added = { ...member, id: generateMemberId() };
+            group.addMemberSync(added);
+            assert.deepEqual(group.memberSync(added.id), { ...carol, id: added.id });
+        }
+
+        const lunch = flat.expense('Lunch', flat.ana, [flat.ana, flat.bob]);
+        group.addExpenseSync({ ...lunch, description: ' At the market\n' });
+        assert.deepEqual(group.expenseSync(lunch.id), { ...lunch, description: 'At the market' });
+        for (const expense of [lunch, { ...lunch, description: ' ' }]) {
+            group.replaceExpenseSync({ ...lunch, description: 'At the market' });
+            group.replaceExpenseSync(expense);
+            assert.deepEqual(group.expenseSync(lunch.id), lunch);
+            const added = { ...expense, id: generateExpenseId() };
+            group.addExpenseSync(added);
+            assert.deepEqual(group.expenseSync(added.id), { ...lunch, id: added.id });
+        }
+
+        const cash = createTransfer({ from: flat.bob, to: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day });
+        group.addTransferSync({ ...cash, note: ' Cash\n' });
+        assert.deepEqual(group.transferSync(cash.id), { ...cash, note: 'Cash' });
+        for (const transfer of [cash, { ...cash, note: ' ' }]) {
+            group.replaceTransferSync({ ...cash, note: 'Cash' });
+            group.replaceTransferSync(transfer);
+            assert.deepEqual(group.transferSync(cash.id), cash);
+            const added = { ...transfer, id: generateTransferId() };
+            group.addTransferSync(added);
+            assert.deepEqual(group.transferSync(added.id), { ...cash, id: added.id });
+        }
     });
 
     /**

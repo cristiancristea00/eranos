@@ -207,6 +207,33 @@ class ExpenseGroupTest {
         }
 
     /**
+     * A description given as `null` or as blank text, to a new group or to either form of the setter, that the group kept, or
+     * text it kept with the whitespace around it, would show an app a description nobody gave the group.
+     */
+    @Test
+    fun aDescriptionIsTrimmedAndNullOrBlankTextClearsIt() =
+        runTest {
+            val flat = Flat()
+            val group = flat.group
+            group.setDescriptionBlocking(" Shared flat\n")
+            assertEquals("Shared flat", group.descriptionBlocking())
+            group.setDescriptionBlocking(null)
+            assertNull(group.descriptionBlocking())
+            group.setDescriptionBlocking("Bills")
+            group.setDescriptionBlocking(" ")
+            assertNull(group.descriptionBlocking())
+            group.setDescription(" Bills\t")
+            assertEquals("Bills", group.description())
+            group.setDescription(null)
+            assertNull(group.description())
+            group.setDescription("Rent")
+            group.setDescription("\n")
+            assertNull(group.description())
+            assertNull(ExpenseGroup("Trip", flat.euro, " ").description())
+            assertEquals("Rent", ExpenseGroup("Trip", flat.euro, " Rent ").description())
+        }
+
+    /**
      * A new group that dropped what it starts with, its identifier included, started from an identifier the rules refuse, or
      * a saved one that loaded from text that is not the saved form, would start an app from another group.
      */

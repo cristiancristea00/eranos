@@ -294,6 +294,29 @@ class ExpenseGroupTest {
     }
 
     /**
+     * A description that kept stray whitespace or that blank text left set, in either form or on a
+     * new group, would show an app a description nobody gave; a setter that took {@code null} would
+     * clear the description where the app meant to set one.
+     */
+    @Test
+    void aDescriptionIsTrimmedAndBlankTextClearsIt() throws EranosException {
+        ExpenseGroup group = new Flat().group;
+        group.setDescription(" Shared flat\n");
+        assertEquals(Optional.of("Shared flat"), group.description());
+        group.setDescription(" ");
+        assertEquals(Optional.empty(), group.description());
+        group.setDescriptionAsync(" Bills\n").join();
+        assertEquals(Optional.of("Bills"), group.description());
+        group.setDescriptionAsync("\t").join();
+        assertEquals(Optional.empty(), group.description());
+        assertThrows(NullPointerException.class, () -> group.setDescription(null));
+        assertThrows(NullPointerException.class, () -> group.setDescriptionAsync(null).join());
+        ExpenseGroup blank =
+                ExpenseGroup.builder("Trip", CurrencyCode.of("EUR")).description(" ").build();
+        assertEquals(Optional.empty(), blank.description());
+    }
+
+    /**
      * A new group that dropped what it starts with, the identifier the app gave it included, two
      * new groups under one generated identifier, or a saved one that loaded from text that is not
      * the saved form, would start an app from another group.

@@ -88,9 +88,11 @@ impl Transfer {
         builder: library::TransferBuilder,
     ) -> Result<library::TransferBuilder, EranosError> {
         let time = self.time.map(TimeOfDay::to_library).transpose()?;
-        Ok(builder
-            .time(time)
-            .note(self.note.clone().unwrap_or_default()))
+        let builder = builder.time(time);
+        Ok(match &self.note {
+            Some(note) => builder.note(note.as_str()),
+            None => builder.clear_note(),
+        })
     }
 }
 

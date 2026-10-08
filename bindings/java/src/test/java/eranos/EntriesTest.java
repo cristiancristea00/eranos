@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -336,6 +337,65 @@ class EntriesTest {
             assertEquals(
                     account.details(),
                     Conversions.converted(Conversions.generated(account.details())));
+        }
+    }
+
+    /**
+     * An expense, a member, or a transfer whose description, last name, or note is absent or blank
+     * that read back with text, added or as a replacement, a replacement without it that kept the
+     * stored text, or text that kept stray whitespace, would show an app text nobody gave.
+     */
+    @Test
+    void absentOrBlankTextReadsBackAbsent() throws EranosException {
+        Flat flat = new Flat();
+        ExpenseGroup group = flat.group;
+        Expense lunch =
+                flat.expense("Lunch", flat.ana, List.of(flat.bob)).toBuilder()
+                        .description(" A birthday\n")
+                        .build();
+        Member carol = Member.builder("Carol").lastName(" Popa ").build();
+        Transfer cash =
+                Transfer.builder(flat.bob, flat.ana, new Cost.Local(flat.euros(100)), flat.day)
+                        .note(" Cash\n")
+                        .build();
+        group.addExpense(lunch);
+        group.addMember(carol);
+        group.addTransfer(cash);
+        for (String absent : Arrays.asList(null, " ")) {
+            group.replaceExpense(lunch);
+            group.replaceMember(carol);
+            group.replaceTransfer(cash);
+            assertEquals(
+                    Optional.of("A birthday"),
+                    group.expense(lunch.id()).orElseThrow().description());
+            assertEquals(Optional.of("Popa"), group.member(carol.id()).orElseThrow().lastName());
+            assertEquals(Optional.of("Cash"), group.transfer(cash.id()).orElseThrow().note());
+
+            group.replaceExpense(lunch.toBuilder().description(absent).build());
+            group.replaceMember(carol.toBuilder().lastName(absent).build());
+            group.replaceTransfer(cash.toBuilder().note(absent).build());
+            assertEquals(Optional.empty(), group.expense(lunch.id()).orElseThrow().description());
+            assertEquals(Optional.empty(), group.member(carol.id()).orElseThrow().lastName());
+            assertEquals(Optional.empty(), group.transfer(cash.id()).orElseThrow().note());
+
+            ExpenseId snack =
+                    group.addExpense(
+                            flat.expense("Snack", flat.bob, List.of(flat.ana)).toBuilder()
+                                    .description(absent)
+                                    .build());
+            MemberId dan = group.addMember(Member.builder("Dan").lastName(absent).build());
+            TransferId change =
+                    group.addTransfer(
+                            Transfer.builder(
+                                            flat.ana,
+                                            flat.bob,
+                                            new Cost.Local(flat.euros(1)),
+                                            flat.day)
+                                    .note(absent)
+                                    .build());
+            assertEquals(Optional.empty(), group.expense(snack).orElseThrow().description());
+            assertEquals(Optional.empty(), group.member(dan).orElseThrow().lastName());
+            assertEquals(Optional.empty(), group.transfer(change).orElseThrow().note());
         }
     }
 

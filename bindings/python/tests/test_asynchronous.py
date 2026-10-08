@@ -97,10 +97,14 @@ def test_every_asynchronous_change_of_the_details_does_what_its_synchronous_form
         assert group.name() == 'Home'
         assert group.description() == 'Bills'
         assert group.language() == Language('ro-RO')
-        await group.set_description_async('')
+        await group.set_description_async(None)
         await group.set_language_async(None)
         assert group.description() is None
         assert group.language() is None
+        await group.set_description_async(' Rent\n')
+        assert group.description() == 'Rent'
+        await group.set_description_async(' ')
+        assert group.description() is None
         await group.change_currency_async(CurrencyCode('RON'), [CurrencyRate(flat.euro, ExchangeRate('5'))])
         assert group.currency() == CurrencyCode('RON')
         with await ExpenseGroup.load_async(group.save()) as loaded:

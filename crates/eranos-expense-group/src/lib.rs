@@ -389,9 +389,16 @@ impl ExpenseGroup {
         self.description.as_deref()
     }
 
-    /// Sets the description; blank text clears it.
+    /// Sets the description, trimmed; blank text clears it, as
+    /// [`clear_description`](Self::clear_description) does.
     pub fn set_description(&mut self, description: impl Into<String>) {
         self.description = text::optional(description);
+    }
+
+    /// Clears the description, which
+    /// [`set_description`](Self::set_description) sets.
+    pub fn clear_description(&mut self) {
+        self.description = None;
     }
 
     // --- Language ------------------------------------------------------------

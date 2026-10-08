@@ -1277,28 +1277,28 @@ class ExpenseGroup:
         with library_errors():
             return await self._generated().description_async(None)
 
-    def set_description(self, description: str) -> None:
+    def set_description(self, description: str | None) -> None:
         """
-        Set the group's description; blank text clears it.
+        Set the group's description, trimmed; none or blank text clears it.
 
         It blocks the calling thread while another call holds the group's lock.
 
         Args:
-            description: The description.
+            description: The description, or none.
 
         """
         with library_errors():
             self._generated().set_description(description)
 
-    async def set_description_async(self, description: str) -> None:
+    async def set_description_async(self, description: str | None) -> None:
         """
-        Set the group's description; blank text clears it.
+        Set the group's description, trimmed; none or blank text clears it.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what set_description refuses.
 
         Args:
-            description: The description.
+            description: The description, or none.
 
         """
         with library_errors():

@@ -527,6 +527,32 @@ fn the_description_is_trimmed_and_blank_clears_it() {
     assert_eq!(cleared_description_expense.description(), None);
 }
 
+/// An app could remove a description only by passing blank text, or a
+/// description set before the clear, or after it, would end up otherwise
+/// than the last call says.
+#[test]
+fn clearing_the_description_removes_it_and_the_last_call_wins() {
+    let cleared = full_expense()
+        .to_builder()
+        .clear_description()
+        .build()
+        .unwrap();
+    assert_eq!(cleared.description(), None);
+    let builder = || dinner().paid_by(ana()).split(Split::equal([ana()]));
+    let set_after = builder()
+        .clear_description()
+        .description("Birthday")
+        .build()
+        .unwrap();
+    assert_eq!(set_after.description(), Some("Birthday"));
+    let cleared_after = builder()
+        .description("Birthday")
+        .clear_description()
+        .build()
+        .unwrap();
+    assert_eq!(cleared_after.description(), None);
+}
+
 /// Optional details could not be added, or not removed once added.
 #[test]
 fn optional_fields_are_set_and_cleared_with_none() {

@@ -438,10 +438,12 @@ breaking.
 1. Add the private field, a getter, and a builder setter; an optional field
    takes `impl Into<Option<T>>` so callers can clear it, a field with a
    default takes the value itself and its default clears it (a category, a
-   tip), and a text field trims and treats blank as absent. The field goes
-   where the field order of [AGENTS.md](../AGENTS.md) puts it, in the
-   builder and the `*Record` struct too, and its getter and setter go where
-   the accessor order puts them.
+   tip), and an optional text field takes the text, which it trims,
+   leaving the field absent for blank text, and has a `clear_` method
+   beside its setter (`description` and `clear_description`). The field
+   goes where the field order of [AGENTS.md](../AGENTS.md) puts it, in the
+   builder and the `*Record` struct too, and its getter and setters go
+   where the accessor order puts them.
 2. Validate it in the builder's `build()`, or in `ExpenseGroup::check_*`
    when the rule depends on the group.
 3. With `serde`: add `#[serde(skip_serializing_if = …)]` for an optional

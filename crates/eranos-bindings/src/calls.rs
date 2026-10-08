@@ -198,10 +198,11 @@ trait ExpenseGroupCalls {
     #[infallible]
     fn description(&self) -> Result<Option<String>, EranosError>;
 
-    /// Sets the description; blank text clears it.
+    /// Sets the description, trimmed, or clears it when there is none or
+    /// the text is blank.
     #[write]
     #[infallible]
-    fn set_description(&self, description: &str) -> Result<(), EranosError>;
+    fn set_description(&self, description: Option<&str>) -> Result<(), EranosError>;
 
     // --- Language ------------------------------------------------------------
 

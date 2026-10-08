@@ -364,7 +364,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Sets the group's description; blank text clears it.
+     * Sets the group's description, trimmed; blank text clears it, as {@link ExpenseGroup.clearDescription} does.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.setDescriptionSync} does not wait.
@@ -378,7 +378,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Sets the group's description; blank text clears it.
+     * Sets the group's description, trimmed; blank text clears it, as {@link ExpenseGroup.clearDescriptionSync} does.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.setDescription} waits for it.
@@ -392,7 +392,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Clears the group's description.
+     * Clears the group's description, which {@link ExpenseGroup.setDescription} sets.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.clearDescriptionSync} does not wait.
@@ -401,18 +401,18 @@ export class ExpenseGroup implements Disposable {
      * @returns A promise of the call's end
      */
     async clearDescription(options?: CallOptions): Promise<void> {
-        await awaiting((signal) => this.handle.setDescriptionAsync('', undefined, signal), options);
+        await awaiting((signal) => this.handle.setDescriptionAsync(undefined, undefined, signal), options);
     }
 
     /**
-     * Clears the group's description.
+     * Clears the group's description, which {@link ExpenseGroup.setDescriptionSync} sets.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.clearDescription} waits for it.
      */
     clearDescriptionSync(): void {
         calling(() => {
-            this.handle.setDescription('');
+            this.handle.setDescription(undefined);
         });
     }
 

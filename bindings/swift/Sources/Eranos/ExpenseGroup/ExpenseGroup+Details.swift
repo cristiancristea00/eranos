@@ -130,15 +130,15 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Sets the group's description; nil or blank text clears it.
+    /// Sets the group's description, trimmed; nil or blank text clears it.
     ///
     /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
     ///   call holds the lock.
     func changeDescription(to description: String?) throws(EranosError) {
-        try converting { try handle.setDescription(description: description ?? "") }
+        try converting { try handle.setDescription(description: description) }
     }
 
-    /// Sets the group's description; nil or blank text clears it.
+    /// Sets the group's description, trimmed; nil or blank text clears it.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
@@ -146,7 +146,7 @@ public extension ExpenseGroup {
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func changeDescription(to description: String?) async throws(EranosError) {
         try await converting { [handle] cancellation in
-            try await handle.setDescriptionAsync(description: description ?? "", cancellation: cancellation)
+            try await handle.setDescriptionAsync(description: description, cancellation: cancellation)
         }
     }
 

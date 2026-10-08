@@ -115,6 +115,19 @@ fn the_note_is_trimmed_and_blank_clears_it() {
     assert_eq!(cleared_note_transfer.note(), None);
 }
 
+/// An app could remove a note only by passing blank text, or a note set
+/// before the clear, or after it, would end up otherwise than the last call
+/// says.
+#[test]
+fn clearing_the_note_removes_it_and_the_last_call_wins() {
+    let cleared = full_repayment().to_builder().clear_note().build().unwrap();
+    assert_eq!(cleared.note(), None);
+    let set_after = repayment().clear_note().note("Dinner").build().unwrap();
+    assert_eq!(set_after.note(), Some("Dinner"));
+    let cleared_after = repayment().note("Dinner").clear_note().build().unwrap();
+    assert_eq!(cleared_after.note(), None);
+}
+
 /// A time could not be added, or not removed once added.
 #[test]
 fn the_time_is_set_and_cleared_with_none() {

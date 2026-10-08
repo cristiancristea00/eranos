@@ -163,6 +163,41 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     }
 }
 
+/// A last name, a description, or a note that kept stray whitespace, read back as empty text when
+/// it was added absent or blank, or stayed after a replacement without it would show an app a
+/// detail the user never gave or removed.
+@Test
+func absentOrBlankTextReadsBackAbsent() throws {
+    let flat = try Flat()
+    let group = flat.group
+    for text in [nil, " "] as [String?] {
+        var carol = Member(firstName: "Carol", lastName: " Popa\n")
+        var lunch = flat.expense("Lunch", paidBy: flat.ana, sharedBy: [flat.ana, flat.bob])
+        lunch.description = " For the team\n"
+        var cash = Transfer(from: flat.bob, to: flat.ana, cost: .local(flat.euros(100)), date: flat.day, note: " Cash\n")
+        #expect(try "Popa" == group.member(withID: group.add(carol))?.lastName)
+        #expect(try "For the team" == group.expense(withID: group.add(lunch))?.description)
+        #expect(try "Cash" == group.transfer(withID: group.add(cash))?.note)
+
+        carol.lastName = text
+        lunch.description = text
+        cash.note = text
+        try group.replace(carol)
+        try group.replace(lunch)
+        try group.replace(cash)
+        #expect(try nil == group.member(withID: carol.id)?.lastName)
+        #expect(try nil == group.expense(withID: lunch.id)?.description)
+        #expect(try nil == group.transfer(withID: cash.id)?.note)
+
+        #expect(try nil == group.member(withID: group.add(Member(firstName: "Dan", lastName: text)))?.lastName)
+        var dinner = flat.expense("Dinner", paidBy: flat.bob, sharedBy: [flat.ana, flat.bob])
+        dinner.description = text
+        #expect(try nil == group.expense(withID: group.add(dinner))?.description)
+        let refund = Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(100)), date: flat.day, note: text)
+        #expect(try nil == group.transfer(withID: group.add(refund))?.note)
+    }
+}
+
 /// A replace that added an entry the group does not hold, instead of refusing it, would bring back
 /// an entry the app removed while its user edited it.
 @Test

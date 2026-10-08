@@ -1698,7 +1698,7 @@ static inline void eranosExpenseGroupDescriptionAsync(EranosExpenseGroup const *
     EranosExpenseGroup_description_async(group, cancellation, wrapped);
 }
 
-/// Sets the description; blank text clears it.
+/// Sets the description, trimmed, or clears it when the text is blank.
 ///
 /// @param group The group
 /// @param description The description, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -1708,6 +1708,11 @@ static inline void eranosExpenseGroupDescriptionAsync(EranosExpenseGroup const *
     EranosExpenseGroup_set_description_result const result = EranosExpenseGroup_set_description(group, eranosDetailView(description));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
+
+/// Clears the group's description.
+///
+/// @param group The group
+static inline void eranosExpenseGroupClearDescription(EranosExpenseGroup *const group) { EranosExpenseGroup_clear_description(group); }
 
 /// The asynchronous form of eranosExpenseGroupSetDescription(): it runs on the group's worker thread, in the order of the calls, and reports its
 /// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
@@ -1726,6 +1731,24 @@ static inline void eranosExpenseGroupSetDescriptionAsync(EranosExpenseGroup *con
         .destructor = nullptr,
     };
     EranosExpenseGroup_set_description_async(group, eranosDetailView(description), cancellation, wrapped);
+}
+
+/// The asynchronous form of eranosExpenseGroupClearDescription(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, and reports the
+/// kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+///
+/// @param group The group
+/// @param cancellation A cancellation for the call, or nullptr for none
+/// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
+///   until it is called, which happens once
+static inline void eranosExpenseGroupClearDescriptionAsync(EranosExpenseGroup *const group, EranosCancellation const *const cancellation,
+                                                           EranosUnitCallback const *const callback) {
+    DiplomatCallback_EranosExpenseGroup_clear_description_async_callback const wrapped = {
+        .data = callback,
+        .run_callback = eranosDetailRunUnitCallback,
+        .destructor = nullptr,
+    };
+    EranosExpenseGroup_clear_description_async(group, cancellation, wrapped);
 }
 
 /// The language the apps show the group in, as a BCP 47 tag. Writes it into @p language, if the group has one, and nothing otherwise: the group holds

@@ -131,8 +131,9 @@ func synchronousChangesToCategoriesAndMembersTakeEffect() throws {
     }
 }
 
-/// A change to expenses, transfers, or the group's own details that did not take effect would
-/// leave an app showing a group that is not there.
+/// A change to expenses, transfers, or the group's own details that did not take effect, or a
+/// description that kept stray whitespace or stayed set after nil or blank text, would leave an app
+/// showing a group that is not there.
 @Test
 func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     let flat = try Flat()
@@ -152,6 +153,10 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     try group.rename(to: "Home")
     #expect(try "Home" == group.name())
     try group.changeDescription(to: nil)
+    #expect(try nil == group.description())
+    try group.changeDescription(to: " Bills\n")
+    #expect(try "Bills" == group.description())
+    try group.changeDescription(to: " ")
     #expect(try nil == group.description())
     try group.changeLanguage(to: Language("ro"))
     #expect(try group.language() == Language("ro"))
@@ -203,20 +208,26 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     #expect(try await "ro" == group.language()?.description)
     try await group.changeDescription(to: nil)
     #expect(try await nil == group.description())
+    try await group.changeDescription(to: " Rent\n")
+    #expect(try await "Rent" == group.description())
+    try await group.changeDescription(to: " ")
+    #expect(try await nil == group.description())
     let lei = try CurrencyCode(code: "RON")
     try await group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
     #expect(try await group.currency() == lei)
 }
 
-/// A new group that dropped what it starts with, its identifier included, or started under an
-/// identifier the rules refuse, or a saved one that loaded from text that is not the saved form,
-/// would start an app from another group than the user made.
+/// A new group that dropped what it starts with, its identifier included, kept a blank
+/// description, or started under an identifier the rules refuse, or a saved one that loaded from
+/// text that is not the saved form, would start an app from another group than the user made.
 @Test
 func aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() async throws {
     let euro = try CurrencyCode(code: "EUR")
     let plain = try ExpenseGroup(name: "Trip", currency: euro)
     #expect(try await nil == plain.description())
     #expect(try await nil == plain.language())
+    let blank = try ExpenseGroup(name: "Trip", currency: euro, description: " ")
+    #expect(try await nil == blank.description())
     let named = try ExpenseGroup(id: ExpenseGroup.ID("flat-12"), name: "Flat", currency: euro)
     #expect(try await "flat-12" == named.id().rawValue)
     #expect(try await plain.id() != named.id())

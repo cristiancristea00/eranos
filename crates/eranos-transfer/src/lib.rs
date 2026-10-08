@@ -306,9 +306,16 @@ impl TransferBuilder {
         self
     }
 
-    /// Sets the note; blank text clears it.
+    /// Sets the note, trimmed; blank text leaves it absent, as
+    /// [`clear_note`](Self::clear_note) does.
     pub fn note(mut self, note: impl Into<String>) -> Self {
         self.note = Some(note.into());
+        self
+    }
+
+    /// Clears the note, which [`note`](Self::note) sets.
+    pub fn clear_note(mut self) -> Self {
+        self.note = None;
         self
     }
 

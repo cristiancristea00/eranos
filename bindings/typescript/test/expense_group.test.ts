@@ -141,7 +141,10 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(reader.language(), undefined);
     });
 
-    /** A synchronous change that did not take effect, or took another, would leave the group other than the app changed it. */
+    /**
+     * A synchronous change that did not take effect, or took another, or a description that kept the whitespace around it or
+     * stayed set when blank, would leave the group other than the app changed it.
+     */
     void it('takes every synchronous change into effect', () => {
         const flat = new Flat();
         const group = flat.group;
@@ -187,10 +190,12 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(group.nameSync(), 'Home');
         assert.equal(group.descriptionSync(), undefined);
         assert.equal(group.languageSync(), undefined);
-        group.setDescriptionSync('Shared flat');
+        group.setDescriptionSync(' Shared flat\n');
         group.setLanguageSync(Language.parse('ro'));
         assert.equal(group.descriptionSync(), 'Shared flat');
         assert.equal(group.languageSync()?.toString(), 'ro');
+        group.setDescriptionSync(' ');
+        assert.equal(group.descriptionSync(), undefined);
         const lei = CurrencyCode.of('RON');
         group.changeCurrencySync(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
@@ -249,6 +254,10 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         await group.clearLanguage();
         assert.equal(group.descriptionSync(), undefined);
         assert.equal(group.languageSync(), undefined);
+        await group.setDescription(' Rent\n');
+        assert.equal(group.descriptionSync(), 'Rent');
+        await group.setDescription(' ');
+        assert.equal(group.descriptionSync(), undefined);
         const lei = CurrencyCode.of('RON');
         await group.changeCurrency(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
@@ -256,9 +265,9 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     });
 
     /**
-     * A new group that dropped what it starts with, the identifier the app gives it included, took an identifier the rules
-     * refuse, shared a generated identifier with another group, or a saved one that loaded from text that is not the saved
-     * form, would start an app from another group.
+     * A new group that dropped what it starts with, the identifier the app gives it included, kept a blank description, took
+     * an identifier the rules refuse, shared a generated identifier with another group, or a saved one that loaded from text
+     * that is not the saved form, would start an app from another group.
      */
     void it('starts a group with what it is given and loads only its saved form', async () => {
         const euro = CurrencyCode.of('EUR');
@@ -266,6 +275,8 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(trip.idSync(), 'trip-2026');
         assert.equal(trip.nameSync(), 'Trip');
         assert.equal(trip.descriptionSync(), 'Alps');
+        using blank = ExpenseGroup.create('Trip', euro, { description: ' ' });
+        assert.equal(blank.descriptionSync(), undefined);
         assert.equal(ExpenseGroup.loadSync(trip.saveSync()).idSync(), 'trip-2026');
         assert.throws(
             () => ExpenseGroup.createWithId(expenseGroupId(' trip'), 'Trip', euro),

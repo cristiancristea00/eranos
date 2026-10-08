@@ -604,6 +604,31 @@ fn a_zero_tip_reads_back_as_set() {
     assert_eq!(read, equal);
 }
 
+/// An expense to add or a replacement whose description is absent or blank
+/// would read back with an empty description instead of none, a
+/// replacement would keep the stored one, or a description would keep stray
+/// whitespace.
+#[test]
+fn an_absent_or_blank_description_reads_back_absent() {
+    let stored = dinner().to_new().unwrap();
+    for description in [None, Some(" ".to_owned())] {
+        let record = Expense {
+            description,
+            ..dinner()
+        };
+        let added = Expense::from_library(&record.to_new().unwrap());
+        assert_eq!(added.description, None);
+        let replaced = Expense::from_library(&record.replacing(&stored).unwrap());
+        assert_eq!(replaced.description, None);
+    }
+    let padded = Expense {
+        description: Some(" A birthday\n".to_owned()),
+        ..taxi()
+    };
+    let added = Expense::from_library(&padded.to_new().unwrap());
+    assert_eq!(added.description.as_deref(), Some("A birthday"));
+}
+
 /// An expense to add would lose the identifier its app gives it, its own or
 /// a generated one, or take one the rules refuse.
 #[test]

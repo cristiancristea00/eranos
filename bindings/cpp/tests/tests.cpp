@@ -499,6 +499,8 @@ void replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas(Check &check) noexcep
     auto noted = repayment;
     noted.note = "Back";
     check.that(flat.group.replaceTransfer(noted) == repayment && flat.group.transfer(flat.repayment) == noted, "a transfer");
+    check.that(flat.group.replaceTransfer(repayment) == noted && flat.group.transfer(flat.repayment) == repayment,
+               "a transfer replaced without its note loses it");
     auto const ana = flat.group.member(flat.ana).value().value();
     auto renamed = ana;
     renamed.firstName = "Ana Maria";
@@ -634,11 +636,11 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) noexcept {
     check.that("Flat" == flat.group.name() && flat.group.currency() == flat.euro, "the name and the currency");
     check.that("Rent" == flat.group.description() && flat.group.language() == Language::parse("pt-PT").value(), "the options it started with");
     flat.group.setName("Home").value();
-    flat.group.setDescription("Rent and bills").value();
+    flat.group.setDescription(" Rent and bills ").value();
     flat.group.setLanguage(Language::parse("ro-RO").value());
     check.that("Home" == flat.group.name() && "Rent and bills" == flat.group.description() &&
                    flat.group.language() == Language::parse("ro-RO").value(),
-               "the details as set");
+               "the details as set, the description trimmed");
     flat.group.clearDescription();
     flat.group.clearLanguage();
     check.that(!flat.group.description().has_value() && !flat.group.language().has_value(), "the details cleared");
@@ -646,6 +648,9 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) noexcept {
         auto const reader = flat.group.read();
         check.that(!reader.description().value().has_value() && !reader.language().value().has_value(), "and cleared through a read handle");
     }
+    flat.group.setDescription("Rent").value();
+    flat.group.setDescription(" ").value();
+    check.that(!flat.group.description().has_value(), "blank text clears the description");
     check.that(isFailure(refusal(flat.group.setName(" ")), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME), "a blank name");
     check.that(isFailure(refusal(flat.group.setDescription("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a description that is not text");
     auto const trip = ExpenseGroup::create("Trip", flat.euro).value();

@@ -173,8 +173,11 @@ impl Member {
             .iter()
             .map(PaymentAccount::to_library)
             .collect::<Result<Vec<_>, EranosError>>()?;
+        let builder = match &self.last_name {
+            Some(last_name) => builder.last_name(last_name.as_str()),
+            None => builder.clear_last_name(),
+        };
         Ok(builder
-            .last_name(self.last_name.clone().unwrap_or_default())
             .email(email)
             .phone(phone)
             .accounts(accounts)

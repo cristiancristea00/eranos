@@ -217,19 +217,19 @@ public class ExpenseGroup private constructor(
     public fun descriptionBlocking(): String? = converting { handle.description() }
 
     /**
-     * Sets the group's description; `null` or blank text clears it.
+     * Sets the group's description, trimmed; `null` or blank text clears it.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [setDescriptionBlocking] blocks instead.
      */
-    public suspend fun setDescription(description: String?): Unit = converting { handle.setDescriptionAsync(description.orEmpty(), null) }
+    public suspend fun setDescription(description: String?): Unit = converting { handle.setDescriptionAsync(description, null) }
 
     /**
-     * Sets the group's description; `null` or blank text clears it.
+     * Sets the group's description, trimmed; `null` or blank text clears it.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [setDescription] waits without blocking it.
      */
-    public fun setDescriptionBlocking(description: String?): Unit = converting { handle.setDescription(description.orEmpty()) }
+    public fun setDescriptionBlocking(description: String?): Unit = converting { handle.setDescription(description) }
 
     /**
      * The language the apps show the group in.

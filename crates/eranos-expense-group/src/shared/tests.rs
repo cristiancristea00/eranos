@@ -331,6 +331,9 @@ fn every_change_does_what_the_group_does() {
     );
     block_on(shared.set_description("Spring"));
     group.set_description("Spring");
+    assert_eq!(shared_contents(&shared), contents_of(&group));
+    block_on(shared.clear_description());
+    group.clear_description();
     let portuguese = Language::parse("pt-PT").unwrap();
     block_on(shared.set_language(portuguese.clone()));
     group.set_language(portuguese);
@@ -440,6 +443,7 @@ fn every_call_is_send_static_and_small() {
         size_of_call(&shared.change_currency(CurrencyCode::RON, lei())),
         size_of_call(&shared.description()),
         size_of_call(&shared.set_description("Weekly")),
+        size_of_call(&shared.clear_description()),
         size_of_call(&shared.language()),
         size_of_call(&shared.set_language(None)),
         size_of_call(&shared.members()),
