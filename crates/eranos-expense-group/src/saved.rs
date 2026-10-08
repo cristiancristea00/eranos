@@ -1,11 +1,13 @@
 //! The saved form of a group: its details and entries, never the derived
 //! totals.
 //!
-//! Loading replays every entry through the same checks as the `add_*`
-//! methods, so a hand-edited or corrupted file cannot produce an
-//! inconsistent group. Members are replayed unarchived and archived at the
-//! end, because an expense may reference a member who was archived after it
-//! was added.
+//! Loading checks every entry as the `add_*` methods do, so a hand-edited
+//! or corrupted file cannot produce an inconsistent group, and range-checks
+//! the totals once, after the last entry: the entries replay in the order
+//! of their identifiers, not the order the group was built in, and the
+//! sums between two of them can leave the range where the group's never
+//! did. Members are replayed unarchived and archived at the end, because
+//! an expense may reference a member who was archived after it was added.
 
 use std::future::Future;
 
@@ -13,6 +15,7 @@ use eranos_category::Category;
 use eranos_core::cooperative::{Cooperative, Pacer};
 use eranos_core::{CategoryId, ExpenseGroupId, MemberId};
 use eranos_expense::Expense;
+use eranos_ledger::Delta;
 use eranos_member::Member;
 use eranos_money::CurrencyCode;
 use eranos_transfer::Transfer;
@@ -261,8 +264,8 @@ impl<'de> Deserialize<'de> for ExpenseGroup {
 }
 
 impl SavedExpenseGroup {
-    /// Loads the group, replaying its entries through the same checks as
-    /// the `add_*` methods.
+    /// Loads the group, checking its entries as the `add_*` methods do and
+    /// range-checking the totals once, after the last.
     ///
     /// # Errors
     ///
@@ -274,6 +277,8 @@ impl SavedExpenseGroup {
     ///   [`ExpenseGroup::archive_member`] for an entry that does not fit the
     ///   others: a repeated identifier or category name, an unknown or
     ///   archived member, an unknown category, or a missing exchange rate.
+    /// - [`ExpenseGroupError::Overflow`] when the totals of every entry
+    ///   together would leave the range of an amount.
     pub fn into_expense_group(self) -> Result<ExpenseGroup, ExpenseGroupError> {
         self.into_expense_group_async().complete()
     }
@@ -336,14 +341,16 @@ impl SavedExpenseGroup {
             group.add_category(category)?;
             pacer.advance(1).await;
         }
+        let mut delta = Delta::default();
         for expense in contents.expenses {
-            group.add_expense(expense)?;
+            group.stage_expense(expense, &mut delta)?;
             pacer.advance(1).await;
         }
         for transfer in contents.transfers {
-            group.add_transfer(transfer)?;
+            group.stage_transfer(transfer, &mut delta)?;
             pacer.advance(1).await;
         }
+        group.apply_staged(&delta)?;
         for member in contents.archived {
             group.archive_member(member)?;
             pacer.advance(1).await;

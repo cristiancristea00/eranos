@@ -687,6 +687,17 @@ impl ExpenseGroup {
     /// - [`ExpenseGroupError::Overflow`] when a total would leave the range of an
     ///   amount.
     pub fn add_expense(&mut self, expense: Expense) -> Result<ExpenseId, ExpenseGroupError> {
+        let record = self.checked_expense(expense)?;
+        let mut delta = Delta::default();
+        delta.add_expense(&record.resolved, record.expense.category(), 1);
+        self.apply_staged(&delta)?;
+        Ok(self.insert_expense(record))
+    }
+
+    /// The record of `expense`, checked against the group as
+    /// [`add_expense`](Self::add_expense) checks it and resolved in the
+    /// group currency, not yet stored.
+    fn checked_expense(&self, expense: Expense) -> Result<ExpenseRecord, ExpenseGroupError> {
         let id = expense.id();
         if self.expenses.contains_key(&id) {
             return Err(ExpenseGroupError::DuplicateExpense(id));
@@ -694,15 +705,37 @@ impl ExpenseGroup {
         self.check_expense(&expense, None)?;
         let resolved =
             resolve_expense(&expense, self.currency).map_err(|_| ExpenseGroupError::Overflow)?;
-        let mut delta = Delta::default();
-        delta.add_expense(&resolved, expense.category(), 1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| ExpenseGroupError::Overflow)?;
-        self.expenses
-            .insert(id, ExpenseRecord { expense, resolved });
+        Ok(ExpenseRecord { expense, resolved })
+    }
+
+    /// Stores `record` and drops the kept settlements, returning its
+    /// identifier.
+    fn insert_expense(&mut self, record: ExpenseRecord) -> ExpenseId {
+        let id = record.expense.id();
+        self.expenses.insert(id, record);
         self.invalidate_settlements();
-        Ok(id)
+        id
+    }
+
+    /// Adds `expense` as [`add_expense`](Self::add_expense) does, but adds
+    /// its totals to `delta` rather than to the ledger, for a load that
+    /// applies every entry's at once with
+    /// [`apply_staged`](Self::apply_staged); until that succeeds, the ledger
+    /// lacks the entry, so a load whose apply fails drops the group.
+    ///
+    /// # Errors
+    ///
+    /// As for [`add_expense`](Self::add_expense), but
+    /// [`ExpenseGroupError::Overflow`] only for a resolution out of range.
+    pub(crate) fn stage_expense(
+        &mut self,
+        expense: Expense,
+        delta: &mut Delta,
+    ) -> Result<(), ExpenseGroupError> {
+        let record = self.checked_expense(expense)?;
+        delta.add_expense(&record.resolved, record.expense.category(), 1);
+        self.insert_expense(record);
+        Ok(())
     }
 
     /// Replaces the expense with the identifier of `expense`, returning the
@@ -799,6 +832,17 @@ impl ExpenseGroup {
     /// - [`ExpenseGroupError::Overflow`] when a total would leave the range of an
     ///   amount.
     pub fn add_transfer(&mut self, transfer: Transfer) -> Result<TransferId, ExpenseGroupError> {
+        let record = self.checked_transfer(transfer)?;
+        let mut delta = Delta::default();
+        delta.add_transfer(pair(&record.transfer), record.amount, 1);
+        self.apply_staged(&delta)?;
+        Ok(self.insert_transfer(record))
+    }
+
+    /// The record of `transfer`, checked against the group as
+    /// [`add_transfer`](Self::add_transfer) checks it and resolved in the
+    /// group currency, not yet stored.
+    fn checked_transfer(&self, transfer: Transfer) -> Result<TransferRecord, ExpenseGroupError> {
         let id = transfer.id();
         if self.transfers.contains_key(&id) {
             return Err(ExpenseGroupError::DuplicateTransfer(id));
@@ -806,15 +850,48 @@ impl ExpenseGroup {
         self.check_transfer(&transfer)?;
         let amount =
             resolve_transfer(&transfer, self.currency).map_err(|_| ExpenseGroupError::Overflow)?;
-        let mut delta = Delta::default();
-        delta.add_transfer(pair(&transfer), amount, 1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| ExpenseGroupError::Overflow)?;
-        self.transfers
-            .insert(id, TransferRecord { transfer, amount });
+        Ok(TransferRecord { transfer, amount })
+    }
+
+    /// Stores `record` and drops the kept settlements, returning its
+    /// identifier.
+    fn insert_transfer(&mut self, record: TransferRecord) -> TransferId {
+        let id = record.transfer.id();
+        self.transfers.insert(id, record);
         self.invalidate_settlements();
-        Ok(id)
+        id
+    }
+
+    /// Adds `transfer` as [`add_transfer`](Self::add_transfer) does, but
+    /// adds its amount to `delta` rather than to the ledger, as
+    /// [`stage_expense`](Self::stage_expense) does for an expense.
+    ///
+    /// # Errors
+    ///
+    /// As for [`add_transfer`](Self::add_transfer), but
+    /// [`ExpenseGroupError::Overflow`] only for a resolution out of range.
+    pub(crate) fn stage_transfer(
+        &mut self,
+        transfer: Transfer,
+        delta: &mut Delta,
+    ) -> Result<(), ExpenseGroupError> {
+        let record = self.checked_transfer(transfer)?;
+        delta.add_transfer(pair(&record.transfer), record.amount, 1);
+        self.insert_transfer(record);
+        Ok(())
+    }
+
+    /// Applies `delta` to the ledger, every value of which it range-checks
+    /// first, so a refused delta changes nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`ExpenseGroupError::Overflow`] when a total would leave the range of
+    /// an amount.
+    pub(crate) fn apply_staged(&mut self, delta: &Delta) -> Result<(), ExpenseGroupError> {
+        self.ledger
+            .apply(delta)
+            .map_err(|_| ExpenseGroupError::Overflow)
     }
 
     /// Replaces the transfer with the identifier of `transfer`, returning

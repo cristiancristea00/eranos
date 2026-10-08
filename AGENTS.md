@@ -375,9 +375,10 @@ test in `crates/xtask` checks every root.
   validating constructor, in a written-out `Deserialize` impl that reads a
   private record (the `TryFrom` impl that `serde(try_from = …)` needs would
   show the record on the facade's pages); a group loads through
-  `SavedExpenseGroup::into_expense_group`, which replays its entries through
-  the `add_*` methods; a change older readers cannot accept bumps the
-  `FORMAT` constant of `eranos-expense-group`.
+  `SavedExpenseGroup::into_expense_group`, which checks its entries as the
+  `add_*` methods do and range-checks the totals once; a change older
+  readers cannot accept bumps the `FORMAT` constant of
+  `eranos-expense-group`.
 - **Doc comments follow rustdoc conventions**: a one-sentence summary, then
   `# Errors`, `# Panics`, and `# Examples` sections where they apply.
   Examples use `?`, never `unwrap`, and compile with warnings denied. Types

@@ -655,10 +655,14 @@ never the derived totals:
   [AGENTS.md](../AGENTS.md): `format` and `id` first, then the fields that
   describe the value in their natural order, the optional ones after the
   required, and a group's collections last.
-- Loading replays the entries through the `add_*` methods: members (all
-  unarchived first), categories, expenses, transfers, then the `archived`
-  list, because an expense may reference a member archived after it was
-  added. The group and every entry take their saved identifiers through
+- Loading checks the entries as the `add_*` methods do, in this order:
+  members (all unarchived first), categories, expenses, transfers, then
+  the `archived` list, because an expense may reference a member archived
+  after it was added; it range-checks the totals once, after the last
+  entry, since the entries replay in the order of their identifiers, not
+  the order the group was built in, and the sums between two of them can
+  leave the range where the group's never did. The group and every entry
+  take their saved identifiers through
   the constructors' `with_id` twins, as an app gives its own, so a load
   generates none. A hand-edited or corrupted file is refused, never
   loaded inconsistently. Deserialising an `ExpenseGroup` reports the

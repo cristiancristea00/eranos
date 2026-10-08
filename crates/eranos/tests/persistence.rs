@@ -784,3 +784,77 @@ fn value_types_serialise_on_their_own() {
         Discount::percentage(Percentage::parse("10").unwrap())
     );
 }
+
+/// A group the library accepted must load: the entries replay in the order
+/// of their identifiers, not the order they were added in, and the sums
+/// between two of them can leave the range of an amount where the group's
+/// never did, so the totals are range-checked once, after the last entry.
+#[test]
+fn a_group_the_library_accepted_loads_whatever_order_its_entries_replay_in() {
+    let mut group = ExpenseGroup::builder("Edge", CurrencyCode::EUR)
+        .build()
+        .unwrap();
+    let maria = group
+        .add_member(
+            Member::builder_with_id(MemberId::new("maria").unwrap(), "Maria")
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    let nina = group
+        .add_member(
+            Member::builder_with_id(MemberId::new("nina").unwrap(), "Nina")
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    let huge = Money::from_minor_units(i64::MAX - 2, CurrencyCode::EUR);
+    // M pays one cent for N, sends N nearly the range, gets it back, and
+    // pays ten cents for N: every total stays in range in this order.
+    let expenses = ["first", "second"].map(|id| {
+        Expense::builder_with_id(
+            ExpenseId::new(id).unwrap(),
+            id,
+            eur("0.01"),
+            maria,
+            Split::equal([nina]),
+            day(),
+        )
+        .build()
+        .unwrap()
+    });
+    let [first, second] = expenses;
+    let second = second.to_builder().cost(eur("0.10")).build().unwrap();
+    group.add_expense(first).unwrap();
+    group
+        .add_transfer(
+            Transfer::builder_with_id(TransferId::new("t1").unwrap(), maria, nina, huge, day())
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    group
+        .add_transfer(
+            Transfer::builder_with_id(TransferId::new("t2").unwrap(), nina, maria, huge, day())
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    group.add_expense(second).unwrap();
+    // Replayed as saved, both expenses come before the first transfer, whose
+    // amount then leaves the range for a moment.
+    let loaded: ExpenseGroup =
+        serde_json::from_str(&serde_json::to_string(&group).unwrap()).unwrap();
+    assert_eq!(loaded, group);
+    // A file whose entries together leave the range is still refused, as
+    // the typed error, once every entry has been checked.
+    let mut value = json_of(&group);
+    let mut again = value["transfers"][0].clone();
+    again["id"] = json!("t3");
+    value["transfers"].as_array_mut().unwrap().push(again);
+    let refused = serde_json::from_value::<SavedExpenseGroup>(value)
+        .unwrap()
+        .into_expense_group()
+        .map(|refused_group| refused_group.id());
+    assert_eq!(refused, Err(ExpenseGroupError::Overflow));
+}
