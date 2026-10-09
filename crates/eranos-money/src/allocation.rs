@@ -21,33 +21,81 @@ pub fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
     }
     // All-zero weights say nothing about the split, so they count as equal.
     let equal = weights.iter().all(|&weight| 0 == weight);
-    let weight_of = |weight: u64| if equal { 1 } else { i128::from(weight) };
-    let weight_sum: i128 = weights.iter().map(|&weight| weight_of(weight)).sum();
+    let weight_of = |weight: u64| if equal { 1 } else { weight };
+    let weight_sum: u128 = weights
+        .iter()
+        .map(|&weight| u128::from(weight_of(weight)))
+        .sum();
     // A usize is at most 64 bits wide on every target Rust supports.
     let len = u64::try_from(weights.len()).unwrap_or(u64::MAX);
     let start = rotation % len;
-    let wide_total = i128::from(total);
+    // Every part is the magnitude's exact share rounded down, with the sign
+    // of `total`, as a division that rounds towards zero gives it. When the
+    // largest product and the sum of the weights fit in 64 bits, as they do
+    // for every everyday amount, the shares are divided in 64-bit
+    // arithmetic, which needs no call into 128-bit division; both widths
+    // give the same quotients and remainders.
+    let magnitude = total.unsigned_abs();
+    let largest = weights
+        .iter()
+        .map(|&weight| weight_of(weight))
+        .max()
+        .unwrap_or_default();
+    let narrow_sum = u64::try_from(weight_sum)
+        .ok()
+        .filter(|_| largest.checked_mul(magnitude).is_some());
+    let divide = |weight: u64| {
+        narrow_sum.map_or_else(
+            || {
+                // |total| ≤ 2^63 and weight < 2^64, so the product fits in
+                // u128, and the quotient, at most the magnitude, fits back in
+                // u64.
+                let product = u128::from(magnitude) * u128::from(weight);
+                Division {
+                    quotient: u64::try_from(product / weight_sum).unwrap_or_default(),
+                    remainder: product % weight_sum,
+                }
+            },
+            |sum| {
+                // No weight exceeds the largest, so the product fits.
+                let product = magnitude * weight;
+                Division {
+                    quotient: product / sum,
+                    remainder: u128::from(product % sum),
+                }
+            },
+        )
+    };
+    // A quotient is at most the magnitude, so it fits in i64 with the sign of
+    // `total`, the most negative amount's included.
+    let signed = |quotient: u64| {
+        if 0 > total {
+            0_i64.checked_sub_unsigned(quotient)
+        } else {
+            i64::try_from(quotient).ok()
+        }
+        .unwrap_or_default()
+    };
     // Every part's exact share rounded towards zero, and its claim to one of
     // the units the rounding leaves over.
     let mut parts = Vec::with_capacity(weights.len());
     let mut claims = Vec::with_capacity(weights.len());
-    let mut allocated = 0_i128;
+    let mut allocated = 0_u128;
     for (position, &weight) in (0_u64..).zip(weights) {
-        // |total| ≤ 2^63 and weight < 2^64, so every product fits in i128.
-        // Division rounds towards zero, so every part has the sign of
-        // `total` and lies between zero and it, so it fits in i64.
-        let product = wide_total * weight_of(weight);
-        let part = product / weight_sum;
-        allocated += part;
-        parts.push(i64::try_from(part).unwrap_or_default());
+        let Division {
+            quotient,
+            remainder,
+        } = divide(weight_of(weight));
+        allocated += u128::from(quotient);
+        parts.push(signed(quotient));
         claims.push(LeftoverClaim {
             position: (position + len - start) % len,
-            remainder: (product % weight_sum).unsigned_abs(),
+            remainder,
         });
     }
     // Σ remainders = weight_sum × leftover, so leftover < weights.len(), and
     // the rank of the last claim to receive a unit is an index of `claims`.
-    let leftover = (wide_total - allocated).unsigned_abs();
+    let leftover = u128::from(magnitude) - allocated;
     if let Some(rank) = usize::try_from(leftover)
         .ok()
         .and_then(|count| count.checked_sub(1))
@@ -68,6 +116,15 @@ pub fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
         }
     }
     parts
+}
+
+/// A part's exact share of the magnitude, rounded down, and what the
+/// rounding left.
+struct Division {
+    /// The share rounded down.
+    quotient: u64,
+    /// The share's remainder over the sum of the weights.
+    remainder: u128,
 }
 
 /// A part's claim to a leftover unit: its remainder, and its position counted

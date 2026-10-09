@@ -160,6 +160,13 @@ fn extreme_totals_and_weights_do_not_overflow() {
     );
     // All of the smallest total to a single part.
     assert_eq!(allocate(i64::MIN, &[0, 1], 0), vec![0, i64::MIN]);
+    // A product beyond 64 bits ranks the leftover by its remainder too: of
+    // 3/4 and 1/4 of i64::MAX, whose fractions are .25 and .75, the second
+    // rounds up.
+    assert_eq!(
+        allocate(i64::MAX, &[3, 1], 0),
+        vec![6_917_529_027_641_081_855, 2_305_843_009_213_693_952]
+    );
 }
 
 /// The rotation must be the same on every platform and release, or synced
