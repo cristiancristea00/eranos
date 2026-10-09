@@ -304,25 +304,13 @@ fn a_missing_llvm_stops_the_gates_before_any_step() {
     assert_eq!(recorder.steps, Vec::<Step>::new());
 }
 
-/// A failure at any point stops the gates there, so no check reads what a
-/// failed step did not make: the library, the headers, the tests' build or
-/// run, the coverage summary, or a check that fails, or a directory that
-/// could not be cleared.
+/// The headers are generated into a cleared directory once the library is
+/// built, so headers left from another build are never read: a directory
+/// that cannot be cleared stops the gates after the library. That a failing
+/// step stops the gates is the plan's claim.
 #[test]
-fn a_failure_stops_the_c_and_cpp_gates_where_it_happens() {
+fn a_directory_that_cannot_be_cleared_stops_the_c_and_cpp_gates() {
     let metadata = Metadata::parse(METADATA).unwrap();
-    for failing in [
-        library(),
-        headers(C_PACKAGE),
-        tests(C_PACKAGE, "/LLVM_HOME", &metadata)[0].clone(),
-        coverage(C_PACKAGE, "/LLVM_HOME"),
-        plan::steps(&checks(C_PACKAGE, "/LLVM_HOME"))[0].clone(),
-    ] {
-        let mut recorder = Recorder::new();
-        recorder.failing = Some(failing.clone());
-        assert!(matches!(run(&mut recorder, &metadata), Err(Failure::Usage)));
-        assert_eq!(recorder.steps.last(), Some(&failing));
-    }
     let mut blocked = Recorder::new();
     blocked.failing_files = Some(FileOperation::Clear);
     assert!(matches!(run(&mut blocked, &metadata), Err(Failure::Usage)));

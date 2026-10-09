@@ -103,10 +103,13 @@ fn the_package_is_built_tested_linted_and_documented_in_order() {
     );
 }
 
-/// A failure at any point stops the gates there: a framework that could not
-/// be cleared, a log that could not be written, or a failing step.
+/// The framework is made in a cleared place once the libraries are built,
+/// and the analyzer reads a log the builds wrote: a framework that cannot be
+/// cleared stops the gates after the libraries, and a log that cannot be
+/// written stops them after the examples' build. That a failing step stops
+/// the gates is the plan's claim.
 #[test]
-fn a_failure_stops_the_swift_gates_where_it_happens() {
+fn a_framework_or_a_log_the_gates_cannot_write_stops_the_swift_gates() {
     let mut unclear = Recorder::new();
     unclear.failing_files = Some(FileOperation::Clear);
     assert!(matches!(
@@ -122,20 +125,4 @@ fn a_failure_stops_the_swift_gates_where_it_happens() {
         Err(Failure::Usage)
     ));
     assert_eq!(unwritten.steps.last(), Some(&build_examples()));
-
-    for failing in [
-        libraries(&metadata())[0].clone(),
-        package(&metadata())[0].clone(),
-        build(),
-        build_examples(),
-        plan::steps(&checks(&metadata()))[0].clone(),
-    ] {
-        let mut recorder = Recorder::new();
-        recorder.failing = Some(failing.clone());
-        assert!(matches!(
-            run(&mut recorder, &metadata()),
-            Err(Failure::Usage)
-        ));
-        assert_eq!(recorder.steps.last(), Some(&failing));
-    }
 }

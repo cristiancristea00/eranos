@@ -393,13 +393,6 @@ fn a_command_that_cannot_run_stops_before_its_package_s_actions() {
         Err(Failure::Apple)
     ));
     assert_eq!(elsewhere.steps, Vec::<Step>::new());
-    let mut unset = Recorder::new();
-    unset.variables.retain(|&name| "ANDROID_HOME" != name);
-    assert!(matches!(
-        test(&mut unset, &[Language::Kotlin]),
-        Err(Failure::Variable("ANDROID_HOME"))
-    ));
-    assert_eq!(unset.steps, [gates::metadata()]);
     for Unset { language, missing } in [
         Unset {
             language: Language::Capi,

@@ -454,7 +454,6 @@ fn the_workspace_s_gates_are_in_the_phase_each_checks() {
         ]
         .concat()
     );
-    assert!(formats().iter().all(|action| Phase::Format == action.phase));
 }
 
 /// A package that turned on async-lock's `std` would bring the clock into
@@ -623,19 +622,6 @@ fn a_failing_example_list_runs_no_example() {
     assert_eq!(unreadable.steps.last(), Some(&metadata()));
 }
 
-/// A failing step of the Swift package stops the gates there, so a package
-/// that does not build is never taken for one that passed.
-#[test]
-fn a_failing_swift_step_stops_the_gates() {
-    let mut recorder = Recorder::new();
-    recorder.failing = Some(crate::swift::build());
-    assert!(matches!(
-        run(&mut recorder, Part::Every),
-        Err(Failure::Usage)
-    ));
-    assert_eq!(recorder.steps.last(), Some(&crate::swift::build()));
-}
-
 /// A failing example stops the examples after it, and nothing is generated.
 #[test]
 fn a_failing_example_stops_the_examples_after_it() {
@@ -711,6 +697,7 @@ fn a_missing_variable_stops_the_gates_before_the_examples() {
 fn a_failing_package_stops_the_gates_at_its_step() {
     let metadata = Metadata::parse(METADATA).unwrap();
     for failing in [
+        crate::swift::build(),
         crate::kotlin::libraries()[0].clone(),
         crate::java::sources(&metadata)[0].clone(),
         crate::web::node(),

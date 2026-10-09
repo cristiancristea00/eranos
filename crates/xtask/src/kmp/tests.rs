@@ -88,15 +88,3 @@ fn a_missing_variable_stops_the_kotlin_multiplatform_gates_before_any_step() {
         assert_eq!(recorder.steps, Vec::<Step>::new());
     }
 }
-
-/// A failing step stops the gates there, so a later step's success cannot
-/// hide it.
-#[test]
-fn a_failing_step_stops_the_kotlin_multiplatform_gates() {
-    for failing in plan::steps(&checks("/JAVA_HOME", true)) {
-        let mut recorder = Recorder::new();
-        recorder.failing = Some(failing.clone());
-        assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
-        assert_eq!(recorder.steps.last(), Some(&failing));
-    }
-}

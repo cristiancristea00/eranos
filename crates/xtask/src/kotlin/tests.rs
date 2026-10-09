@@ -97,10 +97,12 @@ fn a_missing_variable_stops_the_kotlin_gates_before_any_step() {
     }
 }
 
-/// A failure at any point stops the gates there: generated sources that
-/// could not be cleared, or a failing step.
+/// The generated Kotlin is copied into a cleared directory once the
+/// Android libraries are built, so a type the library no longer has never
+/// compiles: generated sources that cannot be cleared stop the gates after
+/// the libraries. That a failing step stops the gates is the plan's claim.
 #[test]
-fn a_failure_stops_the_kotlin_gates_where_it_happens() {
+fn generated_sources_that_cannot_be_cleared_stop_the_kotlin_gates() {
     let mut unclear = Recorder::new();
     unclear.failing_files = Some(FileOperation::Clear);
     assert!(matches!(
@@ -108,18 +110,4 @@ fn a_failure_stops_the_kotlin_gates_where_it_happens() {
         Err(Failure::Usage)
     ));
     assert_eq!(unclear.steps, libraries());
-
-    for failing in [
-        libraries()[0].clone(),
-        sources(&metadata())[0].clone(),
-        plan::steps(&checks(&metadata()))[0].clone(),
-    ] {
-        let mut recorder = Recorder::new();
-        recorder.failing = Some(failing.clone());
-        assert!(matches!(
-            run(&mut recorder, &metadata()),
-            Err(Failure::Usage)
-        ));
-        assert_eq!(recorder.steps.last(), Some(&failing));
-    }
 }

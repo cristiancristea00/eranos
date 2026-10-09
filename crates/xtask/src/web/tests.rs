@@ -76,27 +76,16 @@ fn another_node_stops_the_web_gates_before_any_other_step() {
     }
 }
 
-/// A failure at any point stops the gates there: old generated sources that
-/// could not be cleared, or a step that fails.
+/// The TypeScript is generated into a cleared directory once Node's
+/// version is checked, so a type the library no longer has leaves no file
+/// behind: old generated sources that cannot be cleared stop the gates
+/// after that check. That a failing step stops the gates is the plan's
+/// claim.
 #[test]
-fn a_failure_stops_the_web_gates_where_it_happens() {
+fn generated_sources_that_cannot_be_cleared_stop_the_web_gates() {
     let mut unclear = Recorder::new();
     unclear.failing_files = Some(FileOperation::Clear);
     assert!(matches!(run(&mut unclear), Err(Failure::Usage)));
     assert_eq!(unclear.steps, [node()]);
     assert_eq!(unclear.cleared, [generated_sources()]);
-
-    for failing in [
-        node(),
-        library()[0].clone(),
-        install(),
-        generator(),
-        plan::steps(&checks())[0].clone(),
-        plan::steps(&package())[0].clone(),
-    ] {
-        let mut recorder = Recorder::new();
-        recorder.failing = Some(failing.clone());
-        assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
-        assert_eq!(recorder.steps.last(), Some(&failing));
-    }
 }
