@@ -68,7 +68,7 @@ fn owed_by_a_hub(creditors: u8) -> Ledger {
 /// sorts its payments by payer and recipient.
 #[test]
 fn every_strategy_pays_in_the_group_currency_in_order() {
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         let settlement = settle(strategy, &ledger()).unwrap();
         let computed_by = if SettlementStrategy::Adaptive == strategy {
             SettlementStrategy::MinimumTransfers
@@ -106,7 +106,7 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
 fn a_kept_settlement_lasts_until_it_is_cleared() {
     let mut kept = Settlements::default();
     let empty = Ledger::new(CurrencyCode::RON);
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         // The first request computes the plan; later ones return it.
         let first = kept.get(strategy, &ledger()).unwrap();
         let second = kept.get(strategy, &empty).unwrap();
@@ -115,7 +115,7 @@ fn a_kept_settlement_lasts_until_it_is_cleared() {
     }
     // Cleared, every plan is computed again.
     kept.clear();
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         assert!(kept.get(strategy, &empty).unwrap().is_empty());
     }
 }
@@ -184,7 +184,7 @@ fn all_lists_every_strategy_in_declaration_order() {
 /// A settled group has an empty settlement under every strategy.
 #[test]
 fn a_settled_ledger_has_no_payments() {
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         assert!(
             settle(strategy, &Ledger::new(CurrencyCode::EUR))
                 .unwrap()
@@ -277,8 +277,8 @@ impl FromSettlementStrategy for StrategyName {
 #[test]
 fn a_strategy_converts_through_the_method_of_its_variant() {
     let names: Vec<&str> = SettlementStrategy::all()
-        .into_iter()
-        .map(|strategy| StrategyName::from_settlement_strategy(strategy).0)
+        .iter()
+        .map(|&strategy| StrategyName::from_settlement_strategy(strategy).0)
         .collect();
     assert_eq!(names, ["adaptive", "minimum transfers", "greedy", "direct"]);
 }

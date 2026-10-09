@@ -284,7 +284,7 @@ fn every_strategy_settles_the_weekend_its_own_way() {
 /// settlement is then empty.
 #[test]
 fn recording_a_settlement_settles_everyone() -> TestResult {
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         let Weekend {
             ana,
             bob,

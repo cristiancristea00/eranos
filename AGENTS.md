@@ -264,7 +264,7 @@ test in `crates/xtask` checks every root.
   by yielding; its public form returns it in a `Cooperative`, the
   synchronous method is its `.complete()`, and it writes nothing to the
   group before its last yield, so a dropped call changes nothing. A future
-  that can wait for a lock, such as a `SharedExpenseGroup` call, is never a
+  that can wait for a lock, such as `SharedExpenseGroup::write`, is never a
   `Cooperative`: `complete` would spin on it. Where each call yields and
   which lock it takes:
   [docs/ARCHITECTURE.md § 12](docs/ARCHITECTURE.md#12-async-and-concurrency).

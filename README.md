@@ -19,7 +19,7 @@ library itself is plain Rust with no I/O and no async runtime.
 | Concept         | Type                 | What it is                                                                        |
 | --------------- | -------------------- | --------------------------------------------------------------------------------- |
 | Group           | `ExpenseGroup`       | A trip, a day out, or a household: name, currency, language, and everything below |
-| Shared group    | `SharedExpenseGroup` | A group shared between tasks and threads, each call locking it while it runs      |
+| Shared group    | `SharedExpenseGroup` | A group shared between tasks and threads, read and changed through lock guards    |
 | Member          | `Member`             | A person: first name (required), last name, email, phone, payment accounts        |
 | Payment account | `PaymentAccount`     | Where a member can be paid: an IBAN or a payment-app username                     |
 | Category        | `Category`           | A label the group defines, such as "Food", or the built-in "Uncategorised"        |

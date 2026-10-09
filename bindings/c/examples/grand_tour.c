@@ -2698,10 +2698,11 @@ static void settleCoffee(EranosExpenseGroup *const other, EranosExpenseGroup con
     eranosExpenseGroupSettlementAsync(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, nullptr, &plannedCallback);
     EranosSettlementPlan *const plan = awaited(&planned);
     EranosPaymentList *const payments = eranosSettlementPlanPayments(plan);
-    printLine("An app shares the group between its tasks and threads through a\n"
-              "SharedExpenseGroup, whose calls are futures any executor runs; here the library's\n"
-              "block_on runs each one on this thread. Bob adds the airport coffee through another\n"
-              "handle, and the plan that settles it comes through the first:");
+    printLine("An app shares the group between its tasks and threads through a SharedExpenseGroup,\n"
+              "whose read and write are futures any executor runs, each returning a guard that\n"
+              "dereferences to the group; here the library's block_on runs each one on this thread.\n"
+              "Bob adds the airport coffee through another handle, and the plan that settles it\n"
+              "comes through the first:");
     EranosExpenseGroupReader *const reader = readAsync(group);
     Table *const table = paymentTable(2);
     EranosText *const sender = eranosTextCreate();

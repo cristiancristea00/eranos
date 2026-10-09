@@ -1508,10 +1508,11 @@ void sharing(ExpenseGroup &group, People const &people) noexcept {
                                                         WholeExpenseSplit{EqualSplit{everyone}}, october(8)))
                                .get()));
     auto const plan = must(group.settlementAsync(SettlementStrategy::MINIMUM_TRANSFERS).get());
-    printLine("An app shares the group between its tasks and threads through a\n"
-              "SharedExpenseGroup, whose calls are futures any executor runs; here the library's\n"
-              "block_on runs each one on this thread. Bob adds the airport coffee through another\n"
-              "handle, and the plan that settles it comes through the first:");
+    printLine("An app shares the group between its tasks and threads through a SharedExpenseGroup,\n"
+              "whose read and write are futures any executor runs, each returning a guard that\n"
+              "dereferences to the group; here the library's block_on runs each one on this thread.\n"
+              "Bob adds the airport coffee through another handle, and the plan that settles it\n"
+              "comes through the first:");
     {
         auto const reader = must(group.readAsync().get());
         std::vector<PaymentRow> rows;

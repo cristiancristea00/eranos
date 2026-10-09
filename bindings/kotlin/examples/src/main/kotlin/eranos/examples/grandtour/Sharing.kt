@@ -37,10 +37,11 @@ internal suspend fun sharing(
         val plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
         println(
             """
-            An app shares the group between its tasks and threads through a
-            SharedExpenseGroup, whose calls are futures any executor runs; here the library's
-            block_on runs each one on this thread. Bob adds the airport coffee through another
-            handle, and the plan that settles it comes through the first:
+            An app shares the group between its tasks and threads through a SharedExpenseGroup,
+            whose read and write are futures any executor runs, each returning a guard that
+            dereferences to the group; here the library's block_on runs each one on this thread.
+            Bob adds the airport coffee through another handle, and the plan that settles it
+            comes through the first:
             """.trimIndent(),
         )
         val rows =

@@ -499,7 +499,7 @@ proptest! {
         prop_assert!(minimum.len() <= greedy);
         prop_assert!(greedy <= open.saturating_sub(1));
         prop_assert_eq!(group.settlement(SettlementStrategy::Adaptive).unwrap(), minimum);
-        for strategy in SettlementStrategy::all() {
+        for &strategy in SettlementStrategy::all() {
             let mut settled = group.clone();
             let plan = settled.settlement(strategy).unwrap().clone();
             for payment in plan.payments() {
@@ -517,7 +517,7 @@ proptest! {
     fn an_awaited_plan_equals_a_computed_one(recipe in group_recipe()) {
         let Entries { members, expenses, transfers } = entries(&recipe);
         let group = group(&base(&members), &expenses, &transfers);
-        for strategy in SettlementStrategy::all() {
+        for &strategy in SettlementStrategy::all() {
             // A copy, so each call computes its plan instead of reading the other's.
             let awaited = group.clone();
             prop_assert_eq!(block_on(awaited.settlement_async(strategy)), group.settlement(strategy));
@@ -558,7 +558,7 @@ proptest! {
         let backward = group(&base, &expenses, &transfers);
         prop_assert_eq!(&forward, &backward);
         prop_assert_eq!(forward.summary(), backward.summary());
-        for strategy in SettlementStrategy::all() {
+        for &strategy in SettlementStrategy::all() {
             prop_assert_eq!(forward.settlement(strategy).unwrap(), backward.settlement(strategy).unwrap());
         }
     }

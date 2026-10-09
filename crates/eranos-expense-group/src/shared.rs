@@ -6,43 +6,33 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use async_lock::{RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
-use eranos_category::Category;
 #[cfg(not(target_family = "wasm"))]
 use eranos_core::cooperative::block_on;
-use eranos_core::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId};
-use eranos_expense::Expense;
-use eranos_ledger::{ExpenseShares, Summary};
-use eranos_member::Member;
-use eranos_money::{CurrencyCode, CurrencyRate, Money};
-use eranos_settlement::{SettlementError, SettlementPlan, SettlementStrategy};
-use eranos_transfer::Transfer;
 
-use crate::{ExpenseGroup, ExpenseGroupError, Language};
+use crate::{ExpenseGroup, ExpenseGroupError};
 
-/// A [`ExpenseGroup`] shared between tasks and threads: each call locks the group
-/// while it runs and returns, owned, what the group's method of the same
-/// name returns.
+/// An [`ExpenseGroup`] shared between tasks and threads behind a read-write
+/// lock.
 ///
-/// Reads take a shared lock and run alongside each other; changes take an
-/// exclusive one and run alone, once the reads in progress are done. While a
-/// change waits, new reads wait behind it, so a stream of reads cannot keep
-/// a change waiting. Two calls yield while they hold the lock:
-/// [`settlement`](Self::settlement), under the shared lock, while the exact
-/// solver fills its table, and [`change_currency`](Self::change_currency),
-/// under the exclusive one, while it re-converts the entries. Every other
-/// call holds the lock only for one poll.
+/// [`read`](Self::read) and [`write`](Self::write) wait for the lock and
+/// return guards that dereference to the group, through which a caller uses
+/// the group's own methods until the guard is dropped. Reads take a shared
+/// lock and run alongside each other; changes take an exclusive one and run
+/// alone, once the reads in progress are done. While a change waits, new
+/// reads wait behind it, so a stream of reads cannot keep a change waiting.
+/// A guard keeps the lock across a yield: a settlement awaited through a
+/// read guard holds the shared lock while the exact solver fills its table,
+/// and a currency change through a write guard holds the exclusive one while
+/// it re-converts the entries.
 ///
-/// Every call returns a future that is `Send + 'static`, so an executor can
-/// run it on any thread. A call dropped before it completes changes nothing
-/// and releases the lock it holds or waits for. A synchronous caller drives
-/// a call with [`block_on`](eranos_core::cooperative::block_on), which sleeps
-/// while the call waits for the lock.
-///
-/// A caller that needs several reads or changes to see no other call in
-/// between takes a guard, with [`read`](Self::read) or
-/// [`write`](Self::write), and calls the group's own methods on it. Clones
-/// share one group. [`Debug`](fmt::Debug) never locks, so it prints none of
-/// the group.
+/// The futures `read` and `write` return are `Send + 'static`, so an executor
+/// can run them on any thread, and so are the guards, which borrow nothing.
+/// A wait dropped before the lock is granted takes nothing. A synchronous
+/// caller waits with [`read_blocking`](Self::read_blocking) and
+/// [`write_blocking`](Self::write_blocking), which sleep meanwhile, or tries
+/// the lock with [`try_read`](Self::try_read) and
+/// [`try_write`](Self::try_write). Clones share one group.
+/// [`Debug`](fmt::Debug) never locks, so it prints none of the group.
 ///
 /// # Examples
 ///
@@ -54,8 +44,9 @@ use crate::{ExpenseGroup, ExpenseGroupError, Language};
 /// let other = shared.clone();
 ///
 /// // A change through one clone is read through the other.
-/// let ana = block_on(shared.add_member(Member::builder("Ana").build()?))?;
-/// let member = block_on(other.member(ana)).ok_or("Ana is a member")?;
+/// let ana = block_on(shared.write()).add_member(Member::builder("Ana").build()?)?;
+/// let group = block_on(other.read());
+/// let member = group.member(ana).ok_or("Ana is a member")?;
 /// assert_eq!(member.first_name(), "Ana");
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -72,376 +63,6 @@ impl SharedExpenseGroup {
             group: Arc::new(RwLock::new(group)),
         }
     }
-
-    // --- Identifier ----------------------------------------------------------
-
-    /// The identifier, as [`ExpenseGroup::id`] returns it.
-    pub fn id(&self) -> impl Future<Output = ExpenseGroupId> + Send + 'static {
-        self.read_with(ExpenseGroup::id)
-    }
-
-    // --- Name ----------------------------------------------------------------
-
-    /// The name, as [`ExpenseGroup::name`] returns it.
-    pub fn name(&self) -> impl Future<Output = String> + Send + 'static {
-        self.read_with(|group| group.name().to_owned())
-    }
-
-    /// Renames the group, as [`ExpenseGroup::set_name`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::set_name`].
-    pub fn set_name(
-        &self,
-        name: impl Into<String>,
-    ) -> impl Future<Output = Result<(), ExpenseGroupError>> + Send + 'static {
-        let name = name.into();
-        self.write_with(move |group| group.set_name(name))
-    }
-
-    // --- Currency ------------------------------------------------------------
-
-    /// The currency of every total, balance, and settlement, as
-    /// [`ExpenseGroup::currency`] returns it.
-    pub fn currency(&self) -> impl Future<Output = CurrencyCode> + Send + 'static {
-        self.read_with(ExpenseGroup::currency)
-    }
-
-    /// Moves the group to another currency, as [`ExpenseGroup::change_currency`]
-    /// does, with a rate for every other currency its entries use.
-    ///
-    /// The call holds the exclusive lock while it re-converts the entries
-    /// and yields as [`ExpenseGroup::change_currency_async`] does; dropped at a
-    /// yield, it leaves the group as it was.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::change_currency`].
-    pub fn change_currency(
-        &self,
-        currency: CurrencyCode,
-        rates: impl Into<Vec<CurrencyRate>>,
-    ) -> impl Future<Output = Result<(), ExpenseGroupError>> + Send + 'static {
-        let group = Arc::clone(&self.group);
-        let rates = rates.into();
-        async move {
-            let mut group = group.write().await;
-            group.change_currency_async(currency, &rates).await
-        }
-    }
-
-    // --- Description ---------------------------------------------------------
-
-    /// The note, if any, as [`ExpenseGroup::note`] returns it.
-    pub fn note(&self) -> impl Future<Output = Option<String>> + Send + 'static {
-        self.read_with(|group| group.note().map(str::to_owned))
-    }
-
-    /// Sets the note, as [`ExpenseGroup::set_note`] does.
-    pub fn set_note(&self, note: impl Into<String>) -> impl Future<Output = ()> + Send + 'static {
-        let note = note.into();
-        self.write_with(move |group| group.set_note(note))
-    }
-
-    /// Clears the note, as [`ExpenseGroup::clear_note`] does.
-    pub fn clear_note(&self) -> impl Future<Output = ()> + Send + 'static {
-        self.write_with(ExpenseGroup::clear_note)
-    }
-
-    // --- Language ------------------------------------------------------------
-
-    /// The language, if set, as [`ExpenseGroup::language`] returns it.
-    pub fn language(&self) -> impl Future<Output = Option<Language>> + Send + 'static {
-        self.read_with(|group| group.language().cloned())
-    }
-
-    /// Sets or clears the language, as [`ExpenseGroup::set_language`] does.
-    pub fn set_language(
-        &self,
-        language: impl Into<Option<Language>>,
-    ) -> impl Future<Output = ()> + Send + 'static {
-        let language = language.into();
-        self.write_with(move |group| group.set_language(language))
-    }
-
-    // --- Members -------------------------------------------------------------
-
-    /// Every member, as [`ExpenseGroup::members`] lists them.
-    pub fn members(&self) -> impl Future<Output = Vec<Member>> + Send + 'static {
-        self.read_with(|group| group.members().cloned().collect())
-    }
-
-    /// The member with this identifier, as [`ExpenseGroup::member`] finds them.
-    pub fn member(&self, id: MemberId) -> impl Future<Output = Option<Member>> + Send + 'static {
-        self.read_with(move |group| group.member(id).cloned())
-    }
-
-    /// Whether the member with this identifier is archived, or `None` for a
-    /// member the group does not hold, as [`ExpenseGroup::is_archived`] says.
-    pub fn is_archived(&self, id: MemberId) -> impl Future<Output = Option<bool>> + Send + 'static {
-        self.read_with(move |group| group.is_archived(id))
-    }
-
-    /// Adds a member, as [`ExpenseGroup::add_member`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::add_member`].
-    pub fn add_member(
-        &self,
-        member: Member,
-    ) -> impl Future<Output = Result<MemberId, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.add_member(member))
-    }
-
-    /// Replaces a member, as [`ExpenseGroup::replace_member`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::replace_member`].
-    pub fn replace_member(
-        &self,
-        member: Member,
-    ) -> impl Future<Output = Result<Member, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.replace_member(member))
-    }
-
-    /// Archives a member, as [`ExpenseGroup::archive_member`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::archive_member`].
-    pub fn archive_member(
-        &self,
-        id: MemberId,
-    ) -> impl Future<Output = Result<(), ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.archive_member(id))
-    }
-
-    /// Unarchives a member, as [`ExpenseGroup::unarchive_member`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::unarchive_member`].
-    pub fn unarchive_member(
-        &self,
-        id: MemberId,
-    ) -> impl Future<Output = Result<(), ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.unarchive_member(id))
-    }
-
-    /// Removes a member, as [`ExpenseGroup::remove_member`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::remove_member`].
-    pub fn remove_member(
-        &self,
-        id: MemberId,
-    ) -> impl Future<Output = Result<Member, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.remove_member(id))
-    }
-
-    // --- Categories ----------------------------------------------------------
-
-    /// Every category, as [`ExpenseGroup::categories`] lists them.
-    pub fn categories(&self) -> impl Future<Output = Vec<Category>> + Send + 'static {
-        self.read_with(|group| group.categories().cloned().collect())
-    }
-
-    /// The category with this identifier, as [`ExpenseGroup::category`] finds it.
-    pub fn category(
-        &self,
-        id: CategoryId,
-    ) -> impl Future<Output = Option<Category>> + Send + 'static {
-        self.read_with(move |group| group.category(id).cloned())
-    }
-
-    /// Adds a category, as [`ExpenseGroup::add_category`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::add_category`].
-    pub fn add_category(
-        &self,
-        category: Category,
-    ) -> impl Future<Output = Result<CategoryId, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.add_category(category))
-    }
-
-    /// Replaces a category, as [`ExpenseGroup::replace_category`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::replace_category`].
-    pub fn replace_category(
-        &self,
-        category: Category,
-    ) -> impl Future<Output = Result<Category, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.replace_category(category))
-    }
-
-    /// Removes a category, as [`ExpenseGroup::remove_category`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::remove_category`].
-    pub fn remove_category(
-        &self,
-        id: CategoryId,
-    ) -> impl Future<Output = Result<Category, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.remove_category(id))
-    }
-
-    // --- Expenses ------------------------------------------------------------
-
-    /// Every expense, as [`ExpenseGroup::expenses`] lists them.
-    pub fn expenses(&self) -> impl Future<Output = Vec<Expense>> + Send + 'static {
-        self.read_with(|group| group.expenses().cloned().collect())
-    }
-
-    /// The expense with this identifier, as [`ExpenseGroup::expense`] finds it.
-    pub fn expense(&self, id: ExpenseId) -> impl Future<Output = Option<Expense>> + Send + 'static {
-        self.read_with(move |group| group.expense(id).cloned())
-    }
-
-    /// How an expense divides in the group currency, as
-    /// [`ExpenseGroup::expense_shares`] returns it.
-    pub fn expense_shares(
-        &self,
-        id: ExpenseId,
-    ) -> impl Future<Output = Option<ExpenseShares>> + Send + 'static {
-        self.read_with(move |group| group.expense_shares(id).cloned())
-    }
-
-    /// Adds an expense, as [`ExpenseGroup::add_expense`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::add_expense`].
-    pub fn add_expense(
-        &self,
-        expense: Expense,
-    ) -> impl Future<Output = Result<ExpenseId, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.add_expense(expense))
-    }
-
-    /// Replaces an expense, as [`ExpenseGroup::replace_expense`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::replace_expense`].
-    pub fn replace_expense(
-        &self,
-        expense: Expense,
-    ) -> impl Future<Output = Result<Expense, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.replace_expense(expense))
-    }
-
-    /// Removes an expense, as [`ExpenseGroup::remove_expense`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::remove_expense`].
-    pub fn remove_expense(
-        &self,
-        id: ExpenseId,
-    ) -> impl Future<Output = Result<Expense, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.remove_expense(id))
-    }
-
-    // --- Transfers -----------------------------------------------------------
-
-    /// Every transfer, as [`ExpenseGroup::transfers`] lists them.
-    pub fn transfers(&self) -> impl Future<Output = Vec<Transfer>> + Send + 'static {
-        self.read_with(|group| group.transfers().cloned().collect())
-    }
-
-    /// The transfer with this identifier, as [`ExpenseGroup::transfer`] finds it.
-    pub fn transfer(
-        &self,
-        id: TransferId,
-    ) -> impl Future<Output = Option<Transfer>> + Send + 'static {
-        self.read_with(move |group| group.transfer(id).cloned())
-    }
-
-    /// A transfer's amount in the group currency, as
-    /// [`ExpenseGroup::transfer_amount`] returns it.
-    pub fn transfer_amount(
-        &self,
-        id: TransferId,
-    ) -> impl Future<Output = Option<Money>> + Send + 'static {
-        self.read_with(move |group| group.transfer_amount(id))
-    }
-
-    /// Adds a transfer, as [`ExpenseGroup::add_transfer`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::add_transfer`].
-    pub fn add_transfer(
-        &self,
-        transfer: Transfer,
-    ) -> impl Future<Output = Result<TransferId, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.add_transfer(transfer))
-    }
-
-    /// Replaces a transfer, as [`ExpenseGroup::replace_transfer`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::replace_transfer`].
-    pub fn replace_transfer(
-        &self,
-        transfer: Transfer,
-    ) -> impl Future<Output = Result<Transfer, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.replace_transfer(transfer))
-    }
-
-    /// Removes a transfer, as [`ExpenseGroup::remove_transfer`] does.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::remove_transfer`].
-    pub fn remove_transfer(
-        &self,
-        id: TransferId,
-    ) -> impl Future<Output = Result<Transfer, ExpenseGroupError>> + Send + 'static {
-        self.write_with(move |group| group.remove_transfer(id))
-    }
-
-    // --- Ledger --------------------------------------------------------------
-
-    /// The group's totals, as [`ExpenseGroup::summary`] returns them.
-    pub fn summary(&self) -> impl Future<Output = Summary> + Send + 'static {
-        self.read_with(|group| group.summary().clone())
-    }
-
-    // --- Settlements ---------------------------------------------------------
-
-    /// The payments that settle every balance, as [`ExpenseGroup::settlement`]
-    /// computes and caches them.
-    ///
-    /// The call holds the shared lock while the exact solver fills its
-    /// table and yields as [`ExpenseGroup::settlement_async`] does; dropped at a
-    /// yield, it caches nothing.
-    ///
-    /// # Errors
-    ///
-    /// As for [`ExpenseGroup::settlement`].
-    pub fn settlement(
-        &self,
-        strategy: SettlementStrategy,
-    ) -> impl Future<Output = Result<SettlementPlan, SettlementError>> + Send + 'static {
-        let group = Arc::clone(&self.group);
-        async move {
-            let group = group.read().await;
-            group.settlement_async(strategy).await.cloned()
-        }
-    }
-
-    // --- Locking -------------------------------------------------------------
 
     /// Waits for the shared lock, then reads the group through the guard
     /// until it is dropped.
@@ -501,42 +122,16 @@ impl SharedExpenseGroup {
         block_on(self.write())
     }
 
-    /// Whether a call holds the lock, shared or exclusive.
-    #[must_use]
-    pub fn is_locked(&self) -> bool {
-        self.group.try_write().is_none()
-    }
-
     /// The group, taken back from its last handle.
     ///
     /// # Errors
     ///
-    /// The shared group itself, while a clone of it or a call still in
-    /// progress shares the group.
-    pub fn into_expense_group(self) -> Result<ExpenseGroup, Self> {
+    /// The shared group itself, while a clone of it, a guard, or a wait for
+    /// the lock still shares the group.
+    pub fn into_inner(self) -> Result<ExpenseGroup, Self> {
         Arc::try_unwrap(self.group)
             .map(RwLock::into_inner)
             .map_err(|group| Self { group })
-    }
-
-    /// A call that reads the group under the shared lock, which it holds
-    /// for one poll.
-    fn read_with<T: Send + 'static>(
-        &self,
-        read: impl FnOnce(&ExpenseGroup) -> T + Send + 'static,
-    ) -> impl Future<Output = T> + Send + 'static {
-        let group = Arc::clone(&self.group);
-        async move { read(&*group.read().await) }
-    }
-
-    /// A call that changes the group under the exclusive lock, which it
-    /// holds for one poll.
-    fn write_with<T: Send + 'static>(
-        &self,
-        write: impl FnOnce(&mut ExpenseGroup) -> T + Send + 'static,
-    ) -> impl Future<Output = T> + Send + 'static {
-        let group = Arc::clone(&self.group);
-        async move { write(&mut *group.write().await) }
     }
 }
 

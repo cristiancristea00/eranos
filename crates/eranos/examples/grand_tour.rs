@@ -1431,7 +1431,7 @@ const fn strategy_name(strategy: SettlementStrategy) -> &'static str {
 fn settling_up(group: &mut ExpenseGroup) -> Result<(), Box<dyn Error>> {
     section("11. Settling up");
     let mut counts = Vec::new();
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         let settlement = group.settlement(strategy)?;
         // The group's open balances are well within the adaptive strategy's
         // limit, so it settles them exactly.
@@ -1862,27 +1862,29 @@ fn sharing(group: ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
         october(8)?,
     )
     .build()?;
-    block_on(other.add_expense(coffee))?;
-    let plan = block_on(shared.settlement(SettlementStrategy::MinimumTransfers))?;
+    block_on(other.write()).add_expense(coffee)?;
     println!(
-        "An app shares the group between its tasks and threads through a\n\
-         SharedExpenseGroup, whose calls are futures any executor runs; here the library's\n\
-         block_on runs each one on this thread. Bob adds the airport coffee through another\n\
-         handle, and the plan that settles it comes through the first:"
+        "An app shares the group between its tasks and threads through a SharedExpenseGroup,\n\
+         whose read and write are futures any executor runs, each returning a guard that\n\
+         dereferences to the group; here the library's block_on runs each one on this thread.\n\
+         Bob adds the airport coffee through another handle, and the plan that settles it\n\
+         comes through the first:"
     );
-    {
-        let reading = block_on(shared.read());
-        print_table(
-            plan.payments().iter().map(|payment| PaymentRow {
-                sender: name(&reading, payment.sender()),
-                receiver: name(&reading, payment.receiver()),
-                amount: payment.amount(),
-            }),
-            2,
-        );
-    }
+    let reading = block_on(shared.read());
+    let plan = reading
+        .settlement(SettlementStrategy::MinimumTransfers)?
+        .clone();
+    print_table(
+        plan.payments().iter().map(|payment| PaymentRow {
+            sender: name(&reading, payment.sender()),
+            receiver: name(&reading, payment.receiver()),
+            amount: payment.amount(),
+        }),
+        2,
+    );
+    drop(reading);
 
-    let before = block_on(shared.summary());
+    let before = block_on(shared.read()).summary().clone();
     let rates = [CurrencyRate::new(
         CurrencyCode::RON,
         ExchangeRate::parse("0.2")?,
@@ -1890,7 +1892,13 @@ fn sharing(group: ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
     let (waited, reported) = {
         // A report reads the group, holding the shared lock meanwhile.
         let report = block_on(shared.read());
-        let mut change = pin!(shared.change_currency(CurrencyCode::EUR, rates));
+        let changing = shared.clone();
+        let mut change = pin!(async move {
+            let mut writing = changing.write().await;
+            writing
+                .change_currency_async(CurrencyCode::EUR, &rates)
+                .await
+        });
         let waited = change
             .as_mut()
             .poll(&mut Context::from_waker(Waker::noop()))
@@ -1898,17 +1906,17 @@ fn sharing(group: ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
         (waited, report.summary().total_spent())
         // The block drops the waiting change, then the report's guard.
     };
-    let after = block_on(shared.summary());
+    let after = block_on(shared.read()).summary().clone();
     println!(
         "While a report reads the group, a change of its currency to EUR waits for the\n\
          report. The app drops the waiting change, which cancels it: the group still\n\
          keeps its books in {}, and the trip cost {}, as the report read.",
-        block_on(shared.currency()),
+        block_on(shared.read()).currency(),
         after.total_spent()
     );
     drop(other);
     let returned = shared
-        .into_expense_group()
+        .into_inner()
         .map_err(|_| "another handle still shares the group")?;
     println!(
         "With the other handle gone, the app takes the group back: {} expenses.",

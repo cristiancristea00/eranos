@@ -92,9 +92,10 @@
 //! [`Cooperative::complete`](cooperative::Cooperative::complete) runs one on
 //! the calling thread, which is what the synchronous calls do. A
 //! [`SharedExpenseGroup`] shares a group between tasks and threads behind a
-//! read-write lock; each of its calls is a future an executor can run on any
-//! thread, and [`block_on`](cooperative::block_on) waits for one from
-//! synchronous code.
+//! read-write lock: its `read` and `write` are futures an executor can run on
+//! any thread, each returning a guard through which the caller uses the
+//! group's own methods, and [`block_on`](cooperative::block_on) waits for one
+//! from synchronous code.
 //!
 //! ```
 //! use eranos::cooperative::block_on;
@@ -104,16 +105,19 @@
 //! };
 //!
 //! let shared = SharedExpenseGroup::new(ExpenseGroup::builder("Flat", CurrencyCode::EUR).build()?);
-//! let ana = block_on(shared.add_member(Member::builder("Ana").build()?))?;
-//! let bob = block_on(shared.add_member(Member::builder("Bob").build()?))?;
+//! let mut group = block_on(shared.write());
+//! let ana = group.add_member(Member::builder("Ana").build()?)?;
+//! let bob = group.add_member(Member::builder("Bob").build()?)?;
+//! drop(group);
 //!
 //! // Ana pays the rent; a clone shares the group, as another task would.
 //! let (amount, day) = (Money::parse("900.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 10, 1)?);
 //! let rent = Expense::builder("Rent", amount, ana, Split::equal([ana, bob]), day).build()?;
 //! let other = shared.clone();
-//! block_on(other.add_expense(rent))?;
+//! block_on(other.write()).add_expense(rent)?;
 //!
-//! let settlement = block_on(shared.settlement(SettlementStrategy::MinimumTransfers))?;
+//! let group = block_on(shared.read());
+//! let settlement = group.settlement(SettlementStrategy::MinimumTransfers)?;
 //! assert_eq!(settlement.payments()[0].sender(), bob);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```

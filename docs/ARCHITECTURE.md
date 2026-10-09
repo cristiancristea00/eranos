@@ -756,16 +756,16 @@ either way; the difference follows where the compiler places the code.
 without its `std` feature, so the lock reads no clock and keeps no
 per-thread parker (a gate keeps its features off,
 [AGENTS.md](../AGENTS.md#gates-before-committing)). Its clones share one
-group, and each of its methods mirrors one of the group's, returning a
-`Send + 'static` future of an owned result. Reads take the shared lock and
-run alongside each other; changes take the exclusive lock and run alone,
-once the reads in progress are done; while a change waits, new reads wait
-behind it, so a stream of reads cannot starve a change. Only the
-settlement and the currency change yield while they hold the lock; every
-other call holds it for one poll. A call dropped before it completes
-changes nothing and releases the lock it holds or waits for. `read` and
-`write` return guards, for a caller that needs several calls with no other
-call in between.
+group. `read` and `write` wait for the lock, as `Send + 'static` futures an
+executor runs on any thread, and return guards that dereference to the
+group, so a caller uses the group's own methods, the `_async` ones
+included, through a guard until it is dropped. Reads take the shared lock
+and run alongside each other; changes take the exclusive lock and run
+alone, once the reads in progress are done; while a change waits, new reads
+wait behind it, so a stream of reads cannot starve a change. A guard keeps
+the lock across a yield: a settlement awaited through a read guard holds
+the shared lock at its yields, and a currency change through a write guard
+the exclusive one. A wait dropped before the lock is granted takes nothing.
 
 A settlement at a yield, with a read beside it, and a change and a later
 read waiting their turn:
@@ -818,11 +818,11 @@ sequenceDiagram
 | Future                                                                        | Pends                                       | Driven by                                                           |
 | ----------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
 | a `Cooperative`: the `_async` calls of `ExpenseGroup` and `SavedExpenseGroup` | only by yielding                            | any executor, or `Cooperative::complete` on the calling thread      |
-| a `SharedExpenseGroup` call, `read`, or `write`                               | by yielding, or while it waits for the lock | any executor, or `block_on`, which sleeps until the future is woken |
+| `SharedExpenseGroup::read` or `write`                                         | while it waits for the lock                 | any executor, or `block_on`, which sleeps until the future is woken |
 
 `complete` polls again as soon as a poll pends, with a waker that does
 nothing. It is reachable only through `Cooperative`, because a future that
-waits for another thread, such as a `SharedExpenseGroup` call, would keep the
+waits for another thread, such as `SharedExpenseGroup::write`, would keep the
 thread busy until the lock is free. `block_on` parks the thread between
 polls and wakes it through the future's waker. On wasm, whose one thread
 `block_on` would put to sleep with nothing left to wake it, neither it nor

@@ -52,7 +52,7 @@ pub use error::{FromSettlementError, SettlementError};
 /// // Bob paid Ana 20.00 too much.
 /// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", CurrencyCode::EUR)?, day).build()?)?;
 ///
-/// for strategy in SettlementStrategy::all() {
+/// for &strategy in SettlementStrategy::all() {
 ///     let settlement = group.settlement(strategy)?;
 ///     assert_eq!(settlement.payments().len(), 1);
 ///     assert_eq!(settlement.payments()[0].sender(), ana);
@@ -117,8 +117,8 @@ pub enum SettlementStrategy {
 impl SettlementStrategy {
     /// Every strategy, in the order they are declared.
     #[must_use]
-    pub const fn all() -> [Self; 4] {
-        [
+    pub const fn all() -> &'static [Self] {
+        &[
             Self::Adaptive,
             Self::MinimumTransfers,
             Self::Greedy,

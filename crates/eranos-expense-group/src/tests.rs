@@ -867,7 +867,7 @@ fn settlements_are_cached_until_a_balance_changes() {
         group.settlement(SettlementStrategy::Greedy).unwrap().len(),
         1
     );
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         assert_eq!(
             group.settlement(strategy).unwrap().payments()[0].sender(),
             carol
@@ -1641,7 +1641,7 @@ proptest! {
             let nets: i64 = group.summary().members().map(|summary| summary.net().minor_units()).sum();
             prop_assert_eq!(nets, 0);
         }
-        for strategy in SettlementStrategy::all() {
+        for &strategy in SettlementStrategy::all() {
             let mut settled = group.clone();
             let payments = settled.settlement(strategy).unwrap().payments().to_vec();
             for payment in payments {

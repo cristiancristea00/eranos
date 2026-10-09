@@ -614,16 +614,7 @@ When code in one crate needs something another crate holds:
    `Pacer`, returned in a `Cooperative`, with the synchronous method as its
    `.complete()`. A change writes nothing to the group before its last
    yield, so a dropped call changes nothing.
-3. Mirror it on `SharedExpenseGroup` in
-   `crates/eranos-expense-group/src/shared.rs`, in the same section and
-   under the same name: a read through `read_with`, a change through
-   `write_with`, each returning owned values; a method that yields awaits
-   the group's `_async` method while it holds the lock.
-4. Compare its result with the group's in the shared group's tests
-   (`every_read_returns_what_the_group_returns` or
-   `every_change_does_what_the_group_does`), and add its future to
-   `every_call_is_send_static_and_small`.
-5. Forward it in the binding core: a function over the group in
+3. Forward it in the binding core: a function over the group in
    `crates/eranos-bindings/src/operations.rs`, named as the call, which
    converts the records and the answer; then the call in the trait
    `ExpenseGroupCalls` of `calls.rs`, in its section, with the synchronous
@@ -638,39 +629,39 @@ When code in one crate needs something another crate holds:
    `operations/tests.rs` and the two forms in `group/tests.rs`
    (`every_read_answers_alike_in_both_forms` or the change's
    `*_change_alike_in_both_forms`).
-6. The UniFFI glue's `ExpenseGroup` and `ExpenseGroupReader` take both forms
+4. The UniFFI glue's `ExpenseGroup` and `ExpenseGroupReader` take both forms
    and the read's from the same trait, with the core's documentation,
    through the core's `expense_group_calls!` table in
    `crates/eranos-uniffi/src/objects.rs`: a parameter the trait takes as
    optional text crosses as an owned `Option<String>`, and the rest as the
    core takes them.
-7. Add both forms, one name overloaded by `async`, to the Swift layer's
+5. Add both forms, one name overloaded by `async`, to the Swift layer's
    `ExpenseGroup` in
    `bindings/swift/Sources/Eranos/ExpenseGroup/ExpenseGroup+<section>.swift`,
    named by the Swift API Design Guidelines, and a read to its
    `ExpenseGroupReader`; call them in
    `Tests/EranosTests/ExpenseGroupTests.swift`.
-8. Add both forms to the Kotlin layer's `ExpenseGroup` in
+6. Add both forms to the Kotlin layer's `ExpenseGroup` in
    `bindings/kotlin/eranos/src/main/kotlin/eranos/ExpenseGroup.kt`, the
    `suspend` one under the call's name and its twin with `Blocking` after
    it, and a read to its `ExpenseGroupReader`; call them in
    `ExpenseGroupTest.kt`, and record the API with
    `./gradlew :eranos:apiDump`.
-9. Add both forms to the Java layer's `ExpenseGroup` in
+7. Add both forms to the Java layer's `ExpenseGroup` in
    `bindings/java/src/main/java/eranos/ExpenseGroup.java`, the blocking one
    under the call's name and its twin with `Async` after it, and a read to
    its `ExpenseGroupReader`; call them in `ExpenseGroupTest.java`.
-10. Add both forms to the TypeScript layer's `ExpenseGroup` in
+8. Add both forms to the TypeScript layer's `ExpenseGroup` in
     `bindings/typescript/src/expense_group.ts`, the Promise under the call's
     name and its twin with `Sync` after it, and a read to its
     `ExpenseGroupReader` in `expense_group_reader.ts`; call them in
     `test/expense_group.test.ts`.
-11. Add both forms to the Python layer's `ExpenseGroup` in
+9. Add both forms to the Python layer's `ExpenseGroup` in
     `bindings/python/src/eranos/_expense_group.py`, the blocking one under
     the call's name and its coroutine with `_async` after it, and a read to
     its `ExpenseGroupReader` in `_expense_group_reader.py`; call them in
     `tests/test_expense_group.py` and `tests/test_asynchronous.py`.
-12. Run `cargo xtask generate`: the C glue's `EranosExpenseGroup` takes both
+10. Run `cargo xtask generate`: the C glue's `EranosExpenseGroup` takes both
     forms and `EranosExpenseGroupReader` the read's, from the same trait,
     with an outcome for a new kind of answer; a call that takes optional
     text gets a twin of each form that passes none, `clear_` for its `set_`.

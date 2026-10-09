@@ -148,7 +148,7 @@ fn a_group_round_trips_through_json() {
     let loaded: ExpenseGroup = serde_json::from_str(&text).unwrap();
     assert_eq!(loaded, group);
     assert_eq!(loaded.summary(), group.summary());
-    for strategy in SettlementStrategy::all() {
+    for &strategy in SettlementStrategy::all() {
         assert_eq!(
             loaded.settlement(strategy).unwrap(),
             group.settlement(strategy).unwrap()
