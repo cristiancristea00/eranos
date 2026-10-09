@@ -367,8 +367,8 @@ void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) noexcept {
     checkValue(check, email, Email::parse("ana@example.com").value(), Email::parse("bob@example.com").value(), "emails compare by text");
     check.that(isFailure(refusal(Email::parse("ana")), ErrorKind::CONTACT, Failure::CONTACT_INVALID_EMAIL), "an email has a domain");
     auto const phone = PhoneNumber::parse("+40 712 345 678").value();
-    check.that("+40712345678" == phone.toString() && "+40 712 345 678" == phone.international(),
-               "a phone number holds its E.164 form and the international form the library derives from it");
+    check.that("+40 712 345 678" == phone.toString() && "+40 712 345 678" == phone.international() && "+40712345678" == phone.e164(),
+               "a phone number prints the international form the library derives from it and holds its E.164 form");
     checkValue(check, phone, PhoneNumber::parse("+40712345678").value(), PhoneNumber::parse("+40712345679").value(),
                "phone numbers compare by number");
     auto const local = refusal(PhoneNumber::parse("0712345678"));

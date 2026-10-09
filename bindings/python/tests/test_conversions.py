@@ -319,8 +319,9 @@ def test_a_phone_number_and_an_iban_hold_the_text_the_library_gives_without_a_ca
     )
     carla = _entries.member_of(record)
     assert carla.phone is not None
-    assert str(carla.phone) == '+40712345678'
+    assert carla.phone.e164 == '+40712345678'
     assert carla.phone.international == '+40-712-345-678'
+    assert str(carla.phone) == '+40-712-345-678'
     details = carla.accounts[0].details
     assert isinstance(details, IbanPaymentAccountDetails)
     assert str(details.iban) == IBAN

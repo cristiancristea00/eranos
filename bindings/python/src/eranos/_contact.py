@@ -34,7 +34,8 @@ class PhoneNumber(CheckedText):
     A phone number, valid in its country's numbering plan, kept in E.164 form, such as ``"+40712345678"``.
 
     It holds its international form as the library wrote it, when it checked the number or gave it with a member, so reading
-    the form calls nothing. Two numbers are equal when both their forms are.
+    the form calls nothing; ``str`` writes the international form, and ``e164`` the stored one. Two numbers are equal when
+    both their forms are.
     """
 
     __slots__ = ('_international',)
@@ -74,8 +75,24 @@ class PhoneNumber(CheckedText):
         return phone
 
     @property
+    def e164(self) -> str:
+        """The number in E.164 form, ``+`` followed by digits only, such as ``"+40712345678"``: the form to dial and store."""
+        return self._text
+
+    @property
     def international(self) -> str:
         """The number in its international form, grouped as its country groups it, as the library wrote it, such as ``"+40 712 345 678"``."""
+        return self._international
+
+    @override
+    def __str__(self) -> str:
+        """
+        Write the number in its international form, as the library did.
+
+        Returns:
+            The international form.
+
+        """
         return self._international
 
     @override
@@ -90,7 +107,7 @@ class PhoneNumber(CheckedText):
             Whether the two are equal.
 
         """
-        return isinstance(other, PhoneNumber) and str(other) == str(self) and other.international == self._international
+        return isinstance(other, PhoneNumber) and other.e164 == self._text and other.international == self._international
 
     @override
     def __hash__(self) -> int:
@@ -101,7 +118,7 @@ class PhoneNumber(CheckedText):
             The hash.
 
         """
-        return hash((PhoneNumber, str(self), self._international))
+        return hash((PhoneNumber, self._text, self._international))
 
 
 @final
@@ -246,7 +263,7 @@ def generated_phone_number(phone: PhoneNumber) -> generated.PhoneNumber:
         The generated number.
 
     """
-    return generated.PhoneNumber(e164=str(phone), international=phone.international)
+    return generated.PhoneNumber(e164=phone.e164, international=phone.international)
 
 
 def iban_of(iban: str, country_code: str) -> Iban:

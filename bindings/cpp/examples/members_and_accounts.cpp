@@ -181,7 +181,7 @@ void validation() noexcept {
     auto const phone = [](std::string_view const input) noexcept {
         return validated(
             input, "phone", [](std::string_view const text) noexcept { return PhoneNumber::parse(text); },
-            [](PhoneNumber const &parsed) noexcept { return parsed.toString(); });
+            [](PhoneNumber const &parsed) noexcept { return parsed.e164(); });
     };
     printTable<CheckRow>(
         {

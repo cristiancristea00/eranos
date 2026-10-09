@@ -137,7 +137,7 @@ def describe(account: PaymentAccount) -> str:
     return f'{account.name}: {details}'
 
 
-def checked(text: str, kind: str, parse: Callable[[str], object]) -> CheckRow:
+def checked[Value](text: str, kind: str, parse: Callable[[str], Value], shown: Callable[[Value], str] = str) -> CheckRow:
     """
     Check text as kind with parse.
 
@@ -145,6 +145,7 @@ def checked(text: str, kind: str, parse: Callable[[str], object]) -> CheckRow:
         text: The text to check.
         kind: What the text is checked as, such as ``"IBAN"``.
         parse: What checks the text, such as ``Iban``.
+        shown: What writes the value for the table: its text, unless the table shows another form.
 
     Returns:
         The row of the table of what validation accepts, whose result is ``valid:`` with the value as the library writes
@@ -155,7 +156,7 @@ def checked(text: str, kind: str, parse: Callable[[str], object]) -> CheckRow:
         value = parse(text)
     except EranosError as error:
         return CheckRow(input=text, kind=kind, result=f'refused: {error}')
-    return CheckRow(input=text, kind=kind, result=f'valid: {value}')
+    return CheckRow(input=text, kind=kind, result=f'valid: {shown(value)}')
 
 
 def print_members(group: ExpenseGroup) -> None:
@@ -260,10 +261,10 @@ def validation() -> None:
             checked('ana@example.com', 'email', Email),
             checked('ana.example.com', 'email', Email),
             checked('ana..popescu@example.com', 'email', Email),
-            checked('+40 (712) 345-678', 'phone', PhoneNumber),
-            checked('0712 345 678', 'phone', PhoneNumber),
-            checked('+40 612 345 678', 'phone', PhoneNumber),
-            checked('+44 (0)20 7946 0958', 'phone', PhoneNumber),
+            checked('+40 (712) 345-678', 'phone', PhoneNumber, lambda phone: phone.e164),
+            checked('0712 345 678', 'phone', PhoneNumber, lambda phone: phone.e164),
+            checked('+40 612 345 678', 'phone', PhoneNumber, lambda phone: phone.e164),
+            checked('+44 (0)20 7946 0958', 'phone', PhoneNumber, lambda phone: phone.e164),
         ],
         3,
     )

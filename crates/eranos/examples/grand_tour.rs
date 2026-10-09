@@ -506,7 +506,7 @@ fn validation() {
         input: format!("\"{input}\""),
         kind: "phone",
         result: outcome(PhoneNumber::parse(input), |phone| {
-            format!("{}, stored as {}", phone.international(), phone.as_str())
+            format!("{}, stored as {}", phone.international(), phone.e164())
         }),
     };
     print_table(

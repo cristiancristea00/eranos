@@ -333,7 +333,9 @@ structs hold any numbers, checks with the check.
 A phone number and an IBAN cross with the text the library derives from
 them, which the core fills whenever it reads one from the library: a
 `PhoneNumber` holds its E.164 form and its international form, grouped as
-its country groups it, and an IBAN, in `iban_parse`'s `Iban` and in an
+its country groups it, which is the number's text in every language, as
+it is the library's, while the E.164 form is the one to dial, store, and
+save; and an IBAN, in `iban_parse`'s `Iban` and in an
 account's `PaymentAccountDetails::Iban`, holds its country code. A layer
 reads the derived text from the record, so it calls no helper that could
 fail to print a value it holds. On the way in, the core parses the value
@@ -989,7 +991,9 @@ Core Guidelines with the naming rule above:
   `PhoneNumber` and `Iban` also hold the text the library derives from
   them, the international form and the country code, which
   `international()` and `countryCode()` read without a call, and only the
-  library makes either, through `parse` or a record it answers with.
+  library makes either, through `parse` or a record it answers with; a
+  phone number's `toString()` is its international form and `e164()` the
+  stored one.
   `Percentage::toString()`, `Parts::toString()`, and
   `Quantity::toString()` return a `std::string`, written for any number as
   the library's formatters write it, so a negative percentage, which a call
@@ -1107,8 +1111,9 @@ reads its annotations without checking its code, and Ruff leaves it out:
   currency the core gives with an amount, as the group currency, and in a
   failure is made from the `CurrencyDetails` it carries, with no lookup,
   and an amount crosses back with them. A `PhoneNumber` holds its
-  international form, and an `Iban` its country code, as the core derives
-  them when it parses the text, reads it through a property
+  international form, which `str` writes, and its E.164 form, `e164`, and
+  an `Iban` its country code, as the core derives them when it parses the
+  text, reads them through properties
   (`phone.international`, `iban.country_code`), and equals only a value
   with the same derived text; one the core gives with a member is made
   from the text it carries, with no call, and crosses back with it

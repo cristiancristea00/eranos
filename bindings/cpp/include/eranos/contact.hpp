@@ -61,7 +61,7 @@ class Email final {
 };
 
 /// A phone number, which the library keeps in the E.164 form, with the international form it derives from it. Only the library makes one, so the
-/// two forms always belong together.
+/// two forms always belong together; the international form is the number's text, and the E.164 form the one to dial and store.
 class PhoneNumber final {
   public:
     /// The phone number written @p text, checked and made canonical by the library, which derives its international form.
@@ -71,12 +71,17 @@ class PhoneNumber final {
     ///   not UTF-8
     [[nodiscard]] static std::expected<PhoneNumber, Error> parse(std::string_view const text) noexcept;
 
-    /// The phone number as the library writes it, in the E.164 form: "+40712345678".
+    /// The number in the international form, grouped as its country groups it: "+40 712 345 678".
     ///
     /// @return The text
-    [[nodiscard]] inline constexpr std::string const &toString() const noexcept { return fields.e164; }
+    [[nodiscard]] inline constexpr std::string const &toString() const noexcept { return fields.international; }
 
-    /// The number in the international form, grouped as its country groups it: "+40 712 345 678".
+    /// The number in the E.164 form, "+" followed by digits only: "+40712345678", the form to dial and store.
+    ///
+    /// @return The text
+    [[nodiscard]] inline constexpr std::string const &e164() const noexcept { return fields.e164; }
+
+    /// The number in the international form, as toString() writes it.
     ///
     /// @return The text
     [[nodiscard]] inline constexpr std::string const &international() const noexcept { return fields.international; }

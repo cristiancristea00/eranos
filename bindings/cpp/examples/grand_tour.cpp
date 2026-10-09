@@ -586,9 +586,9 @@ void validation(ExpenseGroup &group) noexcept {
         return CheckRow{
             .input = std::format("\"{}\"", input),
             .kind = "phone",
-            .result = outcome(
-                [&] noexcept { return PhoneNumber::parse(input); },
-                [](PhoneNumber const &parsed) noexcept { return std::format("{}, stored as {}", parsed.international(), parsed.toString()); }),
+            .result =
+                outcome([&] noexcept { return PhoneNumber::parse(input); },
+                        [](PhoneNumber const &parsed) noexcept { return std::format("{}, stored as {}", parsed.international(), parsed.e164()); }),
         };
     };
     auto const text = [](auto const &parsed) noexcept { return parsed.toString(); };

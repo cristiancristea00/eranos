@@ -23,7 +23,7 @@ impl PhoneNumber {
     /// writes for it.
     pub(crate) fn from_library(phone: &library::PhoneNumber) -> Self {
         Self {
-            e164: phone.as_str().to_owned(),
+            e164: phone.e164().to_owned(),
             international: phone.international(),
         }
     }

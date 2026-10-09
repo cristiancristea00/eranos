@@ -328,16 +328,15 @@ fn phone_separators_are_dropped() {
         "+40712345678",
     ] {
         assert_eq!(
-            PhoneNumber::parse(text).unwrap().as_str(),
+            PhoneNumber::parse(text).unwrap().e164(),
             "+40712345678",
             "{text}"
         );
     }
-    // Display shows the stored form.
-    assert_eq!(
-        PhoneNumber::parse("+40 712 345 678").unwrap().to_string(),
-        "+40712345678"
-    );
+    // Display shows the international form, and `e164` the stored one.
+    let phone = PhoneNumber::parse("+40 712 345 678").unwrap();
+    assert_eq!(phone.to_string(), "+40 712 345 678");
+    assert_eq!(phone.e164(), "+40712345678");
     // `FromStr` parses the same way.
     assert_eq!(
         "+40 712 345 678".parse::<PhoneNumber>(),
@@ -368,7 +367,7 @@ fn a_phone_number_needs_a_leading_plus() {
     }
     // A doubled leading sign is read as one.
     assert_eq!(
-        PhoneNumber::parse("++40712345678").unwrap().as_str(),
+        PhoneNumber::parse("++40712345678").unwrap().e164(),
         "+40712345678"
     );
 }
@@ -419,7 +418,7 @@ fn a_phone_number_must_be_valid_in_its_countrys_plan() {
             stored: "+80012345678",
         },
     ] {
-        assert_eq!(PhoneNumber::parse(text).unwrap().as_str(), stored, "{text}");
+        assert_eq!(PhoneNumber::parse(text).unwrap().e164(), stored, "{text}");
     }
     // Lengths no plan uses, a Romanian range that does not exist, numbers too
     // short or too long for Romania, an unassigned country code, the United
@@ -491,11 +490,11 @@ fn letters_extensions_and_other_symbols_are_rejected_in_a_phone_number() {
 fn other_digit_forms_are_read_as_digits() {
     // Full-width and Arabic-Indic digits after an ASCII sign.
     assert_eq!(
-        PhoneNumber::parse("+4071234567８").unwrap().as_str(),
+        PhoneNumber::parse("+4071234567８").unwrap().e164(),
         "+40712345678"
     );
     assert_eq!(
-        PhoneNumber::parse("+٤٠ ٧٢١ ٢٣٤ ٥٦٧").unwrap().as_str(),
+        PhoneNumber::parse("+٤٠ ٧٢١ ٢٣٤ ٥٦٧").unwrap().e164(),
         "+40721234567"
     );
     // A full-width sign.
@@ -529,7 +528,7 @@ fn a_trunk_zero_after_the_country_code_is_dropped() {
             stored: "+390212345678",
         },
     ] {
-        assert_eq!(PhoneNumber::parse(text).unwrap().as_str(), stored, "{text}");
+        assert_eq!(PhoneNumber::parse(text).unwrap().e164(), stored, "{text}");
     }
 }
 
@@ -555,7 +554,7 @@ fn every_regions_example_numbers_are_accepted() {
     for example in regional.chain(global) {
         let stored = plans.format(&example, PhoneNumberFormat::E164).into_owned();
         let phone = PhoneNumber::parse(&stored).unwrap();
-        assert_eq!(phone.as_str(), stored);
+        assert_eq!(phone.e164(), stored);
         // Formatting compiles the country's other patterns.
         assert!(phone.international().starts_with('+'), "{stored}");
         checked += 1;
@@ -605,7 +604,7 @@ fn the_international_form_groups_the_digits() {
         let phone = PhoneNumber::parse(stored).unwrap();
         assert_eq!(phone.international(), grouped, "{stored}");
         // The stored form stays E.164.
-        assert_eq!(phone.as_str(), stored);
+        assert_eq!(phone.e164(), stored);
     }
 }
 
@@ -614,7 +613,7 @@ fn the_international_form_groups_the_digits() {
 fn surrounding_whitespace_is_trimmed_from_a_phone_number() {
     // Spaces, tabs, and newlines around the number.
     assert_eq!(
-        PhoneNumber::parse(" \t+40712345678\n").unwrap().as_str(),
+        PhoneNumber::parse(" \t+40712345678\n").unwrap().e164(),
         "+40712345678"
     );
 }

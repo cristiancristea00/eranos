@@ -249,6 +249,10 @@ fn general_category(character: char) -> GeneralCategory {
 /// A phone number that is valid in its country's numbering plan, stored in
 /// E.164 form: `+`, the country code, and the national number, digits only.
 ///
+/// Its text form is the international form, grouped as its country writes
+/// it, such as `+40 712 345 678`; [`e164`](Self::e164) is the form to dial
+/// and store, and the one the saved form holds.
+///
 /// The number starts with `+`. Separators such as spaces, dashes, dots,
 /// slashes, and parentheses are dropped, and so is a national trunk 0 after
 /// the country code (`+44 (0)20 …`); letters, extensions, and `tel:` URIs are
@@ -261,7 +265,8 @@ fn general_category(character: char) -> GeneralCategory {
 /// use eranos::PhoneNumber;
 ///
 /// let phone = PhoneNumber::parse("+40 (712) 345-678")?;
-/// assert_eq!(phone.as_str(), "+40712345678");
+/// assert_eq!(phone.e164(), "+40712345678");
+/// assert_eq!(phone.to_string(), "+40 712 345 678");
 /// assert!(PhoneNumber::parse("0712 345 678").is_err()); // no country code
 /// assert!(PhoneNumber::parse("+40 612 345 678").is_err()); // no such range in Romania
 /// # Ok::<(), eranos::error::ContactError>(())
@@ -318,15 +323,16 @@ impl PhoneNumber {
         ))
     }
 
-    /// The number in E.164 form: `+` followed by digits only.
+    /// The number in E.164 form, `+` followed by digits only: the form to
+    /// dial and store.
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub fn e164(&self) -> &str {
         &self.0
     }
 
     /// The number grouped the way its country writes it for callers abroad,
-    /// such as `+40 712 345 678`, for showing; [`as_str`](Self::as_str) is the
-    /// form to dial and store.
+    /// such as `+40 712 345 678`: the text form, which [`Display`](fmt::Display)
+    /// writes; [`e164`](Self::e164) is the form to dial and store.
     ///
     /// # Panics
     ///
@@ -360,7 +366,7 @@ impl PhoneNumber {
 
 impl fmt::Display for PhoneNumber {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.0)
+        formatter.write_str(&self.international())
     }
 }
 
@@ -392,7 +398,7 @@ mod serde_impls {
 
     impl Serialize for PhoneNumber {
         fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-            serialiser.serialize_str(self.as_str())
+            serialiser.serialize_str(self.e164())
         }
     }
 

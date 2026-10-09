@@ -219,7 +219,7 @@ def _phone(text: str) -> CheckRow:
 
     """
     return CheckRow(
-        input=f'"{text}"', kind='phone', result=_outcome(lambda: PhoneNumber(text), lambda phone: f'{phone.international}, stored as {phone}')
+        input=f'"{text}"', kind='phone', result=_outcome(lambda: PhoneNumber(text), lambda phone: f'{phone.international}, stored as {phone.e164}')
     )
 
 

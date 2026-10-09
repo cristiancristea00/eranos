@@ -178,7 +178,7 @@ fn validation() {
     let phone = |input: &'static str| CheckRow {
         input,
         kind: "phone",
-        result: outcome(PhoneNumber::parse(input), |phone| phone.as_str().to_owned()),
+        result: outcome(PhoneNumber::parse(input), |phone| phone.e164().to_owned()),
     };
     print_table(
         [

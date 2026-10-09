@@ -423,8 +423,9 @@ def test_contacts_and_accounts_are_checked_and_made_canonical() -> None:
         Email('ana')
     assert email.value.failure == ContactError.InvalidEmail()
     phone = PhoneNumber('+40 712 345 678')
-    assert str(phone) == '+40712345678'
+    assert phone.e164 == '+40712345678'
     assert phone.international == '+40 712 345 678'
+    assert str(phone) == '+40 712 345 678'
     with pytest.raises(ContactError) as local:
         PhoneNumber('0712345678')
     assert local.value.failure == ContactError.InvalidPhoneNumber()
