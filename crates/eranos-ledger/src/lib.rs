@@ -319,9 +319,10 @@ impl ExpenseShares {
 
     /// What one member paid and consumed; `None` when the expense does not
     /// involve them.
+    #[must_use]
     pub fn member(&self, member: MemberId) -> Option<&MemberShare> {
         self.members
-            .binary_search_by_key(&member, MemberShare::member)
+            .binary_search_by(|share| share.member.cmp(&member))
             .ok()
             .and_then(|index| self.members.get(index))
     }

@@ -92,18 +92,18 @@ pub fn resolve_expense_at(
         }
     };
 
-    let mut shares = base.clone();
+    let mut shares = base;
     if 0 < tip {
         // `build` refuses an amount that is not positive, and the base
         // shares add up to it with none below zero, so at least one share is
         // positive and one weight is not zero: `allocate` never receives the
         // all-zero weights it would count as equal.
         let weights: Vec<u64> = match expense.tip().distribution() {
-            TipDistribution::Proportional => base
+            TipDistribution::Proportional => shares
                 .iter()
                 .map(|share| share.amount.unsigned_abs())
                 .collect(),
-            TipDistribution::Equal => base
+            TipDistribution::Equal => shares
                 .iter()
                 .map(|share| u64::from(0 < share.amount))
                 .collect(),

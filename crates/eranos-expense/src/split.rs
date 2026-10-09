@@ -215,7 +215,7 @@ impl Split {
                 })
                 .collect(),
         };
-        entries.sort_unstable_by_key(|entry| entry.member);
+        entries.sort_unstable();
         let weights: Vec<u64> = entries.iter().map(|entry| entry.weight).collect();
         entries
             .into_iter()
@@ -269,7 +269,9 @@ pub(crate) struct Share {
 }
 
 /// A member's weight in a division: what their share is proportional to.
-#[derive(Debug, Clone, Copy)]
+/// Ordered by member, whom a split names once, so a sort compares the
+/// identifiers in place.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct MemberWeight {
     member: MemberId,
     weight: u64,
