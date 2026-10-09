@@ -1263,7 +1263,7 @@ void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check &check
 /// A kind of call whose outcome lost its failure would leave the app's future waiting, or hand it a value the library never
 /// gave; a call given a cancelled cancellation reports the cancellation, whatever it returns.
 void everyKindOfAsynchronousCallReportsItsCancellation(Check &check) noexcept {
-    Flat const flat;
+    Flat flat;
     Cancellation cancelled;
     cancelled.cancel();
     auto const reportsIt = [](std::optional<Error> const &error) noexcept { return isFailure(error, ErrorKind::CANCELLED, std::nullopt); };
@@ -1281,6 +1281,7 @@ void everyKindOfAsynchronousCallReportsItsCancellation(Check &check) noexcept {
     check.that(reportsIt(refusal(flat.group.transferAmountAsync(flat.repayment, &cancelled).get())), "a transfer's amount");
     check.that(reportsIt(refusal(flat.group.transfersAsync(&cancelled).get())), "the transfers");
     check.that(reportsIt(refusal(flat.group.transferAsync(flat.repayment, &cancelled).get())), "a transfer");
+    check.that(reportsIt(refusal(flat.group.writeAsync(&cancelled).get())), "a write handle");
 }
 
 /// A test: its name, the claim it makes, and its body.

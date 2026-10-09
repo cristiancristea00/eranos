@@ -194,7 +194,7 @@ pub fn exchange_rate_convert(rate: &str, amount: &Money, code: &str) -> Result<M
 ///
 /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage).
 pub fn percentage_parse(text: &str) -> Result<i32, EranosError> {
-    basis_points(library::Percentage::parse(text)?)
+    Ok(basis_points(library::Percentage::parse(text)?))
 }
 
 /// The percentage of the double `value`, a number of per cent, in basis
@@ -211,7 +211,7 @@ pub fn percentage_parse(text: &str) -> Result<i32, EranosError> {
 /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
 /// for a negative value and one whose basis points do not fit an `i32`.
 pub fn percentage_from_f64(value: f64) -> Result<i32, EranosError> {
-    basis_points(library::Percentage::from_f64(value)?)
+    Ok(basis_points(library::Percentage::from_f64(value)?))
 }
 
 /// The percentage of `basis_points`, as the library writes it: "12.5%".
@@ -243,7 +243,7 @@ pub fn percentage_check(basis_points: i32) -> Result<(), EranosError> {
 ///
 /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts).
 pub fn parts_parse(text: &str) -> Result<i32, EranosError> {
-    hundredths(library::Parts::parse(text)?)
+    Ok(hundredths(library::Parts::parse(text)?))
 }
 
 /// The parts of the double `value`, in hundredths: 1.005 is 101.
@@ -259,7 +259,7 @@ pub fn parts_parse(text: &str) -> Result<i32, EranosError> {
 /// value that rounds to zero or below and one whose hundredths do not fit
 /// an `i32`.
 pub fn parts_from_f64(value: f64) -> Result<i32, EranosError> {
-    hundredths(library::Parts::from_f64(value)?)
+    Ok(hundredths(library::Parts::from_f64(value)?))
 }
 
 /// The parts of `hundredths`, as the library writes them: "0.5".
@@ -287,24 +287,16 @@ pub fn parts_check(hundredths: i32) -> Result<(), EranosError> {
 
 /// The basis points of `percentage`, as the bindings' 32-bit signed
 /// integers hold them.
-///
-/// # Errors
-///
-/// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
-/// above 21 474 836.47 %, whose basis points do not fit an `i32`.
-fn basis_points(percentage: library::Percentage) -> Result<i32, EranosError> {
-    Ok(i32::try_from(percentage.basis_points()).map_err(|_| MoneyError::InvalidPercentage)?)
+fn basis_points(percentage: library::Percentage) -> i32 {
+    // `Percentage::MAX` is `i32::MAX` basis points, so every percentage fits.
+    i32::try_from(percentage.basis_points()).unwrap_or(i32::MAX)
 }
 
 /// The hundredths of `parts`, as the bindings' 32-bit signed integers hold
 /// them.
-///
-/// # Errors
-///
-/// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) above
-/// 21 474 836.47 parts, whose hundredths do not fit an `i32`.
-fn hundredths(parts: library::Parts) -> Result<i32, EranosError> {
-    Ok(i32::try_from(parts.hundredths()).map_err(|_| MoneyError::InvalidParts)?)
+fn hundredths(parts: library::Parts) -> i32 {
+    // `Parts::MAX` is `i32::MAX` hundredths, so every number of parts fits.
+    i32::try_from(parts.hundredths()).unwrap_or(i32::MAX)
 }
 
 // --- Quantities --------------------------------------------------------------

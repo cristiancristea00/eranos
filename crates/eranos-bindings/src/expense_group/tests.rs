@@ -806,10 +806,10 @@ fn a_change_cancelled_while_it_waits_changes_nothing() {
     );
 }
 
-/// A read cancelled while a change holds the lock would still run once the
-/// change ends, after its caller gave it up.
+/// A call or a handle cancelled while a change holds the lock would still
+/// run, or take the lock, once the change ends, after its caller gave it up.
 #[test]
-fn a_read_cancelled_while_it_waits_ends_at_once() {
+fn a_call_or_a_handle_cancelled_while_it_waits_ends_at_once() {
     let task = Arc::new(Task::default());
     let waker = Waker::from(Arc::clone(&task));
     let mut context = Context::from_waker(&waker);
@@ -820,12 +820,14 @@ fn a_read_cancelled_while_it_waits_ends_at_once() {
     let mut settling =
         pin!(handle.settlement_async(SettlementStrategy::Greedy, Some(Arc::clone(&cancellation))));
     let mut reading = pin!(handle.read_async(Some(Arc::clone(&cancellation))));
+    let mut writing = pin!(handle.write_async(Some(Arc::clone(&cancellation))));
     assert!(naming.as_mut().poll(&mut context).is_pending());
     assert!(settling.as_mut().poll(&mut context).is_pending());
     assert!(reading.as_mut().poll(&mut context).is_pending());
+    assert!(writing.as_mut().poll(&mut context).is_pending());
 
     cancellation.cancel();
-    assert_eq!(task.wakes(), 3);
+    assert_eq!(task.wakes(), 4);
     assert_eq!(
         naming.as_mut().poll(&mut context),
         Poll::Ready(Err(EranosError::cancelled()))
@@ -838,7 +840,14 @@ fn a_read_cancelled_while_it_waits_ends_at_once() {
         reading.as_mut().poll(&mut context),
         Poll::Ready(Err(EranosError::Cancelled { .. }))
     ));
+    assert!(matches!(
+        writing.as_mut().poll(&mut context),
+        Poll::Ready(Err(EranosError::Cancelled { .. }))
+    ));
     drop(change);
+    // Once the change ends, a write handle that nobody cancelled takes the
+    // lock, and releasing it frees the lock.
+    drop(block_on(handle.write_async(None)).unwrap());
     assert!(handle.try_write_lock().is_ok());
 }
 

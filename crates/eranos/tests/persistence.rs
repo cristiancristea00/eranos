@@ -862,3 +862,101 @@ fn a_group_the_library_accepted_loads_whatever_order_its_entries_replay_in() {
         .map(|refused_group| refused_group.id());
     assert_eq!(refused, Err(ExpenseGroupError::Overflow));
 }
+
+/// A key of a saved group and a value of its type.
+struct SavedKey {
+    name: &'static str,
+    value: &'static str,
+}
+
+/// A file that repeats a key, holds a value of another type under one, or
+/// breaks off inside a value the reader skips is damaged: read on, it would
+/// keep one of two values, or a value of no meaning, without a word.
+#[test]
+fn every_key_of_a_saved_group_is_read_once_and_checked() {
+    let read = |text: &str| {
+        serde_json::from_str::<SavedExpenseGroup>(text)
+            .map(|_| ())
+            .unwrap_err()
+            .to_string()
+    };
+    let keys = [
+        SavedKey {
+            name: "id",
+            value: r#""lisbon""#,
+        },
+        SavedKey {
+            name: "name",
+            value: r#""Lisbon""#,
+        },
+        SavedKey {
+            name: "currency",
+            value: r#""EUR""#,
+        },
+        SavedKey {
+            name: "note",
+            value: r#""Trip""#,
+        },
+        SavedKey {
+            name: "language",
+            value: r#""pt-PT""#,
+        },
+        SavedKey {
+            name: "members",
+            value: "[]",
+        },
+        SavedKey {
+            name: "archived",
+            value: "[]",
+        },
+        SavedKey {
+            name: "categories",
+            value: "[]",
+        },
+        SavedKey {
+            name: "expenses",
+            value: "[]",
+        },
+        SavedKey {
+            name: "transfers",
+            value: "[]",
+        },
+    ];
+    for SavedKey { name, value } in keys {
+        // A key given twice.
+        let repeated = read(&format!(
+            r#"{{"format":4,"{name}":{value},"{name}":{value}}}"#
+        ));
+        assert!(
+            repeated.contains(&format!("duplicate field `{name}`")),
+            "{repeated}"
+        );
+        // A value of another type.
+        let mistyped = read(&format!(r#"{{"format":4,"{name}":true}}"#));
+        assert!(mistyped.contains("invalid type"), "{mistyped}");
+    }
+    // A key the reader skips, whose value breaks off, and a key that is not
+    // text.
+    let broken = read(r#"{"format":4,"future":}"#);
+    assert!(broken.contains("expected value"), "{broken}");
+    let numbered = read(r#"{"format":4,1:2}"#);
+    assert!(numbered.contains("key must be a string"), "{numbered}");
+    // A format that is not a number.
+    let worded = read(r#"{"format":"4"}"#);
+    assert!(worded.contains("invalid type"), "{worded}");
+    // A newer format, whose other keys are skipped unread, unless the file
+    // breaks off among them.
+    let newer = serde_json::from_str::<SavedExpenseGroup>(r#"{"format":5,"members":"later"}"#)
+        .unwrap()
+        .into_expense_group()
+        .map(|loaded| loaded.id());
+    assert_eq!(
+        newer,
+        Err(ExpenseGroupError::UnsupportedFormat { format: 5 })
+    );
+    let cut = read(r#"{"format":5,"members":}"#);
+    assert!(cut.contains("expected value"), "{cut}");
+    // A file that is not an object at all.
+    let listed = read("[]");
+    assert!(listed.contains("expected a saved group"), "{listed}");
+}

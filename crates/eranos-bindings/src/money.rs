@@ -232,8 +232,11 @@ pub(crate) fn exchange_rate(text: &str) -> Result<library::ExchangeRate, EranosE
 /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
 /// for a negative number.
 pub(crate) fn percentage(basis_points: i32) -> Result<library::Percentage, EranosError> {
-    let basis_points = u32::try_from(basis_points).map_err(|_| MoneyError::InvalidPercentage)?;
-    Ok(library::Percentage::from_basis_points(basis_points)?)
+    // A negative number becomes `u32::MAX`, which the library refuses as it
+    // refuses every number above `Percentage::MAX`.
+    Ok(library::Percentage::from_basis_points(
+        u32::try_from(basis_points).unwrap_or(u32::MAX),
+    )?)
 }
 
 /// The parts of `hundredths`.
@@ -243,8 +246,11 @@ pub(crate) fn percentage(basis_points: i32) -> Result<library::Percentage, Erano
 /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for a
 /// number that is not positive.
 pub(crate) fn parts(hundredths: i32) -> Result<library::Parts, EranosError> {
-    let hundredths = u32::try_from(hundredths).map_err(|_| MoneyError::InvalidParts)?;
-    Ok(library::Parts::from_hundredths(hundredths)?)
+    // A negative number becomes `u32::MAX`, which the library refuses as it
+    // refuses every number above `Parts::MAX`.
+    Ok(library::Parts::from_hundredths(
+        u32::try_from(hundredths).unwrap_or(u32::MAX),
+    )?)
 }
 
 /// The quantity of `ten_thousandths`.

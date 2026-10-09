@@ -147,6 +147,18 @@ fn members_are_listed_in_the_order_given() {
     assert_eq!(amounts_split.members().collect::<Vec<_>>(), order);
 }
 
+/// Payers given as one member, an array, or a vector would split another
+/// way than the equal split among them that each stands for.
+#[test]
+fn a_member_an_array_and_a_vector_convert_to_an_equal_split() {
+    assert_eq!(Split::from(ana()), Split::equal([ana()]));
+    assert_eq!(Split::from([ana(), bob()]), Split::equal([ana(), bob()]));
+    assert_eq!(
+        Split::from(vec![ana(), bob()]),
+        Split::equal([ana(), bob()])
+    );
+}
+
 /// Split forms would show the wrong number of participants.
 #[test]
 fn len_counts_the_listed_members() {
