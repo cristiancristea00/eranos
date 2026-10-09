@@ -265,10 +265,10 @@ trait ExpenseGroupCalls {
     #[infallible]
     fn name(&self) -> Result<String, EranosError>;
 
-    /// The description.
+    /// The note.
     #[read]
     #[infallible]
-    fn description(&self) -> Result<Option<String>, EranosError>;
+    fn note(&self) -> Result<Option<String>, EranosError>;
 
     /// Whether the member with the identifier `id` is archived.
     #[read]

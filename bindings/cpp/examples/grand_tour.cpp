@@ -514,17 +514,17 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
 [[nodiscard]] ExpenseGroup theGroup() noexcept {
     section("1. The group");
     auto group = must(ExpenseGroup::create("Lisbon", must(CurrencyCode::of("EUR")),
-                                           ExpenseGroupOptions{.description = "A week by the Atlantic", .language = must(Language::parse("pt-pt"))}));
+                                           ExpenseGroupOptions{.note = "A week by the Atlantic", .language = must(Language::parse("pt-pt"))}));
     auto const blank = refusal(group.setName("   "));
     must(group.setName("Lisbon and Porto"));
-    must(group.setDescription("A week by the Atlantic, with a day in Porto"));
+    must(group.setNote("A week by the Atlantic, with a day in Porto"));
     auto const language = group.language().value().toString();
     printTable<DetailRow>(
         {
             {.detail = "Name", .value = group.name()},
             {.detail = "Currency", .value = group.currency().code()},
             {.detail = "Language", .value = language},
-            {.detail = "Description", .value = group.description().value_or("")},
+            {.detail = "Description", .value = group.note().value_or("")},
         },
         2);
     std::println("The group started as Lisbon and was renamed when a day in Porto joined the plan.\n"
@@ -850,7 +850,7 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) noexcept {
                       AmountsSplit{{MemberAmount(people.carol, eur("39.40")), MemberAmount(people.dan, eur("20.00"))}},
                       ItemisedExpenseSplit{fadoItems(people)}, october(4));
     fadoNight.category = categories.food;
-    fadoNight.description = "Tasca do Chico";
+    fadoNight.note = "Tasca do Chico";
     fadoNight.time = must(TimeOfDay::of(22, 15));
     fadoNight.tip = TipRule(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
     auto const fado = must(group.addExpense(fadoNight));
@@ -888,7 +888,7 @@ void printFado(ExpenseGroup const &group, Expense const &fado) noexcept {
                  "leftover cent; the expense's identifier picks which, so it moves from expense to\n"
                  "expense. The fado night, at {} on {} at {}, was itemised; its\n"
                  "{} tip of {} was shared {}:",
-                 fado.time.value().toString(), fado.date.toString(), fado.description.value_or(""), rule, must(tipAmount(fado)).toString(), shared);
+                 fado.time.value().toString(), fado.date.toString(), fado.note.value_or(""), rule, must(tipAmount(fado)).toString(), shared);
     printItems(group, fado.id);
     printLine("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.");
 }
@@ -966,7 +966,7 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
     // The dinner's receipt said 99.00.
     auto dinner = must(group.expense(seafood)).value();
     dinner.cost = LocalCost{eur("99.00")};
-    dinner.description = "Cervejaria Ramiro";
+    dinner.note = "Cervejaria Ramiro";
     auto const previous = must(group.replaceExpense(dinner));
     // Bob entered the coffee twice, so each entry has an identifier of its own.
     auto const coffee = [&] noexcept {
@@ -997,7 +997,7 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
         {
             .entry = previous.name,
             .edit = std::format("{} became {}, at {}", amountOf(previous.cost).toString(), amountOf(corrected.cost).toString(),
-                                corrected.description.value_or("")),
+                                corrected.note.value_or("")),
         },
         {.entry = removed.name, .edit = std::format("entered twice; the copy of {} was removed", amountOf(removed.cost).toString())},
         {

@@ -25,10 +25,10 @@ fn trait_item() -> ItemTrait {
             /// Sets the language.
             #[write]
             fn set_language(&self, language: Option<&str>) -> Result<(), EranosError>;
-            /// Sets the description.
+            /// Sets the note.
             #[write]
             #[infallible]
-            fn set_description(&self, description: &str) -> Result<(), EranosError>;
+            fn set_note(&self, note: &str) -> Result<(), EranosError>;
             /// The payments that settle every balance.
             #[read]
             #[async_body = bodies::settlement]
@@ -75,10 +75,10 @@ fn text(tokens: impl ToTokens) -> String {
 /// borrows would break every binding at once.
 #[test]
 fn every_call_writes_both_forms_on_the_group_handle() {
-    let (name, language, description, settlement) = (
+    let (name, language, note, settlement) = (
         docs("The group's name."),
         docs("Sets the language."),
-        docs("Sets the description."),
+        docs("Sets the note."),
         docs("The payments that settle every balance."),
     );
     let (name_doc, name_future) = (
@@ -90,8 +90,8 @@ fn every_call_writes_both_forms_on_the_group_handle() {
         language.asynchronous(false),
     );
     let (description_doc, description_future) = (
-        description.synchronous(Access::Write, true),
-        description.asynchronous(true),
+        note.synchronous(Access::Write, true),
+        note.asynchronous(true),
     );
     let (settlement_doc, settlement_future) = (
         settlement.synchronous(Access::Read, false),
@@ -127,19 +127,19 @@ fn every_call_writes_both_forms_on_the_group_handle() {
                 self.writing_async(cancellation, move |group| operations::set_language(group, language.as_deref()))
             }
             #[doc = #description_doc]
-            pub fn set_description(&self, description: &str) -> ::std::result::Result<(), EranosError> {
-                self.writing(|group| { operations::set_description(group, description); ::std::result::Result::Ok(()) })
+            pub fn set_note(&self, note: &str) -> ::std::result::Result<(), EranosError> {
+                self.writing(|group| { operations::set_note(group, note); ::std::result::Result::Ok(()) })
             }
             #[doc = #description_future]
-            pub fn set_description_async(
+            pub fn set_note_async(
                 &self,
-                description: ::std::string::String,
+                note: ::std::string::String,
                 cancellation: ::std::option::Option<::std::sync::Arc<Cancellation>>,
             ) -> impl ::std::future::Future<Output = ::std::result::Result<(), EranosError>>
                    + ::std::marker::Send
                    + 'static {
                 self.writing_async(cancellation, move |group| {
-                    operations::set_description(group, &description);
+                    operations::set_note(group, &note);
                     ::std::result::Result::Ok(())
                 })
             }

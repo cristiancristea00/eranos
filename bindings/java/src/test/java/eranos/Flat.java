@@ -26,7 +26,7 @@ final class Flat {
         day = CalendarDate.of(2026, 9, 23);
         group =
                 ExpenseGroup.builder("Flat", euro)
-                        .description("Rent")
+                        .note("Rent")
                         .language(Language.parse("pt-pt"))
                         .build();
         ana = group.addMember(Member.builder("Ana").build());

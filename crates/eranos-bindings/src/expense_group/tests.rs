@@ -73,7 +73,7 @@ fn new_group() -> NewExpenseGroup {
         id: identifier_generate(),
         name: "Flat".to_owned(),
         currency: "EUR".to_owned(),
-        description: Some("Rent".to_owned()),
+        note: Some("Rent".to_owned()),
         language: Some("pt-pt".to_owned()),
     }
 }
@@ -120,7 +120,7 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
         tip: tip_rule_none(),
         time: None,
         category: category_id_uncategorised(),
-        description: None,
+        note: None,
     }
 }
 
@@ -221,7 +221,7 @@ fn busy() -> ExpenseGroupHandle {
 const fn assert_send_and_static<Call: Future + Send + 'static>(_call: &Call) {}
 
 /// A new group would drop what it starts with, its identifier included,
-/// keep a blank description, or start from an identifier, a currency, a
+/// keep a blank note, or start from an identifier, a currency, a
 /// name, or a language the library refuses.
 #[test]
 fn a_new_group_takes_what_it_starts_with() {
@@ -239,22 +239,22 @@ fn a_new_group_takes_what_it_starts_with() {
         Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
     );
     assert_eq!(handle.name(), Ok("Flat".to_owned()));
-    assert_eq!(handle.description(), Ok(Some("Rent".to_owned())));
+    assert_eq!(handle.note(), Ok(Some("Rent".to_owned())));
     assert_eq!(handle.language(), Ok(Some("pt-PT".to_owned())));
     let plain = ExpenseGroupHandle::new(&NewExpenseGroup {
-        description: None,
+        note: None,
         language: None,
         ..new_group()
     })
     .unwrap();
-    assert_eq!(plain.description(), Ok(None));
+    assert_eq!(plain.note(), Ok(None));
     assert_eq!(plain.language(), Ok(None));
     let blank = ExpenseGroupHandle::new(&NewExpenseGroup {
-        description: Some(" ".to_owned()),
+        note: Some(" ".to_owned()),
         ..new_group()
     })
     .unwrap();
-    assert_eq!(blank.description(), Ok(None));
+    assert_eq!(blank.note(), Ok(None));
 
     let refusals = [
         NewExpenseGroup {
@@ -356,10 +356,7 @@ fn every_read_answers_alike_in_both_forms() {
         block_on(handle.transfer_amount_async(repayment.clone(), None)),
         handle.transfer_amount(repayment)
     );
-    assert_eq!(
-        block_on(handle.description_async(None)),
-        handle.description()
-    );
+    assert_eq!(block_on(handle.note_async(None)), handle.note());
     assert_eq!(block_on(handle.language_async(None)), handle.language());
     assert_eq!(block_on(handle.save_async(None)), handle.save());
     let reader = handle.read().unwrap();
@@ -523,8 +520,8 @@ fn transfers_change_alike_in_both_forms() {
     assert_eq!(handle.transfers().map(|transfers| transfers.len()), Ok(1));
 }
 
-/// A change of the name, the description, or the language would take
-/// effect in one form only, or a blank or absent description would stay
+/// A change of the name, the note, or the language would take
+/// effect in one form only, or a blank or absent note would stay
 /// set.
 #[test]
 fn the_name_description_and_language_change_alike_in_both_forms() {
@@ -534,14 +531,14 @@ fn the_name_description_and_language_change_alike_in_both_forms() {
     block_on(handle.set_name_async("House".to_owned(), None)).unwrap();
     assert_eq!(handle.name(), Ok("House".to_owned()));
 
-    handle.set_description(Some("Bills")).unwrap();
-    assert_eq!(handle.description(), Ok(Some("Bills".to_owned())));
-    block_on(handle.set_description_async(None, None)).unwrap();
-    assert_eq!(handle.description(), Ok(None));
-    block_on(handle.set_description_async(Some("Rent".to_owned()), None)).unwrap();
-    assert_eq!(handle.description(), Ok(Some("Rent".to_owned())));
-    handle.set_description(Some(" ")).unwrap();
-    assert_eq!(handle.description(), Ok(None));
+    handle.set_note(Some("Bills")).unwrap();
+    assert_eq!(handle.note(), Ok(Some("Bills".to_owned())));
+    block_on(handle.set_note_async(None, None)).unwrap();
+    assert_eq!(handle.note(), Ok(None));
+    block_on(handle.set_note_async(Some("Rent".to_owned()), None)).unwrap();
+    assert_eq!(handle.note(), Ok(Some("Rent".to_owned())));
+    handle.set_note(Some(" ")).unwrap();
+    assert_eq!(handle.note(), Ok(None));
 
     handle.set_language(Some("ro")).unwrap();
     assert_eq!(handle.language(), Ok(Some("ro".to_owned())));

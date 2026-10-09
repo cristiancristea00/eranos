@@ -87,7 +87,7 @@ fn lei() -> [CurrencyRate; 1] {
 struct Contents {
     name: String,
     currency: CurrencyCode,
-    description: Option<String>,
+    note: Option<String>,
     language: Option<Language>,
     members: Vec<Member>,
     categories: Vec<Category>,
@@ -100,7 +100,7 @@ fn contents_of(group: &ExpenseGroup) -> Contents {
     Contents {
         name: group.name().to_owned(),
         currency: group.currency(),
-        description: group.description().map(str::to_owned),
+        note: group.note().map(str::to_owned),
         language: group.language().cloned(),
         members: group.members().cloned().collect(),
         categories: group.categories().cloned().collect(),
@@ -115,7 +115,7 @@ fn shared_contents(shared: &SharedExpenseGroup) -> Contents {
         Contents {
             name: shared.name().await,
             currency: shared.currency().await,
-            description: shared.description().await,
+            note: shared.note().await,
             language: shared.language().await,
             members: shared.members().await,
             categories: shared.categories().await,
@@ -164,7 +164,7 @@ struct Trip {
 
 fn trip() -> Trip {
     let mut group = ExpenseGroup::builder("Trip", CurrencyCode::EUR)
-        .description("Autumn")
+        .note("Autumn")
         .build()
         .unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
@@ -329,11 +329,11 @@ fn every_change_does_what_the_group_does() {
         block_on(shared.set_name("Lisbon")),
         group.set_name("Lisbon")
     );
-    block_on(shared.set_description("Spring"));
-    group.set_description("Spring");
+    block_on(shared.set_note("Spring"));
+    group.set_note("Spring");
     assert_eq!(shared_contents(&shared), contents_of(&group));
-    block_on(shared.clear_description());
-    group.clear_description();
+    block_on(shared.clear_note());
+    group.clear_note();
     let portuguese = Language::parse("pt-PT").unwrap();
     block_on(shared.set_language(portuguese.clone()));
     group.set_language(portuguese);
@@ -441,9 +441,9 @@ fn every_call_is_send_static_and_small() {
         size_of_call(&shared.set_name("Club")),
         size_of_call(&shared.currency()),
         size_of_call(&shared.change_currency(CurrencyCode::RON, lei())),
-        size_of_call(&shared.description()),
-        size_of_call(&shared.set_description("Weekly")),
-        size_of_call(&shared.clear_description()),
+        size_of_call(&shared.note()),
+        size_of_call(&shared.set_note("Weekly")),
+        size_of_call(&shared.clear_note()),
         size_of_call(&shared.language()),
         size_of_call(&shared.set_language(None)),
         size_of_call(&shared.members()),

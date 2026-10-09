@@ -44,9 +44,9 @@ from eranos import (
 
 def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
     """
-    A group whose details did not change as asked would show an app a name, a description, or a language the user replaced.
+    A group whose details did not change as asked would show an app a name, a note, or a language the user replaced.
 
-    A description is trimmed, and none or blank text clears it, so the group never holds an empty one.
+    A note is trimmed, and none or blank text clears it, so the group never holds an empty one.
     """
     assert flat.group.id()
     assert flat.group.name() == 'Flat'
@@ -56,28 +56,28 @@ def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
     assert currency.name == 'Euro'
     assert currency.numeric_code == 978
     assert currency.decimal_places == 2
-    assert flat.group.description() == 'Rent'
+    assert flat.group.note() == 'Rent'
     assert flat.group.language() == Language('pt-PT')
     flat.group.set_name('Home')
-    flat.group.set_description(' Rent and bills\n')
+    flat.group.set_note(' Rent and bills\n')
     flat.group.set_language(Language('ro-RO'))
     assert flat.group.name() == 'Home'
-    assert flat.group.description() == 'Rent and bills'
+    assert flat.group.note() == 'Rent and bills'
     assert flat.group.language() == Language('ro-RO')
-    flat.group.set_description(None)
+    flat.group.set_note(None)
     flat.group.set_language(None)
-    assert flat.group.description() is None
+    assert flat.group.note() is None
     assert flat.group.language() is None
-    flat.group.set_description('Rent')
-    flat.group.set_description(' ')
-    assert flat.group.description() is None
+    flat.group.set_note('Rent')
+    flat.group.set_note(' ')
+    assert flat.group.note() is None
     with pytest.raises(ExpenseGroupError) as blank:
         flat.group.set_name(' ')
     assert blank.value.failure == ExpenseGroupError.EmptyName()
-    with ExpenseGroup.create('Trip', flat.euro) as trip, ExpenseGroup.create('Trip', flat.euro, description=' ') as blank_description:
-        assert trip.description() is None
+    with ExpenseGroup.create('Trip', flat.euro) as trip, ExpenseGroup.create('Trip', flat.euro, note=' ') as blank_note:
+        assert trip.note() is None
         assert trip.language() is None
-        assert blank_description.description() is None
+        assert blank_note.note() is None
     with pytest.raises(ExpenseGroupError) as nameless:
         ExpenseGroup.create(' ', flat.euro)
     assert nameless.value.failure == ExpenseGroupError.EmptyName()
@@ -86,9 +86,9 @@ def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
 def test_a_group_keeps_the_identifier_its_app_gives_it(flat: Flat) -> None:
     """A group that lost the identifier its app gave it, or took one the library refuses, would be saved under another key than the app's."""
     trip_id = parse_expense_group_id('trip-12')
-    with ExpenseGroup.create_with_id(trip_id, 'Trip', flat.euro, description='Porto', language=Language('pt-pt')) as trip:
+    with ExpenseGroup.create_with_id(trip_id, 'Trip', flat.euro, note='Porto', language=Language('pt-pt')) as trip:
         assert trip.id() == trip_id
-        assert trip.description() == 'Porto'
+        assert trip.note() == 'Porto'
         assert trip.language() == Language('pt-PT')
         with ExpenseGroup.load(trip.save()) as loaded:
             assert loaded.id() == trip_id

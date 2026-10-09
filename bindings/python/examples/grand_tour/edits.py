@@ -142,7 +142,7 @@ def _replace_and_remove(group: ExpenseGroup, people: People, categories: Categor
     # The dinner's receipt said 99.00.
     dinner = group.expense(seafood)
     assert dinner is not None, 'the dinner was added'
-    previous = group.replace_expense(copy.replace(dinner, cost=LocalCost(eur('99.00')), description='Cervejaria Ramiro'))
+    previous = group.replace_expense(copy.replace(dinner, cost=LocalCost(eur('99.00')), note='Cervejaria Ramiro'))
 
     # Bob entered the coffee twice, so each entry has an identifier of its own.
     def coffee() -> Expense:
@@ -176,7 +176,7 @@ def _replace_and_remove(group: ExpenseGroup, people: People, categories: Categor
     apartment = group.transfer(first)
     assert apartment is not None
     return [
-        EditRow(entry=previous.name, edit=f'{previous.cost.amount} became {corrected.cost.amount}, at {corrected.description or ""}'),
+        EditRow(entry=previous.name, edit=f'{previous.cost.amount} became {corrected.cost.amount}, at {corrected.note or ""}'),
         EditRow(entry=removed.name, edit=f'entered twice; the copy of {removed.cost.amount} was removed'),
         EditRow(
             entry=f'{name(group, people.dan)} to {name(group, people.ana)}',

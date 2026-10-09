@@ -104,7 +104,7 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
         reader.transfer_amount(repayment),
         handle.transfer_amount(repayment)
     );
-    assert_eq!(reader.description(), handle.description());
+    assert_eq!(reader.note(), handle.note());
     assert_eq!(reader.language(), handle.language());
     assert_eq!(reader.save(), handle.save());
     assert!(matches!(
@@ -152,7 +152,7 @@ fn a_released_handle_reads_nothing_and_holds_no_lock() {
         reader.transfers().err(),
         reader.transfer(&flat.repayment).err(),
         reader.transfer_amount(&flat.repayment).err(),
-        reader.description().err(),
+        reader.note().err(),
         reader.language().err(),
         reader.save().err(),
     ];

@@ -59,7 +59,7 @@ func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Cat
         preconditionFailure("the dinner was added")
     }
     corrected.cost = .local(try eur("99.00"))
-    corrected.description = "Cervejaria Ramiro"
+    corrected.note = "Cervejaria Ramiro"
     let previous = try group.replace(corrected)
     // Bob entered the coffee twice. Each entry is an expense with an identifier of its own: the same
     // value added twice would be refused as a duplicate.
@@ -98,7 +98,7 @@ func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Cat
     let dinner = try group.expense(withID: seafood)
     let apartment = try group.transfer(withID: first)
     return [
-        EditRow(entry: previous.name, edit: "\(previous.cost.amount) became \(dinner?.cost.amount ?? zero), at \(dinner?.description ?? "")"),
+        EditRow(entry: previous.name, edit: "\(previous.cost.amount) became \(dinner?.cost.amount ?? zero), at \(dinner?.note ?? "")"),
         EditRow(entry: removed.name, edit: "entered twice; the copy of \(removed.cost.amount) was removed"),
         EditRow(
             entry: "\(try name(group, people.dan)) to \(try name(group, people.ana))",

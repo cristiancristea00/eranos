@@ -271,7 +271,7 @@ function addExpenses(group: ExpenseGroup, people: People, categories: Categories
             tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
             time: TimeOfDay.of(22, 15),
             category: categories.food,
-            description: 'Tasca do Chico',
+            note: 'Tasca do Chico',
         }),
     );
     const tour = group.addExpenseSync(
@@ -301,7 +301,7 @@ function printFado(group: ExpenseGroup, fado: Expense): void {
     printLines(
         "The groceries' 10.00 EUR did not divide into thirds, so one member consumed the",
         "leftover cent; the expense's identifier picks which, so it moves from expense to",
-        `expense. The fado night, at ${fado.time?.toString() ?? ''} on ${fado.date.toString()} at ${fado.description ?? ''}, was itemised; its`,
+        `expense. The fado night, at ${fado.time?.toString() ?? ''} on ${fado.date.toString()} at ${fado.note ?? ''}, was itemised; its`,
         `${rule} tip of ${expenseTipAmount(fado).toString()} was shared ${shared}:`,
     );
     printItems(group, fado.id);

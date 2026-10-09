@@ -139,7 +139,7 @@ fn assert_unchanged<T: std::fmt::Debug>(
 #[test]
 fn a_new_group_starts_empty() {
     let group = ExpenseGroup::builder("  Lisbon ", CurrencyCode::EUR)
-        .description(" ")
+        .note(" ")
         .language(Language::parse("pt-PT").unwrap())
         .build()
         .unwrap();
@@ -148,7 +148,7 @@ fn a_new_group_starts_empty() {
         .unwrap();
     assert_ne!(group.id(), other.id());
     assert_eq!(group.name(), "Lisbon");
-    assert_eq!(group.description(), None);
+    assert_eq!(group.note(), None);
     assert_eq!(group.currency(), CurrencyCode::EUR);
     assert_eq!(group.language().map(Language::as_str), Some("pt-PT"));
     assert_eq!(group.members().len(), 0);
@@ -161,26 +161,18 @@ fn a_new_group_starts_empty() {
     );
 }
 
-/// A new group's description would keep stray whitespace, or a description
+/// A new group's note would keep stray whitespace, or a note
 /// set before a clear, or after it, would end up otherwise than the last
 /// call says.
 #[test]
 fn a_new_group_description_is_trimmed_and_the_last_call_wins() {
     let builder = || ExpenseGroup::builder("Lisbon", CurrencyCode::EUR);
-    let described = builder().description("  Weekend \n").build().unwrap();
-    assert_eq!(described.description(), Some("Weekend"));
-    let set_after = builder()
-        .clear_description()
-        .description("Weekend")
-        .build()
-        .unwrap();
-    assert_eq!(set_after.description(), Some("Weekend"));
-    let cleared_after = builder()
-        .description("Weekend")
-        .clear_description()
-        .build()
-        .unwrap();
-    assert_eq!(cleared_after.description(), None);
+    let described = builder().note("  Weekend \n").build().unwrap();
+    assert_eq!(described.note(), Some("Weekend"));
+    let set_after = builder().clear_note().note("Weekend").build().unwrap();
+    assert_eq!(set_after.note(), Some("Weekend"));
+    let cleared_after = builder().note("Weekend").clear_note().build().unwrap();
+    assert_eq!(cleared_after.note(), None);
 }
 
 /// A group from an app's own store would get another identifier than its
@@ -301,20 +293,20 @@ fn details_change_in_place() {
         .unwrap();
     let summary = group.summary().clone();
     group.set_name("Porto").unwrap();
-    group.set_description("  Weekend  ");
+    group.set_note("  Weekend  ");
     group.set_language(Language::parse("en").unwrap());
     assert_eq!(group.name(), "Porto");
-    assert_eq!(group.description(), Some("Weekend"));
+    assert_eq!(group.note(), Some("Weekend"));
     assert_eq!(group.language().map(Language::as_str), Some("en"));
     // Clearing works, with blank text or by name, and a blank name is
     // refused.
-    group.set_description("");
+    group.set_note("");
     group.set_language(None);
-    assert_eq!(group.description(), None);
+    assert_eq!(group.note(), None);
     assert_eq!(group.language(), None);
-    group.set_description("Weekend");
-    group.clear_description();
-    assert_eq!(group.description(), None);
+    group.set_note("Weekend");
+    group.clear_note();
+    assert_eq!(group.note(), None);
     assert!(group.set_name(" ").is_err());
     assert_eq!(group.name(), "Porto");
     assert_eq!(*group.summary(), summary);

@@ -84,7 +84,7 @@ class ExpenseGroup:
         self._handle: generated.ExpenseGroup | None = handle
 
     @classmethod
-    def create(cls, name: str, currency: CurrencyCode, *, description: str | None = None, language: Language | None = None) -> Self:
+    def create(cls, name: str, currency: CurrencyCode, *, note: str | None = None, language: Language | None = None) -> Self:
         """
         Make a group with no members and no entries, called name, whose totals are in currency, under a generated identifier.
 
@@ -94,14 +94,14 @@ class ExpenseGroup:
         Args:
             name: The name.
             currency: The group currency.
-            description: A longer description, or none.
+            note: A note on it, or none.
             language: The language the apps show the group in, or none.
 
         Returns:
             The group.
 
         """
-        return cls.create_with_id(generate_expense_group_id(), name, currency, description=description, language=language)
+        return cls.create_with_id(generate_expense_group_id(), name, currency, note=note, language=language)
 
     @classmethod
     def create_with_id(
@@ -111,7 +111,7 @@ class ExpenseGroup:
         name: str,
         currency: CurrencyCode,
         *,
-        description: str | None = None,
+        note: str | None = None,
         language: Language | None = None,
     ) -> Self:
         """
@@ -124,16 +124,14 @@ class ExpenseGroup:
             id: The identifier the app gives the group, such as the key of its own store, or one ``generate_expense_group_id`` returns.
             name: The name.
             currency: The group currency.
-            description: A longer description, or none.
+            note: A note on it, or none.
             language: The language the apps show the group in, or none.
 
         Returns:
             The group.
 
         """
-        details = generated.NewExpenseGroup(
-            id=id, name=name, currency=currency.code, description=description, language=None if language is None else str(language)
-        )
+        details = generated.NewExpenseGroup(id=id, name=name, currency=currency.code, note=note, language=None if language is None else str(language))
         with library_errors():
             return cls(generated.ExpenseGroup(details))
 
@@ -1250,59 +1248,59 @@ class ExpenseGroup:
         with library_errors():
             return transfer_of(await self._generated().remove_transfer_async(transfer_id, None))
 
-    def description(self) -> str | None:
+    def note(self) -> str | None:
         """
-        Read the group's description, if it has one.
+        Read the group's note, if it has one.
 
         It blocks the calling thread while another call holds the group's lock.
 
         Returns:
-            The description, or none.
+            The note, or none.
 
         """
         with library_errors():
-            return self._generated().description()
+            return self._generated().note()
 
-    async def description_async(self) -> str | None:
+    async def note_async(self) -> str | None:
         """
-        Read the group's description, if it has one.
+        Read the group's note, if it has one.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what description refuses.
+        It refuses what note refuses.
 
         Returns:
-            The description, or none.
+            The note, or none.
 
         """
         with library_errors():
-            return await self._generated().description_async(None)
+            return await self._generated().note_async(None)
 
-    def set_description(self, description: str | None) -> None:
+    def set_note(self, note: str | None) -> None:
         """
-        Set the group's description, trimmed; none or blank text clears it.
+        Set the group's note, trimmed; none or blank text clears it.
 
         It blocks the calling thread while another call holds the group's lock.
 
         Args:
-            description: The description, or none.
+            note: The note, or none.
 
         """
         with library_errors():
-            self._generated().set_description(description)
+            self._generated().set_note(note)
 
-    async def set_description_async(self, description: str | None) -> None:
+    async def set_note_async(self, note: str | None) -> None:
         """
-        Set the group's description, trimmed; none or blank text clears it.
+        Set the group's note, trimmed; none or blank text clears it.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what set_description refuses.
+        It refuses what set_note refuses.
 
         Args:
-            description: The description, or none.
+            note: The note, or none.
 
         """
         with library_errors():
-            await self._generated().set_description_async(description, None)
+            await self._generated().set_note_async(note, None)
 
     def language(self) -> Language | None:
         """

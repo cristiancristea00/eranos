@@ -302,9 +302,9 @@ public final class eranos/Expense {
 	public final fun getCategory-UO3Xi0Q ()Ljava/lang/String;
 	public final fun getCost ()Leranos/Cost;
 	public final fun getDate ()Leranos/CalendarDate;
-	public final fun getDescription ()Ljava/lang/String;
 	public final fun getId-uqo_usE ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
+	public final fun getNote ()Ljava/lang/String;
 	public final fun getPayers ()Leranos/Split;
 	public final fun getSplit ()Leranos/ExpenseSplit;
 	public final fun getTime ()Leranos/TimeOfDay;
@@ -466,8 +466,6 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public fun close ()V
 	public final fun currency (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun currencyBlocking ()Leranos/CurrencyCode;
-	public final fun description (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun descriptionBlocking ()Ljava/lang/String;
 	public final fun expense-eQtW8qI (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun expenseBlocking-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
 	public final fun expenseShares-eQtW8qI (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -486,6 +484,8 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public final fun membersBlocking ()Ljava/util/List;
 	public final fun name (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun nameBlocking ()Ljava/lang/String;
+	public final fun note (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun noteBlocking ()Ljava/lang/String;
 	public final fun read (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun readBlocking ()Leranos/ExpenseGroupReader;
 	public final fun remove-2F7qjSk (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -508,10 +508,10 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public final fun replaceBlocking (Leranos/Transfer;)Leranos/Transfer;
 	public final fun save (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun saveBlocking ()Ljava/lang/String;
-	public final fun setDescription (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun setDescriptionBlocking (Ljava/lang/String;)V
 	public final fun setLanguage (Leranos/Language;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun setLanguageBlocking (Leranos/Language;)V
+	public final fun setNote (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun setNoteBlocking (Ljava/lang/String;)V
 	public final fun settlement (Leranos/SettlementStrategy;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun settlementBlocking (Leranos/SettlementStrategy;)Leranos/SettlementPlan;
 	public final fun summary (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -710,7 +710,6 @@ public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
 	public final fun category-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
 	public fun close ()V
 	public final fun currency ()Leranos/CurrencyCode;
-	public final fun description ()Ljava/lang/String;
 	public final fun expense-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
 	public final fun expenseShares-rZhyMcA (Ljava/lang/String;)Leranos/ExpenseShares;
 	public final fun expenses ()Ljava/util/List;
@@ -720,6 +719,7 @@ public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
 	public final fun member-Ew0_zjs (Ljava/lang/String;)Leranos/Member;
 	public final fun members ()Ljava/util/List;
 	public final fun name ()Ljava/lang/String;
+	public final fun note ()Ljava/lang/String;
 	public final fun save ()Ljava/lang/String;
 	public final fun settlement (Leranos/SettlementStrategy;)Leranos/SettlementPlan;
 	public final fun summary ()Leranos/Summary;

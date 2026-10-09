@@ -3,8 +3,8 @@ internal import EranosGenerated
 /// Something bought for the group: what it cost, who paid, and how it divides.
 ///
 /// An expense has an identifier from the moment it is made: the app's own, which
-/// ``init(id:name:cost:payers:split:date:tip:time:category:description:)`` takes, or one that
-/// ``init(name:cost:payers:split:date:tip:time:category:description:)`` generates. To change an
+/// ``init(id:name:cost:payers:split:date:tip:time:category:note:)`` takes, or one that
+/// ``init(name:cost:payers:split:date:tip:time:category:note:)`` generates. To change an
 /// expense, read it from the group, change its properties, and pass it to
 /// `ExpenseGroup.replace(_:)`.
 public struct Expense: Hashable, Sendable {
@@ -39,8 +39,8 @@ public struct Expense: Hashable, Sendable {
     /// The category: the built-in one, ``Identifier/uncategorised``, until it is given another.
     public var category: Category.ID
 
-    /// A longer description.
-    public var description: String?
+    /// A note on it.
+    public var note: String?
 
     var generated: EranosGenerated.Expense {
         .init(
@@ -53,13 +53,13 @@ public struct Expense: Hashable, Sendable {
             tip: tip.generated,
             time: time?.generated,
             category: category.rawValue,
-            description: description
+            note: note
         )
     }
 
     /// An expense of `cost`, that `payers` paid and `split` shares, on `date`, under `id`, which
     /// the app gives: its own, or one ``Identifier/generate()`` makes;
-    /// ``init(name:cost:payers:split:date:tip:time:category:description:)`` generates it.
+    /// ``init(name:cost:payers:split:date:tip:time:category:note:)`` generates it.
     public init(
         id: ID,
         name: String,
@@ -70,7 +70,7 @@ public struct Expense: Hashable, Sendable {
         tip: TipRule = .noTip,
         time: TimeOfDay? = nil,
         category: Category.ID = .uncategorised,
-        description: String? = nil
+        note: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -81,12 +81,12 @@ public struct Expense: Hashable, Sendable {
         self.tip = tip
         self.time = time
         self.category = category
-        self.description = description
+        self.note = note
     }
 
     /// An expense of `cost`, that `payers` paid and `split` shares, on `date`, under an identifier
     /// ``Identifier/generate()`` makes when this is called;
-    /// ``init(id:name:cost:payers:split:date:tip:time:category:description:)`` takes the app's own.
+    /// ``init(id:name:cost:payers:split:date:tip:time:category:note:)`` takes the app's own.
     public init(
         name: String,
         cost: Cost,
@@ -96,7 +96,7 @@ public struct Expense: Hashable, Sendable {
         tip: TipRule = .noTip,
         time: TimeOfDay? = nil,
         category: Category.ID = .uncategorised,
-        description: String? = nil
+        note: String? = nil
     ) {
         self.init(
             id: .generate(),
@@ -108,7 +108,7 @@ public struct Expense: Hashable, Sendable {
             tip: tip,
             time: time,
             category: category,
-            description: description
+            note: note
         )
     }
 
@@ -123,7 +123,7 @@ public struct Expense: Hashable, Sendable {
             tip: TipRule(expense.tip),
             time: expense.time.map(TimeOfDay.init),
             category: Category.ID(rawValue: expense.category),
-            description: expense.description
+            note: expense.note
         )
     }
 

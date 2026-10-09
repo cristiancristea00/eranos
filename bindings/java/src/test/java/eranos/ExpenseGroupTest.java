@@ -47,7 +47,7 @@ class ExpenseGroupTest {
         assertEquals(Optional.of(members.get(0)), group.member(flat.ana));
         assertEquals(Optional.of(false), group.isArchived(flat.ana));
         assertEquals("Flat", group.name());
-        assertEquals(Optional.of("Rent"), group.description());
+        assertEquals(Optional.of("Rent"), group.note());
         assertEquals(Optional.of(Language.parse("pt-PT")), group.language());
         assertEquals(
                 List.of(flat.euros(500)),
@@ -87,7 +87,7 @@ class ExpenseGroupTest {
         assertEquals(group.member(flat.bob), group.memberAsync(flat.bob).join());
         assertEquals(group.isArchived(flat.bob), group.isArchivedAsync(flat.bob).join());
         assertEquals(group.name(), group.nameAsync().join());
-        assertEquals(group.description(), group.descriptionAsync().join());
+        assertEquals(group.note(), group.noteAsync().join());
         assertEquals(group.language(), group.languageAsync().join());
         for (SettlementStrategy strategy : SettlementStrategy.values()) {
             assertEquals(group.settlement(strategy), group.settlementAsync(strategy).join());
@@ -208,14 +208,14 @@ class ExpenseGroupTest {
         assertEquals(Optional.of("Cash"), group.removeTransfer(cash).note());
 
         group.setName("Home");
-        group.clearDescription();
+        group.clearNote();
         group.clearLanguage();
         assertEquals("Home", group.name());
-        assertEquals(Optional.empty(), group.description());
+        assertEquals(Optional.empty(), group.note());
         assertEquals(Optional.empty(), group.language());
-        group.setDescription("Shared flat");
+        group.setNote("Shared flat");
         group.setLanguage(Language.parse("ro"));
-        assertEquals(Optional.of("Shared flat"), group.description());
+        assertEquals(Optional.of("Shared flat"), group.note());
         assertEquals(Optional.of(Language.parse("ro")), group.language());
         CurrencyCode lei = CurrencyCode.of("RON");
         group.changeCurrency(lei, Map.of(flat.euro, ExchangeRate.parse("5")));
@@ -282,13 +282,13 @@ class ExpenseGroupTest {
         assertEquals(Optional.of("Cash"), group.removeTransferAsync(cash).join().note());
 
         group.setNameAsync("Home").join();
-        group.setDescriptionAsync("Shared flat").join();
+        group.setNoteAsync("Shared flat").join();
         group.setLanguageAsync(Language.parse("ro")).join();
         assertEquals("Home", group.name());
-        assertEquals(Optional.of("Shared flat"), group.description());
-        group.clearDescriptionAsync().join();
+        assertEquals(Optional.of("Shared flat"), group.note());
+        group.clearNoteAsync().join();
         group.clearLanguageAsync().join();
-        assertEquals(Optional.empty(), group.description());
+        assertEquals(Optional.empty(), group.note());
         assertEquals(Optional.empty(), group.language());
         CurrencyCode lei = CurrencyCode.of("RON");
         group.changeCurrencyAsync(lei, Map.of(flat.euro, ExchangeRate.parse("5"))).join();
@@ -300,26 +300,25 @@ class ExpenseGroupTest {
     }
 
     /**
-     * A description that kept stray whitespace or that blank text left set, in either form or on a
-     * new group, would show an app a description nobody gave; a setter that took {@code null} would
-     * clear the description where the app meant to set one.
+     * A note that kept stray whitespace or that blank text left set, in either form or on a new
+     * group, would show an app a note nobody gave; a setter that took {@code null} would clear the
+     * note where the app meant to set one.
      */
     @Test
-    void aDescriptionIsTrimmedAndBlankTextClearsIt() throws EranosException {
+    void aNoteIsTrimmedAndBlankTextClearsIt() throws EranosException {
         ExpenseGroup group = new Flat().group;
-        group.setDescription(" Shared flat\n");
-        assertEquals(Optional.of("Shared flat"), group.description());
-        group.setDescription(" ");
-        assertEquals(Optional.empty(), group.description());
-        group.setDescriptionAsync(" Bills\n").join();
-        assertEquals(Optional.of("Bills"), group.description());
-        group.setDescriptionAsync("\t").join();
-        assertEquals(Optional.empty(), group.description());
-        assertThrows(NullPointerException.class, () -> group.setDescription(null));
-        assertThrows(NullPointerException.class, () -> group.setDescriptionAsync(null).join());
-        ExpenseGroup blank =
-                ExpenseGroup.builder("Trip", CurrencyCode.of("EUR")).description(" ").build();
-        assertEquals(Optional.empty(), blank.description());
+        group.setNote(" Shared flat\n");
+        assertEquals(Optional.of("Shared flat"), group.note());
+        group.setNote(" ");
+        assertEquals(Optional.empty(), group.note());
+        group.setNoteAsync(" Bills\n").join();
+        assertEquals(Optional.of("Bills"), group.note());
+        group.setNoteAsync("\t").join();
+        assertEquals(Optional.empty(), group.note());
+        assertThrows(NullPointerException.class, () -> group.setNote(null));
+        assertThrows(NullPointerException.class, () -> group.setNoteAsync(null).join());
+        ExpenseGroup blank = ExpenseGroup.builder("Trip", CurrencyCode.of("EUR")).note(" ").build();
+        assertEquals(Optional.empty(), blank.note());
     }
 
     /**
@@ -331,7 +330,7 @@ class ExpenseGroupTest {
     void aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() throws EranosException {
         CurrencyCode euro = CurrencyCode.of("EUR");
         ExpenseGroup plain = ExpenseGroup.builder("Trip", euro).build();
-        assertEquals(Optional.empty(), plain.description());
+        assertEquals(Optional.empty(), plain.note());
         assertEquals(Optional.empty(), plain.language());
         assertNotEquals(plain.id(), ExpenseGroup.builder("Trip", euro).build().id());
         ExpenseGroupId lisbon = ExpenseGroupId.parse("lisbon-2026");
@@ -399,7 +398,7 @@ class ExpenseGroupTest {
         assertEquals(Optional.of(false), reader.isArchived(flat.ana));
         assertEquals(Optional.of(true), reader.isArchived(flat.bob));
         assertEquals("Flat", reader.name());
-        assertEquals(Optional.of("Rent"), reader.description());
+        assertEquals(Optional.of("Rent"), reader.note());
         assertEquals(group.language(), reader.language());
         assertEquals(
                 group.settlement(SettlementStrategy.GREEDY),

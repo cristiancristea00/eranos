@@ -118,8 +118,8 @@ fn the_group_has_every_form_of_every_call_in_order() {
             "expenses_async",
             "name",
             "name_async",
-            "description",
-            "description_async",
+            "note",
+            "note_async",
             "is_archived",
             "is_archived_async",
             "is_open",
@@ -184,8 +184,8 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
                 }
             },
             quote! {
-                pub fn description(&self, write: &mut DiplomatWrite) -> Option<()> {
-                    crate::write_optional(write, crate::waited(self.handle.description()).as_deref())
+                pub fn note(&self, write: &mut DiplomatWrite) -> Option<()> {
+                    crate::write_optional(write, crate::waited(self.handle.note()).as_deref())
                 }
             },
             quote! {
@@ -500,8 +500,8 @@ fn every_form_says_how_it_fails() {
         "The group's name. Writes it into `write`.\n\nIt is never blank."
     );
     assert_eq!(
-        method(&group, "description").docs,
-        "The description. Writes it into `write` when there is one, and nothing otherwise."
+        method(&group, "note").docs,
+        "The note. Writes it into `write` when there is one, and nothing otherwise."
     );
     assert_eq!(
         method(&group, "set_note").docs,
@@ -546,7 +546,7 @@ fn the_read_handle_reads_through_itself() {
             "expense",
             "expenses",
             "name",
-            "description",
+            "note",
             "is_archived",
             "is_open",
             "has_expense_named",

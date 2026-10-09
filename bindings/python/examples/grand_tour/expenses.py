@@ -413,7 +413,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
             tip=TipRule(PercentageTip(Percentage.parse('10'))),
             time=TimeOfDay(22, 15),
             category=categories.food,
-            description='Tasca do Chico',
+            note='Tasca do Chico',
         )
     )
     tour = group.add_expense(
@@ -477,7 +477,7 @@ def _print_fado(group: ExpenseGroup, fado: Expense) -> None:
     print_lines(
         "The groceries' 10.00 EUR did not divide into thirds, so one member consumed the",
         "leftover cent; the expense's identifier picks which, so it moves from expense to",
-        f'expense. The fado night, at {fado.time or ""} on {fado.date} at {fado.description or ""}, was itemised; its',
+        f'expense. The fado night, at {fado.time or ""} on {fado.date} at {fado.note or ""}, was itemised; its',
         f'{_worth(tip.value)} tip of {fado.tip_amount()} was shared {_shared(tip.distribution)}:',
     )
     _print_items(group, fado)

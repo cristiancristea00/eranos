@@ -122,7 +122,7 @@ public final class ExpenseGroup implements AutoCloseable {
         return Converting.future(handle.readAsync(null), ExpenseGroupReader::new);
     }
 
-    // The group's own details: its identifier, name, currency, description, language, and saved
+    // The group's own details: its identifier, name, currency, note, language, and saved
     // form.
 
     /**
@@ -268,79 +268,76 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * The group's description, if it has one.
+     * The group's note, if it has one.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #descriptionAsync} waits without
+     * <p>Waits for the group's lock by blocking its thread; {@link #noteAsync} waits without
      * blocking it.
      *
-     * @return the description, if the group has one
+     * @return the note, if the group has one
      */
-    public Optional<String> description() {
-        return Converting.callUnfailing(() -> Optional.ofNullable(handle.description()));
+    public Optional<String> note() {
+        return Converting.callUnfailing(() -> Optional.ofNullable(handle.note()));
     }
 
     /**
-     * The group's description, if it has one.
+     * The group's note, if it has one.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
      *
-     * @return a future of the description, if the group has one
+     * @return a future of the note, if the group has one
      */
-    public CompletableFuture<Optional<String>> descriptionAsync() {
-        return Converting.future(
-                handle.descriptionAsync(null), value -> Optional.ofNullable(value));
+    public CompletableFuture<Optional<String>> noteAsync() {
+        return Converting.future(handle.noteAsync(null), value -> Optional.ofNullable(value));
     }
 
     /**
-     * Sets the group's description, trimmed; blank text clears it, as {@link #clearDescription}
-     * does.
+     * Sets the group's note, trimmed; blank text clears it, as {@link #clearNote} does.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #setDescriptionAsync} waits
-     * without blocking it.
+     * <p>Waits for the group's lock by blocking its thread; {@link #setNoteAsync} waits without
+     * blocking it.
      *
-     * @param description the new description
+     * @param note the new note
      */
-    public void setDescription(String description) {
-        Objects.requireNonNull(description, "description");
-        Converting.runUnfailing(() -> handle.setDescription(description));
+    public void setNote(String note) {
+        Objects.requireNonNull(note, "note");
+        Converting.runUnfailing(() -> handle.setNote(note));
     }
 
     /**
-     * Sets the group's description, trimmed; blank text clears it, as {@link
-     * #clearDescriptionAsync} does.
+     * Sets the group's note, trimmed; blank text clears it, as {@link #clearNoteAsync} does.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
      *
-     * @param description the new description
+     * @param note the new note
      * @return a future of the call's end
      */
-    public CompletableFuture<Void> setDescriptionAsync(String description) {
-        Objects.requireNonNull(description, "description");
-        return Converting.future(handle.setDescriptionAsync(description, null), _ -> null);
+    public CompletableFuture<Void> setNoteAsync(String note) {
+        Objects.requireNonNull(note, "note");
+        return Converting.future(handle.setNoteAsync(note, null), _ -> null);
     }
 
     /**
-     * Clears the group's description, which {@link #setDescription} sets.
+     * Clears the group's note, which {@link #setNote} sets.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #clearDescriptionAsync} waits
-     * without blocking it.
+     * <p>Waits for the group's lock by blocking its thread; {@link #clearNoteAsync} waits without
+     * blocking it.
      */
-    public void clearDescription() {
-        Converting.runUnfailing(() -> handle.setDescription(null));
+    public void clearNote() {
+        Converting.runUnfailing(() -> handle.setNote(null));
     }
 
     /**
-     * Clears the group's description, which {@link #setDescriptionAsync} sets.
+     * Clears the group's note, which {@link #setNoteAsync} sets.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
      *
      * @return a future of the call's end
      */
-    public CompletableFuture<Void> clearDescriptionAsync() {
-        return Converting.future(handle.setDescriptionAsync(null, null), _ -> null);
+    public CompletableFuture<Void> clearNoteAsync() {
+        return Converting.future(handle.setNoteAsync(null, null), _ -> null);
     }
 
     /**
@@ -1385,7 +1382,7 @@ public final class ExpenseGroup implements AutoCloseable {
         private ExpenseGroupId id;
         private final String name;
         private final CurrencyCode currency;
-        private String description;
+        private String note;
         private Language language;
 
         private Builder(ExpenseGroupId id, String name, CurrencyCode currency) {
@@ -1406,13 +1403,13 @@ public final class ExpenseGroup implements AutoCloseable {
         }
 
         /**
-         * Sets the description; {@code null} leaves the group without one.
+         * Sets the note; {@code null} leaves the group without one.
          *
-         * @param description the description, or {@code null}
+         * @param note the note, or {@code null}
          * @return this builder
          */
-        public Builder description(String description) {
-            this.description = description;
+        public Builder note(String note) {
+            this.note = note;
             return this;
         }
 
@@ -1441,7 +1438,7 @@ public final class ExpenseGroup implements AutoCloseable {
                             id.value(),
                             name,
                             currency.code(),
-                            description,
+                            note,
                             null == language ? null : language.toString());
             return new ExpenseGroup(Converting.call(() -> new eranos.internal.ExpenseGroup(group)));
         }

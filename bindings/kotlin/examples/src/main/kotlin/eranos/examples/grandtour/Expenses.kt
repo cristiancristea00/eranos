@@ -165,7 +165,7 @@ internal fun printFado(
         """
         The groceries' 10.00 EUR did not divide into thirds, so one member consumed the
         leftover cent; the expense's identifier picks which, so it moves from expense to
-        expense. The fado night, at ${fado.time?.toString().orEmpty()} on ${fado.date} at ${fado.description.orEmpty()}, was itemised; its
+        expense. The fado night, at ${fado.time?.toString().orEmpty()} on ${fado.date} at ${fado.note.orEmpty()}, was itemised; its
         $rule tip of ${fado.tipAmount()} was shared $shared:
         """.trimIndent(),
     )

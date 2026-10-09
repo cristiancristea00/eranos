@@ -33,7 +33,7 @@ struct ExpenseGroupView<'group> {
     name: &'group str,
     currency: CurrencyCode,
     #[serde(skip_serializing_if = "Option::is_none")]
-    description: Option<&'group str>,
+    note: Option<&'group str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     language: Option<&'group Language>,
     members: Vec<&'group Member>,
@@ -98,7 +98,7 @@ struct SavedContents {
     id: ExpenseGroupId,
     name: String,
     currency: CurrencyCode,
-    description: Option<String>,
+    note: Option<String>,
     language: Option<Language>,
     members: Vec<Member>,
     archived: Vec<MemberId>,
@@ -117,7 +117,7 @@ enum Key {
     Id,
     Name,
     Currency,
-    Description,
+    Note,
     Language,
     Members,
     Archived,
@@ -159,7 +159,7 @@ impl<'de> serde::de::Visitor<'de> for SavedVisitor {
         let mut id = None;
         let mut name = None;
         let mut currency = None;
-        let mut description = None;
+        let mut note = None;
         let mut language = None;
         let mut members = None;
         let mut archived = None;
@@ -182,7 +182,7 @@ impl<'de> serde::de::Visitor<'de> for SavedVisitor {
                 Key::Id => once(&mut id, "id", map.next_value()?)?,
                 Key::Name => once(&mut name, "name", map.next_value()?)?,
                 Key::Currency => once(&mut currency, "currency", map.next_value()?)?,
-                Key::Description => once(&mut description, "description", map.next_value()?)?,
+                Key::Note => once(&mut note, "note", map.next_value()?)?,
                 Key::Language => once(&mut language, "language", map.next_value()?)?,
                 Key::Members => once(&mut members, "members", map.next_value()?)?,
                 Key::Archived => once(&mut archived, "archived", map.next_value()?)?,
@@ -200,7 +200,7 @@ impl<'de> serde::de::Visitor<'de> for SavedVisitor {
                 id: id.ok_or_else(|| A::Error::missing_field("id"))?,
                 name: name.ok_or_else(|| A::Error::missing_field("name"))?,
                 currency: currency.ok_or_else(|| A::Error::missing_field("currency"))?,
-                description: description.unwrap_or_default(),
+                note: note.unwrap_or_default(),
                 language: language.unwrap_or_default(),
                 members: members.unwrap_or_default(),
                 archived: archived.unwrap_or_default(),
@@ -225,7 +225,7 @@ impl Serialize for ExpenseGroup {
             id: self.id,
             name: &self.name,
             currency: self.currency,
-            description: self.description.as_deref(),
+            note: self.note.as_deref(),
             language: self.language.as_ref(),
             members: self.members.values().map(|record| &record.member).collect(),
             archived: self
@@ -328,8 +328,8 @@ impl SavedExpenseGroup {
         };
         let mut builder =
             ExpenseGroup::builder_with_id(contents.id, contents.name, contents.currency);
-        if let Some(description) = contents.description {
-            builder = builder.description(description);
+        if let Some(note) = contents.note {
+            builder = builder.note(note);
         }
         let mut group = builder.language(contents.language).build()?;
         let mut pacer = Pacer::new(ENTRIES_PER_YIELD);

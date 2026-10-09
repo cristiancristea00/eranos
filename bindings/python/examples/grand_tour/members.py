@@ -99,10 +99,10 @@ def the_group() -> ExpenseGroup:
 
     """
     section('1. The group')
-    group = ExpenseGroup.create('Lisbon', CurrencyCode('EUR'), description='A week by the Atlantic', language=Language('pt-pt'))
+    group = ExpenseGroup.create('Lisbon', CurrencyCode('EUR'), note='A week by the Atlantic', language=Language('pt-pt'))
     blank = refusal(lambda: group.set_name('   '))
     group.set_name('Lisbon and Porto')
-    group.set_description('A week by the Atlantic, with a day in Porto')
+    group.set_note('A week by the Atlantic, with a day in Porto')
     language = group.language()
     tag = '' if language is None else str(language)
     print_table(
@@ -111,7 +111,7 @@ def the_group() -> ExpenseGroup:
             DetailRow(detail='Name', value=group.name()),
             DetailRow(detail='Currency', value=str(group.currency())),
             DetailRow(detail='Language', value=tag),
-            DetailRow(detail='Description', value=group.description() or ''),
+            DetailRow(detail='Description', value=group.note() or ''),
         ],
         2,
     )
@@ -138,7 +138,7 @@ def _describe(account: PaymentAccount) -> str:
         account: The account.
 
     Returns:
-        The description, such as ``"Revolut, username @ana"``.
+        The note, such as ``"Revolut, username @ana"``.
 
     """
     details = account.details

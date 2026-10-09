@@ -34,7 +34,7 @@ private struct Expenses {
             tip: TipRule(value: .fixed(Money(minorUnits: 500, currency: lei)), distribution: .equal),
             time: TimeOfDay(hour: 9, minute: 5),
             category: flat.food,
-            description: "To the airport"
+            note: "To the airport"
         )
         dinner = try Expense(
             name: "Dinner",
@@ -65,7 +65,7 @@ func everyKindOfExpenseConvertsAndStoresWhole() throws {
         #expect(stored.tip == expense.tip)
         #expect(stored.time == expense.time)
         #expect(stored.category == expense.category)
-        #expect(stored.description == expense.description)
+        #expect(stored.note == expense.note)
     }
 }
 
@@ -311,7 +311,7 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     }
 }
 
-/// A last name, a description, or a note that kept stray whitespace, read back as empty text when
+/// A last name or a note that kept stray whitespace, read back as empty text when
 /// it was added absent or blank, or stayed after a replacement without it would show an app a
 /// detail the user never gave or removed.
 @Test
@@ -321,26 +321,26 @@ func absentOrBlankTextReadsBackAbsent() throws {
     for text in [nil, " "] as [String?] {
         var carol = Member(firstName: "Carol", lastName: " Popa\n")
         var lunch = flat.expense("Lunch", paidBy: flat.ana, sharedBy: [flat.ana, flat.bob])
-        lunch.description = " For the team\n"
+        lunch.note = " For the team\n"
         var cash = Transfer(sender: flat.bob, receiver: flat.ana, cost: .local(flat.euros(100)), date: flat.day, note: " Cash\n")
         #expect(try "Popa" == group.member(withID: group.add(carol))?.lastName)
-        #expect(try "For the team" == group.expense(withID: group.add(lunch))?.description)
+        #expect(try "For the team" == group.expense(withID: group.add(lunch))?.note)
         #expect(try "Cash" == group.transfer(withID: group.add(cash))?.note)
 
         carol.lastName = text
-        lunch.description = text
+        lunch.note = text
         cash.note = text
         try group.replace(carol)
         try group.replace(lunch)
         try group.replace(cash)
         #expect(try nil == group.member(withID: carol.id)?.lastName)
-        #expect(try nil == group.expense(withID: lunch.id)?.description)
+        #expect(try nil == group.expense(withID: lunch.id)?.note)
         #expect(try nil == group.transfer(withID: cash.id)?.note)
 
         #expect(try nil == group.member(withID: group.add(Member(firstName: "Dan", lastName: text)))?.lastName)
         var dinner = flat.expense("Dinner", paidBy: flat.bob, sharedBy: [flat.ana, flat.bob])
-        dinner.description = text
-        #expect(try nil == group.expense(withID: group.add(dinner))?.description)
+        dinner.note = text
+        #expect(try nil == group.expense(withID: group.add(dinner))?.note)
         let refund = Transfer(sender: flat.ana, receiver: flat.bob, cost: .local(flat.euros(100)), date: flat.day, note: text)
         #expect(try nil == group.transfer(withID: group.add(refund))?.note)
     }

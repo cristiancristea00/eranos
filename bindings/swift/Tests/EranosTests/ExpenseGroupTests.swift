@@ -29,7 +29,7 @@ func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     #expect(try group.member(withID: flat.ana) == members.first)
     #expect(try false == group.isArchived(flat.ana))
     #expect(try "Flat" == group.name())
-    #expect(try "Rent" == group.description())
+    #expect(try "Rent" == group.note())
     #expect(try "pt-PT" == group.language()?.description)
     for strategy in SettlementStrategy.allCases {
         let settlement = try group.settlement(by: strategy)
@@ -72,7 +72,7 @@ func everyAsynchronousReadAnswersAsItsSynchronousTwin() async throws {
     #expect(try await false == group.isArchived(flat.ana))
     #expect(try await nil == group.isArchived(Member.ID(rawValue: "nobody")))
     #expect(try await "Flat" == group.name())
-    #expect(try await "Rent" == group.description())
+    #expect(try await "Rent" == group.note())
     #expect(try await "pt-PT" == group.language()?.description)
     #expect(try await group.settlement(by: .greedy) == synchronous.settlement)
     #expect(try await group.transfers() == synchronous.transfers)
@@ -137,7 +137,7 @@ func synchronousChangesToCategoriesAndMembersTakeEffect() throws {
 }
 
 /// A change to expenses, transfers, or the group's own details that did not take effect, or a
-/// description that kept stray whitespace or stayed set after nil or blank text, would leave an app
+/// note that kept stray whitespace or stayed set after nil or blank text, would leave an app
 /// showing a group that is not there.
 @Test
 func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
@@ -157,12 +157,12 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
 
     try group.rename(to: "Home")
     #expect(try "Home" == group.name())
-    try group.changeDescription(to: nil)
-    #expect(try nil == group.description())
-    try group.changeDescription(to: " Bills\n")
-    #expect(try "Bills" == group.description())
-    try group.changeDescription(to: " ")
-    #expect(try nil == group.description())
+    try group.changeNote(to: nil)
+    #expect(try nil == group.note())
+    try group.changeNote(to: " Bills\n")
+    #expect(try "Bills" == group.note())
+    try group.changeNote(to: " ")
+    #expect(try nil == group.note())
     try group.changeLanguage(to: Language("ro"))
     #expect(try group.language() == Language("ro"))
     try group.changeLanguage(to: nil)
@@ -209,33 +209,33 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     #expect(try await group.remove(payment).cost == .local(flat.euros(700)))
 
     try await group.rename(to: "Home")
-    try await group.changeDescription(to: "Bills")
+    try await group.changeNote(to: "Bills")
     try await group.changeLanguage(to: Language("ro"))
     #expect(try await "Home" == group.name())
-    #expect(try await "Bills" == group.description())
+    #expect(try await "Bills" == group.note())
     #expect(try await "ro" == group.language()?.description)
-    try await group.changeDescription(to: nil)
-    #expect(try await nil == group.description())
-    try await group.changeDescription(to: " Rent\n")
-    #expect(try await "Rent" == group.description())
-    try await group.changeDescription(to: " ")
-    #expect(try await nil == group.description())
+    try await group.changeNote(to: nil)
+    #expect(try await nil == group.note())
+    try await group.changeNote(to: " Rent\n")
+    #expect(try await "Rent" == group.note())
+    try await group.changeNote(to: " ")
+    #expect(try await nil == group.note())
     let lei = try CurrencyCode(code: "RON")
     try await group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
     #expect(try await group.currency() == lei)
 }
 
 /// A new group that dropped what it starts with, its identifier included, kept a blank
-/// description, or started under an identifier the rules refuse, or a saved one that loaded from
+/// note, or started under an identifier the rules refuse, or a saved one that loaded from
 /// text that is not the saved form, would start an app from another group than the user made.
 @Test
 func aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() async throws {
     let euro = try CurrencyCode(code: "EUR")
     let plain = try ExpenseGroup(name: "Trip", currency: euro)
-    #expect(try await nil == plain.description())
+    #expect(try await nil == plain.note())
     #expect(try await nil == plain.language())
-    let blank = try ExpenseGroup(name: "Trip", currency: euro, description: " ")
-    #expect(try await nil == blank.description())
+    let blank = try ExpenseGroup(name: "Trip", currency: euro, note: " ")
+    #expect(try await nil == blank.note())
     let named = try ExpenseGroup(id: ExpenseGroup.ID("flat-12"), name: "Flat", currency: euro)
     #expect(try await "flat-12" == named.id().rawValue)
     #expect(try await plain.id() != named.id())
@@ -278,7 +278,7 @@ func aReadHandleReadsAsTheGroupDoesUntilItIsReleased() throws {
     #expect(try true == reader.isArchived(flat.bob))
     #expect(try nil == reader.isArchived(Member.ID(rawValue: "nobody")))
     #expect(try "Flat" == reader.name())
-    #expect(try "Rent" == reader.description())
+    #expect(try "Rent" == reader.note())
     #expect(try "pt-PT" == reader.language()?.description)
     #expect(try reader.settlement(by: .greedy) == snapshot.settlement)
     #expect(try reader.transfers() == snapshot.transfers)

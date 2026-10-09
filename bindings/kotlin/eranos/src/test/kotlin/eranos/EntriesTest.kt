@@ -40,7 +40,7 @@ class EntriesTest {
                 tip = TipRule(TipValue.Fixed(Money(500, lei)), TipDistribution.EQUAL),
                 time = TimeOfDay.of(9, 5),
                 category = flat.food,
-                description = "To the airport",
+                note = "To the airport",
             )
         val dinner =
             Expense(
@@ -406,7 +406,7 @@ class EntriesTest {
     }
 
     /**
-     * An expense's description, a member's last name, or a transfer's note, absent or blank, that read back as text, that a
+     * An expense's note, a member's last name, or a transfer's note, absent or blank, that read back as text, that a
      * replacement without it left as it was stored, or that kept the whitespace around it would show an app text nobody gave
      * the entry.
      */
@@ -416,10 +416,10 @@ class EntriesTest {
         val group = flat.group
         for (text in listOf(null, " ")) {
             val lunch = flat.expense("Lunch", flat.ana, listOf(flat.ana))
-            assertNull(present(group.expenseBlocking(group.addBlocking(lunch.copy(description = text)))).description)
-            group.replaceBlocking(lunch.copy(description = "Lunch out"))
-            group.replaceBlocking(lunch.copy(description = text))
-            assertNull(present(group.expenseBlocking(lunch.id)).description)
+            assertNull(present(group.expenseBlocking(group.addBlocking(lunch.copy(note = text)))).note)
+            group.replaceBlocking(lunch.copy(note = "Lunch out"))
+            group.replaceBlocking(lunch.copy(note = text))
+            assertNull(present(group.expenseBlocking(lunch.id)).note)
 
             val carol = Member("Carol")
             assertNull(present(group.memberBlocking(group.addBlocking(carol.copy(lastName = text)))).lastName)
@@ -433,8 +433,8 @@ class EntriesTest {
             group.replaceBlocking(cash.copy(note = text))
             assertNull(present(group.transferBlocking(cash.id)).note)
         }
-        val taxi = flat.expense("Taxi", flat.bob, listOf(flat.bob)).copy(description = " To the airport\n")
-        assertEquals("To the airport", present(group.expenseBlocking(group.addBlocking(taxi))).description)
+        val taxi = flat.expense("Taxi", flat.bob, listOf(flat.bob)).copy(note = " To the airport\n")
+        assertEquals("To the airport", present(group.expenseBlocking(group.addBlocking(taxi))).note)
         val dan = Member("Dan", lastName = "\tPopescu ")
         assertEquals("Popescu", present(group.memberBlocking(group.addBlocking(dan))).lastName)
         val change = Transfer(flat.ana, flat.bob, Cost.Local(flat.euros(100)), flat.day, note = " Change\n")

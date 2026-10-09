@@ -128,7 +128,7 @@ class Flat final {
   public:
     inline Flat() noexcept
         : euro(CurrencyCode::of("EUR").value()), day(CalendarDate::of(2026, 9, 23).value()),
-          group(ExpenseGroup::create("Flat", euro, ExpenseGroupOptions{.description = "Rent", .language = Language::parse("pt-pt").value()}).value()),
+          group(ExpenseGroup::create("Flat", euro, ExpenseGroupOptions{.note = "Rent", .language = Language::parse("pt-pt").value()}).value()),
           ana(group.addMember(Member("Ana")).value()), bob(group.addMember(Member("Bob")).value()), food(group.addCategory(Category("Food")).value()),
           dinner(group.addExpense(dinnerExpense()).value()), repayment(group.addTransfer(Transfer(bob, ana, LocalCost{euros(1'000)}, day)).value()) {}
 
@@ -477,9 +477,9 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) n
     ExpenseId const dinnerId("0199a000-0000-7000-8000-000000000004");
     Expense const dinner(dinnerId, "Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day);
     auto described = dinner;
-    described.description = "At the corner";
+    described.note = "At the corner";
     checkValue(check, dinner, Expense(dinnerId, "Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day),
-               described, "expenses compare by description too");
+               described, "expenses compare by note too");
     checkValue(check, dinner, Expense(dinnerId, "Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day),
                Expense("Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day),
                "expenses compare by identifier too");
@@ -538,7 +538,7 @@ void anExpenseReadsBackAsItWasAdded(Check &check) noexcept {
     lunch.tip = TipRule(PercentageTipValue{Percentage{1'000}}, TipDistribution::PROPORTIONAL);
     lunch.time = TimeOfDay::of(13, 15).value();
     lunch.category = flat.food;
-    lunch.description = "By the sea";
+    lunch.note = "By the sea";
     check.that(flat.group.addExpense(lunch) == lunch.id && flat.group.expense(lunch.id) == lunch,
                "a converted expense with every detail reads back unchanged, under its identifier");
     ExpenseItem pizza("Pizza", flat.euros(1'200), EqualSplit{{flat.ana, flat.bob}});
@@ -880,27 +880,26 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) noexcept {
     Flat flat;
     check.that(!flat.group.id().value().empty(), "the group has an identifier");
     check.that("Flat" == flat.group.name() && flat.group.currency() == flat.euro, "the name and the currency");
-    check.that("Rent" == flat.group.description() && flat.group.language() == Language::parse("pt-PT").value(), "the options it started with");
+    check.that("Rent" == flat.group.note() && flat.group.language() == Language::parse("pt-PT").value(), "the options it started with");
     flat.group.setName("Home").value();
-    flat.group.setDescription(" Rent and bills ").value();
+    flat.group.setNote(" Rent and bills ").value();
     flat.group.setLanguage(Language::parse("ro-RO").value());
-    check.that("Home" == flat.group.name() && "Rent and bills" == flat.group.description() &&
-                   flat.group.language() == Language::parse("ro-RO").value(),
-               "the details as set, the description trimmed");
-    flat.group.clearDescription();
+    check.that("Home" == flat.group.name() && "Rent and bills" == flat.group.note() && flat.group.language() == Language::parse("ro-RO").value(),
+               "the details as set, the note trimmed");
+    flat.group.clearNote();
     flat.group.clearLanguage();
-    check.that(!flat.group.description().has_value() && !flat.group.language().has_value(), "the details cleared");
+    check.that(!flat.group.note().has_value() && !flat.group.language().has_value(), "the details cleared");
     {
         auto const reader = flat.group.read();
-        check.that(!reader.description().value().has_value() && !reader.language().value().has_value(), "and cleared through a read handle");
+        check.that(!reader.note().value().has_value() && !reader.language().value().has_value(), "and cleared through a read handle");
     }
-    flat.group.setDescription("Rent").value();
-    flat.group.setDescription(" ").value();
-    check.that(!flat.group.description().has_value(), "blank text clears the description");
+    flat.group.setNote("Rent").value();
+    flat.group.setNote(" ").value();
+    check.that(!flat.group.note().has_value(), "blank text clears the note");
     check.that(isFailure(refusal(flat.group.setName(" ")), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME), "a blank name");
-    check.that(isFailure(refusal(flat.group.setDescription("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a description that is not text");
+    check.that(isFailure(refusal(flat.group.setNote("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a note that is not text");
     auto const trip = ExpenseGroup::create("Trip", flat.euro).value();
-    check.that(!trip.description().has_value() && !trip.language().has_value(), "a group made without options has neither");
+    check.that(!trip.note().has_value() && !trip.language().has_value(), "a group made without options has neither");
     check.that(trip.id() != flat.group.id(), "a group made without an identifier has a generated one of its own");
     check.that(isFailure(refusal(ExpenseGroup::create(" ", flat.euro)), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME),
                "a group needs a name");
@@ -1091,8 +1090,7 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) noe
     Flat flat;
     auto &group = flat.group;
     check.that(group.idAsync().get() == group.id() && group.nameAsync().get() == group.name(), "the identifier and the name");
-    check.that(group.currencyAsync().get() == group.currency() && group.descriptionAsync().get().value() == group.description(),
-               "the currency and the description");
+    check.that(group.currencyAsync().get() == group.currency() && group.noteAsync().get().value() == group.note(), "the currency and the note");
     check.that(group.languageAsync().get().value() == group.language() && group.saveAsync().get() == group.save(),
                "the language and the saved group");
     check.that(group.categoriesAsync().get() == group.categories() &&
@@ -1138,12 +1136,12 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) noe
     check.that("Drinks" == group.replaceCategoryAsync(renamedDrinks).get().value().name && group.removeCategoryAsync(drinks).get() == renamedDrinks,
                "a category");
     group.setNameAsync("Home").get().value();
-    group.setDescriptionAsync("Bills").get().value();
+    group.setNoteAsync("Bills").get().value();
     group.setLanguageAsync(Language::parse("ro-RO").value()).get().value();
-    check.that("Home" == group.name() && "Bills" == group.description() && group.language() == Language::parse("ro-RO").value(), "the details set");
-    group.clearDescriptionAsync().get().value();
+    check.that("Home" == group.name() && "Bills" == group.note() && group.language() == Language::parse("ro-RO").value(), "the details set");
+    group.clearNoteAsync().get().value();
     group.clearLanguageAsync().get().value();
-    check.that(!group.description().has_value() && !group.language().has_value(), "the details cleared");
+    check.that(!group.note().has_value() && !group.language().has_value(), "the details cleared");
     group.changeCurrencyAsync(CurrencyCode::of("RON").value(), std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5").value())}).get().value();
     check.that(group.currency() == CurrencyCode::of("RON").value(), "the currency changed");
     auto const loaded = ExpenseGroup::loadAsync(group.save()).get().value();
@@ -1181,8 +1179,7 @@ void aReaderReadsTheGroupUntilItIsReleased(Check &check) noexcept {
     Flat const flat;
     auto reader = flat.group.read();
     check.that(reader.id() == flat.group.id() && "Flat" == reader.name() && reader.currency() == flat.euro, "the details");
-    check.that("Rent" == reader.description() && reader.language() == Language::parse("pt-PT").value() && reader.save() == flat.group.save(),
-               "the options");
+    check.that("Rent" == reader.note() && reader.language() == Language::parse("pt-PT").value() && reader.save() == flat.group.save(), "the options");
     check.that(reader.categories() == flat.group.categories() && reader.category(flat.food).value() == flat.group.category(flat.food).value(),
                "the categories");
     check.that(reader.expenses() == flat.group.expenses() && reader.expense(flat.dinner).value() == flat.group.expense(flat.dinner).value(),

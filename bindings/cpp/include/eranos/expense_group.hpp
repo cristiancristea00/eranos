@@ -65,8 +65,8 @@ struct CurrencyRate final {
 /// The details a new group can start with besides its identifier, name, and currency. Each starts absent, so a designated initialiser names only
 /// those it gives.
 struct ExpenseGroupOptions final {
-    /// A longer description.
-    std::optional<std::string> description = std::nullopt;
+    /// A note on it.
+    std::optional<std::string> note = std::nullopt;
     /// The language the apps show the group in.
     std::optional<Language> language = std::nullopt;
 };
@@ -639,35 +639,35 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Transfer, Error>> removeTransferAsync(TransferId const &id,
                                                                                   Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The group's description. Blocks the calling thread while another call holds the group's lock.
+    /// The group's note. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @return The result
-    [[nodiscard]] std::optional<std::string> description() const noexcept;
+    [[nodiscard]] std::optional<std::string> note() const noexcept;
 
-    /// The asynchronous form of description(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
+    /// The asynchronous form of note(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
     /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
     /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::optional<std::string>, Error>>
-    descriptionAsync(Cancellation const *const cancellation = nullptr) const noexcept;
+    noteAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Sets the description, trimmed, or clears it when the text is blank. Blocks the calling thread while another call holds the group's lock.
+    /// Sets the note, trimmed, or clears it when the text is blank. Blocks the calling thread while another call holds the group's lock.
     ///
-    /// @param description The description
+    /// @param note The note
     /// @return Nothing, or an error of the kind ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] std::expected<void, Error> setDescription(std::string_view const description) noexcept;
+    [[nodiscard]] std::expected<void, Error> setNote(std::string_view const note) noexcept;
 
-    /// The asynchronous form of setDescription(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
+    /// The asynchronous form of setNote(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
     /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
     /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
     ///
-    /// @param description The description
+    /// @param note The note
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the end of the call, or of the error the call ends with
-    [[nodiscard]] std::future<std::expected<void, Error>> setDescriptionAsync(std::string_view const description,
-                                                                              Cancellation const *const cancellation = nullptr) noexcept;
+    [[nodiscard]] std::future<std::expected<void, Error>> setNoteAsync(std::string_view const note,
+                                                                       Cancellation const *const cancellation = nullptr) noexcept;
 
     /// The language the apps show the group in, as a BCP 47 tag. Blocks the calling thread while another call holds the group's lock.
     ///
@@ -711,14 +711,14 @@ class ExpenseGroup final {
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<ExpenseGroupReader, Error>> readAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Clears the group's description. Blocks the calling thread while another call holds the group's lock.
-    void clearDescription() noexcept;
+    /// Clears the group's note. Blocks the calling thread while another call holds the group's lock.
+    void clearNote() noexcept;
 
-    /// The asynchronous form of clearDescription().
+    /// The asynchronous form of clearNote().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the end of the call, or of the error the call ends with
-    [[nodiscard]] std::future<std::expected<void, Error>> clearDescriptionAsync(Cancellation const *const cancellation = nullptr) noexcept;
+    [[nodiscard]] std::future<std::expected<void, Error>> clearNoteAsync(Cancellation const *const cancellation = nullptr) noexcept;
 
     /// Sets the language the apps show the group in. Blocks the calling thread while another call holds the group's lock.
     ///
@@ -760,8 +760,8 @@ inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(ExpenseGroupId co
     return detail::expectedOf(detail::EranosNewExpenseGroup::create(id.value(), name, currency.code()))
         .and_then([&options](std::unique_ptr<detail::EranosNewExpenseGroup> details) noexcept {
             return detail::setIfPresent(
-                std::move(details), options.description,
-                [](detail::EranosNewExpenseGroup &record, std::string const &text) noexcept { return record.set_description(text); });
+                std::move(details), options.note,
+                [](detail::EranosNewExpenseGroup &record, std::string const &text) noexcept { return record.set_note(text); });
         })
         .and_then([&options](std::unique_ptr<detail::EranosNewExpenseGroup> details) noexcept {
             return detail::setIfPresent(
@@ -792,10 +792,10 @@ inline std::future<std::expected<ExpenseGroup, Error>> ExpenseGroup::loadAsync(s
         [](detail::EranosExpenseGroupOutcome &done) noexcept { return ExpenseGroup(done.take()); });
 }
 
-inline void ExpenseGroup::clearDescription() noexcept { handle->clear_description(); }
+inline void ExpenseGroup::clearNote() noexcept { handle->clear_note(); }
 
-inline std::future<std::expected<void, Error>> ExpenseGroup::clearDescriptionAsync(Cancellation const *const cancellation) noexcept {
-    return detail::launch<void>([&](auto callback) noexcept { handle->clear_description_async(detail::handleOf(cancellation), std::move(callback)); },
+inline std::future<std::expected<void, Error>> ExpenseGroup::clearNoteAsync(Cancellation const *const cancellation) noexcept {
+    return detail::launch<void>([&](auto callback) noexcept { handle->clear_note_async(detail::handleOf(cancellation), std::move(callback)); },
                                 detail::finished);
 }
 
@@ -1182,24 +1182,20 @@ inline std::future<std::expected<Transfer, Error>> ExpenseGroup::removeTransferA
         [](detail::EranosTransferOutcome const &done) noexcept { return detail::fromDetail(*done.value()); });
 }
 
-inline std::optional<std::string> ExpenseGroup::description() const noexcept { return handle->description(); }
+inline std::optional<std::string> ExpenseGroup::note() const noexcept { return handle->note(); }
 
-inline std::future<std::expected<std::optional<std::string>, Error>>
-ExpenseGroup::descriptionAsync(Cancellation const *const cancellation) const noexcept {
+inline std::future<std::expected<std::optional<std::string>, Error>> ExpenseGroup::noteAsync(Cancellation const *const cancellation) const noexcept {
     return detail::launch<std::optional<std::string>>(
-        [&](auto callback) noexcept { handle->description_async(detail::handleOf(cancellation), std::move(callback)); },
+        [&](auto callback) noexcept { handle->note_async(detail::handleOf(cancellation), std::move(callback)); },
         [](detail::EranosOptionalTextOutcome const &done) noexcept { return done.value(); });
 }
 
-inline std::expected<void, Error> ExpenseGroup::setDescription(std::string_view const description) noexcept {
-    return detail::expectedOf(handle->set_description(description));
-}
+inline std::expected<void, Error> ExpenseGroup::setNote(std::string_view const note) noexcept { return detail::expectedOf(handle->set_note(note)); }
 
-inline std::future<std::expected<void, Error>> ExpenseGroup::setDescriptionAsync(std::string_view const description,
-                                                                                 Cancellation const *const cancellation) noexcept {
-    return detail::launch<void>(
-        [&](auto callback) noexcept { handle->set_description_async(description, detail::handleOf(cancellation), std::move(callback)); },
-        detail::finished);
+inline std::future<std::expected<void, Error>> ExpenseGroup::setNoteAsync(std::string_view const note,
+                                                                          Cancellation const *const cancellation) noexcept {
+    return detail::launch<void>([&](auto callback) noexcept { handle->set_note_async(note, detail::handleOf(cancellation), std::move(callback)); },
+                                detail::finished);
 }
 
 inline std::optional<Language> ExpenseGroup::language() const noexcept {

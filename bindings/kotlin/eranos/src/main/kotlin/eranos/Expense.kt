@@ -37,8 +37,8 @@ public class Expense(
     public val time: TimeOfDay? = null,
     /** The category: the built-in one, [CategoryId.UNCATEGORISED], until the expense is given another. */
     public val category: CategoryId = CategoryId.UNCATEGORISED,
-    /** A longer description. */
-    public val description: String? = null,
+    /** A note on it. */
+    public val note: String? = null,
 ) {
     /**
      * An expense of [cost] on [date], that [payers] paid and [split] shares, under an identifier [ExpenseId.generate] makes,
@@ -53,8 +53,8 @@ public class Expense(
         tip: TipRule = TipRule.NONE,
         time: TimeOfDay? = null,
         category: CategoryId = CategoryId.UNCATEGORISED,
-        description: String? = null,
-    ) : this(ExpenseId.generate(), name, cost, payers, split, date, tip, time, category, description)
+        note: String? = null,
+    ) : this(ExpenseId.generate(), name, cost, payers, split, date, tip, time, category, note)
 
     /** The expense as the generated code holds it. */
     internal val generated: eranos.internal.Expense
@@ -69,7 +69,7 @@ public class Expense(
                 tip.generated,
                 time?.generated,
                 category.value,
-                description,
+                note,
             )
 
     /** This expense with the given fields changed; the identifier stays, so the copy can replace the expense. */
@@ -82,8 +82,8 @@ public class Expense(
         tip: TipRule = this.tip,
         time: TimeOfDay? = this.time,
         category: CategoryId = this.category,
-        description: String? = this.description,
-    ): Expense = Expense(id, name, cost, payers, split, date, tip, time, category, description)
+        note: String? = this.note,
+    ): Expense = Expense(id, name, cost, payers, split, date, tip, time, category, note)
 
     /**
      * The total, amount and tip, in the expense's own currency: what its payers paid.
@@ -113,7 +113,7 @@ public class Expense(
 
     /**
      * Whether [other] is of the same class, with the same [id], [name], [cost], [payers], [split], [date], [tip], [time],
-     * [category], and [description].
+     * [category], and [note].
      */
     override fun equals(other: Any?): Boolean =
         other is Expense &&
@@ -126,15 +126,15 @@ public class Expense(
             tip == other.tip &&
             time == other.time &&
             category == other.category &&
-            description == other.description
+            note == other.note
 
     /** A hash of what [equals] compares. */
-    override fun hashCode(): Int = hashOf(id, name, cost, payers, split, date, tip, time, category, description)
+    override fun hashCode(): Int = hashOf(id, name, cost, payers, split, date, tip, time, category, note)
 
     /** A description of every field, for logs. */
     override fun toString(): String =
         "Expense(id=$id, name=$name, cost=$cost, payers=$payers, split=$split, date=$date, tip=$tip, time=$time, " +
-            "category=$category, description=$description)"
+            "category=$category, note=$note)"
 }
 
 /** The expense the generated code holds as [this]. */
@@ -149,7 +149,7 @@ internal fun eranos.internal.Expense.converted(): Expense =
         tip.converted(),
         time?.converted(),
         CategoryId(category),
-        description,
+        note,
     )
 
 /**

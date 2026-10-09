@@ -640,8 +640,8 @@ export interface Expense {
     readonly time?: TimeOfDay;
     /** The category: the built-in one, {@link UNCATEGORISED}, until the expense is given another. */
     readonly category: CategoryId;
-    /** A longer description. */
-    readonly description?: string;
+    /** A note on it. */
+    readonly note?: string;
 }
 
 /**
@@ -671,8 +671,8 @@ export interface ExpenseInput {
     readonly time?: TimeOfDay;
     /** The category; the built-in one, {@link UNCATEGORISED}, unless given. */
     readonly category?: CategoryId;
-    /** A longer description. */
-    readonly description?: string;
+    /** A note on it. */
+    readonly note?: string;
 }
 
 /**
@@ -691,7 +691,7 @@ export function completedExpense(expense: ExpenseInput): Expense {
         tip: undefined === expense.tip ? NO_TIP : completedTipRule(expense.tip),
         ...(undefined === expense.time ? {} : { time: expense.time }),
         category: expense.category ?? UNCATEGORISED,
-        ...(undefined === expense.description ? {} : { description: expense.description }),
+        ...(undefined === expense.note ? {} : { note: expense.note }),
     };
 }
 
@@ -724,7 +724,7 @@ export function convertedExpense(expense: internal.Expense): Expense {
         tip: convertedTipRule(expense.tip),
         ...(undefined === expense.time ? {} : { time: TimeOfDay.converted(expense.time) }),
         category: categoryId(expense.category),
-        ...(undefined === expense.description ? {} : { description: expense.description }),
+        ...(undefined === expense.note ? {} : { note: expense.note }),
     };
 }
 
@@ -744,7 +744,7 @@ export function generatedExpense(expense: Expense): internal.Expense {
         tip: generatedTipRule(expense.tip),
         ...(undefined === expense.time ? {} : { time: expense.time.generated() }),
         category: expense.category,
-        ...(undefined === expense.description ? {} : { description: expense.description }),
+        ...(undefined === expense.note ? {} : { note: expense.note }),
     });
 }
 

@@ -129,10 +129,10 @@ class ExpenseGroupReader final {
     ///   module that refused it
     [[nodiscard]] std::expected<std::optional<Money>, Error> transferAmount(TransferId const &id) const noexcept;
 
-    /// The group's description.
+    /// The group's note.
     ///
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::expected<std::optional<std::string>, Error> description() const noexcept;
+    [[nodiscard]] std::expected<std::optional<std::string>, Error> note() const noexcept;
 
     /// The language the apps show the group in, as a BCP 47 tag.
     ///
@@ -231,8 +231,8 @@ inline std::expected<std::optional<Money>, Error> ExpenseGroupReader::transferAm
     });
 }
 
-inline std::expected<std::optional<std::string>, Error> ExpenseGroupReader::description() const noexcept {
-    return detail::expectedOf(handle->description()).transform(detail::present);
+inline std::expected<std::optional<std::string>, Error> ExpenseGroupReader::note() const noexcept {
+    return detail::expectedOf(handle->note()).transform(detail::present);
 }
 
 inline std::expected<std::optional<Language>, Error> ExpenseGroupReader::language() const noexcept {

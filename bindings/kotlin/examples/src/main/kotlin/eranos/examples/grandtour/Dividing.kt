@@ -148,7 +148,7 @@ internal fun fadoItemByItem(
         tip = TipRule(TipValue.Percentage(Percentage.parse("10"))),
         time = TimeOfDay.of(hour = 22, minute = 15),
         category = categories.food,
-        description = "Tasca do Chico",
+        note = "Tasca do Chico",
     )
 
 /** The tuk-tuk tour, with a fixed tip shared equally. */

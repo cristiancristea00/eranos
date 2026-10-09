@@ -94,7 +94,7 @@ fn dinner() -> Expense {
         },
         time: None,
         category: category_id_uncategorised(),
-        description: None,
+        note: None,
     }
 }
 

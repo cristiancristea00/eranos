@@ -29,7 +29,7 @@ class ExpenseGroupTest {
         assertTrue(group.idBlocking().value.isNotEmpty())
         assertEquals("Flat", group.nameBlocking())
         assertEquals(flat.euro, group.currencyBlocking())
-        assertEquals("Rent", group.descriptionBlocking())
+        assertEquals("Rent", group.noteBlocking())
         assertEquals("pt-PT", group.languageBlocking().toString())
         val members = group.membersBlocking()
         assertEquals(listOf("Ana", "Bob"), members.map { it.firstName })
@@ -64,7 +64,7 @@ class ExpenseGroupTest {
             assertEquals(group.idBlocking(), group.id())
             assertEquals(group.nameBlocking(), group.name())
             assertEquals(group.currencyBlocking(), group.currency())
-            assertEquals(group.descriptionBlocking(), group.description())
+            assertEquals(group.noteBlocking(), group.note())
             assertEquals(group.languageBlocking(), group.language())
             assertEquals(group.membersBlocking(), group.members())
             assertEquals(group.memberBlocking(flat.bob), group.member(flat.bob))
@@ -163,12 +163,12 @@ class ExpenseGroupTest {
         group.renameBlocking("Home")
         val lei = CurrencyCode.of("RON")
         group.changeCurrencyBlocking(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
-        group.setDescriptionBlocking(null)
+        group.setNoteBlocking(null)
         group.setLanguageBlocking(null)
         assertEquals("Home", group.nameBlocking())
         assertEquals(lei, group.currencyBlocking())
         assertEquals(Money(15_000, lei), group.summaryBlocking().totalSpent)
-        assertNull(group.descriptionBlocking())
+        assertNull(group.noteBlocking())
         assertNull(group.languageBlocking())
     }
 
@@ -207,39 +207,39 @@ class ExpenseGroupTest {
             group.rename("Home")
             val lei = CurrencyCode.of("RON")
             group.changeCurrency(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
-            group.setDescription("Shared flat")
+            group.setNote("Shared flat")
             group.setLanguage(Language.parse("ro"))
             assertEquals("Home", group.name())
             assertEquals(lei, group.currency())
-            assertEquals("Shared flat", group.description())
+            assertEquals("Shared flat", group.note())
             assertEquals("ro", group.language().toString())
         }
 
     /**
-     * A description given as `null` or as blank text, to a new group or to either form of the setter, that the group kept, or
-     * text it kept with the whitespace around it, would show an app a description nobody gave the group.
+     * A note given as `null` or as blank text, to a new group or to either form of the setter, that the group kept, or
+     * text it kept with the whitespace around it, would show an app a note nobody gave the group.
      */
     @Test
-    fun aDescriptionIsTrimmedAndNullOrBlankTextClearsIt() =
+    fun aNoteIsTrimmedAndNullOrBlankTextClearsIt() =
         runTest {
             val flat = Flat()
             val group = flat.group
-            group.setDescriptionBlocking(" Shared flat\n")
-            assertEquals("Shared flat", group.descriptionBlocking())
-            group.setDescriptionBlocking(null)
-            assertNull(group.descriptionBlocking())
-            group.setDescriptionBlocking("Bills")
-            group.setDescriptionBlocking(" ")
-            assertNull(group.descriptionBlocking())
-            group.setDescription(" Bills\t")
-            assertEquals("Bills", group.description())
-            group.setDescription(null)
-            assertNull(group.description())
-            group.setDescription("Rent")
-            group.setDescription("\n")
-            assertNull(group.description())
-            assertNull(ExpenseGroup("Trip", flat.euro, " ").description())
-            assertEquals("Rent", ExpenseGroup("Trip", flat.euro, " Rent ").description())
+            group.setNoteBlocking(" Shared flat\n")
+            assertEquals("Shared flat", group.noteBlocking())
+            group.setNoteBlocking(null)
+            assertNull(group.noteBlocking())
+            group.setNoteBlocking("Bills")
+            group.setNoteBlocking(" ")
+            assertNull(group.noteBlocking())
+            group.setNote(" Bills\t")
+            assertEquals("Bills", group.note())
+            group.setNote(null)
+            assertNull(group.note())
+            group.setNote("Rent")
+            group.setNote("\n")
+            assertNull(group.note())
+            assertNull(ExpenseGroup("Trip", flat.euro, " ").note())
+            assertEquals("Rent", ExpenseGroup("Trip", flat.euro, " Rent ").note())
         }
 
     /**
@@ -251,11 +251,11 @@ class ExpenseGroupTest {
         runTest {
             val euro = CurrencyCode.of("EUR")
             val plain = ExpenseGroup("Trip", euro)
-            assertNull(plain.description())
+            assertNull(plain.note())
             assertNull(plain.language())
             val named = ExpenseGroup(ExpenseGroupId.parse("flat-12"), "Flat", euro, "Rent", Language.parse("ro"))
             assertEquals(ExpenseGroupId("flat-12"), named.id())
-            assertEquals("Rent", named.description())
+            assertEquals("Rent", named.note())
             assertEquals(ExpenseGroupId("flat-12"), ExpenseGroup.load(named.save()).id())
             assertNotEquals(named.id(), plain.id())
             val refused = assertThrows<EranosException.Id> { ExpenseGroup(ExpenseGroupId("flat\n12"), "Flat", euro) }
@@ -283,7 +283,7 @@ class ExpenseGroupTest {
         assertEquals(group.idBlocking(), reader.id())
         assertEquals("Flat", reader.name())
         assertEquals(flat.euro, reader.currency())
-        assertEquals("Rent", reader.description())
+        assertEquals("Rent", reader.note())
         assertEquals("pt-PT", reader.language().toString())
         assertEquals(group.saveBlocking(), reader.save())
         assertEquals(group.membersBlocking(), reader.members())

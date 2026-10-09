@@ -96,7 +96,7 @@ function replaceAndRemove(group: ExpenseGroup, people: People, categories: Categ
     // The dinner's receipt said 99.00.
     const dinner = group.expenseSync(seafood);
     assert.ok(undefined !== dinner, 'the dinner was added');
-    const previous = group.replaceExpenseSync({ ...dinner, cost: { kind: 'local', amount: eur('99.00') }, description: 'Cervejaria Ramiro' });
+    const previous = group.replaceExpenseSync({ ...dinner, cost: { kind: 'local', amount: eur('99.00') }, note: 'Cervejaria Ramiro' });
     // Bob entered the coffee twice.
     const coffee = (): Expense =>
         createExpense({
@@ -133,7 +133,7 @@ function replaceAndRemove(group: ExpenseGroup, people: People, categories: Categ
     return [
         {
             entry: previous.name,
-            edit: `${previous.cost.amount.toString()} became ${(corrected?.cost.amount ?? zero).toString()}, at ${corrected?.description ?? ''}`,
+            edit: `${previous.cost.amount.toString()} became ${(corrected?.cost.amount ?? zero).toString()}, at ${corrected?.note ?? ''}`,
         },
         { entry: removed.name, edit: `entered twice; the copy of ${removed.cost.amount.toString()} was removed` },
         {

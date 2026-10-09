@@ -45,7 +45,7 @@ struct Trip {
 /// look up.
 fn trip() -> Trip {
     let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
-        .description("Autumn trip")
+        .note("Autumn trip")
         .language(Language::parse("pt-PT").unwrap())
         .build()
         .unwrap();
@@ -96,7 +96,7 @@ fn trip() -> Trip {
         ],
         day(),
     )
-    .description("Tasca")
+    .note("Tasca")
     .time(TimeOfDay::new(20, 30).unwrap())
     .category(food)
     .tip(
@@ -174,7 +174,7 @@ fn the_json_shape_is_pinned() {
     // and what it holds; every entry starts with its own identifier.
     let text = serde_json::to_string(&group).unwrap();
     let start = format!(
-        r#"{{"format":4,"id":"{}","name":"Lisbon","currency":"EUR","description":"Autumn trip","language":"pt-PT","members":[{{"id":"#,
+        r#"{{"format":4,"id":"{}","name":"Lisbon","currency":"EUR","note":"Autumn trip","language":"pt-PT","members":[{{"id":"#,
         group.id()
     );
     assert!(text.starts_with(&start), "{text}");
@@ -732,10 +732,10 @@ fn a_bare_group_round_trips_through_json() {
         .build()
         .unwrap();
     let text = serde_json::to_string(&group).unwrap();
-    assert!(!text.contains("description"), "{text}");
+    assert!(!text.contains("note"), "{text}");
     let loaded: ExpenseGroup = serde_json::from_str(&text).unwrap();
     assert_eq!(loaded, group);
-    assert_eq!(loaded.description(), None);
+    assert_eq!(loaded.note(), None);
     assert_eq!(loaded.language(), None);
 }
 

@@ -110,7 +110,7 @@ function expenses(flat: Flat): Expenses {
         tip: { value: { kind: 'fixed', amount: new Money(500n, lei) }, distribution: TipDistribution.EQUAL },
         time: TimeOfDay.of(9, 5),
         category: flat.food,
-        description: 'To the airport',
+        note: 'To the airport',
     });
     const dinner = createExpense({
         name: 'Dinner',
@@ -145,7 +145,7 @@ void describe('the expenses, members, categories, and transfers', () => {
             assert.deepEqual(stored.date, expense.date);
             assert.deepEqual(stored.time, expense.time);
             assert.equal(stored.category, expense.category);
-            assert.equal(stored.description, expense.description);
+            assert.equal(stored.note, expense.note);
             assert.deepEqual(stored, expense);
         }
     });
@@ -573,10 +573,10 @@ void describe('the expenses, members, categories, and transfers', () => {
     });
 
     /**
-     * A last name, a description, or a note that read back as empty text when it was left out or blank, that a replace
+     * A last name, a note, or a note that read back as empty text when it was left out or blank, that a replace
      * without it kept, or that kept the whitespace around it, would show an app a detail it never gave.
      */
-    void it('reads back a left-out or blank last name, description, or note as absent, and the rest trimmed', () => {
+    void it('reads back a left-out or blank last name, note, or note as absent, and the rest trimmed', () => {
         const flat = new Flat();
         const group = flat.group;
 
@@ -593,10 +593,10 @@ void describe('the expenses, members, categories, and transfers', () => {
         }
 
         const lunch = flat.expense('Lunch', flat.ana, [flat.ana, flat.bob]);
-        group.addExpenseSync({ ...lunch, description: ' At the market\n' });
-        assert.deepEqual(group.expenseSync(lunch.id), { ...lunch, description: 'At the market' });
-        for (const expense of [lunch, { ...lunch, description: ' ' }]) {
-            group.replaceExpenseSync({ ...lunch, description: 'At the market' });
+        group.addExpenseSync({ ...lunch, note: ' At the market\n' });
+        assert.deepEqual(group.expenseSync(lunch.id), { ...lunch, note: 'At the market' });
+        for (const expense of [lunch, { ...lunch, note: ' ' }]) {
+            group.replaceExpenseSync({ ...lunch, note: 'At the market' });
             group.replaceExpenseSync(expense);
             assert.deepEqual(group.expenseSync(lunch.id), lunch);
             const added = { ...expense, id: generateExpenseId() };

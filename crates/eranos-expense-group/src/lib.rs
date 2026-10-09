@@ -83,7 +83,7 @@ pub struct ExpenseGroup {
     id: ExpenseGroupId,
     name: String,
     currency: CurrencyCode,
-    description: Option<String>,
+    note: Option<String>,
     language: Option<Language>,
     members: BTreeMap<MemberId, MemberRecord>,
     categories: BTreeMap<CategoryKey, Category>,
@@ -156,14 +156,14 @@ impl ExpenseGroup {
         id: ExpenseGroupId,
         name: String,
         currency: CurrencyCode,
-        description: Option<String>,
+        note: Option<String>,
         language: Option<Language>,
     ) -> Self {
         Self {
             id,
             name,
             currency,
-            description,
+            note,
             language,
             members: BTreeMap::new(),
             categories: BTreeMap::from([(
@@ -383,21 +383,21 @@ impl ExpenseGroup {
 
     // --- Description ---------------------------------------------------------
 
-    /// The description, if any.
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
+    /// The note, if any.
+    pub fn note(&self) -> Option<&str> {
+        self.note.as_deref()
     }
 
-    /// Sets the description, trimmed; blank text clears it, as
-    /// [`clear_description`](Self::clear_description) does.
-    pub fn set_description(&mut self, description: impl Into<String>) {
-        self.description = text::optional(description);
+    /// Sets the note, trimmed; blank text clears it, as
+    /// [`clear_note`](Self::clear_note) does.
+    pub fn set_note(&mut self, note: impl Into<String>) {
+        self.note = text::optional(note);
     }
 
-    /// Clears the description, which
-    /// [`set_description`](Self::set_description) sets.
-    pub fn clear_description(&mut self) {
-        self.description = None;
+    /// Clears the note, which
+    /// [`set_note`](Self::set_note) sets.
+    pub fn clear_note(&mut self) {
+        self.note = None;
     }
 
     // --- Language ------------------------------------------------------------
@@ -1090,7 +1090,7 @@ impl PartialEq for ExpenseGroup {
         self.id == other.id
             && self.name == other.name
             && self.currency == other.currency
-            && self.description == other.description
+            && self.note == other.note
             && self.language == other.language
             && self.members == other.members
             && self.categories == other.categories

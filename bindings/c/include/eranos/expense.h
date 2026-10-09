@@ -327,33 +327,33 @@ static inline void eranosExpenseCategory(EranosExpense const *const expense, Era
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// A longer description. Writes it, if present; absent otherwise.
+/// A note on it. Writes it, if present; absent otherwise.
 ///
 /// @param expense The expense
-/// @param description Receives a longer description, replacing what it held
+/// @param note Receives a note, replacing what it held
 /// @return Whether there is one
-[[nodiscard]] static inline bool eranosExpenseDescription(EranosExpense const *const expense, EranosText *const description) {
-    eranosDetailClear(description);
-    bool const present = EranosExpense_description(expense, description).is_ok;
-    eranosDetailFinish(description);
+[[nodiscard]] static inline bool eranosExpenseNote(EranosExpense const *const expense, EranosText *const note) {
+    eranosDetailClear(note);
+    bool const present = EranosExpense_note(expense, note).is_ok;
+    eranosDetailFinish(note);
     return present;
 }
 
-/// Sets a longer description.
+/// Sets a note.
 ///
 /// @param expense The expense
-/// @param description A longer description, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param note A note, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosExpenseSetDescription(EranosExpense *const expense, char const *const description) {
-    EranosExpense_set_description_result const result = EranosExpense_set_description(expense, eranosDetailView(description));
+[[nodiscard]] static inline EranosError *eranosExpenseSetNote(EranosExpense *const expense, char const *const note) {
+    EranosExpense_set_note_result const result = EranosExpense_set_note(expense, eranosDetailView(note));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Clears a longer description.
+/// Clears a note.
 ///
 /// @param expense The expense
-static inline void eranosExpenseClearDescription(EranosExpense *const expense) { EranosExpense_clear_description(expense); }
+static inline void eranosExpenseClearNote(EranosExpense *const expense) { EranosExpense_clear_note(expense); }
 
 /// The tip in the expense's currency, zero without one.
 ///

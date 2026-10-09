@@ -64,7 +64,7 @@ class EntriesTest {
                 .tip(new TipRule(new TipValue.Fixed(new Money(500, lei)), TipDistribution.EQUAL))
                 .time(TimeOfDay.of(9, 5))
                 .category(flat.food)
-                .description("To the airport")
+                .note("To the airport")
                 .build();
     }
 
@@ -104,7 +104,7 @@ class EntriesTest {
             assertEquals(expense.tip(), stored.tip());
             assertEquals(expense.time(), stored.time());
             assertEquals(expense.category(), stored.category());
-            assertEquals(expense.description(), stored.description());
+            assertEquals(expense.note(), stored.note());
             assertValue(
                     stored, stored.toBuilder().build(), stored.toBuilder().name("Lunch").build());
         }
@@ -612,9 +612,9 @@ class EntriesTest {
     }
 
     /**
-     * An expense, a member, or a transfer whose description, last name, or note is absent or blank
-     * that read back with text, added or as a replacement, a replacement without it that kept the
-     * stored text, or text that kept stray whitespace, would show an app text nobody gave.
+     * An expense, a member, or a transfer whose note, last name, or note is absent or blank that
+     * read back with text, added or as a replacement, a replacement without it that kept the stored
+     * text, or text that kept stray whitespace, would show an app text nobody gave.
      */
     @Test
     void absentOrBlankTextReadsBackAbsent() throws EranosException {
@@ -622,7 +622,7 @@ class EntriesTest {
         ExpenseGroup group = flat.group;
         Expense lunch =
                 flat.expense("Lunch", flat.ana, List.of(flat.bob)).toBuilder()
-                        .description(" A birthday\n")
+                        .note(" A birthday\n")
                         .build();
         Member carol = Member.builder("Carol").lastName(" Popa ").build();
         Transfer cash =
@@ -636,23 +636,21 @@ class EntriesTest {
             group.replaceExpense(lunch);
             group.replaceMember(carol);
             group.replaceTransfer(cash);
-            assertEquals(
-                    Optional.of("A birthday"),
-                    group.expense(lunch.id()).orElseThrow().description());
+            assertEquals(Optional.of("A birthday"), group.expense(lunch.id()).orElseThrow().note());
             assertEquals(Optional.of("Popa"), group.member(carol.id()).orElseThrow().lastName());
             assertEquals(Optional.of("Cash"), group.transfer(cash.id()).orElseThrow().note());
 
-            group.replaceExpense(lunch.toBuilder().description(absent).build());
+            group.replaceExpense(lunch.toBuilder().note(absent).build());
             group.replaceMember(carol.toBuilder().lastName(absent).build());
             group.replaceTransfer(cash.toBuilder().note(absent).build());
-            assertEquals(Optional.empty(), group.expense(lunch.id()).orElseThrow().description());
+            assertEquals(Optional.empty(), group.expense(lunch.id()).orElseThrow().note());
             assertEquals(Optional.empty(), group.member(carol.id()).orElseThrow().lastName());
             assertEquals(Optional.empty(), group.transfer(cash.id()).orElseThrow().note());
 
             ExpenseId snack =
                     group.addExpense(
                             flat.expense("Snack", flat.bob, List.of(flat.ana)).toBuilder()
-                                    .description(absent)
+                                    .note(absent)
                                     .build());
             MemberId dan = group.addMember(Member.builder("Dan").lastName(absent).build());
             TransferId change =
@@ -664,7 +662,7 @@ class EntriesTest {
                                             flat.day)
                                     .note(absent)
                                     .build());
-            assertEquals(Optional.empty(), group.expense(snack).orElseThrow().description());
+            assertEquals(Optional.empty(), group.expense(snack).orElseThrow().note());
             assertEquals(Optional.empty(), group.member(dan).orElseThrow().lastName());
             assertEquals(Optional.empty(), group.transfer(change).orElseThrow().note());
         }

@@ -500,8 +500,8 @@ pub struct Expense {
     /// [`category_id_uncategorised`](crate::category_id_uncategorised), until
     /// it is given another.
     pub category: String,
-    /// A longer description.
-    pub description: Option<String>,
+    /// A note on it.
+    pub note: Option<String>,
 }
 
 impl Expense {
@@ -517,7 +517,7 @@ impl Expense {
             tip: TipRule::from_library(expense.tip()),
             time: expense.time().map(TimeOfDay::from_library),
             category: expense.category().to_string(),
-            description: expense.description().map(str::to_owned),
+            note: expense.note().map(str::to_owned),
         }
     }
 
@@ -583,8 +583,8 @@ impl Expense {
         Ok(self.with_other_fields(builder)?.build()?)
     }
 
-    /// `builder` with the record's tip, time, category, and description, the
-    /// time and the description cleared when the record has none.
+    /// `builder` with the record's tip, time, category, and note, the
+    /// time and the note cleared when the record has none.
     fn with_other_fields(
         &self,
         builder: library::ExpenseBuilder,
@@ -593,9 +593,9 @@ impl Expense {
         let time = self.time.map(TimeOfDay::to_library).transpose()?;
         let category = identifier(&self.category)?;
         let builder = builder.tip(tip).time(time).category(category);
-        Ok(match &self.description {
-            Some(description) => builder.description(description.as_str()),
-            None => builder.clear_description(),
+        Ok(match &self.note {
+            Some(note) => builder.note(note.as_str()),
+            None => builder.clear_note(),
         })
     }
 }

@@ -57,7 +57,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.deepEqual(group.memberSync(flat.ana), members[0]);
         assert.equal(group.isArchivedSync(flat.ana), false);
         assert.equal(group.nameSync(), 'Flat');
-        assert.equal(group.descriptionSync(), 'Rent');
+        assert.equal(group.noteSync(), 'Rent');
         assert.equal(group.languageSync()?.toString(), 'pt-PT');
         assert.deepEqual(
             group.settlementSync(SettlementStrategy.GREEDY).payments.map((payment) => payment.amount.toString()),
@@ -95,7 +95,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.deepEqual(await group.member(flat.bob), group.memberSync(flat.bob));
         assert.equal(await group.isArchived(flat.bob), group.isArchivedSync(flat.bob));
         assert.equal(await group.name(), group.nameSync());
-        assert.equal(await group.description(), group.descriptionSync());
+        assert.equal(await group.note(), group.noteSync());
         assert.deepEqual(await group.language(), group.languageSync());
         for (const strategy of Object.values(SettlementStrategy)) {
             assert.deepEqual(await group.settlement(strategy), group.settlementSync(strategy));
@@ -141,7 +141,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
             assert.equal(reader.transferAmount(stranger.repayment), undefined);
         }
         using plain = ExpenseGroup.create('Trip', flat.euro);
-        assert.equal(plain.descriptionSync(), undefined);
+        assert.equal(plain.noteSync(), undefined);
         assert.equal(plain.languageSync(), undefined);
         using reader = plain.readSync();
         assert.equal(reader.language(), undefined);
@@ -149,7 +149,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
 
     /**
      * A synchronous change that did not take effect, or took another, a removed member that still read as archived or active,
-     * or a description that kept the whitespace around it or stayed set when blank, would leave the group other than the app
+     * or a note that kept the whitespace around it or stayed set when blank, would leave the group other than the app
      * changed it.
      */
     void it('takes every synchronous change into effect', () => {
@@ -193,17 +193,17 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(group.removeTransferSync(cash).note, 'Cash');
 
         group.setNameSync('Home');
-        group.clearDescriptionSync();
+        group.clearNoteSync();
         group.clearLanguageSync();
         assert.equal(group.nameSync(), 'Home');
-        assert.equal(group.descriptionSync(), undefined);
+        assert.equal(group.noteSync(), undefined);
         assert.equal(group.languageSync(), undefined);
-        group.setDescriptionSync(' Shared flat\n');
+        group.setNoteSync(' Shared flat\n');
         group.setLanguageSync(Language.parse('ro'));
-        assert.equal(group.descriptionSync(), 'Shared flat');
+        assert.equal(group.noteSync(), 'Shared flat');
         assert.equal(group.languageSync()?.toString(), 'ro');
-        group.setDescriptionSync(' ');
-        assert.equal(group.descriptionSync(), undefined);
+        group.setNoteSync(' ');
+        assert.equal(group.noteSync(), undefined);
         const lei = CurrencyCode.of('RON');
         group.changeCurrencySync(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
@@ -255,18 +255,18 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal((await group.removeTransfer(cash)).note, 'Cash');
 
         await group.setName('Home');
-        await group.setDescription('Shared flat');
+        await group.setNote('Shared flat');
         await group.setLanguage(Language.parse('ro'));
         assert.equal(group.nameSync(), 'Home');
-        assert.equal(group.descriptionSync(), 'Shared flat');
-        await group.clearDescription();
+        assert.equal(group.noteSync(), 'Shared flat');
+        await group.clearNote();
         await group.clearLanguage();
-        assert.equal(group.descriptionSync(), undefined);
+        assert.equal(group.noteSync(), undefined);
         assert.equal(group.languageSync(), undefined);
-        await group.setDescription(' Rent\n');
-        assert.equal(group.descriptionSync(), 'Rent');
-        await group.setDescription(' ');
-        assert.equal(group.descriptionSync(), undefined);
+        await group.setNote(' Rent\n');
+        assert.equal(group.noteSync(), 'Rent');
+        await group.setNote(' ');
+        assert.equal(group.noteSync(), undefined);
         const lei = CurrencyCode.of('RON');
         await group.changeCurrency(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
@@ -274,18 +274,18 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     });
 
     /**
-     * A new group that dropped what it starts with, the identifier the app gives it included, kept a blank description, took
+     * A new group that dropped what it starts with, the identifier the app gives it included, kept a blank note, took
      * an identifier the rules refuse, shared a generated identifier with another group, or a saved one that loaded from text
      * that is not the saved form, would start an app from another group.
      */
     void it('starts a group with what it is given and loads only its saved form', async () => {
         const euro = CurrencyCode.of('EUR');
-        using trip = ExpenseGroup.createWithId(parseExpenseGroupId('trip-2026'), 'Trip', euro, { description: 'Alps' });
+        using trip = ExpenseGroup.createWithId(parseExpenseGroupId('trip-2026'), 'Trip', euro, { note: 'Alps' });
         assert.equal(trip.idSync(), 'trip-2026');
         assert.equal(trip.nameSync(), 'Trip');
-        assert.equal(trip.descriptionSync(), 'Alps');
-        using blank = ExpenseGroup.create('Trip', euro, { description: ' ' });
-        assert.equal(blank.descriptionSync(), undefined);
+        assert.equal(trip.noteSync(), 'Alps');
+        using blank = ExpenseGroup.create('Trip', euro, { note: ' ' });
+        assert.equal(blank.noteSync(), undefined);
         assert.equal(ExpenseGroup.loadSync(trip.saveSync()).idSync(), 'trip-2026');
         assert.throws(
             () => ExpenseGroup.createWithId(expenseGroupId(' trip'), 'Trip', euro),
@@ -333,7 +333,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(reader.isArchived(flat.ana), false);
         assert.equal(reader.isArchived(flat.bob), true);
         assert.equal(reader.name(), 'Flat');
-        assert.equal(reader.description(), 'Rent');
+        assert.equal(reader.note(), 'Rent');
         assert.equal(reader.language()?.toString(), 'pt-PT');
         assert.deepEqual(reader.settlement(SettlementStrategy.GREEDY), group.settlementSync(SettlementStrategy.GREEDY));
         assert.deepEqual(reader.transfers(), group.transfersSync());

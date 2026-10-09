@@ -38,7 +38,7 @@ public class ExpenseGroup private constructor(
         id: ExpenseGroupId,
         name: String,
         currency: CurrencyCode,
-        description: String? = null,
+        note: String? = null,
         language: Language? = null,
     ) : this(
         converting {
@@ -47,7 +47,7 @@ public class ExpenseGroup private constructor(
                     id = id.value,
                     name = name,
                     currency = currency.code,
-                    description = description,
+                    note = note,
                     language = language?.toString(),
                 ),
             )
@@ -64,9 +64,9 @@ public class ExpenseGroup private constructor(
     public constructor(
         name: String,
         currency: CurrencyCode,
-        description: String? = null,
+        note: String? = null,
         language: Language? = null,
-    ) : this(ExpenseGroupId.generate(), name, currency, description, language)
+    ) : this(ExpenseGroupId.generate(), name, currency, note, language)
 
     /** Frees the group; every call after it throws [IllegalStateException], and closing a closed group does nothing. */
     override fun close() {
@@ -104,7 +104,7 @@ public class ExpenseGroup private constructor(
      */
     public inline fun <T> withReadBlocking(block: (ExpenseGroupReader) -> T): T = readBlocking().use(block)
 
-    // The group's own details: its identifier, name, currency, description, language, and saved form.
+    // The group's own details: its identifier, name, currency, note, language, and saved form.
 
     /**
      * The group's identifier.
@@ -202,34 +202,34 @@ public class ExpenseGroup private constructor(
     ): Unit = converting { handle.changeCurrency(currency.code, rates.generated()) }
 
     /**
-     * The group's description.
+     * The group's note.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [descriptionBlocking] blocks instead.
+     * group as it was. [noteBlocking] blocks instead.
      */
-    public suspend fun description(): String? = converting { handle.descriptionAsync(null) }
+    public suspend fun note(): String? = converting { handle.noteAsync(null) }
 
     /**
-     * The group's description.
+     * The group's note.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [description] waits without blocking it.
+     * Waits for the group's lock by blocking its thread; in a coroutine, [note] waits without blocking it.
      */
-    public fun descriptionBlocking(): String? = converting { handle.description() }
+    public fun noteBlocking(): String? = converting { handle.note() }
 
     /**
-     * Sets the group's description, trimmed; `null` or blank text clears it.
+     * Sets the group's note, trimmed; `null` or blank text clears it.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [setDescriptionBlocking] blocks instead.
+     * group as it was. [setNoteBlocking] blocks instead.
      */
-    public suspend fun setDescription(description: String?): Unit = converting { handle.setDescriptionAsync(description, null) }
+    public suspend fun setNote(note: String?): Unit = converting { handle.setNoteAsync(note, null) }
 
     /**
-     * Sets the group's description, trimmed; `null` or blank text clears it.
+     * Sets the group's note, trimmed; `null` or blank text clears it.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [setDescription] waits without blocking it.
+     * Waits for the group's lock by blocking its thread; in a coroutine, [setNote] waits without blocking it.
      */
-    public fun setDescriptionBlocking(description: String?): Unit = converting { handle.setDescription(description) }
+    public fun setNoteBlocking(note: String?): Unit = converting { handle.setNote(note) }
 
     /**
      * The language the apps show the group in.

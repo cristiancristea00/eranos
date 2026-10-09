@@ -77,7 +77,7 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
         tip=TipRule(PercentageTip(Percentage(1000))),
         time=TimeOfDay(13, 15),
         category=flat.food,
-        description='By the sea',
+        note='By the sea',
     )
     assert flat.group.add_expense(lunch) == lunch.id
     assert flat.group.expense(lunch.id) == lunch
@@ -200,7 +200,7 @@ def test_create_makes_every_entry_under_a_new_identifier_with_the_fields_it_is_g
     drinks = Category.create(name='Drinks')
     assert drinks == Category(id=drinks.id, name='Drinks')
     coffee = Expense.create(
-        name='Coffee', cost=cost, payers=payers, split=split, date=flat.day, tip=tip, time=time, category=flat.food, description='Two cups'
+        name='Coffee', cost=cost, payers=payers, split=split, date=flat.day, tip=tip, time=time, category=flat.food, note='Two cups'
     )
     assert coffee == Expense(
         id=coffee.id,
@@ -212,7 +212,7 @@ def test_create_makes_every_entry_under_a_new_identifier_with_the_fields_it_is_g
         tip=tip,
         time=time,
         category=flat.food,
-        description='Two cups',
+        note='Two cups',
     )
     coins = Transfer.create(sender=flat.bob, receiver=flat.ana, cost=cost, date=flat.day, time=time, note='Coins')
     assert coins == Transfer(id=coins.id, sender=flat.bob, receiver=flat.ana, cost=cost, date=flat.day, time=time, note='Coins')
@@ -313,7 +313,7 @@ def test_optional_text_reads_back_trimmed_and_absent_when_left_out_or_blank(flat
     """
     Optional text read back padded, empty, or as it was before a replacement without it would show an app text the user never entered or removed.
 
-    The optional text of an entry is an expense's description, a member's last name, and a transfer's note; the group trims each, and holds
+    The optional text of an entry is an expense's note, a member's last name, and a transfer's note; the group trims each, and holds
     none for text left out or blank.
     """
     dinner, ana, repayment = flat.group.expense(flat.dinner), flat.group.member(flat.ana), flat.group.transfer(flat.repayment)
@@ -321,16 +321,16 @@ def test_optional_text_reads_back_trimmed_and_absent_when_left_out_or_blank(flat
     assert ana is not None
     assert repayment is not None
     for text in (None, ' '):
-        flat.group.add_expense(copy.replace(flat.expense('Lunch', flat.ana, (flat.ana,)), description=text))
+        flat.group.add_expense(copy.replace(flat.expense('Lunch', flat.ana, (flat.ana,)), note=text))
         flat.group.add_member(Member.create(first_name='Carla', last_name=text))
         flat.group.add_transfer(Transfer.create(sender=flat.ana, receiver=flat.bob, cost=LocalCost(flat.euros(100)), date=flat.day, note=text))
-        flat.group.replace_expense(copy.replace(dinner, description=' Soup\n'))
+        flat.group.replace_expense(copy.replace(dinner, note=' Soup\n'))
         flat.group.replace_member(copy.replace(ana, last_name=' Pop\n'))
         flat.group.replace_transfer(copy.replace(repayment, note=' Coins\n'))
-        assert flat.group.replace_expense(copy.replace(dinner, description=text)).description == 'Soup'
+        assert flat.group.replace_expense(copy.replace(dinner, note=text)).note == 'Soup'
         assert flat.group.replace_member(copy.replace(ana, last_name=text)).last_name == 'Pop'
         assert flat.group.replace_transfer(copy.replace(repayment, note=text)).note == 'Coins'
-        assert {expense.description for expense in flat.group.expenses()} == {None}
+        assert {expense.note for expense in flat.group.expenses()} == {None}
         assert {member.last_name for member in flat.group.members()} == {None}
         assert {transfer.note for transfer in flat.group.transfers()} == {None}
 

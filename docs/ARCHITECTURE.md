@@ -233,7 +233,7 @@ depends on `thiserror`, and every crate but `eranos-ledger` and
 
 ## 3. Data model
 
-An `ExpenseGroup` has an ID, a name (the only required text), a description, a
+An `ExpenseGroup` has an ID, a name (the only required text), a note, a
 **required** currency (every total is in it), and a language tag for the
 apps. It owns four maps keyed by the identifiers of their entries, so
 iteration order is the byte order of the identifiers' text, on every device,
@@ -278,7 +278,7 @@ does; Uncategorised's is the nil UUID's text,
 
 An **expense** has a name, a cost (an amount in its own currency, local or
 converted into the group currency at a fixed rate), a date and an optional
-time, an optional description, a category (Uncategorised unless another is
+time, an optional note, a category (Uncategorised unless another is
 set), a tip (none unless set), the payers (a `Split` of the total), and how
 the cost is shared: an `ExpenseSplit::Whole(Split)` or
 `ExpenseSplit::Itemised(Vec<ExpenseItem>)`. A split is `Equal`, `Parts`

@@ -249,18 +249,17 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The group's description. Writes it into @p description, if the group has one, and nothing otherwise: the group holds no blank text there, since
+/// The group's note. Writes it into @p note, if the group has one, and nothing otherwise: the group holds no blank text there, since
 /// blank text clears it.
 ///
 /// @param reader The group reader
-/// @param description Receives the description, replacing what it held
+/// @param note Receives the note, replacing what it held
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_RELEASED after
 ///   eranosExpenseGroupReaderRelease()
-[[nodiscard]] static inline EranosError *eranosExpenseGroupReaderDescription(EranosExpenseGroupReader const *const reader,
-                                                                             EranosText *const description) {
-    eranosDetailClear(description);
-    EranosExpenseGroupReader_description_result const result = EranosExpenseGroupReader_description(reader, description);
-    eranosDetailFinish(description);
+[[nodiscard]] static inline EranosError *eranosExpenseGroupReaderNote(EranosExpenseGroupReader const *const reader, EranosText *const note) {
+    eranosDetailClear(note);
+    EranosExpenseGroupReader_note_result const result = EranosExpenseGroupReader_note(reader, note);
+    eranosDetailFinish(note);
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 

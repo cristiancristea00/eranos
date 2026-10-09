@@ -97,7 +97,7 @@ def flat() -> Iterator[Flat]:
     """
     euro = CurrencyCode('EUR')
     day = CalendarDate(2026, 9, 23)
-    with ExpenseGroup.create('Flat', euro, description='Rent', language=Language('pt-pt')) as group:
+    with ExpenseGroup.create('Flat', euro, note='Rent', language=Language('pt-pt')) as group:
         ana = group.add_member(Member.create(first_name='Ana'))
         bob = group.add_member(Member.create(first_name='Bob'))
         food = group.add_category(Category.create(name='Food'))

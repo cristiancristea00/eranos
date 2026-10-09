@@ -1,4 +1,4 @@
-//! Every name, note, and description goes through these helpers: the tests
+//! Every name and note goes through these helpers: the tests
 //! keep stray whitespace out of stored text, keep blank optional fields
 //! absent rather than empty, and keep blank required fields rejected with the
 //! error of the field that was blank.

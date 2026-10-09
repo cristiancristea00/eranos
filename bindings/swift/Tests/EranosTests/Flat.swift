@@ -17,7 +17,7 @@ struct Flat {
     init() throws {
         euro = try CurrencyCode(code: "EUR")
         day = try CalendarDate(year: 2026, month: 9, day: 23)
-        group = try ExpenseGroup(name: "Flat", currency: euro, description: "Rent", language: Language("pt-pt"))
+        group = try ExpenseGroup(name: "Flat", currency: euro, note: "Rent", language: Language("pt-pt"))
         ana = try group.add(Member(firstName: "Ana"))
         bob = try group.add(Member(firstName: "Bob"))
         food = try group.add(Category(name: "Food"))

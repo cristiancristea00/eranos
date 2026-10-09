@@ -26,7 +26,7 @@ public final class Expense {
     private final TipRule tip;
     private final TimeOfDay time;
     private final CategoryId category;
-    private final String description;
+    private final String note;
 
     private Expense(Builder builder) {
         id = builder.id;
@@ -38,7 +38,7 @@ public final class Expense {
         tip = builder.tip;
         time = builder.time;
         category = builder.category;
-        description = builder.description;
+        note = builder.note;
     }
 
     /**
@@ -93,7 +93,7 @@ public final class Expense {
                 .tip(tip)
                 .time(time)
                 .category(category)
-                .description(description);
+                .note(note);
     }
 
     /**
@@ -113,7 +113,7 @@ public final class Expense {
                 .tip(TipRule.converted(expense.tip()))
                 .time(null == expense.time() ? null : TimeOfDay.converted(expense.time()))
                 .category(new CategoryId(expense.category()))
-                .description(expense.description())
+                .note(expense.note())
                 .build();
     }
 
@@ -133,7 +133,7 @@ public final class Expense {
                 tip.generated(),
                 null == time ? null : time.generated(),
                 category.value(),
-                description);
+                note);
     }
 
     /**
@@ -241,12 +241,12 @@ public final class Expense {
     }
 
     /**
-     * A longer description.
+     * A note on it.
      *
-     * @return the description, if the expense has one
+     * @return the note, if the expense has one
      */
-    public Optional<String> description() {
-        return Optional.ofNullable(description);
+    public Optional<String> note() {
+        return Optional.ofNullable(note);
     }
 
     /**
@@ -273,12 +273,12 @@ public final class Expense {
                 && tip.equals(expense.tip)
                 && Objects.equals(time, expense.time)
                 && category.equals(expense.category)
-                && Objects.equals(description, expense.description);
+                && Objects.equals(note, expense.note);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, cost, payers, split, date, tip, time, category, description);
+        return Objects.hash(id, name, cost, payers, split, date, tip, time, category, note);
     }
 
     @Override
@@ -301,8 +301,8 @@ public final class Expense {
                 + time
                 + ", category="
                 + category
-                + ", description="
-                + description
+                + ", note="
+                + note
                 + "]";
     }
 
@@ -317,7 +317,7 @@ public final class Expense {
         private TipRule tip = TipRule.NONE;
         private TimeOfDay time;
         private CategoryId category = CategoryId.UNCATEGORISED;
-        private String description;
+        private String note;
 
         private Builder(
                 ExpenseId id,
@@ -431,13 +431,13 @@ public final class Expense {
         }
 
         /**
-         * Sets the description; {@code null} leaves the expense without one.
+         * Sets the note; {@code null} leaves the expense without one.
          *
-         * @param description the description, or {@code null}
+         * @param note the note, or {@code null}
          * @return this builder
          */
-        public Builder description(String description) {
-            this.description = description;
+        public Builder note(String note) {
+            this.note = note;
             return this;
         }
 

@@ -79,7 +79,7 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
         tip: tip_rule_none(),
         time: None,
         category: category_id_uncategorised(),
-        description: None,
+        note: None,
     }
 }
 
@@ -199,7 +199,7 @@ fn every_read_converts_what_the_group_holds() {
         operations::transfer_amount(group, &flat.repayment),
         Ok(Some(euros(1_000)))
     );
-    assert_eq!(operations::description(group), None);
+    assert_eq!(operations::note(group), None);
     assert_eq!(operations::language(group), None);
     let saved: ExpenseGroup = serde_json::from_str(&operations::save(group)).unwrap();
     assert_eq!(&saved, group);
@@ -732,9 +732,9 @@ fn transfers_change_through_the_records() {
     ));
 }
 
-/// The name, description, or language would change to text the library
-/// refuses, a description would keep stray whitespace, or a blank or absent
-/// description or an absent language would stay set.
+/// The name, note, or language would change to text the library
+/// refuses, a note would keep stray whitespace, or a blank or absent
+/// note or an absent language would stay set.
 #[test]
 fn the_name_description_and_language_change_through_text() {
     let mut flat = flat();
@@ -750,16 +750,13 @@ fn the_name_description_and_language_change_through_text() {
     ));
     assert_eq!(operations::name(group), "Home");
 
-    operations::set_description(group, Some(" Rent and food\n"));
-    assert_eq!(
-        operations::description(group).as_deref(),
-        Some("Rent and food")
-    );
-    operations::set_description(group, Some(" "));
-    assert_eq!(operations::description(group), None);
-    operations::set_description(group, Some("Rent"));
-    operations::set_description(group, None);
-    assert_eq!(operations::description(group), None);
+    operations::set_note(group, Some(" Rent and food\n"));
+    assert_eq!(operations::note(group).as_deref(), Some("Rent and food"));
+    operations::set_note(group, Some(" "));
+    assert_eq!(operations::note(group), None);
+    operations::set_note(group, Some("Rent"));
+    operations::set_note(group, None);
+    assert_eq!(operations::note(group), None);
 
     operations::set_language(group, Some("pt-pt")).unwrap();
     assert_eq!(operations::language(group).as_deref(), Some("pt-PT"));

@@ -55,8 +55,8 @@ import {
 
 /** The details a new group can start with besides its identifier, name, and currency. */
 export interface ExpenseGroupOptions {
-    /** A longer description. */
-    readonly description?: string;
+    /** A note on it. */
+    readonly note?: string;
     /** The language the apps show the group in. */
     readonly language?: Language;
 }
@@ -98,7 +98,7 @@ export class ExpenseGroup implements Disposable {
      *
      * @param name - The name
      * @param currency - The group currency
-     * @param options - The description and the language, if the group has them
+     * @param options - The note and the language, if the group has them
      * @returns The group
      * @throws {@link ExpenseGroupError} with the failure `emptyName` for a blank name
      */
@@ -113,7 +113,7 @@ export class ExpenseGroup implements Disposable {
      * @param id - The identifier: the app's own, or one that {@link generateExpenseGroupId} makes
      * @param name - The name
      * @param currency - The group currency
-     * @param options - The description and the language, if the group has them
+     * @param options - The note and the language, if the group has them
      * @returns The group
      * @throws {@link ExpenseGroupError} with the failure `emptyName` for a blank name
      * @throws {@link IdError} for an identifier that is not one
@@ -123,7 +123,7 @@ export class ExpenseGroup implements Disposable {
             id,
             name,
             currency: currency.code,
-            ...(undefined === options?.description ? {} : { description: options.description }),
+            ...(undefined === options?.note ? {} : { note: options.note }),
             ...(undefined === options?.language ? {} : { language: options.language.toString() }),
         });
         return new ExpenseGroup(calling(() => new internal.ExpenseGroup(group)));
@@ -193,7 +193,7 @@ export class ExpenseGroup implements Disposable {
         return ExpenseGroupReader.wrapping(calling(() => this.handle.read()));
     }
 
-    // The group's own details: its identifier, name, currency, description, language, and saved form.
+    // The group's own details: its identifier, name, currency, note, language, and saved form.
 
     /**
      * The group's identifier.
@@ -339,80 +339,80 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * The group's description, if it has one.
+     * The group's note, if it has one.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.descriptionSync} does not wait.
+     * was, and rejects with the signal's reason. {@link ExpenseGroup.noteSync} does not wait.
      *
      * @param options - The call's signal
-     * @returns A promise of the description, if the group has one
+     * @returns A promise of the note, if the group has one
      */
-    async description(options?: CallOptions): Promise<string | undefined> {
-        return await awaiting((signal) => this.handle.descriptionAsync(undefined, signal), options);
+    async note(options?: CallOptions): Promise<string | undefined> {
+        return await awaiting((signal) => this.handle.noteAsync(undefined, signal), options);
     }
 
     /**
-     * The group's description, if it has one.
+     * The group's note, if it has one.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.description} waits for it.
+     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.note} waits for it.
      *
-     * @returns The description, if the group has one
+     * @returns The note, if the group has one
      */
-    descriptionSync(): string | undefined {
-        return calling(() => this.handle.description());
+    noteSync(): string | undefined {
+        return calling(() => this.handle.note());
     }
 
     /**
-     * Sets the group's description, trimmed; blank text clears it, as {@link ExpenseGroup.clearDescription} does.
+     * Sets the group's note, trimmed; blank text clears it, as {@link ExpenseGroup.clearNote} does.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.setDescriptionSync} does not wait.
+     * was, and rejects with the signal's reason. {@link ExpenseGroup.setNoteSync} does not wait.
      *
-     * @param description - The new description
+     * @param note - The new note
      * @param options - The call's signal
      * @returns A promise of the call's end
      */
-    async setDescription(description: string, options?: CallOptions): Promise<void> {
-        await awaiting((signal) => this.handle.setDescriptionAsync(description, undefined, signal), options);
+    async setNote(note: string, options?: CallOptions): Promise<void> {
+        await awaiting((signal) => this.handle.setNoteAsync(note, undefined, signal), options);
     }
 
     /**
-     * Sets the group's description, trimmed; blank text clears it, as {@link ExpenseGroup.clearDescriptionSync} does.
+     * Sets the group's note, trimmed; blank text clears it, as {@link ExpenseGroup.clearNoteSync} does.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.setDescription} waits for it.
+     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.setNote} waits for it.
      *
-     * @param description - The new description
+     * @param note - The new note
      */
-    setDescriptionSync(description: string): void {
+    setNoteSync(note: string): void {
         calling(() => {
-            this.handle.setDescription(description);
+            this.handle.setNote(note);
         });
     }
 
     /**
-     * Clears the group's description, which {@link ExpenseGroup.setDescription} sets.
+     * Clears the group's note, which {@link ExpenseGroup.setNote} sets.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.clearDescriptionSync} does not wait.
+     * was, and rejects with the signal's reason. {@link ExpenseGroup.clearNoteSync} does not wait.
      *
      * @param options - The call's signal
      * @returns A promise of the call's end
      */
-    async clearDescription(options?: CallOptions): Promise<void> {
-        await awaiting((signal) => this.handle.setDescriptionAsync(undefined, undefined, signal), options);
+    async clearNote(options?: CallOptions): Promise<void> {
+        await awaiting((signal) => this.handle.setNoteAsync(undefined, undefined, signal), options);
     }
 
     /**
-     * Clears the group's description, which {@link ExpenseGroup.setDescriptionSync} sets.
+     * Clears the group's note, which {@link ExpenseGroup.setNoteSync} sets.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.clearDescription} waits for it.
+     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.clearNote} waits for it.
      */
-    clearDescriptionSync(): void {
+    clearNoteSync(): void {
         calling(() => {
-            this.handle.setDescription(undefined);
+            this.handle.setNote(undefined);
         });
     }
 

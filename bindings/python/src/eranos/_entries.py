@@ -425,8 +425,8 @@ class Expense:
     category: CategoryId = UNCATEGORISED
     """Its category, the built-in one's identifier, ``UNCATEGORISED``, until it is given another."""
 
-    description: str | None = None
-    """A longer description, or none."""
+    note: str | None = None
+    """A note on it, or none."""
 
     # One parameter per field of the expense but its identifier.
     @classmethod
@@ -441,7 +441,7 @@ class Expense:
         tip: TipRule = NO_TIP,
         time: TimeOfDay | None = None,
         category: CategoryId = UNCATEGORISED,
-        description: str | None = None,
+        note: str | None = None,
     ) -> Self:
         """
         Make an expense under an identifier that ``generate_expense_id`` generates when this is called.
@@ -458,7 +458,7 @@ class Expense:
             tip: Its tip, ``NO_TIP`` for an expense without one.
             time: The time of day it happened, or none.
             category: Its category, the built-in one's identifier, ``UNCATEGORISED``, until it is given another.
-            description: A longer description, or none.
+            note: A note on it, or none.
 
         Returns:
             The expense.
@@ -474,7 +474,7 @@ class Expense:
             tip=tip,
             time=time,
             category=category,
-            description=description,
+            note=note,
         )
 
     def total(self) -> Money:
@@ -937,7 +937,7 @@ def generated_expense(expense: Expense) -> generated.Expense:
         tip=generated_tip(expense.tip),
         time=None if expense.time is None else generated_time(expense.time),
         category=expense.category,
-        description=expense.description,
+        note=expense.note,
     )
 
 
@@ -962,7 +962,7 @@ def expense_of(value: generated.Expense) -> Expense:
         tip=tip_of(value.tip),
         time=None if value.time is None else time_of(value.time),
         category=CategoryId(value.category),
-        description=value.description,
+        note=value.note,
     )
 
 

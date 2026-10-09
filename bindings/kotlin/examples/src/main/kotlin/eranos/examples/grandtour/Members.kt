@@ -64,14 +64,14 @@ internal fun theGroup(): ExpenseGroup {
     val group = ExpenseGroup("Lisbon", CurrencyCode.of("EUR"), "A week by the Atlantic", Language.parse("pt-pt"))
     val blank = refusal { group.renameBlocking("   ") }
     group.renameBlocking("Lisbon and Porto")
-    group.setDescriptionBlocking("A week by the Atlantic, with a day in Porto")
+    group.setNoteBlocking("A week by the Atlantic, with a day in Porto")
     printTable(
         DetailRow.HEADERS,
         listOf(
             DetailRow("Name", group.nameBlocking()),
             DetailRow("Currency", "${group.currencyBlocking()}"),
             DetailRow("Language", group.languageBlocking()?.toString().orEmpty()),
-            DetailRow("Description", group.descriptionBlocking().orEmpty()),
+            DetailRow("Description", group.noteBlocking().orEmpty()),
         ),
         numbersFrom = 2,
     )

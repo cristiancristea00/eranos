@@ -14,7 +14,7 @@ pub struct ExpenseGroupBuilder {
     id: ExpenseGroupId,
     name: String,
     currency: CurrencyCode,
-    description: Option<String>,
+    note: Option<String>,
     language: Option<Language>,
 }
 
@@ -24,7 +24,7 @@ impl ExpenseGroupBuilder {
             id,
             name,
             currency,
-            description: None,
+            note: None,
             language: None,
         }
     }
@@ -35,17 +35,17 @@ impl ExpenseGroupBuilder {
         self
     }
 
-    /// Sets the description, trimmed; blank text leaves it absent, as
-    /// [`clear_description`](Self::clear_description) does.
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    /// Sets the note, trimmed; blank text leaves it absent, as
+    /// [`clear_note`](Self::clear_note) does.
+    pub fn note(mut self, note: impl Into<String>) -> Self {
+        self.note = Some(note.into());
         self
     }
 
-    /// Clears the description, which [`description`](Self::description)
+    /// Clears the note, which [`note`](Self::note)
     /// sets.
-    pub fn clear_description(mut self) -> Self {
-        self.description = None;
+    pub fn clear_note(mut self) -> Self {
+        self.note = None;
         self
     }
 
@@ -69,7 +69,7 @@ impl ExpenseGroupBuilder {
             self.id,
             name,
             self.currency,
-            self.description.and_then(text::optional),
+            self.note.and_then(text::optional),
             self.language,
         ))
     }

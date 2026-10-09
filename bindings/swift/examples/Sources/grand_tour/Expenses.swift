@@ -117,7 +117,7 @@ func fadoNight(_ people: People, _ categories: Categories) throws(EranosError) -
         tip: TipRule(value: .percentage(try Percentage(parsing: "10"))),
         time: try TimeOfDay(hour: 22, minute: 15),
         category: categories.food,
-        description: "Tasca do Chico"
+        note: "Tasca do Chico"
     )
 }
 
@@ -231,7 +231,7 @@ func printFado(_ group: ExpenseGroup, _ fado: Expense) throws(EranosError) {
     print("""
         The groceries' 10.00 EUR did not divide into thirds, so one member consumed the
         leftover cent; the expense's identifier picks which, so it moves from expense to
-        expense. The fado night, at \(fado.time?.description ?? "") on \(fado.date) at \(fado.description ?? ""), was itemised; its
+        expense. The fado night, at \(fado.time?.description ?? "") on \(fado.date) at \(fado.note ?? ""), was itemised; its
         \(rule) tip of \(try fado.tipAmount()) was shared \(shared):
         """)
     try printItems(group, fado.id)

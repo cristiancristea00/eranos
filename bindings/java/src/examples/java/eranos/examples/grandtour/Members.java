@@ -48,12 +48,12 @@ final class Members {
         section("1. The group");
         ExpenseGroup group =
                 ExpenseGroup.builder("Lisbon", CurrencyCode.of("EUR"))
-                        .description("A week by the Atlantic")
+                        .note("A week by the Atlantic")
                         .language(Language.parse("pt-pt"))
                         .build();
         Optional<EranosException> blank = refusal(() -> group.setName("   "));
         group.setName("Lisbon and Porto");
-        group.setDescription("A week by the Atlantic, with a day in Porto");
+        group.setNote("A week by the Atlantic, with a day in Porto");
         String language = group.language().map(Language::toString).orElse("");
         printTable(
                 DetailRow.HEADERS,
@@ -61,7 +61,7 @@ final class Members {
                         new DetailRow("Name", group.name()),
                         new DetailRow("Currency", group.currency().toString()),
                         new DetailRow("Language", language),
-                        new DetailRow("Description", group.description().orElse(""))),
+                        new DetailRow("Description", group.note().orElse(""))),
                 2);
         System.out.print(
                 """

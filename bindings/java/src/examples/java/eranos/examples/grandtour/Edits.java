@@ -133,7 +133,7 @@ final class Edits {
         Expense corrected =
                 group.expense(seafood).orElseThrow().toBuilder()
                         .cost(new Cost.Local(eur("99.00")))
-                        .description("Cervejaria Ramiro")
+                        .note("Cervejaria Ramiro")
                         .build();
         Expense previous = group.replaceExpense(corrected);
         // Bob entered the coffee twice.
@@ -180,7 +180,7 @@ final class Edits {
                                 .formatted(
                                         previous.cost().amount(),
                                         dinner.map(expense -> expense.cost().amount()).orElse(zero),
-                                        dinner.flatMap(Expense::description).orElse(""))),
+                                        dinner.flatMap(Expense::note).orElse(""))),
                 new EditRow(
                         removed.name(),
                         "entered twice; the copy of %s was removed"

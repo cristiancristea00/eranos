@@ -133,23 +133,20 @@ impl SharedExpenseGroup {
 
     // --- Description ---------------------------------------------------------
 
-    /// The description, if any, as [`ExpenseGroup::description`] returns it.
-    pub fn description(&self) -> impl Future<Output = Option<String>> + Send + 'static {
-        self.read_with(|group| group.description().map(str::to_owned))
+    /// The note, if any, as [`ExpenseGroup::note`] returns it.
+    pub fn note(&self) -> impl Future<Output = Option<String>> + Send + 'static {
+        self.read_with(|group| group.note().map(str::to_owned))
     }
 
-    /// Sets the description, as [`ExpenseGroup::set_description`] does.
-    pub fn set_description(
-        &self,
-        description: impl Into<String>,
-    ) -> impl Future<Output = ()> + Send + 'static {
-        let description = description.into();
-        self.write_with(move |group| group.set_description(description))
+    /// Sets the note, as [`ExpenseGroup::set_note`] does.
+    pub fn set_note(&self, note: impl Into<String>) -> impl Future<Output = ()> + Send + 'static {
+        let note = note.into();
+        self.write_with(move |group| group.set_note(note))
     }
 
-    /// Clears the description, as [`ExpenseGroup::clear_description`] does.
-    pub fn clear_description(&self) -> impl Future<Output = ()> + Send + 'static {
-        self.write_with(ExpenseGroup::clear_description)
+    /// Clears the note, as [`ExpenseGroup::clear_note`] does.
+    pub fn clear_note(&self) -> impl Future<Output = ()> + Send + 'static {
+        self.write_with(ExpenseGroup::clear_note)
     }
 
     // --- Language ------------------------------------------------------------

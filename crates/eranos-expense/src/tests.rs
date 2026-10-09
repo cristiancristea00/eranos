@@ -83,7 +83,7 @@ fn full_expense() -> Expense {
         .tip(TipRule::percentage(per_cent("10")))
         .time(TimeOfDay::new(20, 30).unwrap())
         .category(CategoryId::new("food").unwrap())
-        .description("Birthday")
+        .note("Birthday")
         .build()
         .unwrap()
 }
@@ -123,7 +123,7 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
     );
     // Optional fields are absent or at their defaults: the built-in
     // category and no tip.
-    assert_eq!(expense.description(), None);
+    assert_eq!(expense.note(), None);
     assert_eq!(expense.category(), CategoryId::UNCATEGORISED);
     assert_eq!(expense.tip(), TipRule::NONE);
     assert_eq!(expense.time(), None);
@@ -542,46 +542,34 @@ fn a_total_out_of_range_is_rejected() {
     );
 }
 
-/// A description left blank would be stored as an empty string and shown as
+/// A note left blank would be stored as an empty string and shown as
 /// an empty line.
 #[test]
 fn the_description_is_trimmed_and_blank_clears_it() {
     let builder = || dinner().paid_by(ana()).split(Split::equal([ana()]));
     // Surrounding whitespace.
-    let expense = builder().description("  Birthday \n").build().unwrap();
-    assert_eq!(expense.description(), Some("Birthday"));
-    // Blank text is no description.
-    let blank_description_expense = builder().description("   ").build().unwrap();
-    assert_eq!(blank_description_expense.description(), None);
-    // Blank text clears a description set before.
-    let cleared_description_expense = full_expense().to_builder().description("").build().unwrap();
-    assert_eq!(cleared_description_expense.description(), None);
+    let expense = builder().note("  Birthday \n").build().unwrap();
+    assert_eq!(expense.note(), Some("Birthday"));
+    // Blank text is no note.
+    let blank_description_expense = builder().note("   ").build().unwrap();
+    assert_eq!(blank_description_expense.note(), None);
+    // Blank text clears a note set before.
+    let cleared_description_expense = full_expense().to_builder().note("").build().unwrap();
+    assert_eq!(cleared_description_expense.note(), None);
 }
 
-/// An app could remove a description only by passing blank text, or a
-/// description set before the clear, or after it, would end up otherwise
+/// An app could remove a note only by passing blank text, or a
+/// note set before the clear, or after it, would end up otherwise
 /// than the last call says.
 #[test]
 fn clearing_the_description_removes_it_and_the_last_call_wins() {
-    let cleared = full_expense()
-        .to_builder()
-        .clear_description()
-        .build()
-        .unwrap();
-    assert_eq!(cleared.description(), None);
+    let cleared = full_expense().to_builder().clear_note().build().unwrap();
+    assert_eq!(cleared.note(), None);
     let builder = || dinner().paid_by(ana()).split(Split::equal([ana()]));
-    let set_after = builder()
-        .clear_description()
-        .description("Birthday")
-        .build()
-        .unwrap();
-    assert_eq!(set_after.description(), Some("Birthday"));
-    let cleared_after = builder()
-        .description("Birthday")
-        .clear_description()
-        .build()
-        .unwrap();
-    assert_eq!(cleared_after.description(), None);
+    let set_after = builder().clear_note().note("Birthday").build().unwrap();
+    assert_eq!(set_after.note(), Some("Birthday"));
+    let cleared_after = builder().note("Birthday").clear_note().build().unwrap();
+    assert_eq!(cleared_after.note(), None);
 }
 
 /// Optional details could not be added, or not removed once added.
@@ -883,10 +871,10 @@ fn expenses_round_trip_through_serde() {
     let json = serde_json::to_string(&expense).unwrap();
     assert!(!json.contains("total"));
     assert_eq!(serde_json::from_str::<Expense>(&json).unwrap(), expense);
-    // An itemised split without a description or a tip.
+    // An itemised split without a note or a tip.
     let itemised = itemised_expense();
     let itemised_json = serde_json::to_string(&itemised).unwrap();
-    assert!(!itemised_json.contains("description"));
+    assert!(!itemised_json.contains("note"));
     assert!(!itemised_json.contains(r#""tip":"#));
     // A fixed zero tip is not the default, so it is written.
     let zero_tip = itemised

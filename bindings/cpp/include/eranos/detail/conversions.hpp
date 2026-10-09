@@ -218,7 +218,7 @@ template <typename List, typename Record>
     return result;
 }
 
-/// @p text, absent when empty: the group holds no blank description and no blank language.
+/// @p text, absent when empty: the group holds no blank note and no blank language.
 [[nodiscard]] inline constexpr std::optional<std::string> present(std::string text) noexcept {
     if (text.empty()) {
         return std::nullopt;
@@ -717,7 +717,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     result.tip = detail::fromDetail(*value.tip());
     result.time = detail::optionalTime(value.time());
     result.category = CategoryId(value.category());
-    result.description = value.description();
+    result.note = value.note();
     return result;
 }
 
@@ -738,8 +738,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
             return expectedOf(result->set_category(value.category.value())).transform([&result] noexcept { return std::move(result); });
         })
         .and_then([&value](std::unique_ptr<EranosExpense> result) noexcept {
-            return setIfPresent(std::move(result), value.description,
-                                [](EranosExpense &record, std::string const &text) noexcept { return record.set_description(text); });
+            return setIfPresent(std::move(result), value.note,
+                                [](EranosExpense &record, std::string const &text) noexcept { return record.set_note(text); });
         });
 }
 

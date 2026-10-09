@@ -305,17 +305,17 @@ pub(crate) fn remove_transfer(group: &mut ExpenseGroup, id: &str) -> Result<Tran
 
 // --- Description -------------------------------------------------------------
 
-/// The group's description.
-pub(crate) fn description(group: &ExpenseGroup) -> Option<String> {
-    group.description().map(str::to_owned)
+/// The group's note.
+pub(crate) fn note(group: &ExpenseGroup) -> Option<String> {
+    group.note().map(str::to_owned)
 }
 
-/// Sets the description, trimmed, or clears it when there is none or the
+/// Sets the note, trimmed, or clears it when there is none or the
 /// text is blank.
-pub(crate) fn set_description(group: &mut ExpenseGroup, description: Option<&str>) {
-    match description {
-        Some(description) => group.set_description(description),
-        None => group.clear_description(),
+pub(crate) fn set_note(group: &mut ExpenseGroup, note: Option<&str>) {
+    match note {
+        Some(note) => group.set_note(note),
+        None => group.clear_note(),
     }
 }
 

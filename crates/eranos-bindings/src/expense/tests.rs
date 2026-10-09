@@ -273,7 +273,7 @@ fn dinner() -> Expense {
             minute: 15,
         }),
         category: CategoryId::new("category-3").unwrap().to_string(),
-        description: Some("A birthday".to_owned()),
+        note: Some("A birthday".to_owned()),
     }
 }
 
@@ -299,7 +299,7 @@ fn taxi() -> Expense {
         tip: tip_rule_none(),
         time: None,
         category: category_id_uncategorised(),
-        description: None,
+        note: None,
     }
 }
 
@@ -769,29 +769,26 @@ fn a_zero_tip_reads_back_as_set() {
     assert_eq!(read, equal);
 }
 
-/// An expense to add or a replacement whose description is absent or blank
-/// would read back with an empty description instead of none, a
-/// replacement would keep the stored one, or a description would keep stray
+/// An expense to add or a replacement whose note is absent or blank
+/// would read back with an empty note instead of none, a
+/// replacement would keep the stored one, or a note would keep stray
 /// whitespace.
 #[test]
 fn an_absent_or_blank_description_reads_back_absent() {
     let stored = dinner().to_new().unwrap();
-    for description in [None, Some(" ".to_owned())] {
-        let record = Expense {
-            description,
-            ..dinner()
-        };
+    for note in [None, Some(" ".to_owned())] {
+        let record = Expense { note, ..dinner() };
         let added = Expense::from_library(&record.to_new().unwrap());
-        assert_eq!(added.description, None);
+        assert_eq!(added.note, None);
         let replaced = Expense::from_library(&record.replacing(&stored).unwrap());
-        assert_eq!(replaced.description, None);
+        assert_eq!(replaced.note, None);
     }
     let padded = Expense {
-        description: Some(" A birthday\n".to_owned()),
+        note: Some(" A birthday\n".to_owned()),
         ..taxi()
     };
     let added = Expense::from_library(&padded.to_new().unwrap());
-    assert_eq!(added.description.as_deref(), Some("A birthday"));
+    assert_eq!(added.note.as_deref(), Some("A birthday"));
 }
 
 /// An expense to add would lose the identifier its app gives it, its own or

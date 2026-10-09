@@ -41,11 +41,11 @@ public final class ExpenseGroupReader: Sendable {
         try converting { CurrencyCode(try handle.currency()) }
     }
 
-    /// The group's description.
+    /// The group's note.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
-    public func description() throws(EranosError) -> String? {
-        try converting { try handle.description() }
+    public func note() throws(EranosError) -> String? {
+        try converting { try handle.note() }
     }
 
     /// The language the apps show the group in.

@@ -148,10 +148,10 @@ flowchart TD
   replace sets them as given; a discount's `scope` is required too, and
   only each layer's constructors start it at the line. A value the domain
   makes optional is optional, never an empty stand-in: an item's discount,
-  absent for a line at full price; an expense's description, a member's
+  absent for a line at full price; an expense's note, a member's
   last name, and a transfer's note, optional text, which a replacement
-  without it clears; so are a new group's description and language; and
-  the group's `set_description` and `set_language` take optional text, none
+  without it clears; so are a new group's note and language; and the
+  group's `set_note` and `set_language` take optional text, none
   clearing the value. Text is trimmed, and blank text reads back absent.
 - **Identity is given or generated.** Every entry and every new group
   carries an identifier from the moment it is made: the app's own, any text
@@ -423,9 +423,9 @@ marks as one that cannot fail returns its answer itself, and a `Result`
 only for the text it checks: the core refuses such a call only as busy, on
 wasm, for which the bridge is not built. A call that takes optional text
 has a twin of each form that passes none, since C passes no absent text,
-named `clear_` for its `set_`: `clear_description` returns nothing, and
+named `clear_` for its `set_`: `clear_note` returns nothing, and
 `clear_language` a `Result`, as `set_language` does, since the core marks
-only the description's call `#[infallible]`. The generator's templates hold
+only the note's call `#[infallible]`. The generator's templates hold
 what the core cannot say: the group's constructors and read handle, the
 cancellation, and the methods of a record that are not a field's, such as an
 expense's total and an item's line totals and its discount's amount. A
@@ -499,8 +499,8 @@ Swift API Design Guidelines:
   entry has two initialisers: one takes its `id` first, with no default
   (`Member(id:firstName:)`), and one without it generates it
   (`Member(firstName:)`, which calls the first with `.generate()`); so has
-  the group, `ExpenseGroup(id:name:currency:description:language:)` and
-  `ExpenseGroup(name:currency:description:language:)`.
+  the group, `ExpenseGroup(id:name:currency:note:language:)` and
+  `ExpenseGroup(name:currency:note:language:)`.
 - An expense's `tip` and `category` are never optional. `TipRule.noTip`,
   the no-tip rule, named so since `.none` reads as `Optional.none`, and
   `Category.ID.uncategorised`, the built-in category's identifier, are

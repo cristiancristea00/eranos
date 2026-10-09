@@ -1,6 +1,6 @@
 internal import EranosGenerated
 
-// The group's own details: its identifier, name, currency, description, language, and saved form.
+// The group's own details: its identifier, name, currency, note, language, and saved form.
 public extension ExpenseGroup {
     /// The group's identifier.
     ///
@@ -110,43 +110,43 @@ public extension ExpenseGroup {
         }
     }
 
-    /// The group's description.
+    /// The group's note.
     ///
     /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
     ///   call holds the lock.
-    func description() throws(EranosError) -> String? {
-        try converting { try handle.description() }
+    func note() throws(EranosError) -> String? {
+        try converting { try handle.note() }
     }
 
-    /// The group's description.
+    /// The group's note.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func description() async throws(EranosError) -> String? {
+    func note() async throws(EranosError) -> String? {
         try await converting { [handle] cancellation in
-            try await handle.descriptionAsync(cancellation: cancellation)
+            try await handle.noteAsync(cancellation: cancellation)
         }
     }
 
-    /// Sets the group's description, trimmed; nil or blank text clears it.
+    /// Sets the group's note, trimmed; nil or blank text clears it.
     ///
     /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
     ///   call holds the lock.
-    func changeDescription(to description: String?) throws(EranosError) {
-        try converting { try handle.setDescription(description: description) }
+    func changeNote(to note: String?) throws(EranosError) {
+        try converting { try handle.setNote(note: note) }
     }
 
-    /// Sets the group's description, trimmed; nil or blank text clears it.
+    /// Sets the group's note, trimmed; nil or blank text clears it.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func changeDescription(to description: String?) async throws(EranosError) {
+    func changeNote(to note: String?) async throws(EranosError) {
         try await converting { [handle] cancellation in
-            try await handle.setDescriptionAsync(description: description, cancellation: cancellation)
+            try await handle.setNoteAsync(note: note, cancellation: cancellation)
         }
     }
 

@@ -309,18 +309,18 @@ class ExpenseGroupReader:
         with library_errors():
             return optional(self._handle.transfer_amount(transfer_id), money_of)
 
-    def description(self) -> str | None:
+    def note(self) -> str | None:
         """
-        Read the group's description, if it has one.
+        Read the group's note, if it has one.
 
         A read after the reader's release raises ``RuntimeError``.
 
         Returns:
-            The description, or none.
+            The note, or none.
 
         """
         with library_errors():
-            return self._handle.description()
+            return self._handle.note()
 
     def language(self) -> Language | None:
         """

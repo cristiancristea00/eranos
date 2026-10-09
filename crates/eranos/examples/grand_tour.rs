@@ -406,12 +406,12 @@ fn print_entries(group: &ExpenseGroup, shown: impl Fn(CurrencyCode) -> bool) {
 fn the_group() -> Result<ExpenseGroup, Box<dyn Error>> {
     section("1. The group");
     let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
-        .description("A week by the Atlantic")
+        .note("A week by the Atlantic")
         .language(Language::parse("pt-pt")?)
         .build()?;
     let blank = group.set_name("   ");
     group.set_name("Lisbon and Porto")?;
-    group.set_description("A week by the Atlantic, with a day in Porto");
+    group.set_note("A week by the Atlantic, with a day in Porto");
     print_table(
         [
             DetailRow {
@@ -430,7 +430,7 @@ fn the_group() -> Result<ExpenseGroup, Box<dyn Error>> {
             },
             DetailRow {
                 detail: "Description",
-                value: group.description().unwrap_or_default().to_owned(),
+                value: group.note().unwrap_or_default().to_owned(),
             },
         ],
         2,
@@ -780,7 +780,7 @@ fn fado_night(people: &People, categories: Categories) -> Result<ExpenseBuilder,
         october(4)?,
     )
     .category(categories.food)
-    .description("Tasca do Chico")
+    .note("Tasca do Chico")
     .time(TimeOfDay::new(22, 15)?)
     .tip(TipRule::percentage(Percentage::parse("10")?)))
 }
@@ -936,7 +936,7 @@ fn expenses(
             .time()
             .map_or_else(String::new, |time| time.to_string()),
         fado_expense.date(),
-        fado_expense.description().unwrap_or_default(),
+        fado_expense.note().unwrap_or_default(),
         fado_expense.tip_amount()
     );
     print_items(group, fado);
@@ -1050,7 +1050,7 @@ fn replace_and_remove(
         .ok_or("the dinner was added")?
         .to_builder()
         .cost(eur("99.00")?)
-        .description("Cervejaria Ramiro")
+        .note("Cervejaria Ramiro")
         .build()?;
     let previous = group.replace_expense(corrected)?;
     // Bob entered the coffee twice.
@@ -1099,7 +1099,7 @@ fn replace_and_remove(
                     .map_or_else(|| Money::zero(CurrencyCode::EUR), Expense::amount),
                 group
                     .expense(seafood)
-                    .and_then(Expense::description)
+                    .and_then(Expense::note)
                     .unwrap_or_default()
             ),
         },

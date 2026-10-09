@@ -1531,18 +1531,17 @@ pub mod ffi {
             );
         }
 
-        /// The group's description. Writes it into `write` when there is one, and nothing
-        /// otherwise.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, crate::waited(self.handle.description()).as_deref())
+        /// The group's note. Writes it into `write` when there is one, and nothing otherwise.
+        pub fn note(&self, write: &mut DiplomatWrite) -> Option<()> {
+            crate::write_optional(write, crate::waited(self.handle.note()).as_deref())
         }
 
-        /// The asynchronous form of `description`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
-        /// kind `Cancelled`, leaving the group as it was.
-        pub fn description_async(
+        /// The asynchronous form of `note`: it runs on the group's worker thread, in the order of
+        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
+        /// the call at its next yield, or at once while it waits for the lock, or, while the call
+        /// is queued behind earlier calls, when its turn comes, and reports the kind `Cancelled`,
+        /// leaving the group as it was.
+        pub fn note_async(
             &self,
             cancellation: Option<&EranosCancellation>,
             callback: impl Fn(Box<EranosOptionalTextOutcome>) + 'static,
@@ -1553,7 +1552,7 @@ pub mod ffi {
                 &self.jobs,
                 async move {
                     handle
-                        .description_async(cancellation)
+                        .note_async(cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -1562,43 +1561,40 @@ pub mod ffi {
             );
         }
 
-        /// Sets the description, trimmed, or clears it when there is none or the text is blank.
+        /// Sets the note, trimmed, or clears it when there is none or the text is blank.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_description(&self, description: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            crate::waited(
-                self.handle
-                    .set_description(Some(&crate::text(description)?)),
-            );
+        pub fn set_note(&self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            crate::waited(self.handle.set_note(Some(&crate::text(note)?)));
             Ok(())
         }
 
-        /// The form of `set_description` that passes no `description`.
-        pub fn clear_description(&self) {
-            crate::waited(self.handle.set_description(None));
+        /// The form of `set_note` that passes no `note`.
+        pub fn clear_note(&self) {
+            crate::waited(self.handle.set_note(None));
         }
 
-        /// The asynchronous form of `set_description`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
-        /// kind `Cancelled`, leaving the group as it was.
-        pub fn set_description_async(
+        /// The asynchronous form of `set_note`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, or, while the
+        /// call is queued behind earlier calls, when its turn comes, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
+        pub fn set_note_async(
             &self,
-            description: &DiplomatStr,
+            note: &DiplomatStr,
             cancellation: Option<&EranosCancellation>,
             callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
-            let description = crate::decoded(description);
+            let note = crate::decoded(note);
             crate::spawn(
                 &self.jobs,
                 async move {
                     handle
-                        .set_description_async(Some(description?), cancellation)
+                        .set_note_async(Some(note?), cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -1607,12 +1603,12 @@ pub mod ffi {
             );
         }
 
-        /// The asynchronous form of `clear_description`: it runs on the group's worker thread, in
-        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// The asynchronous form of `clear_note`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
         /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
         /// or, while the call is queued behind earlier calls, when its turn comes, and reports the
         /// kind `Cancelled`, leaving the group as it was.
-        pub fn clear_description_async(
+        pub fn clear_note_async(
             &self,
             cancellation: Option<&EranosCancellation>,
             callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
@@ -1623,7 +1619,7 @@ pub mod ffi {
                 &self.jobs,
                 async move {
                     handle
-                        .set_description_async(None, cancellation)
+                        .set_note_async(None, cancellation)
                         .await
                         .map_err(crate::Failure::Library)
                 },
@@ -2067,14 +2063,13 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// The group's description. Writes it into `write` when there is one, and nothing
-        /// otherwise.
+        /// The group's note. Writes it into `write` when there is one, and nothing otherwise.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `Released` after `release`.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.description().map_err(crate::failed)?;
+        pub fn note(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.note().map_err(crate::failed)?;
             crate::write_optional(write, text.as_deref());
             Ok(())
         }

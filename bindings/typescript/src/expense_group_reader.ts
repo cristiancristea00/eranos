@@ -95,13 +95,13 @@ export class ExpenseGroupReader implements Disposable {
     }
 
     /**
-     * The group's description, if it has one.
+     * The group's note, if it has one.
      *
-     * @returns The description, if the group has one
+     * @returns The note, if the group has one
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
      */
-    description(): string | undefined {
-        return calling(() => this.handle.description());
+    note(): string | undefined {
+        return calling(() => this.handle.note());
     }
 
     /**

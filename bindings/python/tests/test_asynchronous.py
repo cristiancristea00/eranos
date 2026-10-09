@@ -31,7 +31,7 @@ def test_every_asynchronous_read_returns_what_its_synchronous_form_returns(flat:
         assert await group.id_async() == group.id()
         assert await group.name_async() == group.name()
         assert await group.currency_async() == group.currency()
-        assert await group.description_async() == group.description()
+        assert await group.note_async() == group.note()
         assert await group.language_async() == group.language()
         assert await group.save_async() == group.save()
         assert await group.categories_async() == group.categories()
@@ -100,19 +100,19 @@ def test_every_asynchronous_change_of_the_details_does_what_its_synchronous_form
     async def changes() -> None:
         group = flat.group
         await group.set_name_async('Home')
-        await group.set_description_async('Bills')
+        await group.set_note_async('Bills')
         await group.set_language_async(Language('ro-RO'))
         assert group.name() == 'Home'
-        assert group.description() == 'Bills'
+        assert group.note() == 'Bills'
         assert group.language() == Language('ro-RO')
-        await group.set_description_async(None)
+        await group.set_note_async(None)
         await group.set_language_async(None)
-        assert group.description() is None
+        assert group.note() is None
         assert group.language() is None
-        await group.set_description_async(' Rent\n')
-        assert group.description() == 'Rent'
-        await group.set_description_async(' ')
-        assert group.description() is None
+        await group.set_note_async(' Rent\n')
+        assert group.note() == 'Rent'
+        await group.set_note_async(' ')
+        assert group.note() is None
         await group.change_currency_async(CurrencyCode('RON'), [CurrencyRate(flat.euro, ExchangeRate('5'))])
         assert group.currency() == CurrencyCode('RON')
         with await ExpenseGroup.load_async(group.save()) as loaded:
@@ -150,7 +150,7 @@ def test_a_reader_reads_the_group_until_it_is_released(flat: Flat) -> None:
         assert reader.id() == group.id()
         assert reader.name() == 'Flat'
         assert reader.currency() == flat.euro
-        assert reader.description() == 'Rent'
+        assert reader.note() == 'Rent'
         assert reader.language() == Language('pt-PT')
         assert reader.save() == group.save()
         assert reader.categories() == group.categories()

@@ -60,13 +60,13 @@ public final class ExpenseGroupReader implements AutoCloseable {
     }
 
     /**
-     * The group's description, if it has one.
+     * The group's note, if it has one.
      *
-     * @return the description, if the group has one
+     * @return the note, if the group has one
      * @throws IllegalStateException after {@link #close}
      */
-    public Optional<String> description() {
-        return Converting.callUnfailing(() -> Optional.ofNullable(handle.description()));
+    public Optional<String> note() {
+        return Converting.callUnfailing(() -> Optional.ofNullable(handle.note()));
     }
 
     /**

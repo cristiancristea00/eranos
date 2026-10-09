@@ -46,7 +46,7 @@ export const refusedIdentifiers: readonly RefusedIdentifier[] = [
 export class Flat {
     readonly euro = CurrencyCode.of('EUR');
     readonly day = CalendarDate.of(2026, 9, 23);
-    readonly group = ExpenseGroup.create('Flat', this.euro, { description: 'Rent', language: Language.parse('pt-pt') });
+    readonly group = ExpenseGroup.create('Flat', this.euro, { note: 'Rent', language: Language.parse('pt-pt') });
     readonly ana: MemberId = this.group.addMemberSync(createMember({ firstName: 'Ana' }));
     readonly bob: MemberId = this.group.addMemberSync(createMember({ firstName: 'Bob' }));
     readonly food: CategoryId = this.group.addCategorySync(createCategory({ name: 'Food' }));

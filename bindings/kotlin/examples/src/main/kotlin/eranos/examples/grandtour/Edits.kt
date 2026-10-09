@@ -114,7 +114,7 @@ private fun replaceAndRemove(
     // The dinner's receipt said 99.00.
     val corrected =
         checkNotNull(group.expenseBlocking(seafood)) { "the dinner was added" }
-            .copy(cost = Cost.Local(eur("99.00")), description = "Cervejaria Ramiro")
+            .copy(cost = Cost.Local(eur("99.00")), note = "Cervejaria Ramiro")
     val previous = group.replaceBlocking(corrected)
     // Bob entered the coffee twice, each time as a new expense under an identifier of its own.
     val coffee = {
@@ -146,7 +146,7 @@ private fun replaceAndRemove(
     val dinner = group.expenseBlocking(seafood)
     val apartment = group.transferBlocking(first)
     return listOf(
-        EditRow(entry = previous.name, edit = "${previous.cost.amount} became ${dinner?.cost?.amount ?: zero}, at ${dinner?.description.orEmpty()}"),
+        EditRow(entry = previous.name, edit = "${previous.cost.amount} became ${dinner?.cost?.amount ?: zero}, at ${dinner?.note.orEmpty()}"),
         EditRow(entry = removed.name, edit = "entered twice; the copy of ${removed.cost.amount} was removed"),
         EditRow(
             entry = "${name(group, people.dan)} to ${name(group, people.ana)}",

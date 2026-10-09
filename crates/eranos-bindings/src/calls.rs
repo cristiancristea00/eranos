@@ -222,16 +222,16 @@ trait ExpenseGroupCalls {
 
     // --- Description ---------------------------------------------------------
 
-    /// The group's description.
+    /// The group's note.
     #[read]
     #[infallible]
-    fn description(&self) -> Result<Option<String>, EranosError>;
+    fn note(&self) -> Result<Option<String>, EranosError>;
 
-    /// Sets the description, trimmed, or clears it when there is none or
+    /// Sets the note, trimmed, or clears it when there is none or
     /// the text is blank.
     #[write]
     #[infallible]
-    fn set_description(&self, description: Option<&str>) -> Result<(), EranosError>;
+    fn set_note(&self, note: Option<&str>) -> Result<(), EranosError>;
 
     // --- Language ------------------------------------------------------------
 

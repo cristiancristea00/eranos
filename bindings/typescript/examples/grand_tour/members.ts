@@ -62,12 +62,12 @@ const checkColumns: Columns<CheckRow> = [
 
 export function theGroup(): ExpenseGroup {
     section('1. The group');
-    const group = ExpenseGroup.create('Lisbon', CurrencyCode.of('EUR'), { description: 'A week by the Atlantic', language: Language.parse('pt-pt') });
+    const group = ExpenseGroup.create('Lisbon', CurrencyCode.of('EUR'), { note: 'A week by the Atlantic', language: Language.parse('pt-pt') });
     const blank = refusal(() => {
         group.setNameSync('   ');
     });
     group.setNameSync('Lisbon and Porto');
-    group.setDescriptionSync('A week by the Atlantic, with a day in Porto');
+    group.setNoteSync('A week by the Atlantic, with a day in Porto');
     const language = group.languageSync()?.toString() ?? '';
     printTable(
         detailColumns,
@@ -75,7 +75,7 @@ export function theGroup(): ExpenseGroup {
             { detail: 'Name', value: group.nameSync() },
             { detail: 'Currency', value: group.currencySync().toString() },
             { detail: 'Language', value: language },
-            { detail: 'Description', value: group.descriptionSync() ?? '' },
+            { detail: 'Description', value: group.noteSync() ?? '' },
         ],
         2,
     );

@@ -299,8 +299,8 @@ struct Expense final {
     /// The category's identifier: the built-in one's, CategoryId::uncategorised(), until it is given another.
     CategoryId category{CategoryId::uncategorised()};
 
-    /// A longer description.
-    std::optional<std::string> description;
+    /// A note on it.
+    std::optional<std::string> note;
 
     /// Whether every field of two records is equal.
     ///

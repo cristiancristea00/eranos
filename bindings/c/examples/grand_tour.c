@@ -738,7 +738,7 @@ static void printEntries(EranosExpenseGroup const *const group, char const *cons
     section("1. The group");
     EranosNewExpenseGroup *details = nullptr;
     must(eranosNewExpenseGroupCreate("Lisbon", "EUR", &details));
-    must(eranosNewExpenseGroupSetDescription(details, "A week by the Atlantic"));
+    must(eranosNewExpenseGroupSetNote(details, "A week by the Atlantic"));
     must(eranosNewExpenseGroupSetLanguage(details, "pt-pt"));
     EranosExpenseGroup *group = nullptr;
     must(eranosExpenseGroupCreate(details, &group));
@@ -746,21 +746,21 @@ static void printEntries(EranosExpenseGroup const *const group, char const *cons
     EranosError *const blank = eranosExpenseGroupSetName(group, "   ");
     check(isFailure(blank, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME), "a blank name is refused");
     must(eranosExpenseGroupSetName(group, "Lisbon and Porto"));
-    must(eranosExpenseGroupSetDescription(group, "A week by the Atlantic, with a day in Porto"));
+    must(eranosExpenseGroupSetNote(group, "A week by the Atlantic, with a day in Porto"));
     EranosText *const text = eranosTextCreate();
     eranosExpenseGroupName(group, text);
     Line const name = textLine(text);
     Line const currency = currencyOf(group);
     check(eranosExpenseGroupLanguage(group, text), "the group has a language");
     Line const language = textLine(text);
-    (void)eranosExpenseGroupDescription(group, text);
-    Line const description = textLine(text);
+    (void)eranosExpenseGroupNote(group, text);
+    Line const note = textLine(text);
     eranosTextDestroy(text);
     Table *const table = detailTable(2);
     addDetailRow(table, &(DetailRow){.detail = lineOf("Name"), .value = name});
     addDetailRow(table, &(DetailRow){.detail = lineOf("Currency"), .value = currency});
     addDetailRow(table, &(DetailRow){.detail = lineOf("Language"), .value = language});
-    addDetailRow(table, &(DetailRow){.detail = lineOf("Description"), .value = description});
+    addDetailRow(table, &(DetailRow){.detail = lineOf("Description"), .value = note});
     tablePrint(table);
     Line const message = messageLine(blank);
     printFormatted("The group started as Lisbon and was renamed when a day in Porto joined the plan.\n"
@@ -1329,7 +1329,7 @@ static void tipWith(EranosExpense *const expense, EranosTipValue *const value, E
     eranosSplitDestroy(payers);
     eranosCostDestroy(cost);
     must(eranosExpenseSetCategory(expense, categories->food.text));
-    must(eranosExpenseSetDescription(expense, "Tasca do Chico"));
+    must(eranosExpenseSetNote(expense, "Tasca do Chico"));
     eranosExpenseSetTime(expense, (EranosTimeOfDay){.hour = 22, .minute = 15});
     tipWith(expense, percentageTip("10"), ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
     return expense;
@@ -1460,7 +1460,7 @@ static void printFado(EranosExpenseGroup const *const group, Id const id) {
     }
     eranosCalendarDateFormat(eranosExpenseDate(fado), text);
     Line const date = textLine(text);
-    Line const place = eranosExpenseDescription(fado, text) ? textLine(text) : lineOf("%s", "");
+    Line const place = eranosExpenseNote(fado, text) ? textLine(text) : lineOf("%s", "");
     EranosTipRule *const tip = eranosExpenseTip(fado);
     EranosTipValue *const value = eranosTipRuleValue(tip);
     int32_t basisPoints = 0;
@@ -1617,7 +1617,7 @@ static void anotherCurrency(EranosExpenseGroup *const group, People const *const
     EranosCost *const cost = localCost(eur("99.00"));
     eranosExpenseSetCost(dinner, cost);
     eranosCostDestroy(cost);
-    must(eranosExpenseSetDescription(dinner, "Cervejaria Ramiro"));
+    must(eranosExpenseSetNote(dinner, "Cervejaria Ramiro"));
     EranosExpense *previous = nullptr;
     must(eranosExpenseGroupReplaceExpense(group, dinner, &previous));
     EranosExpense *corrected = nullptr;
@@ -1625,7 +1625,7 @@ static void anotherCurrency(EranosExpenseGroup *const group, People const *const
     EranosText *const text = eranosTextCreate();
     eranosExpenseName(previous, text);
     Line const entry = textLine(text);
-    Line const place = eranosExpenseDescription(corrected, text) ? textLine(text) : lineOf("%s", "");
+    Line const place = eranosExpenseNote(corrected, text) ? textLine(text) : lineOf("%s", "");
     Line const before = costAmount(eranosExpenseCost(previous));
     Line const after = costAmount(eranosExpenseCost(corrected));
     EditRow const edit = {.entry = entry, .edit = lineOf("%s became %s, at %s", before.text, after.text, place.text)};

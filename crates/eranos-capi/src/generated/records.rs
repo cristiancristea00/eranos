@@ -585,7 +585,7 @@ pub mod ffi {
                 tip: eranos_bindings::tip_rule_none(),
                 time: None,
                 category: eranos_bindings::category_id_uncategorised(),
-                description: None,
+                note: None,
             })))
         }
 
@@ -709,27 +709,24 @@ pub mod ffi {
             Ok(())
         }
 
-        /// A longer description. Writes it, if present; absent otherwise.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.description.as_deref())
+        /// A note on it. Writes it, if present; absent otherwise.
+        pub fn note(&self, write: &mut DiplomatWrite) -> Option<()> {
+            crate::write_optional(write, self.0.note.as_deref())
         }
 
-        /// Sets a longer description.
+        /// Sets a note on it.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_description(
-            &mut self,
-            description: &DiplomatStr,
-        ) -> Result<(), Box<EranosError>> {
-            self.0.description = Some(crate::text(description)?);
+        pub fn set_note(&mut self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.note = Some(crate::text(note)?);
             Ok(())
         }
 
-        /// Clears a longer description.
-        pub fn clear_description(&mut self) {
-            self.0.description = None;
+        /// Clears a note on it.
+        pub fn clear_note(&mut self) {
+            self.0.note = None;
         }
 
         /// The tip in the expense's currency, zero without one.
@@ -1708,7 +1705,7 @@ pub mod ffi {
                 id: crate::text(id)?,
                 name: crate::text(name)?,
                 currency: crate::text(currency)?,
-                description: None,
+                note: None,
                 language: None,
             })))
         }
@@ -1758,27 +1755,24 @@ pub mod ffi {
             Ok(())
         }
 
-        /// A longer description. Writes it, if present; absent otherwise.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.description.as_deref())
+        /// A note on it. Writes it, if present; absent otherwise.
+        pub fn note(&self, write: &mut DiplomatWrite) -> Option<()> {
+            crate::write_optional(write, self.0.note.as_deref())
         }
 
-        /// Sets a longer description.
+        /// Sets a note on it.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_description(
-            &mut self,
-            description: &DiplomatStr,
-        ) -> Result<(), Box<EranosError>> {
-            self.0.description = Some(crate::text(description)?);
+        pub fn set_note(&mut self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.note = Some(crate::text(note)?);
             Ok(())
         }
 
-        /// Clears a longer description.
-        pub fn clear_description(&mut self) {
-            self.0.description = None;
+        /// Clears a note on it.
+        pub fn clear_note(&mut self) {
+            self.0.note = None;
         }
 
         /// The language the apps show the group in, as a BCP 47 tag. Writes it, if present; absent

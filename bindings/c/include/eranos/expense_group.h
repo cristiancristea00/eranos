@@ -1685,20 +1685,20 @@ static inline void eranosExpenseGroupRemoveTransferAsync(EranosExpenseGroup *con
     EranosExpenseGroup_remove_transfer_async(group, eranosDetailView(id), cancellation, wrapped);
 }
 
-/// The group's description. Writes it into @p description, if the group has one, and nothing otherwise: the group holds no blank text there, since
+/// The group's note. Writes it into @p note, if the group has one, and nothing otherwise: the group holds no blank text there, since
 /// blank text clears it.
 ///
 /// @param group The group
-/// @param description Receives the description, replacing what it held
+/// @param note Receives the note, replacing what it held
 /// @return Whether the group has one
-[[nodiscard]] static inline bool eranosExpenseGroupDescription(EranosExpenseGroup const *const group, EranosText *const description) {
-    eranosDetailClear(description);
-    bool const present = EranosExpenseGroup_description(group, description).is_ok;
-    eranosDetailFinish(description);
+[[nodiscard]] static inline bool eranosExpenseGroupNote(EranosExpenseGroup const *const group, EranosText *const note) {
+    eranosDetailClear(note);
+    bool const present = EranosExpenseGroup_note(group, note).is_ok;
+    eranosDetailFinish(note);
     return present;
 }
 
-/// The asynchronous form of eranosExpenseGroupDescription(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
+/// The asynchronous form of eranosExpenseGroupNote(): it runs on the group's worker thread, in the order of the calls, and reports its outcome
 /// to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is
 /// queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
@@ -1706,52 +1706,52 @@ static inline void eranosExpenseGroupRemoveTransferAsync(EranosExpenseGroup *con
 /// @param cancellation A cancellation for the call, or nullptr for none
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
-static inline void eranosExpenseGroupDescriptionAsync(EranosExpenseGroup const *const group, EranosCancellation const *const cancellation,
-                                                      EranosOptionalTextCallback const *const callback) {
-    DiplomatCallback_EranosExpenseGroup_description_async_callback const wrapped = {
+static inline void eranosExpenseGroupNoteAsync(EranosExpenseGroup const *const group, EranosCancellation const *const cancellation,
+                                               EranosOptionalTextCallback const *const callback) {
+    DiplomatCallback_EranosExpenseGroup_note_async_callback const wrapped = {
         .data = callback,
         .run_callback = eranosDetailRunOptionalTextCallback,
         .destructor = nullptr,
     };
-    EranosExpenseGroup_description_async(group, cancellation, wrapped);
+    EranosExpenseGroup_note_async(group, cancellation, wrapped);
 }
 
-/// Sets the description, trimmed, or clears it when the text is blank.
+/// Sets the note, trimmed, or clears it when the text is blank.
 ///
 /// @param group The group
-/// @param description The description, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param note The note, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosExpenseGroupSetDescription(EranosExpenseGroup *const group, char const *const description) {
-    EranosExpenseGroup_set_description_result const result = EranosExpenseGroup_set_description(group, eranosDetailView(description));
+[[nodiscard]] static inline EranosError *eranosExpenseGroupSetNote(EranosExpenseGroup *const group, char const *const note) {
+    EranosExpenseGroup_set_note_result const result = EranosExpenseGroup_set_note(group, eranosDetailView(note));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Clears the group's description.
+/// Clears the group's note.
 ///
 /// @param group The group
-static inline void eranosExpenseGroupClearDescription(EranosExpenseGroup *const group) { EranosExpenseGroup_clear_description(group); }
+static inline void eranosExpenseGroupClearNote(EranosExpenseGroup *const group) { EranosExpenseGroup_clear_note(group); }
 
-/// The asynchronous form of eranosExpenseGroupSetDescription(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// The asynchronous form of eranosExpenseGroupSetNote(): it runs on the group's worker thread, in the order of the calls, and reports its
 /// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
 /// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
 /// @param group The group
-/// @param description The description, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param note The note, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param cancellation A cancellation for the call, or nullptr for none
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
-static inline void eranosExpenseGroupSetDescriptionAsync(EranosExpenseGroup *const group, char const *const description,
-                                                         EranosCancellation const *const cancellation, EranosUnitCallback const *const callback) {
-    DiplomatCallback_EranosExpenseGroup_set_description_async_callback const wrapped = {
+static inline void eranosExpenseGroupSetNoteAsync(EranosExpenseGroup *const group, char const *const note,
+                                                  EranosCancellation const *const cancellation, EranosUnitCallback const *const callback) {
+    DiplomatCallback_EranosExpenseGroup_set_note_async_callback const wrapped = {
         .data = callback,
         .run_callback = eranosDetailRunUnitCallback,
         .destructor = nullptr,
     };
-    EranosExpenseGroup_set_description_async(group, eranosDetailView(description), cancellation, wrapped);
+    EranosExpenseGroup_set_note_async(group, eranosDetailView(note), cancellation, wrapped);
 }
 
-/// The asynchronous form of eranosExpenseGroupClearDescription(): it runs on the group's worker thread, in the order of the calls, and reports its
+/// The asynchronous form of eranosExpenseGroupClearNote(): it runs on the group's worker thread, in the order of the calls, and reports its
 /// outcome to `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the
 /// call is queued behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
 ///
@@ -1759,14 +1759,14 @@ static inline void eranosExpenseGroupSetDescriptionAsync(EranosExpenseGroup *con
 /// @param cancellation A cancellation for the call, or nullptr for none
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
-static inline void eranosExpenseGroupClearDescriptionAsync(EranosExpenseGroup *const group, EranosCancellation const *const cancellation,
-                                                           EranosUnitCallback const *const callback) {
-    DiplomatCallback_EranosExpenseGroup_clear_description_async_callback const wrapped = {
+static inline void eranosExpenseGroupClearNoteAsync(EranosExpenseGroup *const group, EranosCancellation const *const cancellation,
+                                                    EranosUnitCallback const *const callback) {
+    DiplomatCallback_EranosExpenseGroup_clear_note_async_callback const wrapped = {
         .data = callback,
         .run_callback = eranosDetailRunUnitCallback,
         .destructor = nullptr,
     };
-    EranosExpenseGroup_clear_description_async(group, cancellation, wrapped);
+    EranosExpenseGroup_clear_note_async(group, cancellation, wrapped);
 }
 
 /// The language the apps show the group in, as a BCP 47 tag. Writes it into @p language, if the group has one, and nothing otherwise: the group holds
@@ -2015,33 +2015,33 @@ static inline void eranosNewExpenseGroupCurrency(EranosNewExpenseGroup const *co
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// A longer description. Writes it, if present; absent otherwise.
+/// A note on it. Writes it, if present; absent otherwise.
 ///
 /// @param newGroup The new group
-/// @param description Receives a longer description, replacing what it held
+/// @param note Receives a note, replacing what it held
 /// @return Whether there is one
-[[nodiscard]] static inline bool eranosNewExpenseGroupDescription(EranosNewExpenseGroup const *const newGroup, EranosText *const description) {
-    eranosDetailClear(description);
-    bool const present = EranosNewExpenseGroup_description(newGroup, description).is_ok;
-    eranosDetailFinish(description);
+[[nodiscard]] static inline bool eranosNewExpenseGroupNote(EranosNewExpenseGroup const *const newGroup, EranosText *const note) {
+    eranosDetailClear(note);
+    bool const present = EranosNewExpenseGroup_note(newGroup, note).is_ok;
+    eranosDetailFinish(note);
     return present;
 }
 
-/// Sets a longer description.
+/// Sets a note.
 ///
 /// @param newGroup The new group
-/// @param description A longer description, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param note A note, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosNewExpenseGroupSetDescription(EranosNewExpenseGroup *const newGroup, char const *const description) {
-    EranosNewExpenseGroup_set_description_result const result = EranosNewExpenseGroup_set_description(newGroup, eranosDetailView(description));
+[[nodiscard]] static inline EranosError *eranosNewExpenseGroupSetNote(EranosNewExpenseGroup *const newGroup, char const *const note) {
+    EranosNewExpenseGroup_set_note_result const result = EranosNewExpenseGroup_set_note(newGroup, eranosDetailView(note));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Clears a longer description.
+/// Clears a note.
 ///
 /// @param newGroup The new group
-static inline void eranosNewExpenseGroupClearDescription(EranosNewExpenseGroup *const newGroup) { EranosNewExpenseGroup_clear_description(newGroup); }
+static inline void eranosNewExpenseGroupClearNote(EranosNewExpenseGroup *const newGroup) { EranosNewExpenseGroup_clear_note(newGroup); }
 
 /// The language the apps show the group in, as a BCP 47 tag. Writes it, if present; absent otherwise.
 ///

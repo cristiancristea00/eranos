@@ -84,7 +84,7 @@ pub struct Expense {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_uncategorised"))]
     category: CategoryId,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    description: Option<String>,
+    note: Option<String>,
 }
 
 impl Expense {
@@ -272,7 +272,7 @@ impl Expense {
             tip: self.tip,
             time: self.time,
             category: self.category,
-            description: self.description.clone(),
+            note: self.note.clone(),
         }
     }
 
@@ -407,10 +407,10 @@ impl Expense {
         self
     }
 
-    /// The description, if any.
+    /// The note, if any.
     #[must_use]
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
+    pub fn note(&self) -> Option<&str> {
+        self.note.as_deref()
     }
 
     /// Every member the expense involves, as a payer or as a participant.
@@ -492,7 +492,7 @@ pub struct ExpenseBuilder {
     tip: TipRule,
     time: Option<TimeOfDay>,
     category: CategoryId,
-    description: Option<String>,
+    note: Option<String>,
 }
 
 impl ExpenseBuilder {
@@ -569,17 +569,17 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Sets the description, trimmed; blank text leaves it absent, as
-    /// [`clear_description`](Self::clear_description) does.
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    /// Sets the note, trimmed; blank text leaves it absent, as
+    /// [`clear_note`](Self::clear_note) does.
+    pub fn note(mut self, note: impl Into<String>) -> Self {
+        self.note = Some(note.into());
         self
     }
 
-    /// Clears the description, which [`description`](Self::description)
+    /// Clears the note, which [`note`](Self::note)
     /// sets.
-    pub fn clear_description(mut self) -> Self {
-        self.description = None;
+    pub fn clear_note(mut self) -> Self {
+        self.note = None;
         self
     }
 
@@ -628,7 +628,7 @@ impl ExpenseBuilder {
             exchange_rate: self.cost.conversion(),
             time: self.time,
             category: self.category,
-            description: self.description.and_then(text::optional),
+            note: self.note.and_then(text::optional),
         })
     }
 }
@@ -680,7 +680,7 @@ const fn starting(
         tip: TipRule::NONE,
         time: None,
         category: CategoryId::UNCATEGORISED,
-        description: None,
+        note: None,
     }
 }
 
@@ -716,7 +716,7 @@ struct ExpenseRecord {
     #[serde(default)]
     category: Option<CategoryId>,
     #[serde(default)]
-    description: Option<String>,
+    note: Option<String>,
 }
 
 /// Builds the expense `record` describes, through the checks of the builder.
@@ -734,8 +734,8 @@ fn from_record(record: ExpenseRecord) -> Result<Expense, ExpenseError> {
     .tip(record.tip)
     .time(record.time)
     .category(record.category.unwrap_or(CategoryId::UNCATEGORISED));
-    match record.description {
-        Some(description) => builder.description(description).build(),
+    match record.note {
+        Some(note) => builder.note(note).build(),
         None => builder.build(),
     }
 }

@@ -235,7 +235,7 @@ typedef struct Flat {
 [[nodiscard]] static Flat flatOf(void) {
     EranosNewExpenseGroup *details = nullptr;
     eranosErrorDestroy(eranosNewExpenseGroupCreate("Flat", "EUR", &details));
-    eranosErrorDestroy(eranosNewExpenseGroupSetDescription(details, "Rent"));
+    eranosErrorDestroy(eranosNewExpenseGroupSetNote(details, "Rent"));
     eranosErrorDestroy(eranosNewExpenseGroupSetLanguage(details, "pt-pt"));
     Flat flat = {.group = nullptr};
     eranosErrorDestroy(eranosExpenseGroupCreate(details, &flat.group));
@@ -1466,13 +1466,13 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     eranosExpenseId(expense, text);
     checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new expense has a generated identifier");
     checkThat(check, isUncategorised(expense) && isNoTip(eranosExpenseTip(expense)), "in the built-in category, with the no-tip rule");
-    checkThat(check, !eranosExpenseDescription(expense, text), "and no description");
+    checkThat(check, !eranosExpenseNote(expense, text), "and no note");
     EranosTimeOfDay time = {.hour = 0, .minute = 0};
     checkThat(check, !eranosExpenseTime(expense, &time), "nor time");
     checkSucceeded(check, eranosExpenseSetId(expense, "0199a000-0000-7000-8000-000000000001"), "an identifier is set");
     checkSucceeded(check, eranosExpenseSetName(expense, "Lunch"), "a name");
     checkSucceeded(check, eranosExpenseSetCategory(expense, "0199a000-0000-7000-8000-000000000002"), "a category");
-    checkSucceeded(check, eranosExpenseSetDescription(expense, "By the sea"), "a description");
+    checkSucceeded(check, eranosExpenseSetNote(expense, "By the sea"), "a note");
     constexpr EranosTimeOfDay NOON = {.hour = 12, .minute = 15};
     eranosExpenseSetTime(expense, NOON);
     constexpr EranosCalendarDate NEXT = {.year = 2026, .month = 9, .day = 24};
@@ -1493,7 +1493,7 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     checkThat(check, isText(text, "Lunch"), "the name");
     eranosExpenseCategory(expense, text);
     checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000002"), "the category");
-    checkThat(check, eranosExpenseDescription(expense, text) && isText(text, "By the sea"), "the description");
+    checkThat(check, eranosExpenseNote(expense, text) && isText(text, "By the sea"), "the note");
     checkThat(check, eranosExpenseTime(expense, &time) && 12 == time.hour && 15 == time.minute, "the time");
     EranosCalendarDate const date = eranosExpenseDate(expense);
     checkThat(check, 2026 == date.year && 9 == date.month && 24 == date.day, "the date");
@@ -1530,11 +1530,11 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
               isKind(eranosExpenseSetId(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosExpenseSetName(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosExpenseSetCategory(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosExpenseSetDescription(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
+                  isKind(eranosExpenseSetNote(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "every text field is text");
-    eranosExpenseClearDescription(expense);
+    eranosExpenseClearNote(expense);
     eranosExpenseClearTime(expense);
-    checkThat(check, !eranosExpenseDescription(expense, text) && !eranosExpenseTime(expense, &time), "every optional field clears");
+    checkThat(check, !eranosExpenseNote(expense, text) && !eranosExpenseTime(expense, &time), "every optional field clears");
     EranosTipRule *const none = eranosTipRuleCreateNone();
     eranosExpenseSetTip(expense, none);
     eranosIdentifierUncategorised(text);
@@ -1870,12 +1870,12 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     checkSucceeded(check, eranosNewExpenseGroupCreateWithId("flat", "Flat", "EUR", &details), "a new group's details under the app's identifier");
     eranosNewExpenseGroupId(details, text);
     checkThat(check, isText(text, "flat"), "keep it");
-    checkThat(check, !eranosNewExpenseGroupDescription(details, text) && !eranosNewExpenseGroupLanguage(details, text),
-              "and start without description or language");
+    checkThat(check, !eranosNewExpenseGroupNote(details, text) && !eranosNewExpenseGroupLanguage(details, text),
+              "and start without note or language");
     checkSucceeded(check, eranosNewExpenseGroupSetId(details, "home"), "an identifier is set");
     checkSucceeded(check, eranosNewExpenseGroupSetCurrency(details, "RON"), "a currency is set");
     checkSucceeded(check, eranosNewExpenseGroupSetName(details, "Home"), "a name");
-    checkSucceeded(check, eranosNewExpenseGroupSetDescription(details, "Bills"), "a description");
+    checkSucceeded(check, eranosNewExpenseGroupSetNote(details, "Bills"), "a note");
     checkSucceeded(check, eranosNewExpenseGroupSetLanguage(details, "ro-RO"), "a language");
     eranosNewExpenseGroupCurrency(details, text);
     checkThat(check, isText(text, "RON"), "the currency as set");
@@ -1884,14 +1884,14 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     eranosNewExpenseGroupId(details, text);
     checkThat(check, isText(text, "home"), "the identifier");
     checkThat(check,
-              eranosNewExpenseGroupDescription(details, text) && isText(text, "Bills") && eranosNewExpenseGroupLanguage(details, text) &&
+              eranosNewExpenseGroupNote(details, text) && isText(text, "Bills") && eranosNewExpenseGroupLanguage(details, text) &&
                   isText(text, "ro-RO"),
-              "the description and the language");
+              "the note and the language");
     checkThat(check,
               isKind(eranosNewExpenseGroupSetId(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosNewExpenseGroupSetCurrency(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosNewExpenseGroupSetName(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosNewExpenseGroupSetDescription(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  isKind(eranosNewExpenseGroupSetNote(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosNewExpenseGroupSetLanguage(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "its fields are text");
     EranosExpenseGroup *home = nullptr;
@@ -1905,9 +1905,9 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
               isFailure(eranosExpenseGroupCreate(details, &refused), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE) &&
                   nullptr == refused,
               "an identifier the library refuses");
-    eranosNewExpenseGroupClearDescription(details);
+    eranosNewExpenseGroupClearNote(details);
     eranosNewExpenseGroupClearLanguage(details);
-    checkThat(check, !eranosNewExpenseGroupDescription(details, text) && !eranosNewExpenseGroupLanguage(details, text), "and clear");
+    checkThat(check, !eranosNewExpenseGroupNote(details, text) && !eranosNewExpenseGroupLanguage(details, text), "and clear");
     EranosNewExpenseGroup *noDetails = nullptr;
     checkThat(check, isKind(eranosNewExpenseGroupCreate("Flat", "\xff", &noDetails), ERANOS_ERROR_KIND_INVALID_TEXT), "a currency's code is text");
     checkThat(check,
@@ -1926,13 +1926,13 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     checkSucceeded(check, eranosExpenseGroupSetName(group, "Trip"), "a name is set");
     eranosExpenseGroupName(group, text);
     checkThat(check, isText(text, "Trip"), "the name as set");
-    checkSucceeded(check, eranosExpenseGroupSetDescription(group, " Summer "), "a description is set");
-    checkThat(check, eranosExpenseGroupDescription(group, text) && isText(text, "Summer"), "and read as set, trimmed");
-    eranosExpenseGroupClearDescription(group);
-    checkThat(check, !eranosExpenseGroupDescription(group, text) && isText(text, ""), "a description clears and reads as none");
-    checkSucceeded(check, eranosExpenseGroupSetDescription(group, "Summer"), "a description is set again");
-    checkSucceeded(check, eranosExpenseGroupSetDescription(group, " "), "blank text clears it");
-    checkThat(check, !eranosExpenseGroupDescription(group, text) && isText(text, ""), "and it reads as none");
+    checkSucceeded(check, eranosExpenseGroupSetNote(group, " Summer "), "a note is set");
+    checkThat(check, eranosExpenseGroupNote(group, text) && isText(text, "Summer"), "and read as set, trimmed");
+    eranosExpenseGroupClearNote(group);
+    checkThat(check, !eranosExpenseGroupNote(group, text) && isText(text, ""), "a note clears and reads as none");
+    checkSucceeded(check, eranosExpenseGroupSetNote(group, "Summer"), "a note is set again");
+    checkSucceeded(check, eranosExpenseGroupSetNote(group, " "), "blank text clears it");
+    checkThat(check, !eranosExpenseGroupNote(group, text) && isText(text, ""), "and it reads as none");
     checkSucceeded(check, eranosExpenseGroupSetLanguage(group, "pt-pt"), "a language is set");
     checkThat(check, eranosExpenseGroupLanguage(group, text) && isText(text, "pt-PT"), "and read, canonical");
     eranosExpenseGroupClearLanguage(group);
@@ -1971,7 +1971,7 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
     EranosExpense *previous = nullptr;
     checkSucceeded(check, eranosExpenseGroupReplaceExpense(flat.group, dinner, &previous), "replaces the expense");
     eranosExpenseName(previous, text);
-    checkThat(check, isText(text, "Dinner") && !eranosExpenseDescription(previous, text), "which comes back as it was, without a description");
+    checkThat(check, isText(text, "Dinner") && !eranosExpenseNote(previous, text), "which comes back as it was, without a note");
     EranosExpense *expense = nullptr;
     checkSucceeded(check, eranosExpenseGroupExpense(flat.group, eranosTextData(flat.dinner), &expense), "the expense by its identifier");
     eranosExpenseName(expense, text);
@@ -2851,10 +2851,10 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     eranosExpenseGroupCurrencyAsync(flat.group, nullptr, &currencyCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error && isCurrency(waiter.object, "EUR"), "the currency");
-    EranosOptionalTextCallback const descriptionCallback = {waiting(&waiter), receiveText};
-    eranosExpenseGroupDescriptionAsync(flat.group, nullptr, &descriptionCallback);
+    EranosOptionalTextCallback const noteCallback = {waiting(&waiter), receiveText};
+    eranosExpenseGroupNoteAsync(flat.group, nullptr, &noteCallback);
     await(&waiter);
-    checkThat(check, nullptr == waiter.error && nullptr != waiter.text && isText(waiter.text, "Rent"), "the description");
+    checkThat(check, nullptr == waiter.error && nullptr != waiter.text && isText(waiter.text, "Rent"), "the note");
     eranosTextDestroy(waiter.text);
     EranosOptionalTextCallback const languageCallback = {waiting(&waiter), receiveText};
     eranosExpenseGroupLanguageAsync(flat.group, nullptr, &languageCallback);
@@ -3032,17 +3032,17 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     EranosUnitCallback const setNameCallback = {waiting(&waiter), receiveUnit};
     eranosExpenseGroupSetNameAsync(flat.group, "Home", nullptr, &setNameCallback);
     await(&waiter);
-    EranosUnitCallback const setDescriptionCallback = {waiting(&waiter), receiveUnit};
-    eranosExpenseGroupSetDescriptionAsync(flat.group, "Bills", nullptr, &setDescriptionCallback);
+    EranosUnitCallback const setNoteCallback = {waiting(&waiter), receiveUnit};
+    eranosExpenseGroupSetNoteAsync(flat.group, "Bills", nullptr, &setNoteCallback);
     await(&waiter);
-    checkThat(check, nullptr == waiter.error && eranosExpenseGroupDescription(flat.group, text) && isText(text, "Bills"), "a description is set");
-    EranosUnitCallback const clearDescriptionCallback = {waiting(&waiter), receiveUnit};
-    eranosExpenseGroupClearDescriptionAsync(flat.group, nullptr, &clearDescriptionCallback);
+    checkThat(check, nullptr == waiter.error && eranosExpenseGroupNote(flat.group, text) && isText(text, "Bills"), "a note is set");
+    EranosUnitCallback const clearNoteCallback = {waiting(&waiter), receiveUnit};
+    eranosExpenseGroupClearNoteAsync(flat.group, nullptr, &clearNoteCallback);
     await(&waiter);
     EranosOptionalTextCallback const clearedCallback = {waiting(&waiter), receiveText};
-    eranosExpenseGroupDescriptionAsync(flat.group, nullptr, &clearedCallback);
+    eranosExpenseGroupNoteAsync(flat.group, nullptr, &clearedCallback);
     await(&waiter);
-    checkThat(check, nullptr == waiter.error && nullptr == waiter.text, "a cleared description is none");
+    checkThat(check, nullptr == waiter.error && nullptr == waiter.text, "a cleared note is none");
     EranosUnitCallback const setLanguageCallback = {waiting(&waiter), receiveUnit};
     eranosExpenseGroupSetLanguageAsync(flat.group, "ro-RO", nullptr, &setLanguageCallback);
     await(&waiter);
@@ -3127,7 +3127,7 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     EranosCurrencyDetails *currency = nullptr;
     checkSucceeded(check, eranosExpenseGroupReaderCurrency(reader, &currency), "the currency");
     checkThat(check, isCurrency(currency, "EUR"), "the euro");
-    checkSucceeded(check, eranosExpenseGroupReaderDescription(reader, text), "the description");
+    checkSucceeded(check, eranosExpenseGroupReaderNote(reader, text), "the note");
     checkThat(check, isText(text, "Rent"), "as given");
     checkSucceeded(check, eranosExpenseGroupReaderLanguage(reader, text), "the language");
     checkThat(check, isText(text, "pt-PT"), "as given");
@@ -3198,7 +3198,7 @@ static void everyReadOfAReleasedReaderFails(Check *const check) {
     EranosText *const text = eranosTextCreate();
     checkThat(check,
               isKind(eranosExpenseGroupReaderId(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
-                  isKind(eranosExpenseGroupReaderDescription(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupReaderNote(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
                   isKind(eranosExpenseGroupReaderLanguage(reader, text), ERANOS_ERROR_KIND_RELEASED) &&
                   isKind(eranosExpenseGroupReaderSave(reader, text), ERANOS_ERROR_KIND_RELEASED) && 0 == eranosTextLength(text),
               "every read of text, which writes none");
@@ -3274,8 +3274,8 @@ static void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_CANCELLED) && nullptr == waiter.text,
               "a call given a cancelled cancellation does not run");
-    EranosOptionalTextCallback const lateDescriptionCallback = {waiting(&waiter), receiveText};
-    eranosExpenseGroupDescriptionAsync(flat.group, cancellation, &lateDescriptionCallback);
+    EranosOptionalTextCallback const lateNoteCallback = {waiting(&waiter), receiveText};
+    eranosExpenseGroupNoteAsync(flat.group, cancellation, &lateNoteCallback);
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_CANCELLED) && nullptr == waiter.text, "nor one that returns optional text");
     eranosCurrencyRateListDestroy(rates);

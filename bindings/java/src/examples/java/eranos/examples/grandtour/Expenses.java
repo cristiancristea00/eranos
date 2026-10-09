@@ -157,7 +157,7 @@ final class Expenses {
                 .tip(new TipRule(new TipValue.Percentage(Percentage.parse("10"))))
                 .time(TimeOfDay.of(22, 15))
                 .category(categories.food())
-                .description("Tasca do Chico")
+                .note("Tasca do Chico")
                 .build();
     }
 
@@ -327,7 +327,7 @@ final class Expenses {
                         .formatted(
                                 fado.time().map(TimeOfDay::toString).orElse(""),
                                 fado.date(),
-                                fado.description().orElse(""),
+                                fado.note().orElse(""),
                                 rule,
                                 fado.tipAmount(),
                                 shared));

@@ -25,8 +25,8 @@ pub struct NewExpenseGroup {
     pub name: String,
     /// The ISO 4217 code of the group currency, which every total is in.
     pub currency: String,
-    /// A longer description.
-    pub description: Option<String>,
+    /// A note on it.
+    pub note: Option<String>,
     /// The language the apps show the group in, as a BCP 47 tag.
     pub language: Option<String>,
 }
@@ -62,8 +62,8 @@ impl ExpenseGroupHandle {
         let builder =
             ExpenseGroup::builder_with_id(id, group.name.clone(), currency(&group.currency)?)
                 .language(language);
-        let builder = match &group.description {
-            Some(description) => builder.description(description.as_str()),
+        let builder = match &group.note {
+            Some(note) => builder.note(note.as_str()),
             None => builder,
         };
         Ok(Self::from(builder.build()?))
