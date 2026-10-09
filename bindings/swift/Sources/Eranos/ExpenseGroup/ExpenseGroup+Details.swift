@@ -9,9 +9,6 @@ public extension ExpenseGroup {
 
     /// The group's identifier.
     ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func id() async throws(EranosError) -> ExpenseGroup.ID {
         try await converting { [handle] cancellation in
@@ -26,9 +23,6 @@ public extension ExpenseGroup {
 
     /// The group's name.
     ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func name() async throws(EranosError) -> String {
         try await converting { [handle] cancellation in
@@ -38,17 +32,13 @@ public extension ExpenseGroup {
 
     /// Renames the group.
     ///
-    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/emptyName`` for a blank name;
-    ///   on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call
-    ///   holds the lock.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/emptyName`` for a blank
+    ///   name.
     func rename(to name: String) throws(EranosError) {
         try converting { try handle.setName(name: name) }
     }
 
     /// Renames the group.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/emptyName`` for a blank name;
     ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
@@ -65,9 +55,6 @@ public extension ExpenseGroup {
 
     /// The group currency, which every total is in.
     ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func currency() async throws(EranosError) -> CurrencyCode {
         try await converting { [handle] cancellation in
@@ -78,19 +65,15 @@ public extension ExpenseGroup {
     /// Moves the group to `currency`, converting every entry with the rate `rates` gives its
     /// currency.
     ///
-    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/missingExchangeRate(_:)`` for
-    ///   a currency in use without a rate, and ``ExpenseGroupFailure/unexpectedExchangeRate`` for a rate of
-    ///   the new group currency; on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy``
-    ///   while another call holds the lock.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/missingExchangeRate(_:)``
+    ///   for a currency in use without a rate, and ``ExpenseGroupFailure/unexpectedExchangeRate`` for a rate
+    ///   of the new group currency.
     func changeCurrency(to currency: CurrencyCode, rates: [CurrencyCode: ExchangeRate]) throws(EranosError) {
         try converting { try handle.changeCurrency(currency: currency.code, rates: rates.map { CurrencyRate(currency: $0.key.code, rate: $0.value.description) }) }
     }
 
     /// Moves the group to `currency`, converting every entry with the rate `rates` gives its
     /// currency.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/missingExchangeRate(_:)`` for
     ///   a currency in use without a rate, and ``ExpenseGroupFailure/unexpectedExchangeRate`` for a rate of
@@ -108,9 +91,6 @@ public extension ExpenseGroup {
 
     /// The group's note.
     ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func note() async throws(EranosError) -> String? {
         try await converting { [handle] cancellation in
@@ -124,9 +104,6 @@ public extension ExpenseGroup {
     }
 
     /// Sets the group's note, trimmed; nil or blank text clears it.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func changeNote(to note: String?) async throws(EranosError) {
@@ -142,9 +119,6 @@ public extension ExpenseGroup {
 
     /// The language the apps show the group in.
     ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func language() async throws(EranosError) -> Language? {
         try await converting { [handle] cancellation in
@@ -154,16 +128,13 @@ public extension ExpenseGroup {
 
     /// Sets the language the apps show the group in, or clears it with nil.
     ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
+    /// - Throws: Nothing on the platforms the package builds for: the call it makes can fail only on wasm,
+    ///   where another call can hold the lock.
     func changeLanguage(to language: Language?) throws(EranosError) {
         try converting { try handle.setLanguage(language: language?.description) }
     }
 
     /// Sets the language the apps show the group in, or clears it with nil.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func changeLanguage(to language: Language?) async throws(EranosError) {
@@ -178,9 +149,6 @@ public extension ExpenseGroup {
     }
 
     /// The group in its saved form, as JSON, which `ExpenseGroup.load(_:)` reads back.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func save() async throws(EranosError) -> String {

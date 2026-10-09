@@ -9,9 +9,6 @@ public extension ExpenseGroup {
 
     /// Every transfer, in identifier order, which is creation order for generated identifiers.
     ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
-    ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     func transfers() async throws(EranosError) -> [Transfer] {
         try await converting { [handle] cancellation in
@@ -21,17 +18,12 @@ public extension ExpenseGroup {
 
     /// The transfer with the identifier `id`, if the group holds it.
     ///
-    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one; on wasm,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call holds the
-    ///   lock.
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one.
     func transfer(withID id: Transfer.ID) throws(EranosError) -> Transfer? {
         try converting { try handle.transfer(id: id.rawValue).map(Transfer.init) }
     }
 
     /// The transfer with the identifier `id`, if the group holds it.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
     ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
@@ -44,18 +36,13 @@ public extension ExpenseGroup {
     /// The amount in the group currency of the transfer with the identifier `id`, if the group
     /// holds it.
     ///
-    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one; on wasm,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call holds the
-    ///   lock.
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one.
     func amount(of id: Transfer.ID) throws(EranosError) -> Money? {
         try converting { try handle.transferAmount(id: id.rawValue).map(Money.init) }
     }
 
     /// The amount in the group currency of the transfer with the identifier `id`, if the group
     /// holds it.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier that is not one;
     ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
@@ -71,17 +58,13 @@ public extension ExpenseGroup {
     ///   ``EranosError/transfer(_:detail:)`` for a transfer that does not build, such as
     ///   ``TransferFailure/sameMember``, and ``EranosError/expenseGroup(_:detail:)`` with
     ///   ``ExpenseGroupFailure/duplicateTransfer(_:)`` for an identifier the group holds, or
-    ///   ``ExpenseGroupFailure/unknownMember(_:)``; on wasm, ``EranosError/expenseGroup(_:detail:)`` with
-    ///   ``ExpenseGroupFailure/busy`` while another call holds the lock.
+    ///   ``ExpenseGroupFailure/unknownMember(_:)``.
     @discardableResult
     func add(_ transfer: Transfer) throws(EranosError) -> Transfer.ID {
         try converting { Transfer.ID(rawValue: try handle.addTransfer(transfer: transfer.generated)) }
     }
 
     /// Adds `transfer` under its identifier, and returns the identifier.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
     ///   ``EranosError/transfer(_:detail:)`` for a transfer that does not build, such as
@@ -98,19 +81,14 @@ public extension ExpenseGroup {
 
     /// Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
     ///
-    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``
-    ///   for an identifier the group does not hold, and the failures of adding one; on wasm,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call
-    ///   holds the lock.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)`` for
+    ///   an identifier the group does not hold, and the failures of adding one.
     @discardableResult
     func replace(_ transfer: Transfer) throws(EranosError) -> Transfer {
         try converting { Transfer(try handle.replaceTransfer(transfer: transfer.generated)) }
     }
 
     /// Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``
     ///   for an identifier the group does not hold, and the failures of adding one;
@@ -124,18 +102,13 @@ public extension ExpenseGroup {
 
     /// Removes the transfer with the identifier `id` and returns it.
     ///
-    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``; on
-    ///   wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call holds
-    ///   the lock.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``.
     @discardableResult
     func remove(_ id: Transfer.ID) throws(EranosError) -> Transfer {
         try converting { Transfer(try handle.removeTransfer(id: id.rawValue)) }
     }
 
     /// Removes the transfer with the identifier `id` and returns it.
-    ///
-    /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
-    /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``;
     ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.

@@ -141,39 +141,26 @@ public class ExpenseGroup private constructor(
 
     /**
      * The group's identifier.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [idBlocking] blocks instead.
      */
     public suspend fun id(): ExpenseGroupId = converting { ExpenseGroupId(handle.idAsync(null)) }
 
     /**
      * The group's identifier.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [id] waits without blocking it.
      */
     public fun idBlocking(): ExpenseGroupId = converting { ExpenseGroupId(handle.id()) }
 
     /**
      * The group's name.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [nameBlocking] blocks instead.
      */
     public suspend fun name(): String = converting { handle.nameAsync(null) }
 
     /**
      * The group's name.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [name] waits without blocking it.
      */
     public fun nameBlocking(): String = converting { handle.name() }
 
     /**
      * Renames the group.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [renameBlocking] blocks instead.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.EmptyName] for a blank name.
      */
@@ -183,8 +170,6 @@ public class ExpenseGroup private constructor(
     /**
      * Renames the group.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [rename] waits without blocking it.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.EmptyName] for a blank name.
      */
     @Throws(EranosException::class)
@@ -192,24 +177,16 @@ public class ExpenseGroup private constructor(
 
     /**
      * The group currency, which every total is in.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [currencyBlocking] blocks instead.
      */
     public suspend fun currency(): CurrencyCode = converting { handle.currencyAsync(null).converted() }
 
     /**
      * The group currency, which every total is in.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [currency] waits without blocking it.
      */
     public fun currencyBlocking(): CurrencyCode = converting { handle.currency().converted() }
 
     /**
      * Moves the group to [currency], converting every entry with the rate [rates] gives its currency.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [changeCurrencyBlocking] blocks instead.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.MissingExchangeRate] for a currency in use without a rate, and
      *   [ExpenseGroupFailure.UnexpectedExchangeRate] for a rate of the new group currency.
@@ -223,8 +200,6 @@ public class ExpenseGroup private constructor(
     /**
      * Moves the group to [currency], converting every entry with the rate [rates] gives its currency.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [changeCurrency] waits without blocking it.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.MissingExchangeRate] for a currency in use without a rate, and
      *   [ExpenseGroupFailure.UnexpectedExchangeRate] for a rate of the new group currency.
      */
@@ -236,76 +211,51 @@ public class ExpenseGroup private constructor(
 
     /**
      * The group's note.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [noteBlocking] blocks instead.
      */
     public suspend fun note(): String? = converting { handle.noteAsync(null) }
 
     /**
      * The group's note.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [note] waits without blocking it.
      */
     public fun noteBlocking(): String? = converting { handle.note() }
 
     /**
      * Sets the group's note, trimmed; `null` or blank text clears it.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [setNoteBlocking] blocks instead.
      */
     public suspend fun setNote(note: String?): Unit = converting { handle.setNoteAsync(note, null) }
 
     /**
      * Sets the group's note, trimmed; `null` or blank text clears it.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [setNote] waits without blocking it.
      */
     public fun setNoteBlocking(note: String?): Unit = converting { handle.setNote(note) }
 
     /**
      * The language the apps show the group in.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [languageBlocking] blocks instead.
      */
     public suspend fun language(): Language? = converting { handle.languageAsync(null)?.let(::Language) }
 
     /**
      * The language the apps show the group in.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [language] waits without blocking it.
      */
     public fun languageBlocking(): Language? = converting { handle.language()?.let(::Language) }
 
     /**
      * Sets the language the apps show the group in, or clears it with `null`.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [setLanguageBlocking] blocks instead.
      */
     public suspend fun setLanguage(language: Language?): Unit = converting { handle.setLanguageAsync(language?.toString(), null) }
 
     /**
      * Sets the language the apps show the group in, or clears it with `null`.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [setLanguage] waits without blocking it.
      */
     public fun setLanguageBlocking(language: Language?): Unit = converting { handle.setLanguage(language?.toString()) }
 
     /**
      * The group in its saved form, as JSON, which [ExpenseGroup.load] reads back.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [saveBlocking] blocks instead.
      */
     public suspend fun save(): String = converting { handle.saveAsync(null) }
 
     /**
      * The group in its saved form, as JSON, which [ExpenseGroup.load] reads back.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [save] waits without blocking it.
      */
     public fun saveBlocking(): String = converting { handle.save() }
 
@@ -313,24 +263,16 @@ public class ExpenseGroup private constructor(
 
     /**
      * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [membersBlocking] blocks instead.
      */
     public suspend fun members(): List<Member> = converting { handle.membersAsync(null).map { it.converted() } }
 
     /**
      * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [members] waits without blocking it.
      */
     public fun membersBlocking(): List<Member> = converting { handle.members().map { it.converted() } }
 
     /**
      * The member with the identifier [id], if the group holds them.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [memberBlocking] blocks instead.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -340,8 +282,6 @@ public class ExpenseGroup private constructor(
     /**
      * The member with the identifier [id], if the group holds them.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [member] waits without blocking it.
-     *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -349,9 +289,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Whether the member with the identifier [id] is archived; `null` for a member the group does not hold.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [isArchivedBlocking] blocks instead.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -361,8 +298,6 @@ public class ExpenseGroup private constructor(
     /**
      * Whether the member with the identifier [id] is archived; `null` for a member the group does not hold.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [isArchived] waits without blocking it.
-     *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -370,9 +305,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Adds [member] under their identifier and returns the identifier.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [addBlocking] blocks instead.
      *
      * @throws EranosException.Member with [MemberFailure.EmptyFirstName] for a blank first name.
      * @throws EranosException.PaymentAccount with [PaymentAccountFailure.EmptyName] for an account with a blank name.
@@ -384,8 +316,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Adds [member] under their identifier and returns the identifier.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
      *
      * @throws EranosException.Member with [MemberFailure.EmptyFirstName] for a blank first name.
      * @throws EranosException.PaymentAccount with [PaymentAccountFailure.EmptyName] for an account with a blank name.
@@ -399,9 +329,6 @@ public class ExpenseGroup private constructor(
      * Replaces the details of the member that [member] names by their identifier, and returns them as they were; an
      * archived member stays archived.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [replaceBlocking] blocks instead.
-     *
      * @throws EranosException.Member as adding one does.
      * @throws EranosException.PaymentAccount as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
@@ -414,8 +341,6 @@ public class ExpenseGroup private constructor(
      * Replaces the details of the member that [member] names by their identifier, and returns them as they were; an
      * archived member stays archived.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [replace] waits without blocking it.
-     *
      * @throws EranosException.Member as adding one does.
      * @throws EranosException.PaymentAccount as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
@@ -427,9 +352,6 @@ public class ExpenseGroup private constructor(
     /**
      * Archives the member with the identifier [id]: they keep their history and balance, and join no new expense.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [archiveBlocking] blocks instead.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -438,8 +360,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Archives the member with the identifier [id]: they keep their history and balance, and join no new expense.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [archive] waits without blocking it.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
      * @throws EranosException.Id for an identifier that is not one.
@@ -450,9 +370,6 @@ public class ExpenseGroup private constructor(
     /**
      * Makes the archived member with the identifier [id] active again.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [unarchiveBlocking] blocks instead.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -461,8 +378,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Makes the archived member with the identifier [id] active again.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [unarchive] waits without blocking it.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
      * @throws EranosException.Id for an identifier that is not one.
@@ -473,9 +388,6 @@ public class ExpenseGroup private constructor(
     /**
      * Removes the member with the identifier [id], who appears in no entry, and returns them.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [removeBlocking] blocks instead.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember], and [ExpenseGroupFailure.MemberInUse] with the entries that
      *   still name them; archive such a member instead.
      * @throws EranosException.Id for an identifier that is not one.
@@ -485,8 +397,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Removes the member with the identifier [id], who appears in no entry, and returns them.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [remove] waits without blocking it.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember], and [ExpenseGroupFailure.MemberInUse] with the entries that
      *   still name them; archive such a member instead.
@@ -500,25 +410,17 @@ public class ExpenseGroup private constructor(
     /**
      * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
      * identifiers.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [categoriesBlocking] blocks instead.
      */
     public suspend fun categories(): List<Category> = converting { handle.categoriesAsync(null).map { it.converted() } }
 
     /**
      * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
      * identifiers.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [categories] waits without blocking it.
      */
     public fun categoriesBlocking(): List<Category> = converting { handle.categories().map { it.converted() } }
 
     /**
      * The category with the identifier [id], if the group holds it.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [categoryBlocking] blocks instead.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -528,8 +430,6 @@ public class ExpenseGroup private constructor(
     /**
      * The category with the identifier [id], if the group holds it.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [category] waits without blocking it.
-     *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -537,9 +437,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Adds [category] under its identifier and returns the identifier.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [addBlocking] blocks instead.
      *
      * @throws EranosException.Category with [CategoryFailure.EmptyName] for a blank name.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateCategory] for an identifier another category has,
@@ -553,8 +450,6 @@ public class ExpenseGroup private constructor(
     /**
      * Adds [category] under its identifier and returns the identifier.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
-     *
      * @throws EranosException.Category with [CategoryFailure.EmptyName] for a blank name.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateCategory] for an identifier another category has,
      *   the built-in one's included, and [ExpenseGroupFailure.DuplicateCategoryName] for a name another category has, compared
@@ -567,9 +462,6 @@ public class ExpenseGroup private constructor(
     /**
      * Renames the category that [category] names by its identifier, and returns it as it was.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [replaceBlocking] blocks instead.
-     *
      * @throws EranosException.Category with [CategoryFailure.EmptyName] for a blank name.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownCategory], [ExpenseGroupFailure.BuiltInCategory], or
      *   [ExpenseGroupFailure.DuplicateCategoryName].
@@ -580,8 +472,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Renames the category that [category] names by its identifier, and returns it as it was.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [replace] waits without blocking it.
      *
      * @throws EranosException.Category with [CategoryFailure.EmptyName] for a blank name.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownCategory], [ExpenseGroupFailure.BuiltInCategory], or
@@ -594,9 +484,6 @@ public class ExpenseGroup private constructor(
     /**
      * Removes the category with the identifier [id] and returns it; its expenses move to the built-in one.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [removeBlocking] blocks instead.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownCategory] or [ExpenseGroupFailure.BuiltInCategory].
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -605,8 +492,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Removes the category with the identifier [id] and returns it; its expenses move to the built-in one.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [remove] waits without blocking it.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownCategory] or [ExpenseGroupFailure.BuiltInCategory].
      * @throws EranosException.Id for an identifier that is not one.
@@ -618,24 +503,16 @@ public class ExpenseGroup private constructor(
 
     /**
      * Every expense, in identifier order, which is creation order for generated identifiers.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [expensesBlocking] blocks instead.
      */
     public suspend fun expenses(): List<Expense> = converting { handle.expensesAsync(null).map { it.converted() } }
 
     /**
      * Every expense, in identifier order, which is creation order for generated identifiers.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [expenses] waits without blocking it.
      */
     public fun expensesBlocking(): List<Expense> = converting { handle.expenses().map { it.converted() } }
 
     /**
      * The expense with the identifier [id], if the group holds it.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [expenseBlocking] blocks instead.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -645,8 +522,6 @@ public class ExpenseGroup private constructor(
     /**
      * The expense with the identifier [id], if the group holds it.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [expense] waits without blocking it.
-     *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -654,9 +529,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * How the expense with the identifier [id] divides, in the group currency, if the group holds it.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [expenseSharesBlocking] blocks instead.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -666,8 +538,6 @@ public class ExpenseGroup private constructor(
     /**
      * How the expense with the identifier [id] divides, in the group currency, if the group holds it.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [expenseShares] waits without blocking it.
-     *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -675,9 +545,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Adds [expense] under its identifier and returns the identifier.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [addBlocking] blocks instead.
      *
      * @throws EranosException.Expense for an expense that does not build, such as one whose amounts do not add up.
      * @throws EranosException.ExpenseGroup for one that does not fit the group, such as [ExpenseGroupFailure.UnknownMember] or
@@ -691,8 +558,6 @@ public class ExpenseGroup private constructor(
     /**
      * Adds [expense] under its identifier and returns the identifier.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
-     *
      * @throws EranosException.Expense for an expense that does not build, such as one whose amounts do not add up.
      * @throws EranosException.ExpenseGroup for one that does not fit the group, such as [ExpenseGroupFailure.UnknownMember] or
      *   [ExpenseGroupFailure.ArchivedMember], and with [ExpenseGroupFailure.DuplicateExpense] for an identifier another expense
@@ -705,9 +570,6 @@ public class ExpenseGroup private constructor(
     /**
      * Replaces the expense that [expense] names by its identifier, and returns it as it was.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [replaceBlocking] blocks instead.
-     *
      * @throws EranosException.Expense as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownExpense], and as adding one does.
      * @throws EranosException.Id for an identifier that is not one.
@@ -717,8 +579,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Replaces the expense that [expense] names by its identifier, and returns it as it was.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [replace] waits without blocking it.
      *
      * @throws EranosException.Expense as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownExpense], and as adding one does.
@@ -730,9 +590,6 @@ public class ExpenseGroup private constructor(
     /**
      * Removes the expense with the identifier [id] and returns it.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [removeBlocking] blocks instead.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownExpense].
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -741,8 +598,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Removes the expense with the identifier [id] and returns it.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [remove] waits without blocking it.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownExpense].
      * @throws EranosException.Id for an identifier that is not one.
@@ -754,24 +609,16 @@ public class ExpenseGroup private constructor(
 
     /**
      * Every transfer, in identifier order, which is creation order for generated identifiers.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [transfersBlocking] blocks instead.
      */
     public suspend fun transfers(): List<Transfer> = converting { handle.transfersAsync(null).map { it.converted() } }
 
     /**
      * Every transfer, in identifier order, which is creation order for generated identifiers.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [transfers] waits without blocking it.
      */
     public fun transfersBlocking(): List<Transfer> = converting { handle.transfers().map { it.converted() } }
 
     /**
      * The transfer with the identifier [id], if the group holds it.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [transferBlocking] blocks instead.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -781,8 +628,6 @@ public class ExpenseGroup private constructor(
     /**
      * The transfer with the identifier [id], if the group holds it.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [transfer] waits without blocking it.
-     *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -790,9 +635,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * The amount in the group currency of the transfer with the identifier [id], if the group holds it.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [transferAmountBlocking] blocks instead.
      *
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -802,8 +644,6 @@ public class ExpenseGroup private constructor(
     /**
      * The amount in the group currency of the transfer with the identifier [id], if the group holds it.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [transferAmount] waits without blocking it.
-     *
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -811,9 +651,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Adds [transfer] under its identifier and returns the identifier.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [addBlocking] blocks instead.
      *
      * @throws EranosException.Transfer for a transfer that does not build, such as [TransferFailure.SameMember].
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember], and [ExpenseGroupFailure.DuplicateTransfer]
@@ -826,8 +663,6 @@ public class ExpenseGroup private constructor(
     /**
      * Adds [transfer] under its identifier and returns the identifier.
      *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
-     *
      * @throws EranosException.Transfer for a transfer that does not build, such as [TransferFailure.SameMember].
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember], and [ExpenseGroupFailure.DuplicateTransfer]
      *   for an identifier another transfer has.
@@ -839,9 +674,6 @@ public class ExpenseGroup private constructor(
     /**
      * Replaces the transfer that [transfer] names by its identifier, and returns it as it was.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [replaceBlocking] blocks instead.
-     *
      * @throws EranosException.Transfer as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownTransfer], and as adding one does.
      * @throws EranosException.Id for an identifier that is not one.
@@ -851,8 +683,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Replaces the transfer that [transfer] names by its identifier, and returns it as it was.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [replace] waits without blocking it.
      *
      * @throws EranosException.Transfer as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownTransfer], and as adding one does.
@@ -864,9 +694,6 @@ public class ExpenseGroup private constructor(
     /**
      * Removes the transfer with the identifier [id] and returns it.
      *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [removeBlocking] blocks instead.
-     *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownTransfer].
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -875,8 +702,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * Removes the transfer with the identifier [id] and returns it.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [remove] waits without blocking it.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownTransfer].
      * @throws EranosException.Id for an identifier that is not one.
@@ -888,24 +713,16 @@ public class ExpenseGroup private constructor(
 
     /**
      * The group's totals.
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [summaryBlocking] blocks instead.
      */
     public suspend fun summary(): Summary = converting { handle.summaryAsync(null).converted() }
 
     /**
      * The group's totals.
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [summary] waits without blocking it.
      */
     public fun summaryBlocking(): Summary = converting { handle.summary().converted() }
 
     /**
      * The payments that settle every balance by [strategy].
-     *
-     * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
-     * group as it was. [settlementBlocking] blocks instead.
      *
      * @throws EranosException.Settlement with [SettlementFailure.OutOfMemory] for an exact plan of more open balances than
      *   its table fits.
@@ -916,8 +733,6 @@ public class ExpenseGroup private constructor(
 
     /**
      * The payments that settle every balance by [strategy].
-     *
-     * Waits for the group's lock by blocking its thread; in a coroutine, [settlement] waits without blocking it.
      *
      * @throws EranosException.Settlement with [SettlementFailure.OutOfMemory] for an exact plan of more open balances than
      *   its table fits.

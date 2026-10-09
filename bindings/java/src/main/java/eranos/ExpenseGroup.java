@@ -154,9 +154,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group's identifier.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #idAsync} waits without blocking
-     * it.
-     *
      * @return the identifier
      */
     public ExpenseGroupId id() {
@@ -165,9 +162,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The group's identifier.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the identifier
      */
@@ -178,9 +172,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group's name.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #nameAsync} waits without
-     * blocking it.
-     *
      * @return the text
      */
     public String name() {
@@ -190,9 +181,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group's name.
      *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
      * @return a future of the text
      */
     public CompletableFuture<String> nameAsync() {
@@ -201,9 +189,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Renames the group.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #setNameAsync} waits without
-     * blocking it.
      *
      * @param name the new name
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.EmptyName} for a blank
@@ -215,9 +200,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Renames the group.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.EmptyName} for a blank name.
@@ -232,9 +214,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group currency, which every total is in.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #currencyAsync} waits without
-     * blocking it.
-     *
      * @return the currency
      */
     public CurrencyCode currency() {
@@ -243,9 +222,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The group currency, which every total is in.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the currency
      */
@@ -257,9 +233,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Moves the group to {@code currency}, converting every entry with the rate {@code rates} gives
      * its currency.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #changeCurrencyAsync} waits
-     * without blocking it.
      *
      * @param currency the new group currency
      * @param rates the rate into the new group currency of every other currency the entries use
@@ -275,9 +248,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Moves the group to {@code currency}, converting every entry with the rate {@code rates} gives
      * its currency.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.MissingExchangeRate} for a currency in use without a rate, and {@link
@@ -296,9 +266,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group's note, if it has one.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #noteAsync} waits without
-     * blocking it.
-     *
      * @return the note, if the group has one
      */
     public Optional<String> note() {
@@ -308,9 +275,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group's note, if it has one.
      *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
      * @return a future of the note, if the group has one
      */
     public CompletableFuture<Optional<String>> noteAsync() {
@@ -319,9 +283,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Sets the group's note, trimmed; blank text clears it, as {@link #clearNote} does.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #setNoteAsync} waits without
-     * blocking it.
      *
      * @param note the new note
      */
@@ -333,9 +294,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Sets the group's note, trimmed; blank text clears it, as {@link #clearNoteAsync} does.
      *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
      * @param note the new note
      * @return a future of the call's end
      */
@@ -346,9 +304,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Clears the group's note, which {@link #setNote} sets.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #clearNoteAsync} waits without
-     * blocking it.
      */
     public void clearNote() {
         handle.setNote(null);
@@ -356,9 +311,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Clears the group's note, which {@link #setNoteAsync} sets.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the call's end
      */
@@ -369,9 +321,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The language the apps show the group in, if it has one.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #languageAsync} waits without
-     * blocking it.
-     *
      * @return the language, if the group has one
      */
     public Optional<Language> language() {
@@ -380,9 +329,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The language the apps show the group in, if it has one.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the language, if the group has one
      */
@@ -395,9 +341,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Sets the language the apps show the group in.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #setLanguageAsync} waits without
-     * blocking it.
-     *
      * @param language the new language
      */
     public void setLanguage(Language language) {
@@ -406,9 +349,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Sets the language the apps show the group in.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @param language the new language
      * @return a future of the call's end
@@ -419,9 +359,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Clears the language the apps show the group in.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #clearLanguageAsync} waits
-     * without blocking it.
      */
     public void clearLanguage() {
         Converting.runUnfailing(() -> handle.setLanguage(null));
@@ -429,9 +366,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Clears the language the apps show the group in.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the call's end
      */
@@ -442,9 +376,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group in its saved form, as JSON, which {@link ExpenseGroup#load} reads back.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #saveAsync} waits without
-     * blocking it.
-     *
      * @return the text
      */
     public String save() {
@@ -453,9 +384,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The group in its saved form, as JSON, which {@link ExpenseGroup#load} reads back.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the text
      */
@@ -469,9 +397,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Every member, archived ones included, in identifier order, which is creation order for
      * generated identifiers.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #membersAsync} waits without
-     * blocking it.
-     *
      * @return the members
      */
     public List<Member> members() {
@@ -482,9 +407,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Every member, archived ones included, in identifier order, which is creation order for
      * generated identifiers.
      *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
      * @return a future of the members
      */
     public CompletableFuture<List<Member>> membersAsync() {
@@ -494,9 +416,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The member with the identifier {@code id}, if the group holds them.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #memberAsync} waits without
-     * blocking it.
      *
      * @param id the identifier
      * @return the member, if the group holds them
@@ -509,9 +428,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The member with the identifier {@code id}, if the group holds them.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
@@ -528,9 +444,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Whether the member with the identifier {@code id} is archived; empty for a member the group
      * does not hold.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #isArchivedAsync} waits without
-     * blocking it.
-     *
      * @param id the identifier
      * @return whether the member is archived, if the group holds them
      * @throws EranosException.Id for an identifier that is not one
@@ -542,9 +455,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Whether the member with the identifier {@code id} is archived; empty for a member the group
      * does not hold.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
@@ -558,9 +468,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Adds {@code member} under their identifier, and returns the identifier.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #addMemberAsync} waits without
-     * blocking it.
      *
      * @param member the member
      * @return the member's identifier
@@ -578,9 +485,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Adds {@code member} under their identifier, and returns the identifier.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Member} with {@link
      * MemberFailure.EmptyFirstName} for a blank first name; {@link EranosException.PaymentAccount}
@@ -600,9 +504,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Replaces the details of the member that {@code member} names by their identifier, and returns
      * them as they were; an archived member stays archived.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #replaceMemberAsync} waits
-     * without blocking it.
-     *
      * @param member the member
      * @return the member as they were
      * @throws EranosException.Member as adding one does
@@ -618,9 +519,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Replaces the details of the member that {@code member} names by their identifier, and returns
      * them as they were; an archived member stays archived.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Member} as adding one does; {@link
      * EranosException.PaymentAccount} as adding one does; {@link EranosException.ExpenseGroup} with
@@ -640,9 +538,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Archives the member with the identifier {@code id}: they keep their history and balance, and
      * join no new expense.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #archiveMemberAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownMember}
      * @throws EranosException.Id for an identifier that is not one
@@ -654,9 +549,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Archives the member with the identifier {@code id}: they keep their history and balance, and
      * join no new expense.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.UnknownMember}; {@link EranosException.Id} for an identifier that is not
@@ -672,9 +564,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Makes the archived member with the identifier {@code id} active again.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #unarchiveMemberAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownMember}
      * @throws EranosException.Id for an identifier that is not one
@@ -685,9 +574,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Makes the archived member with the identifier {@code id} active again.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.UnknownMember}; {@link EranosException.Id} for an identifier that is not
@@ -703,9 +589,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Removes the member with the identifier {@code id}, who appears in no entry, and returns them.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #removeMemberAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @return the member as they were
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownMember}, and
@@ -719,9 +602,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Removes the member with the identifier {@code id}, who appears in no entry, and returns them.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.UnknownMember}, and {@link ExpenseGroupFailure.MemberInUse} with the
@@ -742,9 +622,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Every category: the built-in one first, then the others in identifier order, which is
      * creation order for generated identifiers.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #categoriesAsync} waits without
-     * blocking it.
-     *
      * @return the categories
      */
     public List<Category> categories() {
@@ -754,9 +631,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Every category: the built-in one first, then the others in identifier order, which is
      * creation order for generated identifiers.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the categories
      */
@@ -769,9 +643,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The category with the identifier {@code id}, if the group holds it.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #categoryAsync} waits without
-     * blocking it.
-     *
      * @param id the identifier
      * @return the category, if the group holds it
      * @throws EranosException.Id for an identifier that is not one
@@ -783,9 +654,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The category with the identifier {@code id}, if the group holds it.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
@@ -801,9 +669,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Adds {@code category} under its identifier, and returns the identifier.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #addCategoryAsync} waits without
-     * blocking it.
-     *
      * @param category the category
      * @return the category's identifier
      * @throws EranosException.Category with {@link CategoryFailure.EmptyName} for a blank name
@@ -818,9 +683,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Adds {@code category} under its identifier, and returns the identifier.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Category} with {@link
      * CategoryFailure.EmptyName} for a blank name; {@link EranosException.ExpenseGroup} with {@link
@@ -840,9 +702,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Renames the category that {@code category} names by its identifier, and returns it as it was.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #replaceCategoryAsync} waits
-     * without blocking it.
-     *
      * @param category the category
      * @return the category as it was
      * @throws EranosException.Category with {@link CategoryFailure.EmptyName} for a blank name
@@ -858,9 +717,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Renames the category that {@code category} names by its identifier, and returns it as it was.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Category} with {@link
      * CategoryFailure.EmptyName} for a blank name; {@link EranosException.ExpenseGroup} with {@link
@@ -881,9 +737,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Removes the category with the identifier {@code id} and returns it; its expenses move to the
      * built-in one.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #removeCategoryAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @return the category as it was
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownCategory} or
@@ -897,9 +750,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Removes the category with the identifier {@code id} and returns it; its expenses move to the
      * built-in one.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.UnknownCategory} or {@link ExpenseGroupFailure.BuiltInCategory}; {@link
@@ -918,9 +768,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Every expense, in identifier order, which is creation order for generated identifiers.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #expensesAsync} waits without
-     * blocking it.
-     *
      * @return the expenses
      */
     public List<Expense> expenses() {
@@ -929,9 +776,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Every expense, in identifier order, which is creation order for generated identifiers.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the expenses
      */
@@ -944,9 +788,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The expense with the identifier {@code id}, if the group holds it.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #expenseAsync} waits without
-     * blocking it.
-     *
      * @param id the identifier
      * @return the expense, if the group holds it
      * @throws EranosException.Id for an identifier that is not one
@@ -958,9 +799,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The expense with the identifier {@code id}, if the group holds it.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
@@ -977,9 +815,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * How the expense with the identifier {@code id} divides, in the group currency, if the group
      * holds it.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #expenseSharesAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @return the shares, if the group holds the expense
      * @throws EranosException.Id for an identifier that is not one
@@ -995,9 +830,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * How the expense with the identifier {@code id} divides, in the group currency, if the group
      * holds it.
      *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
      * @param id the identifier
@@ -1011,9 +843,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Adds {@code expense} under its identifier, and returns the identifier.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #addExpenseAsync} waits without
-     * blocking it.
      *
      * @param expense the expense
      * @return the expense's identifier
@@ -1030,9 +859,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Adds {@code expense} under its identifier, and returns the identifier.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Expense} for an expense that does not build,
      * such as one whose amounts do not add up; {@link EranosException.ExpenseGroup} for one that
@@ -1052,9 +878,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Replaces the expense that {@code expense} names by its identifier, and returns it as it was.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #replaceExpenseAsync} waits
-     * without blocking it.
-     *
      * @param expense the expense
      * @return the expense as it was
      * @throws EranosException.Expense as adding one does
@@ -1068,9 +891,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Replaces the expense that {@code expense} names by its identifier, and returns it as it was.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Expense} as adding one does; {@link
      * EranosException.ExpenseGroup} with {@link ExpenseGroupFailure.UnknownExpense} for an
@@ -1089,9 +909,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Removes the expense with the identifier {@code id} and returns it.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #removeExpenseAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @return the expense as it was
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownExpense}
@@ -1103,9 +920,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Removes the expense with the identifier {@code id} and returns it.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.UnknownExpense}; {@link EranosException.Id} for an identifier that is not
@@ -1124,9 +938,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #transfersAsync} waits without
-     * blocking it.
-     *
      * @return the transfers
      */
     public List<Transfer> transfers() {
@@ -1135,9 +946,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Every transfer, in identifier order, which is creation order for generated identifiers.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * @return a future of the transfers
      */
@@ -1150,9 +958,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The transfer with the identifier {@code id}, if the group holds it.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #transferAsync} waits without
-     * blocking it.
-     *
      * @param id the identifier
      * @return the transfer, if the group holds it
      * @throws EranosException.Id for an identifier that is not one
@@ -1164,9 +969,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The transfer with the identifier {@code id}, if the group holds it.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
@@ -1183,9 +985,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * The amount in the group currency of the transfer with the identifier {@code id}, if the group
      * holds it.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #transferAmountAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @return the amount, if the group holds the transfer
      * @throws EranosException.Id for an identifier that is not one
@@ -1198,9 +997,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The amount in the group currency of the transfer with the identifier {@code id}, if the group
      * holds it.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Id} for an identifier that is not one.
      *
@@ -1216,9 +1012,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Adds {@code transfer} under its identifier, and returns the identifier.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #addTransferAsync} waits without
-     * blocking it.
-     *
      * @param transfer the transfer
      * @return the transfer's identifier
      * @throws EranosException.Transfer for a transfer that does not build, such as {@link
@@ -1233,9 +1026,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Adds {@code transfer} under its identifier, and returns the identifier.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Transfer} for a transfer that does not build,
      * such as {@link TransferFailure.SameMember}; {@link EranosException.ExpenseGroup} with {@link
@@ -1256,9 +1046,6 @@ public final class ExpenseGroup implements AutoCloseable {
      * Replaces the transfer that {@code transfer} names by its identifier, and returns it as it
      * was.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #replaceTransferAsync} waits
-     * without blocking it.
-     *
      * @param transfer the transfer
      * @return the transfer as it was
      * @throws EranosException.Transfer as adding one does
@@ -1274,9 +1061,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Replaces the transfer that {@code transfer} names by its identifier, and returns it as it
      * was.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Transfer} as adding one does; {@link
      * EranosException.ExpenseGroup} with {@link ExpenseGroupFailure.UnknownTransfer} for an
@@ -1295,9 +1079,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * Removes the transfer with the identifier {@code id} and returns it.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #removeTransferAsync} waits
-     * without blocking it.
-     *
      * @param id the identifier
      * @return the transfer as it was
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownTransfer}
@@ -1309,9 +1090,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * Removes the transfer with the identifier {@code id} and returns it.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.UnknownTransfer}; {@link EranosException.Id} for an identifier that is
@@ -1330,9 +1108,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group's totals.
      *
-     * <p>Waits for the group's lock by blocking its thread; {@link #summaryAsync} waits without
-     * blocking it.
-     *
      * @return the totals
      */
     public Summary summary() {
@@ -1342,9 +1117,6 @@ public final class ExpenseGroup implements AutoCloseable {
     /**
      * The group's totals.
      *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
-     *
      * @return a future of the totals
      */
     public CompletableFuture<Summary> summaryAsync() {
@@ -1353,9 +1125,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The payments that settle every balance by {@code strategy}.
-     *
-     * <p>Waits for the group's lock by blocking its thread; {@link #settlementAsync} waits without
-     * blocking it.
      *
      * @param strategy the strategy
      * @return the payments
@@ -1369,9 +1138,6 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * The payments that settle every balance by {@code strategy}.
-     *
-     * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
-     * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link EranosException.Settlement} with {@link
      * SettlementFailure.OutOfMemory} for an exact plan of more open balances than its table fits.

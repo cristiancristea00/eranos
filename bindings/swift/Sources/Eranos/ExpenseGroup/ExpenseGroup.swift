@@ -87,8 +87,8 @@ public final class ExpenseGroup: Sendable {
 
     /// A read handle, which holds the shared lock until it is released or freed.
     ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while a change
-    ///   holds the lock.
+    /// - Throws: Nothing on the platforms the package builds for: the call it makes can fail only on wasm,
+    ///   where another call can hold the lock.
     public func read() throws(EranosError) -> ExpenseGroupReader {
         let reader = try converting { try handle.read() }
         return ExpenseGroupReader(reader)
@@ -137,8 +137,8 @@ public final class ExpenseGroup: Sendable {
     /// reads and changes run with no other call in between. Any synchronous call of the group on the
     /// thread that holds one waits forever: release or free the handle first.
     ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
+    /// - Throws: Nothing on the platforms the package builds for: the call it makes can fail only on wasm,
+    ///   where another call can hold the lock.
     public func write() throws(EranosError) -> ExpenseGroupWriter {
         let writer = try converting { try handle.write() }
         return ExpenseGroupWriter(writer)
