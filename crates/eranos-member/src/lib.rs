@@ -13,6 +13,7 @@ mod error;
 use eranos_contact::{Email, PhoneNumber};
 use eranos_core::{MemberId, text};
 use eranos_payment_account::PaymentAccount;
+use std::fmt;
 
 pub use error::{FromMemberError, MemberError};
 
@@ -43,7 +44,7 @@ pub use error::{FromMemberError, MemberError};
 /// assert_eq!(renamed.last_name(), Some("Popescu"));
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Member {
     id: MemberId,
@@ -56,6 +57,17 @@ pub struct Member {
     phone: Option<PhoneNumber>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     accounts: Vec<PaymentAccount>,
+}
+
+/// Prints the identifier and not the names, the contact details, or the
+/// accounts, which a log must not hold.
+impl fmt::Debug for Member {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Member")
+            .field("id", &self.id)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Member {

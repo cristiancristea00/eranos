@@ -83,7 +83,7 @@ impl PaymentAccount {
 /// The details of an [`PaymentAccount`]: where the money goes.
 ///
 /// Serialised as `{"iban": "…"}` or `{"username": "…"}`, in clear text.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
@@ -95,6 +95,18 @@ pub enum PaymentAccountDetails {
     Iban(Iban),
     /// A username in a payment app.
     Username(Username),
+}
+
+/// Prints the kind of account and not its number or username, which a log
+/// must not hold.
+impl fmt::Debug for PaymentAccountDetails {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let kind = match self {
+            Self::Iban(_) => "Iban",
+            Self::Username(_) => "Username",
+        };
+        formatter.debug_tuple(kind).finish_non_exhaustive()
+    }
 }
 
 impl PaymentAccountDetails {
@@ -156,8 +168,15 @@ pub enum PaymentAccountKind {
 /// A username in a payment app, such as `@ana`.
 ///
 /// [`as_str`](Self::as_str) returns it and `Display` prints it, trimmed.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Username(String);
+
+/// Prints the type and not the username, which a log must not hold.
+impl fmt::Debug for Username {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_tuple("Username").finish_non_exhaustive()
+    }
+}
 
 impl Username {
     /// Returns the username `text`, trimmed.

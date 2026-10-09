@@ -33,8 +33,15 @@ mod registry;
 /// assert!(Iban::parse("DE46 37O4 0044 0532 0130 00").is_err());
 /// # Ok::<(), eranos::error::PaymentAccountError>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Iban(String);
+
+/// Prints the type and not the number, which a log must not hold.
+impl fmt::Debug for Iban {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_tuple("Iban").finish_non_exhaustive()
+    }
+}
 
 impl Iban {
     /// Parses an IBAN in electronic (`DE89370400440532013000`) or print

@@ -26,13 +26,13 @@ pub enum ExpenseError {
     #[error("a split needs at least one member")]
     EmptySplit,
     /// A member appears more than once in one split.
-    #[error("member {member} appears more than once in a split")]
+    #[error("a member appears more than once in the split")]
     DuplicateMember {
         /// The repeated member.
         member: MemberId,
     },
     /// A member's percentage or amount is zero or negative.
-    #[error("member {member} has a share that is not positive")]
+    #[error("a member's share is not positive")]
     NonPositiveShare {
         /// The member whose share is not positive.
         member: MemberId,

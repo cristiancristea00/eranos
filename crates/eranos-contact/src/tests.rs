@@ -9,6 +9,16 @@ use rlibphonenumber::PhoneNumberType;
 
 use super::*;
 
+/// A log that printed an address or a number, as a `Debug` of the member
+/// holding them would, would hold contact details.
+#[test]
+fn debug_prints_the_kind_of_contact_detail_and_not_the_detail() {
+    let email = Email::parse("ana@example.com").unwrap();
+    assert_eq!(format!("{email:?}"), "Email(..)");
+    let phone = PhoneNumber::parse("+40712345678").unwrap();
+    assert_eq!(format!("{phone:?}"), "PhoneNumber(..)");
+}
+
 /// Correct addresses would be refused when typed or pasted.
 #[test]
 fn a_well_formed_email_is_accepted() {

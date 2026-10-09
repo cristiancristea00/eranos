@@ -306,7 +306,10 @@ fn a_tampered_file_is_refused() {
     let unknown_payer = tamper(&|value| {
         value["expenses"][0]["payers"] = json!({"equal": [stranger]});
     });
-    assert!(unknown_payer.contains("unknown member"), "{unknown_payer}");
+    assert!(
+        unknown_payer.contains("no member has this identifier"),
+        "{unknown_payer}"
+    );
     // An IBAN with a typo.
     let typo = tamper(&|value| {
         value["members"][0]["accounts"][0]["details"]["iban"] = json!("RO49AAAA1B31007593840001");
@@ -390,7 +393,7 @@ fn an_inconsistent_file_is_refused() {
     let stranger = "stranger";
     let unknown_sender = tamper(&|value| value["transfers"][0]["sender"] = json!(stranger));
     assert!(
-        unknown_sender.contains("unknown member"),
+        unknown_sender.contains("no member has this identifier"),
         "{unknown_sender}"
     );
     // The built-in category listed as if it were the group's own.
@@ -408,7 +411,7 @@ fn an_inconsistent_file_is_refused() {
     // Someone archived who is not a member.
     let archived_stranger = tamper(&|value| value["archived"] = json!([stranger]));
     assert!(
-        archived_stranger.contains("unknown member"),
+        archived_stranger.contains("no member has this identifier"),
         "{archived_stranger}"
     );
 }
@@ -740,15 +743,16 @@ fn a_bare_group_round_trips_through_json() {
 }
 
 /// Account details are stored in clear text, for the app's secure storage,
-/// and print in full, like every other value.
+/// and a log that printed a member would hold them: the saved form holds
+/// them in full, and `Debug` holds none of them.
 #[test]
-fn account_details_serialise_and_print_in_clear_text() {
+fn account_details_serialise_in_clear_text_and_stay_out_of_debug_output() {
     let Trip { group, ana, .. } = trip();
     let text = serde_json::to_string(&group).unwrap();
     assert!(text.contains("RO49AAAA1B31007593840000"));
+    assert!(text.contains("@ana"));
     let debug = format!("{:?}", group.member(ana).unwrap());
-    assert!(debug.contains("RO49AAAA1B31007593840000"), "{debug}");
-    assert!(debug.contains("@ana"), "{debug}");
+    assert_eq!(debug, format!("Member {{ id: {ana:?}, .. }}"));
 }
 
 /// Value types serialise on their own in the same shapes as inside a

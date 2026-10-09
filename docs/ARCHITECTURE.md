@@ -693,7 +693,11 @@ never the derived totals:
 
 IBANs and usernames are validated values, held, printed, and serialised in
 clear text like every other value: `as_str()` returns an IBAN in electronic
-format and a username as entered, trimmed. IBANs are validated against the
+format and a username as entered, trimmed. `Debug` is the exception: for an
+IBAN, a username, an email address, a phone number, and a member it prints
+the kind of value and not the value, so a log that prints a member holds
+no account number or contact detail, and an error message names the kind
+of entry it refused, never an identifier. IBANs are validated against the
 SWIFT IBAN Registry (release 103): the country code,
 the country's length and BBAN structure (which positions hold digits and
 which letters), and the ISO 7064 mod-97 check digits, which must lie

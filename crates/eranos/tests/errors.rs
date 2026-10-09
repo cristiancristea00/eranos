@@ -255,7 +255,7 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
         },
         Expected {
             error: ExpenseError::DuplicateMember { member: member() },
-            message: "member 11111111-1111-1111-1111-111111111111 appears more than once in a split",
+            message: "a member appears more than once in the split",
         },
         Expected {
             error: ExpenseError::EmptyItemName,
@@ -294,7 +294,7 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
         },
         Expected {
             error: ExpenseError::NonPositiveShare { member: member() },
-            message: "member 11111111-1111-1111-1111-111111111111 has a share that is not positive",
+            message: "a member's share is not positive",
         },
         Expected {
             error: ExpenseError::Overflow,
@@ -328,7 +328,7 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
     vec![
         Expected {
             error: ExpenseGroupError::ArchivedMember(member()),
-            message: "member 11111111-1111-1111-1111-111111111111 is archived",
+            message: "the member is archived",
         },
         Expected {
             error: ExpenseGroupError::BuiltInCategory,
@@ -340,13 +340,13 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
         },
         Expected {
             error: ExpenseGroupError::DuplicateCategory(category()),
-            message: "category 22222222-2222-2222-2222-222222222222 already exists",
+            message: "a category with this identifier already exists",
         },
         Expected {
             error: ExpenseGroupError::DuplicateCategoryName {
                 existing: category(),
             },
-            message: "category 22222222-2222-2222-2222-222222222222 already has this name",
+            message: "another category already has this name",
         },
         Expected {
             error: ExpenseGroupError::DuplicateExchangeRate {
@@ -356,15 +356,15 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
         },
         Expected {
             error: ExpenseGroupError::DuplicateExpense(expense()),
-            message: "expense 33333333-3333-3333-3333-333333333333 already exists",
+            message: "an expense with this identifier already exists",
         },
         Expected {
             error: ExpenseGroupError::DuplicateMember(member()),
-            message: "member 11111111-1111-1111-1111-111111111111 already exists",
+            message: "a member with this identifier already exists",
         },
         Expected {
             error: ExpenseGroupError::DuplicateTransfer(transfer()),
-            message: "transfer 44444444-4444-4444-4444-444444444444 already exists",
+            message: "a transfer with this identifier already exists",
         },
         Expected {
             error: ExpenseGroupError::EmptyName,
@@ -379,7 +379,7 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
                 ],
                 transfers: vec![transfer()],
             },
-            message: "member 11111111-1111-1111-1111-111111111111 is used by 2 expenses and 1 transfer",
+            message: "the member is used by 2 expenses and 1 transfer",
         },
         Expected {
             error: ExpenseGroupError::MissingExchangeRate {
@@ -397,19 +397,19 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
         },
         Expected {
             error: ExpenseGroupError::UnknownCategory(category()),
-            message: "unknown category 22222222-2222-2222-2222-222222222222",
+            message: "no category has this identifier",
         },
         Expected {
             error: ExpenseGroupError::UnknownExpense(expense()),
-            message: "unknown expense 33333333-3333-3333-3333-333333333333",
+            message: "no expense has this identifier",
         },
         Expected {
             error: ExpenseGroupError::UnknownMember(member()),
-            message: "unknown member 11111111-1111-1111-1111-111111111111",
+            message: "no member has this identifier",
         },
         Expected {
             error: ExpenseGroupError::UnknownTransfer(transfer()),
-            message: "unknown transfer 44444444-4444-4444-4444-444444444444",
+            message: "no transfer has this identifier",
         },
         Expected {
             error: ExpenseGroupError::UnsupportedFormat { format: 5 },

@@ -44,8 +44,15 @@ pub use error::{ContactError, FromContactError};
 /// assert!(Email::parse("ana..popescu@example.com").is_err()); // a doubled dot
 /// # Ok::<(), eranos::error::ContactError>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Email(String);
+
+/// Prints the type and not the address, which a log must not hold.
+impl fmt::Debug for Email {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_tuple("Email").finish_non_exhaustive()
+    }
+}
 
 impl Email {
     /// Parses an email address, ignoring surrounding whitespace.
@@ -259,8 +266,15 @@ fn general_category(character: char) -> GeneralCategory {
 /// assert!(PhoneNumber::parse("+40 612 345 678").is_err()); // no such range in Romania
 /// # Ok::<(), eranos::error::ContactError>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PhoneNumber(String);
+
+/// Prints the type and not the number, which a log must not hold.
+impl fmt::Debug for PhoneNumber {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_tuple("PhoneNumber").finish_non_exhaustive()
+    }
+}
 
 impl PhoneNumber {
     /// Parses a phone number, ignoring surrounding whitespace, and stores its

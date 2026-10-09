@@ -95,17 +95,24 @@ fn a_blank_username_is_rejected() {
 }
 
 /// Payment screens would show the username differently from how it was
-/// entered, or debug output would show something else than the value.
+/// entered, or a log that printed a member's accounts would hold the
+/// username or the IBAN.
 #[test]
-fn usernames_print_as_entered() {
-    // Display and debug output.
+fn usernames_print_as_entered_and_debug_prints_the_kind_alone() {
     assert_eq!(username().to_string(), USERNAME);
-    assert_eq!(format!("{:?}", username()), "Username(\"@ana.popescu\")");
-    // Nested in account details.
-    let details = PaymentAccountDetails::from(username());
+    assert_eq!(format!("{:?}", username()), "Username(..)");
     assert_eq!(
-        format!("{details:?}"),
-        "Username(Username(\"@ana.popescu\"))"
+        format!("{:?}", PaymentAccountDetails::from(username())),
+        "Username(..)"
+    );
+    assert_eq!(
+        format!("{:?}", PaymentAccountDetails::from(iban())),
+        "Iban(..)"
+    );
+    let account = PaymentAccount::new("ING", iban()).unwrap();
+    assert_eq!(
+        format!("{account:?}"),
+        "PaymentAccount { name: \"ING\", details: Iban(..) }"
     );
 }
 

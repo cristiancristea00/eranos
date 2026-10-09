@@ -319,13 +319,13 @@ fn country_code_is_the_first_two_letters() {
     );
 }
 
-/// Screens and debug output would show the number in another form than the
-/// one banks accept.
+/// Screens would show the number in another form than the one banks
+/// accept, or a log that printed a value would hold the number.
 #[test]
-fn debug_and_display_show_the_electronic_format() {
+fn display_shows_the_electronic_format_and_debug_hides_the_number() {
     // The German example, entered in print format.
     let iban = Iban::parse("de89 3704 0044 0532 0130 00").unwrap();
-    assert_eq!(format!("{iban:?}"), "Iban(\"DE89370400440532013000\")");
+    assert_eq!(format!("{iban:?}"), "Iban(..)");
     assert_eq!(iban.to_string(), GERMAN);
     // Every example.
     for example in registry::EXAMPLES {

@@ -306,7 +306,7 @@ func membersAndTransfersConvertAndStoreWhole() throws {
 
     let category = Category(name: "Travel")
     #expect(Category(category.generated) == category)
-    #expect(throws: EranosError.expenseGroup(.duplicateMember(id), detail: "member \(id) already exists")) {
+    #expect(throws: EranosError.expenseGroup(.duplicateMember(id), detail: "a member with this identifier already exists")) {
         try flat.group.add(stored)
     }
 }
@@ -353,19 +353,19 @@ func onlyAnEntryTheGroupHoldsIsReplaced() throws {
     let flat = try Flat()
     let group = flat.group
     let member = Member(firstName: "Carol")
-    #expect(throws: EranosError.expenseGroup(.unknownMember(member.id), detail: "unknown member \(member.id)")) {
+    #expect(throws: EranosError.expenseGroup(.unknownMember(member.id), detail: "no member has this identifier")) {
         try group.replace(member)
     }
     let category = Category(name: "Travel")
-    #expect(throws: EranosError.expenseGroup(.unknownCategory(category.id), detail: "unknown category \(category.id)")) {
+    #expect(throws: EranosError.expenseGroup(.unknownCategory(category.id), detail: "no category has this identifier")) {
         try group.replace(category)
     }
     let expense = flat.expense("Lunch", paidBy: flat.ana, sharedBy: [flat.ana, flat.bob])
-    #expect(throws: EranosError.expenseGroup(.unknownExpense(expense.id), detail: "unknown expense \(expense.id)")) {
+    #expect(throws: EranosError.expenseGroup(.unknownExpense(expense.id), detail: "no expense has this identifier")) {
         try group.replace(expense)
     }
     let transfer = Transfer(sender: flat.ana, receiver: flat.bob, cost: .local(flat.euros(100)), date: flat.day)
-    #expect(throws: EranosError.expenseGroup(.unknownTransfer(transfer.id), detail: "unknown transfer \(transfer.id)")) {
+    #expect(throws: EranosError.expenseGroup(.unknownTransfer(transfer.id), detail: "no transfer has this identifier")) {
         try group.replace(transfer)
     }
 }
@@ -382,7 +382,7 @@ func everyEntryKeepsTheIdentifierTheAppGivesIt() throws {
     let member = Member(id: carol, firstName: "Carol")
     #expect(try group.add(member) == carol)
     #expect(try group.member(withID: carol) == member)
-    #expect(throws: EranosError.expenseGroup(.duplicateMember(carol), detail: "member carol already exists")) {
+    #expect(throws: EranosError.expenseGroup(.duplicateMember(carol), detail: "a member with this identifier already exists")) {
         try group.add(Member(id: carol, firstName: "Caroline"))
     }
 
@@ -390,11 +390,11 @@ func everyEntryKeepsTheIdentifierTheAppGivesIt() throws {
     let category = Category(id: travel, name: "Travel")
     #expect(try group.add(category) == travel)
     #expect(try group.category(withID: travel) == category)
-    #expect(throws: EranosError.expenseGroup(.duplicateCategory(travel), detail: "category -travel already exists")) {
+    #expect(throws: EranosError.expenseGroup(.duplicateCategory(travel), detail: "a category with this identifier already exists")) {
         try group.add(Category(id: travel, name: "Trips"))
     }
     let builtIn = try #require(try group.categories().first?.id)
-    #expect(throws: EranosError.expenseGroup(.duplicateCategory(builtIn), detail: "category \(builtIn) already exists")) {
+    #expect(throws: EranosError.expenseGroup(.duplicateCategory(builtIn), detail: "a category with this identifier already exists")) {
         try group.add(Category(id: builtIn, name: "Other"))
     }
 
@@ -410,7 +410,7 @@ func everyEntryKeepsTheIdentifierTheAppGivesIt() throws {
     )
     #expect(try group.add(expense) == taxi)
     #expect(try group.expense(withID: taxi) == expense)
-    #expect(throws: EranosError.expenseGroup(.duplicateExpense(taxi), detail: "expense !taxi already exists")) {
+    #expect(throws: EranosError.expenseGroup(.duplicateExpense(taxi), detail: "an expense with this identifier already exists")) {
         try group.add(expense)
     }
 
@@ -418,7 +418,7 @@ func everyEntryKeepsTheIdentifierTheAppGivesIt() throws {
     let transfer = Transfer(id: repaid, sender: flat.ana, receiver: carol, cost: .local(flat.euros(600)), date: flat.day)
     #expect(try group.add(transfer) == repaid)
     #expect(try group.transfer(withID: repaid) == transfer)
-    #expect(throws: EranosError.expenseGroup(.duplicateTransfer(repaid), detail: "transfer zz already exists")) {
+    #expect(throws: EranosError.expenseGroup(.duplicateTransfer(repaid), detail: "a transfer with this identifier already exists")) {
         try group.add(transfer)
     }
 }

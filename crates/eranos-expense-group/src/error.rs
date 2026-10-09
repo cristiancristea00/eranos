@@ -66,17 +66,17 @@ pub enum ExpenseGroupError {
         currency: CurrencyCode,
     },
     /// A member with this ID already exists.
-    #[error("member {0} already exists")]
+    #[error("a member with this identifier already exists")]
     DuplicateMember(MemberId),
     /// No member with this ID.
-    #[error("unknown member {0}")]
+    #[error("no member has this identifier")]
     UnknownMember(MemberId),
     /// An archived member cannot join a new expense.
-    #[error("member {0} is archived")]
+    #[error("the member is archived")]
     ArchivedMember(MemberId),
     /// The member is still referenced and cannot be removed; archive it
     /// instead.
-    #[error("member {member} is used by {}", usage(expenses.len(), transfers.len()))]
+    #[error("the member is used by {}", usage(expenses.len(), transfers.len()))]
     MemberInUse {
         /// The member that was to be removed.
         member: MemberId,
@@ -86,32 +86,32 @@ pub enum ExpenseGroupError {
         transfers: Vec<TransferId>,
     },
     /// A category with this ID already exists.
-    #[error("category {0} already exists")]
+    #[error("a category with this identifier already exists")]
     DuplicateCategory(CategoryId),
     /// Another category already has this name, compared by Unicode canonical
     /// caseless matching.
-    #[error("category {existing} already has this name")]
+    #[error("another category already has this name")]
     DuplicateCategoryName {
         /// The category that has the name.
         existing: CategoryId,
     },
     /// No category with this ID.
-    #[error("unknown category {0}")]
+    #[error("no category has this identifier")]
     UnknownCategory(CategoryId),
     /// The built-in Uncategorised category cannot be renamed or removed.
     #[error("the built-in category cannot be renamed or removed")]
     BuiltInCategory,
     /// An expense with this ID already exists.
-    #[error("expense {0} already exists")]
+    #[error("an expense with this identifier already exists")]
     DuplicateExpense(ExpenseId),
     /// No expense with this ID.
-    #[error("unknown expense {0}")]
+    #[error("no expense has this identifier")]
     UnknownExpense(ExpenseId),
     /// A transfer with this ID already exists.
-    #[error("transfer {0} already exists")]
+    #[error("a transfer with this identifier already exists")]
     DuplicateTransfer(TransferId),
     /// No transfer with this ID.
-    #[error("unknown transfer {0}")]
+    #[error("no transfer has this identifier")]
     UnknownTransfer(TransferId),
     /// A shared group's lock was asked for without waiting, while another
     /// call held it.
