@@ -350,7 +350,7 @@ impl SavedExpenseGroup {
             group.stage_transfer(transfer, &mut delta)?;
             pacer.advance(1).await;
         }
-        group.apply_staged(&delta)?;
+        crate::commit(&mut group.ledger, &mut group.settlements, &delta)?;
         for member in contents.archived {
             group.archive_member(member)?;
             pacer.advance(1).await;
