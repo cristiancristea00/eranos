@@ -71,7 +71,7 @@ func main() throws(EranosError) {
             ExpenseRow(
                 name: expense.name,
                 payers: try names(group, expense.payers.members),
-                participants: try names(group, participants(expense.split)),
+                participants: try names(group, try expense.split.participants()),
                 amount: try expense.total()
             )
         },
@@ -85,15 +85,14 @@ func main() throws(EranosError) {
         and their balance is what they paid minus what they consumed.
         """)
     printTable(
-        group.members().compactMap { member in
-            totals(of: member.id, in: summary).map { totals in
-                MemberRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
-            }
+        group.members().map { member in
+            let totals = summary.member(withID: member.id)
+            return MemberRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
         },
         numbersFrom: 1
     )
-    let anaTotals = totals(of: ana, in: summary)
-    print("Ana paid \(anaTotals?.paid.description ?? "?") but consumed only \(anaTotals?.share.description ?? "?"), so the others owe her the difference.")
+    let anaTotals = summary.member(withID: ana)
+    print("Ana paid \(anaTotals.paid) but consumed only \(anaTotals.share), so the others owe her the difference.")
 
     section("4. Settling up")
     let settlement = try group.settlement(by: .minimumTransfers)
@@ -110,7 +109,7 @@ func main() throws(EranosError) {
     let spent = try Money(parsing: "300.00", in: euro)
     let owed = try Money(parsing: "140.00", in: euro)
     precondition(spent == summary.totalSpent)
-    precondition(Balance.getsBack(owed) == anaTotals?.balance)
+    precondition(Balance.getsBack(owed) == anaTotals.balance)
     precondition(2 == settlement.payments.count)
 }
 

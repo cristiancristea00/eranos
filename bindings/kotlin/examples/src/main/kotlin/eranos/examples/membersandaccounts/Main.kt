@@ -24,7 +24,6 @@ import eranos.Username
 import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
-import eranos.examples.totals
 
 private data class MemberRow(
     val name: String,
@@ -112,20 +111,19 @@ private fun printMembers(group: ExpenseGroup) {
 private fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     val rows =
-        group.membersBlocking().mapNotNull { member ->
-            totals(member.id, summary)?.let { totals ->
-                BalanceRow(
-                    name = member.firstName,
-                    status =
-                        when (group.isArchivedBlocking(member.id)) {
-                            true -> "archived"
-                            false -> "active"
-                            null -> "not in the group"
-                        },
-                    consumed = totals.share,
-                    balance = totals.balance,
-                )
-            }
+        group.membersBlocking().map { member ->
+            val totals = summary.member(member.id)
+            BalanceRow(
+                name = member.firstName,
+                status =
+                    when (group.isArchivedBlocking(member.id)) {
+                        true -> "archived"
+                        false -> "active"
+                        null -> "not in the group"
+                    },
+                consumed = totals.share,
+                balance = totals.balance,
+            )
         }
     printTable(BalanceRow.HEADERS, rows, numbersFrom = 2)
 }
@@ -243,7 +241,7 @@ private fun movingOut(
 
     check((refused as? EranosException.ExpenseGroup)?.failure == ExpenseGroupFailure.ArchivedMember(bob))
     check((removal as? EranosException.ExpenseGroup)?.failure is ExpenseGroupFailure.MemberInUse)
-    check(Balance.Owes(Money.parse("450.00", euro)) == totals(bob, group.summaryBlocking())?.balance)
+    check(Balance.Owes(Money.parse("450.00", euro)) == group.summaryBlocking().member(bob).balance)
     check(null != group.expenseBlocking(rent))
 }
 

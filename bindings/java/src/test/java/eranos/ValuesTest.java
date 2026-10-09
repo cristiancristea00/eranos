@@ -52,6 +52,18 @@ class ValuesTest {
         assertEquals("12.50 EUR", price.toString());
         assertEquals(new Money(1_300, euro), price.plus(new Money(50, euro)));
         assertEquals(new Money(1_200, euro), price.minus(new Money(50, euro)));
+        Money zero = Money.zero(euro);
+        assertEquals(new Money(0, euro), zero);
+        assertEquals(
+                List.of(true, false, false),
+                List.of(zero.isZero(), zero.isPositive(), zero.isNegative()));
+        assertEquals(
+                List.of(false, true, false),
+                List.of(price.isZero(), price.isPositive(), price.isNegative()));
+        Money refund = zero.minus(price);
+        assertEquals(
+                List.of(false, false, true),
+                List.of(refund.isZero(), refund.isPositive(), refund.isNegative()));
         EranosException.Money mismatch =
                 assertThrows(EranosException.Money.class, () -> price.plus(new Money(1, lei)));
         assertEquals(new MoneyFailure.CurrencyMismatch(euro, lei), mismatch.failure());

@@ -125,6 +125,12 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
         assert.equal(price.toString(), '12.50 EUR');
         assert.ok(price.plus(new Money(50n, euro)).equals(new Money(1_300n, euro)));
         assert.ok(price.minus(new Money(50n, euro)).equals(new Money(1_200n, euro)));
+        const zero = Money.zero(euro);
+        assert.ok(zero.equals(new Money(0n, euro)));
+        assert.deepEqual([zero.isZero(), zero.isPositive(), zero.isNegative()], [true, false, false]);
+        assert.deepEqual([price.isZero(), price.isPositive(), price.isNegative()], [false, true, false]);
+        const refund = zero.minus(price);
+        assert.deepEqual([refund.isZero(), refund.isPositive(), refund.isNegative()], [false, false, true]);
         assertRefused(() => price.plus(new Money(1n, lei)), MoneyError, { kind: 'currencyMismatch', left: euro, right: lei });
         assertRefused(() => new Money(9_223_372_036_854_775_807n, euro).plus(new Money(1n, euro)), MoneyError);
         assertRefused(() => new Money(-9_223_372_036_854_775_808n, euro).minus(new Money(1n, euro)), MoneyError);

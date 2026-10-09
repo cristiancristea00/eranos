@@ -12,6 +12,7 @@
 #include "eranos/detail/declarations.hpp"
 #include "eranos/expense.hpp"
 #include "eranos/identifiers.hpp"
+#include "eranos/totals.hpp"
 
 #include <memory>
 #include <optional>
@@ -43,6 +44,22 @@ struct Transfer final {
     /// @param date The day it was paid.
     inline Transfer(MemberId sender, MemberId receiver, Cost cost, CalendarDate const date) noexcept
         : Transfer(TransferId::generate(), std::move(sender), std::move(receiver), std::move(cost), date) {}
+
+    /// The transfer that records @p payment of a settlement, made on @p date, under the identifier @p id: from its sender to its receiver, of its
+    /// amount in the group currency. Transfer(Payment const &, CalendarDate) generates the identifier instead.
+    ///
+    /// @param id The identifier, which the app gives: its own, or one TransferId::generate() makes.
+    /// @param payment The payment.
+    /// @param date The day it was paid.
+    inline Transfer(TransferId id, Payment const &payment, CalendarDate const date) noexcept
+        : Transfer(std::move(id), payment.sender, payment.receiver, LocalCost{payment.amount}, date) {}
+
+    /// The transfer that records @p payment of a settlement, made on @p date, under an identifier generated when it is called, which
+    /// Transfer(TransferId, Payment const &, CalendarDate) takes instead.
+    ///
+    /// @param payment The payment.
+    /// @param date The day it was paid.
+    inline Transfer(Payment const &payment, CalendarDate const date) noexcept : Transfer(TransferId::generate(), payment, date) {}
 
     /// The identifier, which the app gives: its own, or one TransferId::generate() makes.
     TransferId id;

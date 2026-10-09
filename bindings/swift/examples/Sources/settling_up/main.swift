@@ -95,10 +95,9 @@ func spend(_ group: ExpenseGroup, _ name: String, _ amount: String, _ payer: Mem
 func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     let summary = group.summary
     printTable(
-        group.members().compactMap { member in
-            totals(of: member.id, in: summary).map { totals in
-                BalanceRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
-            }
+        group.members().map { member in
+            let totals = summary.member(withID: member.id)
+            return BalanceRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
         },
         numbersFrom: 1
     )
@@ -233,7 +232,7 @@ func main() throws(EranosError) {
             ExpenseRow(
                 name: expense.name,
                 payer: try names(group, expense.payers.members),
-                participants: try names(group, participants(expense.split)),
+                participants: try names(group, try expense.split.participants()),
                 amount: try expense.total()
             )
         },
@@ -250,7 +249,7 @@ func main() throws(EranosError) {
     section("9. Settling up for real")
     let plan = try group.settlement(by: .minimumTransfers)
     for payment in plan.payments {
-        _ = try group.add(Transfer(sender: payment.sender, receiver: payment.receiver, cost: .local(payment.amount), date: try CalendarDate(year: 2026, month: 9, day: 27)))
+        _ = try group.add(Transfer(payment: payment, date: try CalendarDate(year: 2026, month: 9, day: 27)))
     }
     print("""
         Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards
@@ -266,7 +265,7 @@ func main() throws(EranosError) {
     precondition(19 == festivalPayments)
     let summary = group.summary
     for member in [ana, bob, carol, dan, eva, filip] {
-        precondition(Balance.settled == totals(of: member, in: summary)?.balance)
+        precondition(Balance.settled == summary.member(withID: member).balance)
     }
 }
 

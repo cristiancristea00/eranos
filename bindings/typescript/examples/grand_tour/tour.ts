@@ -14,8 +14,9 @@ import {
     expenseTotal,
     formatBalance,
     splitMembers,
+    summaryMember,
 } from '../../src/index.js';
-import { type Columns, names, printTable, refusal, totals } from '../report.js';
+import { type Columns, names, printTable, refusal } from '../report.js';
 
 /** The members of the trip. */
 export interface People {
@@ -140,7 +141,7 @@ export function outcome<Value>(make: () => Value, shown: (value: Value) => strin
 
 /** The sum of `amounts`, all in `currency`. */
 export function sum(currency: CurrencyCode, amounts: readonly Money[]): Money {
-    return amounts.reduce((total, amount) => total.plus(amount), new Money(0n, currency));
+    return amounts.reduce((total, amount) => total.plus(amount), Money.zero(currency));
 }
 
 /** The rate `cost` was entered at: 1 for a cost in the group currency. */
@@ -150,22 +151,18 @@ export function rate(cost: Cost): ExchangeRate {
 
 export function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
-    const zero = new Money(0n, group.currencySync());
     printTable(
         balanceColumns,
         group.membersSync().map((member): BalanceRow => {
-            // The summary lists the members with a total; every total of the others is zero.
-            const found = totals(member.id, summary);
-            return undefined === found
-                ? { name: member.firstName, paid: zero, consumed: zero, sent: zero, received: zero, balance: { kind: 'settled' } }
-                : {
-                      name: member.firstName,
-                      paid: found.paid,
-                      consumed: found.share,
-                      sent: found.sent,
-                      received: found.received,
-                      balance: found.balance,
-                  };
+            const found = summaryMember(summary, member.id);
+            return {
+                name: member.firstName,
+                paid: found.paid,
+                consumed: found.share,
+                sent: found.sent,
+                received: found.received,
+                balance: found.balance,
+            };
         }),
         1,
     );
@@ -186,7 +183,7 @@ export function printCategories(group: ExpenseGroup): void {
 
 /** Every expense and transfer in a currency `shown` accepts, as entered and in the group currency. */
 export function printEntries(group: ExpenseGroup, shown: (currency: CurrencyCode) => boolean): void {
-    const zero = new Money(0n, group.currencySync());
+    const zero = Money.zero(group.currencySync());
     const expenses = group
         .expensesSync()
         .filter((expense) => shown(expense.cost.amount.currency))

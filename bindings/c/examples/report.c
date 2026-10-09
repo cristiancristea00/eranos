@@ -325,53 +325,21 @@ Members splitMembers(EranosSplit const *const split) {
     return members;
 }
 
-/// Orders two identifiers by their text, which orders them as the library does.
-[[nodiscard]] static int compareIds(void const *const left, void const *const right) {
-    return strcmp(((Id const *)left)->text, ((Id const *)right)->text);
-}
-
 Members participants(EranosExpense const *const expense) {
     Members members = {.count = 0};
     EranosExpenseSplit *const split = eranosExpenseSplit(expense);
-    EranosExpenseItemList *const items = eranosExpenseSplitItems(split);
-    if (nullptr == items) {
-        EranosSplit *const whole = eranosExpenseSplitSplit(split);
-        members = splitMembers(whole);
-        eranosSplitDestroy(whole);
-    } else {
-        for (size_t index = 0; eranosExpenseItemListLength(items) > index; ++index) {
-            EranosExpenseItem *const item = eranosExpenseItemListGet(items, index);
-            EranosSplit *const itemSplit = eranosExpenseItemSplit(item);
-            EranosTextList *list = nullptr;
-            must(eranosSplitParticipants(itemSplit, &list));
-            addAll(&members, list);
-            eranosTextListDestroy(list);
-            eranosSplitDestroy(itemSplit);
-            eranosExpenseItemDestroy(item);
-        }
-    }
-    eranosExpenseItemListDestroy(items);
+    EranosTextList *list = nullptr;
+    must(eranosExpenseSplitParticipants(split, &list));
+    addAll(&members, list);
+    eranosTextListDestroy(list);
     eranosExpenseSplitDestroy(split);
-    qsort(members.ids, members.count, sizeof members.ids[0], compareIds);
     return members;
 }
 
 EranosMemberSummary *totalsOf(EranosSummary const *const summary, char const *const member) {
-    EranosMemberSummaryList *const list = eranosSummaryMembers(summary);
-    EranosText *const text = eranosTextCreate();
-    EranosMemberSummary *found = nullptr;
-    for (size_t index = 0; nullptr == found && eranosMemberSummaryListLength(list) > index; ++index) {
-        EranosMemberSummary *const totals = eranosMemberSummaryListGet(list, index);
-        eranosMemberSummaryMember(totals, text);
-        if (0 == strcmp(eranosTextData(text), member)) {
-            found = totals;
-        } else {
-            eranosMemberSummaryDestroy(totals);
-        }
-    }
-    eranosTextDestroy(text);
-    eranosMemberSummaryListDestroy(list);
-    return found;
+    EranosMemberSummary *totals = nullptr;
+    must(eranosSummaryMember(summary, member, &totals));
+    return totals;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the text, then what to find in it and what replaces it, as a search reads.

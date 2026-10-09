@@ -144,6 +144,56 @@ impl Summary {
                 .collect(),
         }
     }
+
+    /// The totals of the member with the identifier `member`: all zero, and
+    /// settled, for a member without entries.
+    #[must_use]
+    pub fn member(&self, member: &str) -> MemberSummary {
+        self.members
+            .iter()
+            .find(|totals| totals.member == member)
+            .cloned()
+            .unwrap_or_else(|| MemberSummary {
+                member: member.to_owned(),
+                paid: self.zero(),
+                share: self.zero(),
+                sent: self.zero(),
+                received: self.zero(),
+                net: self.zero(),
+                balance: Balance::Settled,
+            })
+    }
+
+    /// The spending in the category with the identifier `category`: zero for
+    /// a category without expenses.
+    #[must_use]
+    pub fn category_total(&self, category: &str) -> Money {
+        self.category_totals
+            .iter()
+            .find(|total| total.category == category)
+            .map_or_else(|| self.zero(), |total| total.total.clone())
+    }
+
+    /// The share of the member with the identifier `member` of the spending
+    /// in the category with the identifier `category`: zero when they have
+    /// none there.
+    #[must_use]
+    pub fn member_category_total(&self, member: &str, category: &str) -> Money {
+        self.member_category_totals
+            .iter()
+            .filter(|totals| totals.member == member)
+            .flat_map(|totals| &totals.totals)
+            .find(|total| total.category == category)
+            .map_or_else(|| self.zero(), |total| total.total.clone())
+    }
+
+    /// Zero in the group currency.
+    fn zero(&self) -> Money {
+        Money {
+            minor_units: 0,
+            currency: self.total_spent.currency.clone(),
+        }
+    }
 }
 
 /// What one member paid of an expense and what their share of it is.

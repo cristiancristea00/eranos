@@ -219,6 +219,15 @@ public enum ExpenseSplit: Hashable, Sendable {
             self = .itemised(items.map(ExpenseItem.init))
         }
     }
+
+    /// Every member who shares the cost, once each, in identifier order.
+    ///
+    /// - Throws: ``EranosError/id(_:detail:)`` for a member whose identifier is not one, and the
+    ///   failures of an item that does not build.
+    public func participants() throws(EranosError) -> [Member.ID] {
+        let participants = try converting { try EranosGenerated.expenseSplitParticipants(split: generated) }
+        return participants.map { Member.ID(rawValue: $0) }
+    }
 }
 
 /// A line of an itemised bill.

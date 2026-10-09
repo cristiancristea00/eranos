@@ -32,6 +32,7 @@ import {
 import * as internal from './internal/eranos.js';
 import { Money } from './money.js';
 import { ExchangeRate, Parts, Percentage, Quantity } from './ratios.js';
+import type { Payment } from './totals.js';
 
 /** The exact amount one member pays of a split. */
 export interface MemberAmount {
@@ -783,6 +784,17 @@ export function expenseMembers(expense: ExpenseInput): readonly MemberId[] {
     return calling(() => internal.expenseMembers(generatedExpense(completedExpense(expense)))).map(memberId);
 }
 
+/**
+ * Every member who shares the cost of `split`, once each, in identifier order.
+ *
+ * @param split - The split
+ * @returns The members
+ * @throws {@link IdError} for a member whose identifier is not one, and the failures of an item that does not build
+ */
+export function expenseSplitParticipants(split: ExpenseSplitInput): readonly MemberId[] {
+    return calling(() => internal.expenseSplitParticipants(generatedExpenseSplit(completedExpenseSplit(split)))).map(memberId);
+}
+
 /** Where a member can be paid: a bank account or a payment-app username. */
 export type PaymentAccountDetails =
     | {
@@ -1009,6 +1021,19 @@ export function createTransfer(fields: Omit<Transfer, 'id'>): Transfer {
         ...(undefined === fields.time ? {} : { time: fields.time }),
         ...(undefined === fields.note ? {} : { note: fields.note }),
     };
+}
+
+/**
+ * The transfer that records `payment` of a settlement, made on `date`: from its sender to its receiver, of its amount in
+ * the group currency, under an identifier this call generates; `{ ...createTransferFromPayment(payment, date), id }` takes
+ * the app's own instead, and a spread adds a time or a note in the same way.
+ *
+ * @param payment - The payment
+ * @param date - The day it was paid
+ * @returns The transfer
+ */
+export function createTransferFromPayment(payment: Payment, date: CalendarDate): Transfer {
+    return createTransfer({ sender: payment.sender, receiver: payment.receiver, cost: { kind: 'local', amount: payment.amount }, date });
 }
 
 /**

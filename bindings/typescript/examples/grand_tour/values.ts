@@ -68,7 +68,7 @@ function amounts(): void {
     const mixed = refusal(() => eur('1.00').plus(ron('1.00')));
     const yen = Money.parse('1500', CurrencyCode.of('JPY'));
     const dinars = new Money(1_234n, CurrencyCode.of('BHD'));
-    const nothing = new Money(0n, CurrencyCode.of('RON'));
+    const nothing = Money.zero(CurrencyCode.of('RON'));
     const cost: Cost = { kind: 'converted', amount: eur('10.00'), rate: ExchangeRate.parse('4.9765') };
     const doubled: Cost = { kind: 'converted', amount: eur('20.00'), rate: rate(cost) };
     // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.

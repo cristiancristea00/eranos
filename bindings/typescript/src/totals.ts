@@ -73,6 +73,53 @@ export interface Summary {
     readonly memberCategoryTotals: readonly MemberCategoryTotals[];
 }
 
+/**
+ * The totals in `summary` of the member with the identifier `id`: all zero, and settled, for a member without entries.
+ *
+ * @param summary - The summary
+ * @param id - The member's identifier
+ * @returns The member's totals
+ */
+export function summaryMember(summary: Summary, id: MemberId): MemberSummary {
+    const zero = Money.zero(summary.totalSpent.currency);
+    return (
+        summary.members.find((totals) => totals.member === id) ?? {
+            member: id,
+            paid: zero,
+            share: zero,
+            sent: zero,
+            received: zero,
+            net: zero,
+            balance: { kind: 'settled' },
+        }
+    );
+}
+
+/**
+ * The spending in `summary` of the category with the identifier `id`: zero for a category without expenses.
+ *
+ * @param summary - The summary
+ * @param id - The category's identifier
+ * @returns The spending
+ */
+export function summaryCategoryTotal(summary: Summary, id: CategoryId): Money {
+    return summary.categoryTotals.find((total) => total.category === id)?.total ?? Money.zero(summary.totalSpent.currency);
+}
+
+/**
+ * The share in `summary` of the member with the identifier `member` of the spending in the category with the identifier
+ * `category`: zero when they have none there.
+ *
+ * @param summary - The summary
+ * @param member - The member's identifier
+ * @param category - The category's identifier
+ * @returns The member's share of the spending
+ */
+export function summaryMemberCategoryTotal(summary: Summary, member: MemberId, category: CategoryId): Money {
+    const totals = summary.memberCategoryTotals.find((entry) => entry.member === member)?.totals ?? [];
+    return totals.find((total) => total.category === category)?.total ?? Money.zero(summary.totalSpent.currency);
+}
+
 /** What one member paid of an expense and what their share of it is. */
 export interface MemberShare {
     /** The member. */

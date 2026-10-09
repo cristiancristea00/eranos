@@ -33,6 +33,57 @@ public record Summary(
     }
 
     /**
+     * The totals of the member with the identifier {@code id}: all zero, and settled, for a member
+     * without entries.
+     *
+     * @param id the member's identifier
+     * @return the member's totals
+     */
+    public MemberSummary member(MemberId id) {
+        Money zero = Money.zero(totalSpent.currency());
+        return members.stream()
+                .filter(totals -> totals.member().equals(id))
+                .findFirst()
+                .orElseGet(
+                        () ->
+                                new MemberSummary(
+                                        id, zero, zero, zero, zero, zero, new Balance.Settled()));
+    }
+
+    /**
+     * The spending in the category with the identifier {@code id}: zero for a category without
+     * expenses.
+     *
+     * @param id the category's identifier
+     * @return the spending
+     */
+    public Money categoryTotal(CategoryId id) {
+        return categoryTotals.stream()
+                .filter(total -> total.category().equals(id))
+                .map(CategoryTotal::total)
+                .findFirst()
+                .orElse(Money.zero(totalSpent.currency()));
+    }
+
+    /**
+     * The share of the member with the identifier {@code member} of the spending in the category
+     * with the identifier {@code category}: zero when they have none there.
+     *
+     * @param member the member's identifier
+     * @param category the category's identifier
+     * @return the member's share of the spending
+     */
+    public Money memberCategoryTotal(MemberId member, CategoryId category) {
+        return memberCategoryTotals.stream()
+                .filter(totals -> totals.member().equals(member))
+                .flatMap(totals -> totals.totals().stream())
+                .filter(total -> total.category().equals(category))
+                .map(CategoryTotal::total)
+                .findFirst()
+                .orElse(Money.zero(totalSpent.currency()));
+    }
+
+    /**
      * The summary the generated code holds as {@code summary}.
      *
      * @param summary the generated value

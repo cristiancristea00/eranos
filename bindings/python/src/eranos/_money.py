@@ -28,6 +28,20 @@ class Money:
     """The currency."""
 
     @classmethod
+    def zero(cls, currency: CurrencyCode) -> Money:
+        """
+        Make zero in currency.
+
+        Args:
+            currency: The currency.
+
+        Returns:
+            Zero minor units of the currency.
+
+        """
+        return cls(0, currency)
+
+    @classmethod
     def parse(cls, text: str, currency: CurrencyCode) -> Money:
         """
         Parse the amount written text in currency: ``"12.50"``, ``"12.5"``, or ``"-3"``.
@@ -101,6 +115,75 @@ class Money:
         """
         with _errors.library_errors():
             return money_of(generated.money_subtract(generated_money(self), generated_money(other)))
+
+    def is_zero(self) -> bool:
+        """
+        Tell whether the amount is zero.
+
+        Returns:
+            Whether it is zero.
+
+        """
+        return self.minor_units == 0
+
+    def is_positive(self) -> bool:
+        """
+        Tell whether the amount is above zero.
+
+        Returns:
+            Whether it is above zero.
+
+        """
+        return self.minor_units > 0
+
+    def is_negative(self) -> bool:
+        """
+        Tell whether the amount is below zero.
+
+        Returns:
+            Whether it is below zero.
+
+        """
+        return self.minor_units < 0
+
+    def __add__(self, other: Money) -> Money:
+        """
+        Add other to this amount, as plus does.
+
+        Args:
+            other: The amount to add.
+
+        Returns:
+            The sum.
+
+        """
+        return self.plus(other)
+
+    def __sub__(self, other: Money) -> Money:
+        """
+        Subtract other from this amount, as minus does.
+
+        Args:
+            other: The amount to subtract.
+
+        Returns:
+            The difference.
+
+        """
+        return self.minus(other)
+
+    def __neg__(self) -> Money:
+        """
+        Negate the amount, subtracting it from zero as minus does.
+
+        The library refuses the lowest amount, whose negation does not fit in 64-bit minor units, with ``MoneyError.Overflow``,
+        in a ``MoneyError``.
+
+        Returns:
+            The amount with its sign turned.
+
+        """
+        return Money.zero(self.currency).minus(self)
 
     @override
     def __str__(self) -> str:

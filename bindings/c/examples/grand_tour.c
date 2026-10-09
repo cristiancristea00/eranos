@@ -542,7 +542,6 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
 [[nodiscard]] static EranosMemberSummary *memberTotals(EranosExpenseGroup const *const group, Id const member) {
     EranosSummary *const summary = summaryOf(group);
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
-    check(nullptr != totals, "the member has totals");
     eranosSummaryDestroy(summary);
     return totals;
 }
@@ -550,9 +549,6 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
 /// Prints what each member of @p group paid, consumed, sent, and received, and their balance.
 static void printBalances(EranosExpenseGroup const *const group) {
     EranosSummary *const summary = summaryOf(group);
-    Line const zero = zeroOf(group);
-    EranosBalance *const settled = eranosBalanceCreateSettled();
-    Line const settledLine = balanceLine(settled);
     EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
@@ -561,26 +557,14 @@ static void printBalances(EranosExpenseGroup const *const group) {
         eranosMemberId(member, text);
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         eranosMemberFirstName(member, text);
-        // The summary lists the members with a total; every total of the others is zero.
-        if (nullptr == found) {
-            addBalanceRow(table, &(BalanceRow){
-                                     .name = textLine(text),
-                                     .paid = zero,
-                                     .consumed = zero,
-                                     .sent = zero,
-                                     .received = zero,
-                                     .balance = settledLine,
-                                 });
-        } else {
-            addBalanceRow(table, &(BalanceRow){
-                                     .name = textLine(text),
-                                     .paid = moneyLine(eranosMemberSummaryPaid(found)),
-                                     .consumed = moneyLine(eranosMemberSummaryShare(found)),
-                                     .sent = moneyLine(eranosMemberSummarySent(found)),
-                                     .received = moneyLine(eranosMemberSummaryReceived(found)),
-                                     .balance = balanceLine(eranosMemberSummaryBalance(found)),
-                                 });
-        }
+        addBalanceRow(table, &(BalanceRow){
+                                 .name = textLine(text),
+                                 .paid = moneyLine(eranosMemberSummaryPaid(found)),
+                                 .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                                 .sent = moneyLine(eranosMemberSummarySent(found)),
+                                 .received = moneyLine(eranosMemberSummaryReceived(found)),
+                                 .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                             });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
     }
@@ -1799,14 +1783,12 @@ static void comingsAndGoings(EranosExpenseGroup *const group, People const *cons
         bool archived = false;
         must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &held, &archived));
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
-        if (nullptr != found) {
-            eranosMemberFirstName(member, text);
-            addStatusRow(table, &(StatusRow){
-                                    .name = textLine(text),
-                                    .status = lineOf("%s", statusOf(held, archived)),
-                                    .balance = balanceLine(eranosMemberSummaryBalance(found)),
-                                });
-        }
+        eranosMemberFirstName(member, text);
+        addStatusRow(table, &(StatusRow){
+                                .name = textLine(text),
+                                .status = lineOf("%s", statusOf(held, archived)),
+                                .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                            });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
     }
@@ -1857,32 +1839,23 @@ static void comingsAndGoings(EranosExpenseGroup *const group, People const *cons
     return found;
 }
 
-/// The total of @p category among @p totals, which the caller destroys, or nullptr when they list none.
-[[nodiscard]] static EranosMoney *categoryTotal(EranosCategoryTotalList const *const totals, char const *const category) {
-    EranosText *const text = eranosTextCreate();
-    EranosMoney *found = nullptr;
-    for (size_t index = 0; nullptr != totals && nullptr == found && eranosCategoryTotalListLength(totals) > index; ++index) {
-        EranosCategoryTotal *const total = eranosCategoryTotalListGet(totals, index);
-        eranosCategoryTotalCategory(total, text);
-        if (0 == strcmp(eranosTextData(text), category)) {
-            found = eranosCategoryTotalTotal(total);
-        }
-        eranosCategoryTotalDestroy(total);
-    }
-    eranosTextDestroy(text);
-    return found;
+/// The spending in @p category in @p summary, which the caller destroys.
+[[nodiscard]] static EranosMoney *spentIn(EranosSummary const *const summary, Id const category) {
+    EranosMoney *total = nullptr;
+    must(eranosSummaryCategoryTotal(summary, category.text, &total));
+    return total;
 }
 
-/// The total of @p category among @p totals, or @p zero when they list none.
-[[nodiscard]] static Line categoryLine(EranosCategoryTotalList const *const totals, Id const category, Line const zero) {
-    EranosMoney *const total = categoryTotal(totals, category.text);
-    return nullptr == total ? zero : moneyLine(total);
+/// The share of @p member of the spending in @p category in @p summary.
+[[nodiscard]] static Line shareIn(EranosSummary const *const summary, Id const member, Id const category) {
+    EranosMoney *total = nullptr;
+    must(eranosSummaryMemberCategoryTotal(summary, member.text, category.text, &total));
+    return moneyLine(total);
 }
 
 /// Prints each member's consumption per category.
 static void printMemberCategories(EranosExpenseGroup const *const group, Categories const *const categories) {
     Id const builtIn = builtInCategory();
-    Line const zero = zeroOf(group);
     EranosSummary *const summary = summaryOf(group);
     EranosMemberList *const members = eranosExpenseGroupMembers(group);
     Table *const table = memberCategoryTable(1);
@@ -1890,16 +1863,15 @@ static void printMemberCategories(EranosExpenseGroup const *const group, Categor
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
         eranosMemberId(member, text);
-        EranosCategoryTotalList *const own = byCategory(summary, eranosTextData(text));
+        Id const id = idOf(text);
         eranosMemberFirstName(member, text);
         addMemberCategoryRow(table, &(MemberCategoryRow){
                                         .name = textLine(text),
-                                        .food = categoryLine(own, categories->food, zero),
-                                        .lodging = categoryLine(own, categories->lodging, zero),
-                                        .transport = categoryLine(own, categories->transport, zero),
-                                        .uncategorised = categoryLine(own, builtIn, zero),
+                                        .food = shareIn(summary, id, categories->food),
+                                        .lodging = shareIn(summary, id, categories->lodging),
+                                        .transport = shareIn(summary, id, categories->transport),
+                                        .uncategorised = shareIn(summary, id, builtIn),
                                     });
-        eranosCategoryTotalListDestroy(own);
         eranosMemberDestroy(member);
     }
     tablePrint(table);
@@ -1964,14 +1936,12 @@ static void summary(EranosExpenseGroup const *const group, People const *const p
     check(isBalance(eranosMemberSummaryBalance(dan), ERANOS_BALANCE_KIND_GETS_BACK, 1'255), "Dan gets back 12.55 EUR");
     EranosMemberSummary *const eva = memberTotals(group, people->eva);
     check(isBalance(eranosMemberSummaryBalance(eva), ERANOS_BALANCE_KIND_OWES, 4'260), "Eva owes 42.60 EUR");
-    EranosCategoryTotalList *const categoryTotals = eranosSummaryCategoryTotals(totals);
     Id const builtIn = builtInCategory();
-    check(isMinorUnits(categoryTotal(categoryTotals, categories->food.text), 17'440), "the food came to 174.40 EUR");
-    check(isMinorUnits(categoryTotal(categoryTotals, categories->lodging.text), 80'000), "the lodging came to 800.00 EUR");
-    check(isMinorUnits(categoryTotal(categoryTotals, categories->transport.text), 18'850), "getting around came to 188.50 EUR");
-    check(isMinorUnits(categoryTotal(categoryTotals, builtIn.text), 6'000), "the rest came to 60.00 EUR");
+    check(isMinorUnits(spentIn(totals, categories->food), 17'440), "the food came to 174.40 EUR");
+    check(isMinorUnits(spentIn(totals, categories->lodging), 80'000), "the lodging came to 800.00 EUR");
+    check(isMinorUnits(spentIn(totals, categories->transport), 18'850), "getting around came to 188.50 EUR");
+    check(isMinorUnits(spentIn(totals, builtIn), 6'000), "the rest came to 60.00 EUR");
     check(totalsAddUp(totals), "every member's totals add up");
-    eranosCategoryTotalListDestroy(categoryTotals);
     eranosMemberSummaryDestroy(eva);
     eranosMemberSummaryDestroy(dan);
     eranosMemberSummaryDestroy(bob);
@@ -2020,10 +1990,8 @@ static void removingACategory(EranosExpenseGroup *const group, Categories const 
     must(eranosExpenseGroupCategory(group, categories->transport.text, &gone));
     check(nullptr == gone, "Getting around is gone");
     EranosSummary *const summary = summaryOf(group);
-    EranosCategoryTotalList *const totals = eranosSummaryCategoryTotals(summary);
-    check(isMinorUnits(categoryTotal(totals, uncategorised.text), 24'850), "Uncategorised comes to 248.50 EUR");
+    check(isMinorUnits(spentIn(summary, uncategorised), 24'850), "Uncategorised comes to 248.50 EUR");
     check(!anyIn(group, categories->transport), "no expense is in Getting around");
-    eranosCategoryTotalListDestroy(totals);
     eranosSummaryDestroy(summary);
     eranosTextDestroy(text);
     eranosCategoryDestroy(removed);
@@ -2165,9 +2133,7 @@ static void settlingUp(EranosExpenseGroup *const group) {
     tablePrint(table);
     for (size_t index = 0; eranosPaymentListLength(plan) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(plan, index);
-        eranosPaymentSender(payment, sender);
-        eranosPaymentReceiver(payment, receiver);
-        (void)addTransfer(group, transferOf(idOf(sender), idOf(receiver), localCost(eranosPaymentAmount(payment)), october(7)));
+        (void)addTransfer(group, eranosTransferCreateFromPayment(payment, october(7)));
         eranosPaymentDestroy(payment);
     }
     printLine("Each payment, once made, is recorded as a transfer, and every balance is settled:");

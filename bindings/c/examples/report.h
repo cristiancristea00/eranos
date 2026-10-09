@@ -255,11 +255,11 @@ typedef struct Share {
 /// @return The members
 [[nodiscard]] Members participants(EranosExpense const *expense);
 
-/// The totals of @p member in @p summary, which the caller destroys, or nullptr when the summary lists no totals of theirs.
+/// The totals of @p member in @p summary, which the caller destroys: all zero, and settled, for a member without entries.
 ///
 /// @param summary The summary
 /// @param member The member's identifier
-/// @return The totals, or nullptr
+/// @return The totals
 [[nodiscard]] EranosMemberSummary *totalsOf(EranosSummary const *summary, char const *member);
 
 /// The copy of @p text with the first @p pattern in it replaced by @p replacement, which stops the port when @p text does

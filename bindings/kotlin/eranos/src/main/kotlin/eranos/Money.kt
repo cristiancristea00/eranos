@@ -40,6 +40,18 @@ public class Money(
     @Throws(EranosException::class)
     public operator fun minus(other: Money): Money = converting { moneySubtract(generated, other.generated).converted() }
 
+    /** Whether the amount is zero. */
+    public val isZero: Boolean
+        get() = 0L == minorUnits
+
+    /** Whether the amount is above zero. */
+    public val isPositive: Boolean
+        get() = 0L < minorUnits
+
+    /** Whether the amount is below zero. */
+    public val isNegative: Boolean
+        get() = 0L > minorUnits
+
     /** Whether [other] is of the same class, with the same [minorUnits] and [currency]. */
     override fun equals(other: Any?): Boolean = other is Money && minorUnits == other.minorUnits && currency == other.currency
 
@@ -49,8 +61,11 @@ public class Money(
     /** The amount as the library writes it: "12.50 EUR". */
     override fun toString(): String = moneyFormat(generated)
 
-    /** The parsing of an amount from its text, and its conversion from a double. */
+    /** Zero, the parsing of an amount from its text, and its conversion from a double. */
     public companion object {
+        /** Zero in [currency]. */
+        public fun zero(currency: CurrencyCode): Money = Money(0, currency)
+
         /**
          * The amount written [text] in [currency]: "12.50", "12.5", or "-3".
          *

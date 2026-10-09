@@ -25,6 +25,12 @@ func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
     #expect("12.50 EUR" == price.description)
     #expect(try price.adding(Money(minorUnits: 50, currency: euro)) == Money(minorUnits: 1_300, currency: euro))
     #expect(try price.subtracting(Money(minorUnits: 50, currency: euro)) == Money(minorUnits: 1_200, currency: euro))
+    let zero = Money.zero(in: euro)
+    #expect(zero == Money(minorUnits: 0, currency: euro))
+    #expect([zero.isZero, zero.isPositive, zero.isNegative] == [true, false, false])
+    #expect([price.isZero, price.isPositive, price.isNegative] == [false, true, false])
+    let refund = try zero.subtracting(price)
+    #expect([refund.isZero, refund.isPositive, refund.isNegative] == [false, false, true])
     let lei = try CurrencyCode(code: "RON")
     #expect {
         try price.adding(Money(minorUnits: 1, currency: lei))

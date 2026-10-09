@@ -25,7 +25,7 @@ from eranos import (
     Transfer,
     WholeExpenseSplit,
 )
-from examples.report import Row, names, participants, print_lines, print_table, section, title, totals
+from examples.report import Row, names, print_lines, print_table, section, title
 
 
 @final
@@ -200,7 +200,7 @@ def print_balances(group: ExpenseGroup) -> None:
         [
             BalanceRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=found.balance)
             for member in group.members()
-            if (found := totals(member.id, summary)) is not None
+            for found in (summary.member(member.id),)
         ],
         1,
     )
@@ -375,7 +375,7 @@ def main() -> None:
             ExpenseRow(
                 name=expense.name,
                 payer=names(group, expense.payers.members),
-                participants=names(group, participants(expense.split)),
+                participants=names(group, expense.split.participants()),
                 amount=expense.total(),
             )
             for expense in group.expenses()
@@ -394,9 +394,7 @@ def main() -> None:
     plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
     for payment in plan.payments:
         # A settlement's payments are in the group currency, so the transfer that records one has a local cost.
-        group.add_transfer(
-            Transfer.create(sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=CalendarDate(2026, 9, 27))
-        )
+        group.add_transfer(Transfer.from_payment(payment, CalendarDate(2026, 9, 27)))
     print_lines(
         'Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards',
         'every balance is zero and a new settlement has nothing left to pay:',
@@ -411,9 +409,7 @@ def main() -> None:
     assert festival_payments == 19
     summary = group.summary()
     for member in (ana, bob, carol, dan, eva, filip):
-        found = totals(member, summary)
-        assert found is not None
-        assert found.balance == SettledBalance()
+        assert summary.member(member).balance == SettledBalance()
 
 
 if __name__ == '__main__':

@@ -88,9 +88,7 @@ func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     let summary = group.summary
     var rows: [BalanceRow] = []
     for member in group.members() {
-        guard let totals = totals(of: member.id, in: summary) else {
-            continue
-        }
+        let totals = summary.member(withID: member.id)
         let status = switch try group.isArchived(member.id) {
         case true?:
             "archived"
@@ -208,7 +206,7 @@ func movingOut(_ group: ExpenseGroup, _ flatmates: Flatmates) throws(EranosError
     }
     let owed = try Money(parsing: "450.00", in: euro)
     let summary = group.summary
-    precondition(Balance.owes(owed) == totals(of: bob, in: summary)?.balance)
+    precondition(Balance.owes(owed) == summary.member(withID: bob).balance)
     let stored = try group.expense(withID: rent)
     precondition(nil != stored)
 }

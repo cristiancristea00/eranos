@@ -4,7 +4,6 @@ import static eranos.examples.Report.check;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
 import static eranos.examples.Report.title;
-import static eranos.examples.Report.totals;
 
 import eranos.CalendarDate;
 import eranos.Cost;
@@ -15,7 +14,6 @@ import eranos.ExpenseGroup;
 import eranos.ExpenseSplit;
 import eranos.Member;
 import eranos.MemberId;
-import eranos.MemberSummary;
 import eranos.Money;
 import eranos.Percentage;
 import eranos.SettlementPlan;
@@ -51,10 +49,7 @@ public final class Main {
 
     /** The balance of {@code member} in {@code summary}, as the library writes it. */
     private static String balance(MemberId member, Summary summary) {
-        return totals(member, summary)
-                .map(MemberSummary::balance)
-                .map(Object::toString)
-                .orElse("?");
+        return summary.member(member).balance().toString();
     }
 
     /**

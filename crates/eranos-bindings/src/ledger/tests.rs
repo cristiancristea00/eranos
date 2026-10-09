@@ -40,6 +40,55 @@ fn every_balance_converts_to_its_side() {
     );
 }
 
+/// A lookup in the summary that found another member's or another category's
+/// totals, or failed for one without entries, would show the C apps numbers
+/// the group does not hold.
+#[test]
+fn a_lookup_in_the_summary_finds_its_totals_and_zero_for_the_rest() {
+    let totals = |member: &str| MemberSummary {
+        member: member.to_owned(),
+        paid: record(9_000),
+        share: record(4_500),
+        sent: record(0),
+        received: record(1_000),
+        net: record(3_500),
+        balance: Balance::GetsBack {
+            amount: record(3_500),
+        },
+    };
+    let rent = |category: &str| CategoryTotal {
+        category: category.to_owned(),
+        total: record(4_500),
+    };
+    let summary = Summary {
+        total_spent: record(9_000),
+        members: vec![totals("ana")],
+        category_totals: vec![rent("home")],
+        member_category_totals: vec![MemberCategoryTotals {
+            member: "ana".to_owned(),
+            totals: vec![rent("home")],
+        }],
+    };
+    assert_eq!(summary.member("ana"), totals("ana"));
+    assert_eq!(
+        summary.member("bob"),
+        MemberSummary {
+            member: "bob".to_owned(),
+            paid: record(0),
+            share: record(0),
+            sent: record(0),
+            received: record(0),
+            net: record(0),
+            balance: Balance::Settled,
+        }
+    );
+    assert_eq!(summary.category_total("home"), record(4_500));
+    assert_eq!(summary.category_total("food"), record(0));
+    assert_eq!(summary.member_category_total("ana", "home"), record(4_500));
+    assert_eq!(summary.member_category_total("ana", "food"), record(0));
+    assert_eq!(summary.member_category_total("bob", "home"), record(0));
+}
+
 /// The summary and an expense's shares would reach the apps with another
 /// member's or another category's numbers.
 #[test]

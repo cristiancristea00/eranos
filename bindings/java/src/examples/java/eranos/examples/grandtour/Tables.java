@@ -2,7 +2,6 @@ package eranos.examples.grandtour;
 
 import static eranos.examples.Report.names;
 import static eranos.examples.Report.printTable;
-import static eranos.examples.Report.totals;
 import static eranos.examples.grandtour.Tour.name;
 import static eranos.examples.grandtour.Tour.rate;
 
@@ -244,29 +243,17 @@ final class Tables {
 
     static void printBalances(ExpenseGroup group) {
         Summary summary = group.summary();
-        Money zero = new Money(0, group.currency());
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            // The summary lists the members with a total; every total of the others is zero.
-            Optional<MemberSummary> totals = totals(member.id(), summary);
+            MemberSummary totals = summary.member(member.id());
             rows.add(
-                    totals.map(
-                                    found ->
-                                            new BalanceRow(
-                                                    member.firstName(),
-                                                    found.paid(),
-                                                    found.share(),
-                                                    found.sent(),
-                                                    found.received(),
-                                                    found.balance()))
-                            .orElse(
-                                    new BalanceRow(
-                                            member.firstName(),
-                                            zero,
-                                            zero,
-                                            zero,
-                                            zero,
-                                            new Balance.Settled())));
+                    new BalanceRow(
+                            member.firstName(),
+                            totals.paid(),
+                            totals.share(),
+                            totals.sent(),
+                            totals.received(),
+                            totals.balance()));
         }
         printTable(BalanceRow.HEADERS, rows, 1);
     }
@@ -294,7 +281,7 @@ final class Tables {
      */
     static void printEntries(ExpenseGroup group, Predicate<CurrencyCode> shown)
             throws EranosException {
-        Money zero = new Money(0, group.currency());
+        Money zero = Money.zero(group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
             if (shown.test(expense.cost().amount().currency())) {

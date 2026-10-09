@@ -70,7 +70,7 @@ final class Values {
         Optional<EranosException> mixed = refusal(() -> eur("1.00").plus(ron("1.00")));
         Money yen = Money.parse("1500", CurrencyCode.of("JPY"));
         Money dinars = new Money(1_234, CurrencyCode.of("BHD"));
-        Money nothing = new Money(0, CurrencyCode.of("RON"));
+        Money nothing = Money.zero(CurrencyCode.of("RON"));
         Cost cost = new Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"));
         Cost doubled = new Cost.Converted(eur("20.00"), rate(cost));
         // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.

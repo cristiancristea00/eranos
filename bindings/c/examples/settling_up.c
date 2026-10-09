@@ -179,7 +179,6 @@ static void printBalances(EranosExpenseGroup const *const group) {
         EranosMember *const member = eranosMemberListGet(members, index);
         eranosMemberId(member, text);
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
-        check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         addBalanceRow(table, &(BalanceRow){
                                  .name = textLine(text),
@@ -404,17 +403,11 @@ static void printPayments(EranosExpenseGroup const *const group, EranosPaymentLi
 static void settle(EranosExpenseGroup *const group) {
     EranosPaymentList *const plan = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);
     constexpr EranosCalendarDate DATE = {.year = 2026, .month = 9, .day = 27};
-    EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosPaymentListLength(plan) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(plan, index);
-        eranosPaymentSender(payment, text);
-        Id const sender = idOf(text);
-        eranosPaymentReceiver(payment, text);
-        Id const receiver = idOf(text);
-        (void)addTransfer(group, transferOf(sender, receiver, localCost(eranosPaymentAmount(payment)), DATE));
+        (void)addTransfer(group, eranosTransferCreateFromPayment(payment, DATE));
         eranosPaymentDestroy(payment);
     }
-    eranosTextDestroy(text);
     eranosPaymentListDestroy(plan);
 }
 
@@ -422,7 +415,6 @@ static void settle(EranosExpenseGroup *const group) {
 [[nodiscard]] static bool settled(EranosExpenseGroup const *const group, Id const member) {
     EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
-    check(nullptr != totals, "the member has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);
     bool const zero = ERANOS_BALANCE_KIND_SETTLED == eranosBalanceKind(balance);
     eranosBalanceDestroy(balance);

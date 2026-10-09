@@ -32,7 +32,7 @@ from eranos import (
     UsernamePaymentAccountDetails,
     WholeExpenseSplit,
 )
-from examples.report import Row, print_lines, print_table, refusal, section, status, title, totals
+from examples.report import Row, print_lines, print_table, refusal, section, status, title
 
 
 @final
@@ -201,7 +201,7 @@ def print_balances(group: ExpenseGroup) -> None:
                 balance=found.balance,
             )
             for member in group.members()
-            if (found := totals(member.id, summary)) is not None
+            for found in (summary.member(member.id),)
         ],
         2,
     )
@@ -305,9 +305,7 @@ def moving_out(group: ExpenseGroup, flatmates: Flatmates) -> None:
 
     assert refused.failure == ExpenseGroupError.ArchivedMember(bob)
     assert isinstance(removal.failure, ExpenseGroupError.MemberInUse)
-    bob_totals = totals(bob, group.summary())
-    assert bob_totals is not None
-    assert bob_totals.balance == OwesBalance(Money.parse('450.00', euro))
+    assert group.summary().member(bob).balance == OwesBalance(Money.parse('450.00', euro))
     assert group.expense(rent) is not None
 
 

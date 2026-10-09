@@ -2,18 +2,11 @@ package eranos.examples;
 
 import eranos.EranosException;
 import eranos.ExpenseGroup;
-import eranos.ExpenseSplit;
 import eranos.Member;
 import eranos.MemberId;
-import eranos.MemberSummary;
-import eranos.Summary;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 /** What every port prints its report with: the headings and the tables of the Rust examples. */
 public final class Report {
@@ -146,34 +139,6 @@ public final class Report {
     }
 
     /**
-     * Every member who shares the cost of {@code split}, once each, in the order of their
-     * identifiers.
-     *
-     * @param split the split
-     * @return the members
-     */
-    public static List<MemberId> participants(ExpenseSplit split) {
-        List<MemberId> members =
-                switch (split) {
-                    case ExpenseSplit.Whole whole -> whole.split().members();
-                    case ExpenseSplit.Itemised itemised ->
-                            itemised.items().stream()
-                                    .flatMap(item -> item.split().members().stream())
-                                    .toList();
-                };
-        // The library orders identifiers by the bytes of their UTF-8 text, which String's
-        // compareTo, over UTF-16 code units, does not follow above U+FFFF.
-        return members.stream()
-                .distinct()
-                .sorted(
-                        Comparator.comparing(
-                                (MemberId member) ->
-                                        member.value().getBytes(StandardCharsets.UTF_8),
-                                Arrays::compareUnsigned))
-                .toList();
-    }
-
-    /**
      * Stops the example unless {@code holds}: a number of the report is not the example's.
      *
      * @param holds whether the number is the example's
@@ -182,18 +147,5 @@ public final class Report {
         if (!holds) {
             throw new IllegalStateException("a number of the report is not the example's");
         }
-    }
-
-    /**
-     * The totals of {@code member} in {@code summary}.
-     *
-     * @param member the member
-     * @param summary the summary
-     * @return the totals, if the summary lists the member
-     */
-    public static Optional<MemberSummary> totals(MemberId member, Summary summary) {
-        return summary.members().stream()
-                .filter(totals -> totals.member().equals(member))
-                .findFirst();
     }
 }

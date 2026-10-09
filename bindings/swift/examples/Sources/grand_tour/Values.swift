@@ -25,7 +25,7 @@ func amounts() throws(EranosError) {
     let mixed = Result { () throws(EranosError) in try eur("1.00").adding(ron("1.00")) }
     let yen = try Money(parsing: "1500", in: CurrencyCode(code: "JPY"))
     let dinars = Money(minorUnits: 1_234, currency: try CurrencyCode(code: "BHD"))
-    let nothing = Money(minorUnits: 0, currency: try CurrencyCode(code: "RON"))
+    let nothing = Money.zero(in: try CurrencyCode(code: "RON"))
     let cost = Cost.converted(try eur("10.00"), rate: try ExchangeRate(parsing: "4.9765"))
     let doubled = Cost.converted(try eur("20.00"), rate: try rate(of: cost))
     // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.

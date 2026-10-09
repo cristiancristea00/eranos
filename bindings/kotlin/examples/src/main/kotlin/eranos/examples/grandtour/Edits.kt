@@ -22,7 +22,6 @@ import eranos.TransferFailure
 import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
-import eranos.examples.totals
 
 private data class EditRow(
     val entry: String,
@@ -89,7 +88,7 @@ internal fun anotherCurrency(
     printEntries(group) { currency -> euro != currency }
     val transfer = checkNotNull(group.transferBlocking(cash)) { "the cash was recorded" }
     val converted = ExchangeRate.parse("0.2011").convert(ron("250.00"), euro)
-    val counted = group.transferAmountBlocking(cash) ?: Money(0, euro)
+    val counted = group.transferAmountBlocking(cash) ?: Money.zero(euro)
     println(
         """
         Bob's transfer, at ${transfer.time?.toString().orEmpty()} ("${transfer.note.orEmpty()}"), counts as $counted.
@@ -142,7 +141,7 @@ private fun replaceAndRemove(
     check(null == group.expenseBlocking(copy))
     check(eur("120.00") == group.transferAmountBlocking(first))
     check(null == group.transferBlocking(mistake))
-    val zero = Money(0, CurrencyCode.of("EUR"))
+    val zero = Money.zero(CurrencyCode.of("EUR"))
     val dinner = group.expenseBlocking(seafood)
     val apartment = group.transferBlocking(first)
     return listOf(
@@ -246,19 +245,18 @@ internal fun comingsAndGoings(
     )
     val summary = group.summaryBlocking()
     val rows =
-        group.membersBlocking().mapNotNull { member ->
-            totals(member.id, summary)?.let { totals ->
-                StatusRow(
-                    name = member.firstName,
-                    status =
-                        when (group.isArchivedBlocking(member.id)) {
-                            true -> "archived"
-                            false -> "active"
-                            null -> "not in the group"
-                        },
-                    balance = totals.balance,
-                )
-            }
+        group.membersBlocking().map { member ->
+            val totals = summary.member(member.id)
+            StatusRow(
+                name = member.firstName,
+                status =
+                    when (group.isArchivedBlocking(member.id)) {
+                        true -> "archived"
+                        false -> "active"
+                        null -> "not in the group"
+                    },
+                balance = totals.balance,
+            )
         }
     printTable(StatusRow.HEADERS, rows, numbersFrom = 2)
     printTable(

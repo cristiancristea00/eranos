@@ -351,6 +351,13 @@ struct Expense final {
 /// @return The members, or an error of the kind ErrorKind::ID for an identifier that is not one
 [[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) noexcept;
 
+/// Every member who shares the cost of a split, each once and in the order of their identifiers.
+///
+/// @param split The split
+/// @return The members, or an error of the kind ErrorKind::ID for an identifier that is not one, and the library's refusal of an item that does
+///   not build
+[[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(ExpenseSplit const &split) noexcept;
+
 namespace detail {
 
 [[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) noexcept;
@@ -422,6 +429,12 @@ inline std::expected<Money, Error> total(Expense const &expense) noexcept {
 inline std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) noexcept {
     return detail::toDetail(expense)
         .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) noexcept { return detail::expectedOf(converted->participants()); })
+        .transform([](std::unique_ptr<detail::EranosTextList> const &members) noexcept { return detail::identifiers<MemberId>(*members); });
+}
+
+inline std::expected<std::vector<MemberId>, Error> participants(ExpenseSplit const &split) noexcept {
+    return detail::toDetail(split)
+        .and_then([](std::unique_ptr<detail::EranosExpenseSplit> const &converted) noexcept { return detail::expectedOf(converted->participants()); })
         .transform([](std::unique_ptr<detail::EranosTextList> const &members) noexcept { return detail::identifiers<MemberId>(*members); });
 }
 

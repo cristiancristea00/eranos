@@ -3,7 +3,7 @@
 from collections.abc import Callable, Iterable
 from typing import ClassVar, Protocol, assert_never
 
-from eranos import EranosError, ExpenseSplit, ExpenseGroup, ItemisedExpenseSplit, MemberId, MemberSummary, Summary, WholeExpenseSplit
+from eranos import EranosError, ExpenseGroup, MemberId
 
 
 def print_lines(*lines: str) -> None:
@@ -110,27 +110,6 @@ def names(group: ExpenseGroup, members: Iterable[MemberId]) -> str:
     return ', '.join(member.first_name if (member := group.member(identifier)) is not None else '?' for identifier in members)
 
 
-def participants(split: ExpenseSplit) -> list[MemberId]:
-    """
-    List every member who shares the cost of split, once each, in the order of their identifiers.
-
-    Args:
-        split: How an expense is divided.
-
-    Returns:
-        The members.
-
-    """
-    match split:
-        case WholeExpenseSplit(split=whole):
-            members = list(whole.members)
-        case ItemisedExpenseSplit(items=items):
-            members = [member for item in items for member in item.split.members]
-        case _:
-            assert_never(split)
-    return sorted(set(members))
-
-
 def refusal(change: Callable[[], object]) -> EranosError | None:
     """
     Tell what the library refuses change with.
@@ -161,21 +140,6 @@ def message(refused: EranosError | None) -> str:
 
     """
     return 'accepted' if refused is None else str(refused)
-
-
-def totals(member: MemberId, summary: Summary) -> MemberSummary | None:
-    """
-    Find the totals of member in summary.
-
-    Args:
-        member: The member.
-        summary: The group's summary.
-
-    Returns:
-        The member's totals, or none for a member the summary leaves out.
-
-    """
-    return next((found for found in summary.members if found.member == member), None)
 
 
 def status(archived: bool | None) -> str:

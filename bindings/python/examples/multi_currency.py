@@ -28,7 +28,7 @@ from eranos import (
     Transfer,
     WholeExpenseSplit,
 )
-from examples.report import Row, names, print_lines, print_table, section, title, totals
+from examples.report import Row, names, print_lines, print_table, section, title
 
 
 @final
@@ -120,8 +120,7 @@ def balance(group: ExpenseGroup, member: MemberId) -> Balance | None:
         The member's balance, or none for a member the summary leaves out.
 
     """
-    found = totals(member, group.summary())
-    return None if found is None else found.balance
+    return group.summary().member(member).balance
 
 
 def print_entries(group: ExpenseGroup) -> None:
@@ -132,7 +131,7 @@ def print_entries(group: ExpenseGroup) -> None:
         group: The group.
 
     """
-    zero = Money(0, group.currency())
+    zero = Money.zero(group.currency())
     expenses = [
         EntryRow(
             name=expense.name,
@@ -177,7 +176,7 @@ def print_balances(group: ExpenseGroup) -> None:
                 balance=found.balance,
             )
             for member in group.members()
-            if (found := totals(member.id, summary)) is not None
+            for found in (summary.member(member.id),)
         ],
         1,
     )

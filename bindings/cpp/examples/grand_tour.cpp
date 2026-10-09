@@ -432,30 +432,17 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
 /// Prints what each member of @p group paid, consumed, sent, and received, and their balance.
 void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
-    auto const zero = Money(0, group.currency()).toString();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
-        // The summary lists the members with a total; every total of the others is zero.
-        auto const found = totalsOf(summary, member.id);
-        if (found.has_value()) {
-            rows.push_back({
-                .name = member.firstName,
-                .paid = found->paid.toString(),
-                .consumed = found->share.toString(),
-                .sent = found->sent.toString(),
-                .received = found->received.toString(),
-                .balance = toString(found->balance),
-            });
-        } else {
-            rows.push_back({
-                .name = member.firstName,
-                .paid = zero,
-                .consumed = zero,
-                .sent = zero,
-                .received = zero,
-                .balance = toString(SettledBalance{}),
-            });
-        }
+        auto const found = summary.member(member.id);
+        rows.push_back({
+            .name = member.firstName,
+            .paid = found.paid.toString(),
+            .consumed = found.share.toString(),
+            .sent = found.sent.toString(),
+            .received = found.received.toString(),
+            .balance = toString(found.balance),
+        });
     }
     printTable(rows, 1);
 }
@@ -479,7 +466,7 @@ void printCategories(ExpenseGroup const &group) noexcept {
 
 /// Prints every expense and transfer of @p group in a currency @p shown accepts, as entered and in the group currency.
 void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode const &)> const &shown) noexcept {
-    auto const zero = Money(0, group.currency()).toString();
+    auto const zero = Money::zero(group.currency()).toString();
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
         if (shown(amountOf(expense.cost).currency)) {
@@ -949,8 +936,8 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
     std::println("Bob's transfer, at {} (\"{}\"), counts as {}.\n"
                  "A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,\n"
                  "which becomes {}.",
-                 transfer.time.value().toString(), transfer.note.value_or(""), must(group.transferAmount(cash)).value_or(Money(0, euro)).toString(),
-                 converted.toString());
+                 transfer.time.value().toString(), transfer.note.value_or(""),
+                 must(group.transferAmount(cash)).value_or(Money::zero(euro)).toString(), converted.toString());
 
     check(eur("50.28") == converted, "the conversion rounds to 50.28 EUR");
     check(eur("50.00") == must(group.expenseShares(parking)).value().total, "the parking counts as 50.00 EUR");
@@ -1071,16 +1058,14 @@ void comingsAndGoings(ExpenseGroup &group, People const &people) noexcept {
     auto const summary = group.summary();
     std::vector<StatusRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id);
-        if (found.has_value()) {
-            rows.push_back({
-                .name = member.firstName,
-                .status = must(group.isArchived(member.id))
-                              .transform([](bool const archived) noexcept { return archived ? "archived" : "active"; })
-                              .value_or("not in the group"),
-                .balance = toString(found->balance),
-            });
-        }
+        auto const found = summary.member(member.id);
+        rows.push_back({
+            .name = member.firstName,
+            .status = must(group.isArchived(member.id))
+                          .transform([](bool const archived) noexcept { return archived ? "archived" : "active"; })
+                          .value_or("not in the group"),
+            .balance = toString(found.balance),
+        });
     }
     printTable(rows, 2);
     printTable<RefusalRow>(
@@ -1109,12 +1094,6 @@ void comingsAndGoings(ExpenseGroup &group, People const &people) noexcept {
     return summary.memberCategoryTotals.end() == found ? std::vector<CategoryTotal>() : found->totals;
 }
 
-/// The total of @p category among @p totals, absent when they list none.
-[[nodiscard]] std::optional<Money> totalOf(std::vector<CategoryTotal> const &totals, CategoryId const &category) noexcept {
-    auto const found = std::ranges::find_if(totals, [&](CategoryTotal const &entry) noexcept { return category == entry.category; });
-    return totals.end() == found ? std::nullopt : std::optional<Money>(found->total);
-}
-
 /// Prints the summary: every member's totals, the spending per category, and each member's consumption per category.
 void summary(ExpenseGroup const &group, People const &people, Categories const &categories) noexcept {
     section("8. The summary");
@@ -1127,30 +1106,29 @@ void summary(ExpenseGroup const &group, People const &people, Categories const &
     printCategories(group);
     printLine("And each member's consumption per category:");
     auto const builtIn = CategoryId::uncategorised();
-    Money const zero(0, group.currency());
+    Money const zero = Money::zero(group.currency());
     std::vector<MemberCategoryRow> rows;
     for (auto const &member : group.members()) {
-        auto const own = byCategory(totals, member.id);
         rows.push_back({
             .name = member.firstName,
-            .food = totalOf(own, categories.food).value_or(zero).toString(),
-            .lodging = totalOf(own, categories.lodging).value_or(zero).toString(),
-            .transport = totalOf(own, categories.transport).value_or(zero).toString(),
-            .uncategorised = totalOf(own, builtIn).value_or(zero).toString(),
+            .food = totals.memberCategoryTotal(member.id, categories.food).toString(),
+            .lodging = totals.memberCategoryTotal(member.id, categories.lodging).toString(),
+            .transport = totals.memberCategoryTotal(member.id, categories.transport).toString(),
+            .uncategorised = totals.memberCategoryTotal(member.id, builtIn).toString(),
         });
     }
     printTable(rows, 1);
 
     check(eur("1222.90") == totals.totalSpent, "the group spent 1222.90 EUR");
-    check(eur("890.00") == totalsOf(totals, people.ana).value().paid, "Ana paid 890.00 EUR");
-    check(eur("140.00") == totalsOf(totals, people.ana).value().received, "Ana received 140.00 EUR");
-    check(eur("20.00") == totalsOf(totals, people.bob).value().sent, "Bob sent 20.00 EUR");
-    check(Balance(GetsBackBalance{eur("12.55")}) == totalsOf(totals, people.dan).value().balance, "Dan gets back 12.55 EUR");
-    check(Balance(OwesBalance{eur("42.60")}) == totalsOf(totals, people.eva).value().balance, "Eva owes 42.60 EUR");
-    check(std::optional<Money>(eur("174.40")) == totalOf(totals.categoryTotals, categories.food), "the food came to 174.40 EUR");
-    check(std::optional<Money>(eur("800.00")) == totalOf(totals.categoryTotals, categories.lodging), "the lodging came to 800.00 EUR");
-    check(std::optional<Money>(eur("188.50")) == totalOf(totals.categoryTotals, categories.transport), "getting around came to 188.50 EUR");
-    check(std::optional<Money>(eur("60.00")) == totalOf(totals.categoryTotals, builtIn), "the rest came to 60.00 EUR");
+    check(eur("890.00") == totals.member(people.ana).paid, "Ana paid 890.00 EUR");
+    check(eur("140.00") == totals.member(people.ana).received, "Ana received 140.00 EUR");
+    check(eur("20.00") == totals.member(people.bob).sent, "Bob sent 20.00 EUR");
+    check(Balance(GetsBackBalance{eur("12.55")}) == totals.member(people.dan).balance, "Dan gets back 12.55 EUR");
+    check(Balance(OwesBalance{eur("42.60")}) == totals.member(people.eva).balance, "Eva owes 42.60 EUR");
+    check(eur("174.40") == totals.categoryTotal(categories.food), "the food came to 174.40 EUR");
+    check(eur("800.00") == totals.categoryTotal(categories.lodging), "the lodging came to 800.00 EUR");
+    check(eur("188.50") == totals.categoryTotal(categories.transport), "getting around came to 188.50 EUR");
+    check(eur("60.00") == totals.categoryTotal(builtIn), "the rest came to 60.00 EUR");
     std::vector<Money> nets;
     for (auto const &found : totals.members) {
         std::vector<Money> amounts;
@@ -1179,7 +1157,7 @@ void removingACategory(ExpenseGroup &group, Categories const &categories) noexce
 
     check(builtIn.has_value() && Failure::EXPENSE_GROUP_BUILT_IN_CATEGORY == builtIn->failure(), "the built-in category cannot be removed");
     check(!must(group.category(categories.transport)).has_value(), "Getting around is gone");
-    check(std::optional<Money>(eur("248.50")) == totalOf(group.summary().categoryTotals, uncategorised), "Uncategorised comes to 248.50 EUR");
+    check(eur("248.50") == group.summary().categoryTotal(uncategorised), "Uncategorised comes to 248.50 EUR");
     auto const expenses = group.expenses();
     check(std::ranges::none_of(expenses, [&](Expense const &expense) noexcept { return categories.transport == expense.category; }),
           "no expense is in Getting around");
@@ -1212,8 +1190,8 @@ void newCurrency(ExpenseGroup &group, People const &people) noexcept {
           "a change without the rate from EUR is refused");
     check(leu == group.currency(), "the group keeps its books in RON");
     check(ron("6114.50") == summary.totalSpent, "the trip cost 6114.50 RON");
-    check(Balance(GetsBackBalance{ron("62.75")}) == totalsOf(summary, people.dan).value().balance, "Dan gets back 62.75 RON");
-    check(Balance(OwesBalance{ron("213.00")}) == totalsOf(summary, people.eva).value().balance, "Eva owes 213.00 RON");
+    check(Balance(GetsBackBalance{ron("62.75")}) == summary.member(people.dan).balance, "Dan gets back 62.75 RON");
+    check(Balance(OwesBalance{ron("213.00")}) == summary.member(people.eva).balance, "Eva owes 213.00 RON");
 }
 
 // 11. Settling up.
@@ -1264,7 +1242,7 @@ void settlingUp(ExpenseGroup &group) noexcept {
     }
     printTable(payments, 2);
     for (auto const &payment : plan.payments) {
-        static_cast<void>(must(group.addTransfer(Transfer(payment.sender, payment.receiver, LocalCost{payment.amount}, october(7)))));
+        static_cast<void>(must(group.addTransfer(Transfer(payment, october(7)))));
     }
     printLine("Each payment, once made, is recorded as a transfer, and every balance is settled:");
     printBalances(group);

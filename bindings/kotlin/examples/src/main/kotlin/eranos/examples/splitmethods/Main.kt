@@ -23,7 +23,6 @@ import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
-import eranos.examples.totals
 
 private data class ShareRow(
     val name: String,
@@ -268,10 +267,9 @@ private fun printTotals(group: ExpenseGroup) {
     println("${summary.totalSpent} spent over five expenses:")
     printTable(
         TotalRow.HEADERS,
-        group.membersBlocking().mapNotNull { member ->
-            totals(member.id, summary)?.let { totals ->
-                TotalRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = "${totals.balance}")
-            }
+        group.membersBlocking().map { member ->
+            val totals = summary.member(member.id)
+            TotalRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = "${totals.balance}")
         },
         numbersFrom = 1,
     )

@@ -38,6 +38,16 @@ export class Money {
     }
 
     /**
+     * Zero in `currency`.
+     *
+     * @param currency - The currency
+     * @returns Zero minor units of the currency
+     */
+    static zero(currency: CurrencyCode): Money {
+        return new Money(0n, currency);
+    }
+
+    /**
      * The amount written `text` in `currency`: "12.50", "12.5", or "-3".
      *
      * @param text - The amount's text
@@ -107,6 +117,33 @@ export class Money {
      */
     minus(other: Money): Money {
         return Money.converted(calling(() => internal.moneySubtract(this.generated(), other.generated())));
+    }
+
+    /**
+     * Whether the amount is zero.
+     *
+     * @returns Whether it is zero
+     */
+    isZero(): boolean {
+        return 0n === this.minorUnits;
+    }
+
+    /**
+     * Whether the amount is above zero.
+     *
+     * @returns Whether it is above zero
+     */
+    isPositive(): boolean {
+        return 0n < this.minorUnits;
+    }
+
+    /**
+     * Whether the amount is below zero.
+     *
+     * @returns Whether it is below zero
+     */
+    isNegative(): boolean {
+        return 0n > this.minorUnits;
     }
 
     /**

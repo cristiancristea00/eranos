@@ -10,7 +10,6 @@ import eranos.Money
 import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.printTable
-import eranos.examples.totals
 
 private data class BalanceRow(
     val name: String,
@@ -83,24 +82,18 @@ internal data class RefusalRow(
 
 internal fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
-    val zero = Money(0, group.currencyBlocking())
     printTable(
         BalanceRow.HEADERS,
         group.membersBlocking().map { member ->
-            // The summary lists the members with a total; every total of the others is zero.
-            val totals = totals(member.id, summary)
-            if (null == totals) {
-                BalanceRow(name = member.firstName, paid = zero, consumed = zero, sent = zero, received = zero, balance = Balance.Settled)
-            } else {
-                BalanceRow(
-                    name = member.firstName,
-                    paid = totals.paid,
-                    consumed = totals.share,
-                    sent = totals.sent,
-                    received = totals.received,
-                    balance = totals.balance,
-                )
-            }
+            val totals = summary.member(member.id)
+            BalanceRow(
+                name = member.firstName,
+                paid = totals.paid,
+                consumed = totals.share,
+                sent = totals.sent,
+                received = totals.received,
+                balance = totals.balance,
+            )
         },
         numbersFrom = 1,
     )
@@ -126,7 +119,7 @@ internal fun printEntries(
     group: ExpenseGroup,
     shown: (CurrencyCode) -> Boolean,
 ) {
-    val zero = Money(0, group.currencyBlocking())
+    val zero = Money.zero(group.currencyBlocking())
     val expenses =
         group.expensesBlocking().filter { expense -> shown(expense.cost.amount.currency) }.map { expense ->
             EntryRow(

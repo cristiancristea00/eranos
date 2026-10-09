@@ -33,7 +33,7 @@ static void addComparisonRow(Table *const table, ComparisonRow const *const row)
 [[nodiscard]] static Line balanceOf(EranosExpenseGroup const *const group, Id const member) {
     EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
-    Line const line = nullptr == totals ? lineOf("%s", "?") : balanceLine(eranosMemberSummaryBalance(totals));
+    Line const line = balanceLine(eranosMemberSummaryBalance(totals));
     eranosMemberSummaryDestroy(totals);
     eranosSummaryDestroy(summary);
     return line;

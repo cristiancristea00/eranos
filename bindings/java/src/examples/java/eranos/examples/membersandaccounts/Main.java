@@ -3,7 +3,6 @@ package eranos.examples.membersandaccounts;
 import static eranos.examples.Report.check;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
-import static eranos.examples.Report.totals;
 
 import eranos.Balance;
 import eranos.CalendarDate;
@@ -31,7 +30,6 @@ import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -146,17 +144,15 @@ public final class Main {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = totals(member.id(), summary);
-            if (found.isPresent()) {
-                rows.add(
-                        new BalanceRow(
-                                member.firstName(),
-                                group.isArchived(member.id())
-                                        .map(archived -> archived ? "archived" : "active")
-                                        .orElse("not in the group"),
-                                found.orElseThrow().share(),
-                                found.orElseThrow().balance()));
-            }
+            MemberSummary found = summary.member(member.id());
+            rows.add(
+                    new BalanceRow(
+                            member.firstName(),
+                            group.isArchived(member.id())
+                                    .map(archived -> archived ? "archived" : "active")
+                                    .orElse("not in the group"),
+                            found.share(),
+                            found.balance()));
         }
         printTable(BalanceRow.HEADERS, rows, 2);
     }
@@ -270,8 +266,8 @@ public final class Main {
                 removal instanceof EranosException.ExpenseGroup inUse
                         && inUse.failure() instanceof ExpenseGroupFailure.MemberInUse);
         check(
-                Optional.of(new Balance.Owes(Money.parse("450.00", euro)))
-                        .equals(totals(bob, group.summary()).map(MemberSummary::balance)));
+                new Balance.Owes(Money.parse("450.00", euro))
+                        .equals(group.summary().member(bob).balance()));
         check(group.expense(rent).isPresent());
     }
 

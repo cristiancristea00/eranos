@@ -20,8 +20,9 @@ import {
     expenseTotal,
     formatBalance,
     splitMembers,
+    summaryMember,
 } from '../src/index.js';
-import { type Columns, load, names, printLines, printTable, section, totals } from './report.js';
+import { type Columns, load, names, printLines, printTable, section } from './report.js';
 
 /** An expense or a transfer, as entered and in the group currency, as the table of entries prints it. */
 interface EntryRow {
@@ -66,7 +67,7 @@ function rate(cost: Cost): ExchangeRate {
 
 /** Every expense and transfer, as entered and in the group currency. */
 function printEntries(group: ExpenseGroup): void {
-    const zero = new Money(0n, group.currencySync());
+    const zero = Money.zero(group.currencySync());
     const expenses = group.expensesSync().map((expense): EntryRow => ({
         name: expense.name,
         payer: names(group, splitMembers(expense.payers)),
@@ -88,20 +89,16 @@ function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     printTable(
         balanceColumns,
-        group.membersSync().flatMap((member) => {
-            const found = totals(member.id, summary);
-            return undefined === found
-                ? []
-                : [
-                      {
-                          name: member.firstName,
-                          paid: found.paid,
-                          consumed: found.share,
-                          sent: found.sent,
-                          received: found.received,
-                          balance: found.balance,
-                      },
-                  ];
+        group.membersSync().map((member) => {
+            const found = summaryMember(summary, member.id);
+            return {
+                name: member.firstName,
+                paid: found.paid,
+                consumed: found.share,
+                sent: found.sent,
+                received: found.received,
+                balance: found.balance,
+            };
         }),
         1,
     );
@@ -199,13 +196,13 @@ printLines(
     'difference:',
 );
 printBalances(group);
-assert.deepEqual(totals(bob, group.summarySync())?.balance, { kind: 'getsBack', amount: Money.parse('20.00', euro) });
+assert.deepEqual(summaryMember(group.summarySync(), bob).balance, { kind: 'getsBack', amount: Money.parse('20.00', euro) });
 
 repayment(group, ana, bob);
-assert.deepEqual(totals(bob, group.summarySync())?.balance, { kind: 'settled' });
+assert.deepEqual(summaryMember(group.summarySync(), bob).balance, { kind: 'settled' });
 
 newCurrency(group);
 // 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
 const summary = group.summarySync();
 assert.ok(Money.parse('1000.00', leu).equals(summary.totalSpent));
-assert.deepEqual(totals(bob, summary)?.balance, { kind: 'settled' });
+assert.deepEqual(summaryMember(summary, bob).balance, { kind: 'settled' });

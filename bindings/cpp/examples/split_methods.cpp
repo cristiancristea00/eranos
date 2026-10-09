@@ -201,7 +201,7 @@ void totals(ExpenseGroup const &group) noexcept {
     std::println("{} spent over five expenses:", summary.totalSpent.toString());
     std::vector<TotalRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id).value();
+        auto const found = summary.member(member.id);
         rows.push_back({
             .name = member.firstName,
             .paid = found.paid.toString(),

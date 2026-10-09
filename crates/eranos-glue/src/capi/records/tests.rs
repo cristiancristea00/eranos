@@ -471,13 +471,23 @@ fn a_constructor_without_text_cannot_fail_and_a_default_holds() {
     );
 }
 
-/// A record that only comes back is read-only, a getter of every field.
+/// A record that only comes back is read-only: a getter of every field, then
+/// the methods its template adds, and no constructor or setter.
 #[test]
-fn an_answered_record_has_getters_alone() {
+fn an_answered_record_has_no_constructor_or_setter() {
     let named = named();
     let summary = &named["EranosSummary"];
     assert!(summary.to_string().contains("# [diplomat :: opaque]"));
-    assert_eq!(names(&methods(summary)), ["balances", "total"]);
+    assert_eq!(
+        names(&methods(summary)),
+        [
+            "balances",
+            "total",
+            "member",
+            "category_total",
+            "member_category_total"
+        ]
+    );
 }
 
 /// An enum with data has a constructor per variant, texts checked and a

@@ -37,7 +37,7 @@ func anotherCurrency(_ group: ExpenseGroup, _ people: People, _ categories: Cate
         preconditionFailure("the cash was recorded")
     }
     let converted = try ExchangeRate(parsing: "0.2011").convert(try ron("250.00"), into: euro)
-    let counted = try group.amount(of: cash) ?? Money(minorUnits: 0, currency: euro)
+    let counted = try group.amount(of: cash) ?? Money.zero(in: euro)
     print("""
         Bob's transfer, at \(transfer.time?.description ?? "") ("\(transfer.note ?? "")"), counts as \(counted).
         A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,
@@ -94,7 +94,7 @@ func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Cat
     expect(try eur("120.00"), try group.amount(of: first), "Dan's corrected transfer")
     let mistaken = try group.transfer(withID: mistake)
     precondition(nil == mistaken, "the mistake is removed")
-    let zero = Money(minorUnits: 0, currency: try CurrencyCode(code: "EUR"))
+    let zero = Money.zero(in: try CurrencyCode(code: "EUR"))
     let dinner = try group.expense(withID: seafood)
     let apartment = try group.transfer(withID: first)
     return [
@@ -184,9 +184,7 @@ func comingsAndGoings(_ group: ExpenseGroup, _ people: People) throws(EranosErro
     let summary = group.summary
     var rows: [StatusRow] = []
     for member in group.members() {
-        guard let totals = totals(of: member.id, in: summary) else {
-            continue
-        }
+        let totals = summary.member(withID: member.id)
         let status = switch try group.isArchived(member.id) {
         case true?:
             "archived"

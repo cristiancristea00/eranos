@@ -4,6 +4,7 @@
 package eranos
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 /** The summary, the balances, the shares of an expense, and the settlements. */
@@ -32,6 +33,17 @@ class TotalsTest {
         assertEquals(flat.ana, anaTotals.member)
         assertEquals(flat.bob, bobTotals.member)
         assertEquals(listOf(flat.euros(1_500)), anaTotals.totals.map { it.total })
+        assertEquals(ana, summary.member(flat.ana))
+        val stranger = MemberId("nobody")
+        val nobody = summary.member(stranger)
+        assertEquals(stranger, nobody.member)
+        assertEquals(List(5) { flat.euros(0) }, listOf(nobody.paid, nobody.share, nobody.sent, nobody.received, nobody.net))
+        assertEquals(Balance.Settled, nobody.balance)
+        assertEquals(flat.euros(3_000), summary.categoryTotal(flat.food))
+        assertEquals(flat.euros(0), summary.categoryTotal(CategoryId.UNCATEGORISED))
+        assertEquals(flat.euros(1_500), summary.memberCategoryTotal(flat.ana, flat.food))
+        assertEquals(flat.euros(0), summary.memberCategoryTotal(flat.ana, CategoryId.UNCATEGORISED))
+        assertEquals(flat.euros(0), summary.memberCategoryTotal(stranger, flat.food))
 
         val again = flat.group.summaryBlocking()
         val other = Flat().group.summaryBlocking()
@@ -96,5 +108,11 @@ class TotalsTest {
             assertValue(settlement, flat.group.settlementBlocking(strategy), SettlementPlan(emptyList(), settlement.strategy))
             assertValue(payment, Payment(flat.bob, flat.ana, flat.euros(500)), Payment(flat.ana, flat.bob, flat.euros(500)))
         }
+        val (payment) = flat.group.settlementBlocking(SettlementStrategy.GREEDY).payments
+        val repayment = Transfer(payment, flat.day, note = "Settled")
+        assertEquals(Transfer(repayment.id, flat.bob, flat.ana, Cost.Local(flat.euros(500)), flat.day, note = "Settled"), repayment)
+        assertEquals(repayment, Transfer(repayment.id, payment, flat.day, note = "Settled"))
+        assertEquals(repayment.copy(note = null), Transfer(repayment.id, payment, flat.day))
+        assertNull(Transfer(payment, flat.day).note)
     }
 }

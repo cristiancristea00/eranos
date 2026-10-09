@@ -27,7 +27,7 @@ from eranos import (
     TipRule,
     WholeExpenseSplit,
 )
-from examples.report import Row, names, print_lines, print_table, refusal, section, title, totals
+from examples.report import Row, names, print_lines, print_table, refusal, section, title
 
 
 @final
@@ -63,8 +63,7 @@ def balance(member: MemberId, summary: Summary) -> str:
         The balance, such as ``"owes 18.50 EUR"``, or ``?`` for a member the summary leaves out.
 
     """
-    found = totals(member, summary)
-    return '?' if found is None else str(found.balance)
+    return str(summary.member(member).balance)
 
 
 def main() -> None:

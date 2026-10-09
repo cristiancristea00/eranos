@@ -82,12 +82,12 @@ pub use values::{
     category_id_uncategorised, currencies, currency_details, email_parse, exchange_rate_convert,
     exchange_rate_from_f64, exchange_rate_parse, expense_item_discount_amount,
     expense_item_line_total, expense_item_line_total_before_discount, expense_members,
-    expense_tip_amount, expense_total, iban_parse, identifier_generate, identifier_parse,
-    language_parse, money_add, money_format, money_from_f64, money_parse, money_subtract,
-    parts_check, parts_format, parts_from_f64, parts_parse, percentage_check, percentage_format,
-    percentage_from_f64, percentage_parse, phone_number_parse, quantity_check, quantity_format,
-    quantity_from_f64, quantity_from_whole, quantity_parse, split_members, time_of_day_check,
-    time_of_day_format, time_of_day_parse, tip_rule_none, username_parse,
+    expense_split_participants, expense_tip_amount, expense_total, iban_parse, identifier_generate,
+    identifier_parse, language_parse, money_add, money_format, money_from_f64, money_parse,
+    money_subtract, parts_check, parts_format, parts_from_f64, parts_parse, percentage_check,
+    percentage_format, percentage_from_f64, percentage_parse, phone_number_parse, quantity_check,
+    quantity_format, quantity_from_f64, quantity_from_whole, quantity_parse, split_members,
+    time_of_day_check, time_of_day_format, time_of_day_parse, tip_rule_none, username_parse,
 };
 pub use writer::ExpenseGroupWriter;
 

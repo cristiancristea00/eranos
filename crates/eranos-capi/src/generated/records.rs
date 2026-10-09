@@ -1044,6 +1044,19 @@ pub mod ffi {
                 eranos_bindings::ExpenseSplit::Itemised { .. } => None,
             }
         }
+
+        /// The identifiers of every member who shares the cost, each once and in the order of their
+        /// identifiers.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Id` for an identifier that is not one, and the errors of an
+        /// item that does not convert.
+        pub fn participants(&self) -> Result<Box<EranosTextList>, Box<EranosError>> {
+            eranos_bindings::expense_split_participants(&self.0)
+                .map(|members| Box::new(EranosTextList(members)))
+                .map_err(crate::failed)
+        }
     }
 
     /// The kinds of expense split.
@@ -2251,6 +2264,53 @@ pub mod ffi {
             Box::new(EranosMemberCategoryTotalsList(
                 self.0.member_category_totals.clone(),
             ))
+        }
+
+        /// The totals of the member with the identifier `member`: all zero, and settled, for a
+        /// member without entries.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn member(
+            &self,
+            member: &DiplomatStr,
+        ) -> Result<Box<EranosMemberSummary>, Box<EranosError>> {
+            Ok(Box::new(EranosMemberSummary(
+                self.0.member(&crate::text(member)?),
+            )))
+        }
+
+        /// The spending in the category with the identifier `category`: zero for a category without
+        /// expenses.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn category_total(
+            &self,
+            category: &DiplomatStr,
+        ) -> Result<Box<EranosMoney>, Box<EranosError>> {
+            Ok(Box::new(EranosMoney(
+                self.0.category_total(&crate::text(category)?),
+            )))
+        }
+
+        /// The share of the member with the identifier `member` of the spending in the category
+        /// with the identifier `category`: zero when they have none there.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn member_category_total(
+            &self,
+            member: &DiplomatStr,
+            category: &DiplomatStr,
+        ) -> Result<Box<EranosMoney>, Box<EranosError>> {
+            Ok(Box::new(EranosMoney(self.0.member_category_total(
+                &crate::text(member)?,
+                &crate::text(category)?,
+            ))))
         }
     }
 

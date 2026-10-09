@@ -13,11 +13,13 @@ import {
     SettlementStrategy,
     createExpense,
     createMember,
+    expenseSplitParticipants,
     expenseTotal,
     formatBalance,
     splitMembers,
+    summaryMember,
 } from '../src/index.js';
-import { type Columns, load, names, participants, printLines, printTable, section, title, totals } from './report.js';
+import { type Columns, load, names, printLines, printTable, section, title } from './report.js';
 
 /** An expense, as the table of expenses prints it. */
 interface ExpenseRow {
@@ -104,7 +106,7 @@ printTable(
     group.expensesSync().map((expense) => ({
         name: expense.name,
         payers: names(group, splitMembers(expense.payers)),
-        participants: names(group, participants(expense.split)),
+        participants: names(group, expenseSplitParticipants(expense.split)),
         amount: expenseTotal(expense),
     })),
     3,
@@ -118,16 +120,14 @@ printLines(
 );
 printTable(
     memberColumns,
-    group.membersSync().flatMap((member) => {
-        const found = totals(member.id, summary);
-        return undefined === found ? [] : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance }];
+    group.membersSync().map((member) => {
+        const found = summaryMember(summary, member.id);
+        return { name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance };
     }),
     1,
 );
-const anaTotals = totals(ana, summary);
-printLines(
-    `Ana paid ${anaTotals?.paid.toString() ?? '?'} but consumed only ${anaTotals?.share.toString() ?? '?'}, so the others owe her the difference.`,
-);
+const anaTotals = summaryMember(summary, ana);
+printLines(`Ana paid ${anaTotals.paid.toString()} but consumed only ${anaTotals.share.toString()}, so the others owe her the difference.`);
 
 section('4. Settling up');
 const settlement = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
@@ -145,5 +145,5 @@ printLines('Once these payments are made, nobody owes anything.');
 
 // Everyone's share is 100.00: Ana gets back 140.00 from Bob (40.00) and Carol (100.00).
 assert.ok(Money.parse('300.00', euro).equals(summary.totalSpent));
-assert.deepEqual(anaTotals?.balance, { kind: 'getsBack', amount: Money.parse('140.00', euro) });
+assert.deepEqual(anaTotals.balance, { kind: 'getsBack', amount: Money.parse('140.00', euro) });
 assert.equal(settlement.payments.length, 2);

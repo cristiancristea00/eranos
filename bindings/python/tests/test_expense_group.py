@@ -39,6 +39,8 @@ from eranos import (
     WholeExpenseSplit,
     Category,
     parse_expense_group_id,
+    MemberSummary,
+    UNCATEGORISED,
 )
 
 
@@ -119,6 +121,16 @@ def test_the_summary_and_the_shares_add_up(flat: Flat) -> None:
     assert summary.category_totals == (CategoryTotal(flat.food, flat.euros(3000)),)
     assert len(summary.member_category_totals) == 2
     assert summary.member_category_totals[0].totals[0].category == flat.food
+    assert summary.member(flat.ana) == ana
+    stranger = MemberId('0199a000-0000-7000-8000-00000000ffff')
+    zero = flat.euros(0)
+    absent = MemberSummary(member=stranger, paid=zero, share=zero, sent=zero, received=zero, net=zero, balance=SettledBalance())
+    assert summary.member(stranger) == absent
+    assert summary.category_total(flat.food) == flat.euros(3000)
+    assert summary.category_total(UNCATEGORISED) == zero
+    assert summary.member_category_total(flat.ana, flat.food) == flat.euros(1500)
+    assert summary.member_category_total(flat.ana, UNCATEGORISED) == zero
+    assert summary.member_category_total(stranger, flat.food) == zero
     shares = flat.group.expense_shares(flat.dinner)
     assert shares is not None
     assert len(shares.members) == 2
@@ -134,7 +146,12 @@ def test_each_strategy_settles_every_balance(flat: Flat) -> None:
         # The flat's two open balances are well within the adaptive strategy's limit, so it settles them exactly.
         assert settlement.strategy == (SettlementStrategy.MINIMUM_TRANSFERS if strategy is SettlementStrategy.ADAPTIVE else strategy)
         assert settlement.payments == (Payment(sender=flat.bob, receiver=flat.ana, amount=flat.euros(500)),)
-    flat.group.add_transfer(Transfer.create(sender=flat.bob, receiver=flat.ana, cost=LocalCost(flat.euros(500)), date=flat.day))
+    (payment,) = flat.group.settlement(SettlementStrategy.GREEDY).payments
+    repayment = Transfer.from_payment(payment, flat.day, note='Settled')
+    expected = Transfer(id=repayment.id, sender=flat.bob, receiver=flat.ana, cost=LocalCost(flat.euros(500)), date=flat.day, note='Settled')
+    assert repayment == expected
+    assert Transfer.from_payment_with_id(repayment.id, payment, flat.day, note='Settled') == repayment
+    flat.group.add_transfer(repayment)
     settled: Balance = SettledBalance()
     assert all(member.balance == settled for member in flat.group.summary().members)
 

@@ -3,7 +3,6 @@ package eranos.examples.grandtour;
 import static eranos.examples.Report.check;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
-import static eranos.examples.Report.totals;
 import static eranos.examples.grandtour.Tables.printBalances;
 import static eranos.examples.grandtour.Tables.printCategories;
 import static eranos.examples.grandtour.Tables.printEntries;
@@ -20,7 +19,6 @@ import eranos.Balance;
 import eranos.Category;
 import eranos.CategoryId;
 import eranos.CategoryTotal;
-import eranos.Cost;
 import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
@@ -63,14 +61,6 @@ final class Totals {
                 .orElse(List.of());
     }
 
-    /** The total of {@code category} among {@code totals}. */
-    private static Optional<Money> total(List<CategoryTotal> totals, CategoryId category) {
-        return totals.stream()
-                .filter(total -> total.category().equals(category))
-                .findFirst()
-                .map(CategoryTotal::total);
-    }
-
     static void summary(ExpenseGroup group, People people, Categories categories)
             throws EranosException {
         section("8. The summary");
@@ -85,41 +75,29 @@ final class Totals {
         System.out.println("The spending per category:");
         printCategories(group);
         System.out.println("And each member's consumption per category:");
-        Money zero = new Money(0, group.currency());
+        Money zero = Money.zero(group.currency());
         List<MemberCategoryRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            List<CategoryTotal> totals = byCategory(summary, member.id());
             rows.add(
                     new MemberCategoryRow(
                             member.firstName(),
-                            total(totals, categories.food()).orElse(zero),
-                            total(totals, categories.lodging()).orElse(zero),
-                            total(totals, categories.transport()).orElse(zero),
-                            total(totals, CategoryId.UNCATEGORISED).orElse(zero)));
+                            summary.memberCategoryTotal(member.id(), categories.food()),
+                            summary.memberCategoryTotal(member.id(), categories.lodging()),
+                            summary.memberCategoryTotal(member.id(), categories.transport()),
+                            summary.memberCategoryTotal(member.id(), CategoryId.UNCATEGORISED)));
         }
         printTable(MemberCategoryRow.HEADERS, rows, 1);
 
         check(eur("1222.90").equals(summary.totalSpent()));
-        check(
-                Optional.of(eur("890.00"))
-                        .equals(totals(people.ana(), summary).map(MemberSummary::paid)));
-        check(
-                Optional.of(eur("140.00"))
-                        .equals(totals(people.ana(), summary).map(MemberSummary::received)));
-        check(
-                Optional.of(eur("20.00"))
-                        .equals(totals(people.bob(), summary).map(MemberSummary::sent)));
-        check(
-                Optional.of(new Balance.GetsBack(eur("12.55")))
-                        .equals(totals(people.dan(), summary).map(MemberSummary::balance)));
-        check(
-                Optional.of(new Balance.Owes(eur("42.60")))
-                        .equals(totals(people.eva(), summary).map(MemberSummary::balance)));
-        List<CategoryTotal> categoryTotals = summary.categoryTotals();
-        check(Optional.of(eur("174.40")).equals(total(categoryTotals, categories.food())));
-        check(Optional.of(eur("800.00")).equals(total(categoryTotals, categories.lodging())));
-        check(Optional.of(eur("188.50")).equals(total(categoryTotals, categories.transport())));
-        check(Optional.of(eur("60.00")).equals(total(categoryTotals, CategoryId.UNCATEGORISED)));
+        check(eur("890.00").equals(summary.member(people.ana()).paid()));
+        check(eur("140.00").equals(summary.member(people.ana()).received()));
+        check(eur("20.00").equals(summary.member(people.bob()).sent()));
+        check(new Balance.GetsBack(eur("12.55")).equals(summary.member(people.dan()).balance()));
+        check(new Balance.Owes(eur("42.60")).equals(summary.member(people.eva()).balance()));
+        check(eur("174.40").equals(summary.categoryTotal(categories.food())));
+        check(eur("800.00").equals(summary.categoryTotal(categories.lodging())));
+        check(eur("188.50").equals(summary.categoryTotal(categories.transport())));
+        check(eur("60.00").equals(summary.categoryTotal(CategoryId.UNCATEGORISED)));
         for (MemberSummary totals : summary.members()) {
             List<Money> amounts =
                     byCategory(summary, totals.member()).stream()
@@ -148,9 +126,7 @@ final class Totals {
 
         check(Optional.of(new ExpenseGroupFailure.BuiltInCategory()).equals(groupFailure(builtIn)));
         check(group.category(categories.transport()).isEmpty());
-        check(
-                Optional.of(eur("248.50"))
-                        .equals(total(group.summary().categoryTotals(), CategoryId.UNCATEGORISED)));
+        check(eur("248.50").equals(group.summary().categoryTotal(CategoryId.UNCATEGORISED)));
         check(
                 group.expenses().stream()
                         .noneMatch(expense -> categories.transport().equals(expense.category())));
@@ -186,12 +162,8 @@ final class Totals {
                         .equals(groupFailure(missing)));
         check(leu.equals(group.currency()));
         check(ron("6114.50").equals(summary.totalSpent()));
-        check(
-                Optional.of(new Balance.GetsBack(ron("62.75")))
-                        .equals(totals(people.dan(), summary).map(MemberSummary::balance)));
-        check(
-                Optional.of(new Balance.Owes(ron("213.00")))
-                        .equals(totals(people.eva(), summary).map(MemberSummary::balance)));
+        check(new Balance.GetsBack(ron("62.75")).equals(summary.member(people.dan()).balance()));
+        check(new Balance.Owes(ron("213.00")).equals(summary.member(people.eva()).balance()));
     }
 
     /** The name of {@code strategy} as the apps show it. */
@@ -242,13 +214,7 @@ final class Totals {
         }
         printTable(PaymentRow.HEADERS, rows, 2);
         for (Payment payment : plan.payments()) {
-            group.addTransfer(
-                    Transfer.builder(
-                                    payment.sender(),
-                                    payment.receiver(),
-                                    new Cost.Local(payment.amount()),
-                                    october(7))
-                            .build());
+            group.addTransfer(Transfer.builder(payment, october(7)).build());
         }
         System.out.print(
                 """

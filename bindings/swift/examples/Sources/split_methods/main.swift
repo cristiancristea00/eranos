@@ -204,10 +204,9 @@ func printTotals(_ group: ExpenseGroup) throws(EranosError) {
     let summary = group.summary
     print("\(summary.totalSpent) spent over five expenses:")
     printTable(
-        group.members().compactMap { member in
-            totals(of: member.id, in: summary).map { totals in
-                TotalRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: "\(totals.balance)")
-            }
+        group.members().map { member in
+            let totals = summary.member(withID: member.id)
+            return TotalRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: "\(totals.balance)")
         },
         numbersFrom: 1
     )

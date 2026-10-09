@@ -24,11 +24,10 @@ from eranos import (
     Member,
     MemberId,
     Money,
-    SettledBalance,
     Summary,
     Transfer,
 )
-from examples.report import Row, names, print_table, totals
+from examples.report import Row, names, print_table
 
 
 @final
@@ -242,23 +241,19 @@ def cell(lines: Iterable[str]) -> str:
     return '\n'.join(lines)
 
 
-def _balance_row(member: Member, summary: Summary, zero: Money) -> BalanceRow:
+def _balance_row(member: Member, summary: Summary) -> BalanceRow:
     """
     Write the row of member among the balances.
 
     Args:
         member: The member.
         summary: The group's summary.
-        zero: Zero in the group currency.
 
     Returns:
         The row.
 
     """
-    found = totals(member.id, summary)
-    if found is None:
-        # The summary lists the members with a total; every total of the others is zero.
-        return BalanceRow(name=member.first_name, paid=zero, consumed=zero, sent=zero, received=zero, balance=SettledBalance())
+    found = summary.member(member.id)
     return BalanceRow(name=member.first_name, paid=found.paid, consumed=found.share, sent=found.sent, received=found.received, balance=found.balance)
 
 
@@ -271,8 +266,7 @@ def print_balances(group: ExpenseGroup) -> None:
 
     """
     summary = group.summary()
-    zero = Money(0, group.currency())
-    print_table(BalanceRow, [_balance_row(member, summary, zero) for member in group.members()], 1)
+    print_table(BalanceRow, [_balance_row(member, summary) for member in group.members()], 1)
 
 
 def print_categories(group: ExpenseGroup) -> None:
@@ -336,7 +330,7 @@ def _expense_row(group: ExpenseGroup, expense: Expense) -> EntryRow:
         payer=names(group, expense.payers.members),
         original=expense.total(),
         rate=_rate(expense.cost),
-        converted=Money(0, group.currency()) if shares is None else shares.total,
+        converted=Money.zero(group.currency()) if shares is None else shares.total,
     )
 
 
@@ -359,7 +353,7 @@ def _transfer_row(group: ExpenseGroup, transfer: Transfer) -> EntryRow:
         payer=name(group, transfer.sender),
         original=transfer.cost.amount,
         rate=_rate(transfer.cost),
-        converted=Money(0, group.currency()) if amount is None else amount,
+        converted=Money.zero(group.currency()) if amount is None else amount,
     )
 
 

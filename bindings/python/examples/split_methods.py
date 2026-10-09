@@ -30,7 +30,7 @@ from eranos import (
     PercentagesSplit,
     WholeExpenseSplit,
 )
-from examples.report import Row, names, print_lines, print_table, refusal, section, title, totals
+from examples.report import Row, names, print_lines, print_table, refusal, section, title
 
 
 @final
@@ -351,7 +351,7 @@ def print_totals(group: ExpenseGroup) -> None:
         [
             TotalRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=str(found.balance))
             for member in group.members()
-            if (found := totals(member.id, summary)) is not None
+            for found in (summary.member(member.id),)
         ],
         1,
     )

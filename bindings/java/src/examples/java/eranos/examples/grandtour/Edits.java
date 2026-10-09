@@ -3,7 +3,6 @@ package eranos.examples.grandtour;
 import static eranos.examples.Report.check;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
-import static eranos.examples.Report.totals;
 import static eranos.examples.grandtour.Tables.printBalances;
 import static eranos.examples.grandtour.Tables.printEntries;
 import static eranos.examples.grandtour.Tour.eur;
@@ -98,7 +97,7 @@ final class Edits {
                         .formatted(
                                 transfer.time().map(TimeOfDay::toString).orElse(""),
                                 transfer.note().orElse(""),
-                                group.transferAmount(cash).orElse(new Money(0, euro)),
+                                group.transferAmount(cash).orElse(Money.zero(euro)),
                                 converted));
 
         check(eur("50.28").equals(converted));
@@ -170,7 +169,7 @@ final class Edits {
         check(group.expense(copy).isEmpty());
         check(Optional.of(eur("120.00")).equals(group.transferAmount(first)));
         check(group.transfer(mistake).isEmpty());
-        Money zero = new Money(0, CurrencyCode.of("EUR"));
+        Money zero = Money.zero(CurrencyCode.of("EUR"));
         Optional<Expense> dinner = group.expense(seafood);
         Optional<Transfer> apartment = group.transfer(first);
         return List.of(
@@ -304,16 +303,14 @@ final class Edits {
         Summary summary = group.summary();
         List<StatusRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = totals(member.id(), summary);
-            if (found.isPresent()) {
-                rows.add(
-                        new StatusRow(
-                                member.firstName(),
-                                group.isArchived(member.id())
-                                        .map(archived -> archived ? "archived" : "active")
-                                        .orElse("not in the group"),
-                                found.orElseThrow().balance()));
-            }
+            MemberSummary found = summary.member(member.id());
+            rows.add(
+                    new StatusRow(
+                            member.firstName(),
+                            group.isArchived(member.id())
+                                    .map(archived -> archived ? "archived" : "active")
+                                    .orElse("not in the group"),
+                            found.balance()));
         }
         printTable(StatusRow.HEADERS, rows, 2);
         printTable(

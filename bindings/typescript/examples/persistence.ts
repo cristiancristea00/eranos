@@ -15,8 +15,9 @@ import {
     createExpense,
     createMember,
     formatBalance,
+    summaryMember,
 } from '../src/index.js';
-import { type Columns, load, printLines, printTable, refusal, section, title, totals } from './report.js';
+import { type Columns, load, printLines, printTable, refusal, section, title } from './report.js';
 
 /** A member's balance before saving and after loading, as the table of balances prints it. */
 interface ComparisonRow {
@@ -33,8 +34,7 @@ const comparisonColumns: Columns<ComparisonRow> = [
 
 /** The balance of `member` in `summary`, as the library writes it. */
 function balance(member: MemberId, summary: Summary): string {
-    const found = totals(member, summary);
-    return undefined === found ? '?' : formatBalance(found.balance);
+    return formatBalance(summaryMember(summary, member).balance);
 }
 
 await load();

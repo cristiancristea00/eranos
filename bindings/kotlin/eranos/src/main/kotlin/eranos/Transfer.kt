@@ -39,6 +39,29 @@ public class Transfer(
         note: String? = null,
     ) : this(TransferId.generate(), sender, receiver, cost, date, time, note)
 
+    /**
+     * The transfer that records [payment] of a settlement, made on [date]: from its sender to its receiver, of its amount in
+     * the group currency, under [id], which the app gives; the constructor without [id] generates it.
+     */
+    public constructor(
+        id: TransferId,
+        payment: Payment,
+        date: CalendarDate,
+        time: TimeOfDay? = null,
+        note: String? = null,
+    ) : this(id, payment.sender, payment.receiver, Cost.Local(payment.amount), date, time, note)
+
+    /**
+     * The transfer that records [payment] of a settlement, made on [date], under an identifier [TransferId.generate] makes;
+     * the constructor with an identifier takes the app's.
+     */
+    public constructor(
+        payment: Payment,
+        date: CalendarDate,
+        time: TimeOfDay? = null,
+        note: String? = null,
+    ) : this(TransferId.generate(), payment, date, time, note)
+
     /** The transfer as the generated code holds it. */
     internal val generated: eranos.internal.Transfer
         get() = eranos.internal.Transfer(id.value, sender.value, receiver.value, cost.generated, date.generated, time?.generated, note)

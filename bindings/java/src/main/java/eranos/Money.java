@@ -25,6 +25,43 @@ public record Money(long minorUnits, CurrencyCode currency) {
     }
 
     /**
+     * Zero in {@code currency}.
+     *
+     * @param currency the currency
+     * @return zero minor units of the currency
+     */
+    public static Money zero(CurrencyCode currency) {
+        return new Money(0, currency);
+    }
+
+    /**
+     * Whether the amount is zero.
+     *
+     * @return whether it is zero
+     */
+    public boolean isZero() {
+        return 0 == minorUnits;
+    }
+
+    /**
+     * Whether the amount is above zero.
+     *
+     * @return whether it is above zero
+     */
+    public boolean isPositive() {
+        return 0 < minorUnits;
+    }
+
+    /**
+     * Whether the amount is below zero.
+     *
+     * @return whether it is below zero
+     */
+    public boolean isNegative() {
+        return 0 > minorUnits;
+    }
+
+    /**
      * The amount written {@code text} in {@code currency}: "12.50", "12.5", or "-3".
      *
      * @param text the amount's text

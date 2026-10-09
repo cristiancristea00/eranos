@@ -128,6 +128,14 @@ class EntriesTest {
         assertEquals(flat.euros(300), expenses.dinner.tipAmount())
         val unreadable = expenses.taxi.copy(payers = Split.Equal(listOf(MemberId(" nobody"))))
         assertThrows<EranosException.Id> { unreadable.members() }
+        assertEquals(listOf(flat.ana, flat.bob), ExpenseSplit.Whole(Split.Equal(listOf(flat.bob, flat.ana, flat.bob))).participants())
+        assertThrows<EranosException.Id> { ExpenseSplit.Whole(Split.Equal(listOf(MemberId(" nobody")))).participants() }
+        val lines =
+            listOf(
+                ExpenseItem("Soup", flat.euros(500), Split.Equal(listOf(flat.bob))),
+                ExpenseItem("Bread", flat.euros(200), Split.Equal(listOf(flat.ana, flat.bob))),
+            )
+        assertEquals(listOf(flat.ana, flat.bob), ExpenseSplit.Itemised(lines).participants())
         assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = TipRule(TipValue.Fixed(flat.euros(1)))).tipAmount() }
         assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = TipRule(TipValue.Fixed(Money(-1, lei)))).total() }
         assertEquals(listOf(TipDistribution.PROPORTIONAL, TipDistribution.EQUAL), TipDistribution.entries)

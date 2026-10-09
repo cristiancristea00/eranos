@@ -29,6 +29,27 @@ public class Summary internal constructor(
     /** A hash of what [equals] compares. */
     override fun hashCode(): Int = hashOf(totalSpent, members, categoryTotals, memberCategoryTotals)
 
+    /** The totals of the member with the identifier [id]: all zero, and settled, for a member without entries. */
+    public fun member(id: MemberId): MemberSummary {
+        val zero = Money.zero(totalSpent.currency)
+        return members.find { it.member == id } ?: MemberSummary(id, zero, zero, zero, zero, zero, Balance.Settled)
+    }
+
+    /** The spending in the category with the identifier [id]: zero for a category without expenses. */
+    public fun categoryTotal(id: CategoryId): Money = categoryTotals.find { it.category == id }?.total ?: Money.zero(totalSpent.currency)
+
+    /**
+     * The share of the member with the identifier [member] of the spending in the category with the identifier [category]:
+     * zero when they have none there.
+     */
+    public fun memberCategoryTotal(
+        member: MemberId,
+        category: CategoryId,
+    ): Money {
+        val totals = memberCategoryTotals.find { it.member == member }?.totals.orEmpty()
+        return totals.find { it.category == category }?.total ?: Money.zero(totalSpent.currency)
+    }
+
     /** A description of every field, for logs. */
     override fun toString(): String =
         "Summary(totalSpent=$totalSpent, members=$members, categoryTotals=$categoryTotals, " +

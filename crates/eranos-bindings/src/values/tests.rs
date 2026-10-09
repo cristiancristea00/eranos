@@ -1131,19 +1131,31 @@ fn an_expense_and_a_split_list_their_members() {
     assert_eq!(expense_members(&dinner()), Ok(everyone.to_vec()));
     let itemised = Expense {
         split: ExpenseSplit::Itemised {
-            items: vec![ExpenseItem {
-                name: "Soup".to_owned(),
-                unit_price: euros(3_000),
-                split: equal(&[member(3), member(2)]),
-                quantity: 10_000,
-                discount: None,
-            }],
+            items: vec![
+                ExpenseItem {
+                    name: "Soup".to_owned(),
+                    unit_price: euros(2_500),
+                    split: equal(&[member(3), member(2)]),
+                    quantity: 10_000,
+                    discount: None,
+                },
+                ExpenseItem {
+                    name: "Bread".to_owned(),
+                    unit_price: euros(500),
+                    split: equal(&[member(2)]),
+                    quantity: 10_000,
+                    discount: None,
+                },
+            ],
         },
         ..dinner()
     };
     assert_eq!(expense_members(&itemised), Ok(everyone.to_vec()));
     let listed = equal(&[member(3), member(2)]);
     assert_eq!(split_members(&listed), Ok(vec![member(3), member(2)]));
+    let sharing = Ok(vec![member(2), member(3)]);
+    assert_eq!(expense_split_participants(&dinner().split), sharing);
+    assert_eq!(expense_split_participants(&itemised.split), sharing);
 
     let unreadable = equal(&[" nobody".to_owned()]);
     let refused = [
@@ -1158,6 +1170,7 @@ fn an_expense_and_a_split_list_their_members() {
             ..dinner()
         }),
         split_members(&unreadable),
+        expense_split_participants(&ExpenseSplit::Whole { split: unreadable }),
     ];
     for result in refused {
         assert!(
@@ -1183,11 +1196,19 @@ fn an_expense_and_a_split_list_their_members() {
         },
         ..dinner()
     };
-    assert!(matches!(
+    for result in [
         expense_members(&bad_item),
-        Err(EranosError::Money {
-            failure: MoneyFailure::InvalidQuantity,
-            ..
-        })
-    ));
+        expense_split_participants(&bad_item.split),
+    ] {
+        assert!(
+            matches!(
+                result,
+                Err(EranosError::Money {
+                    failure: MoneyFailure::InvalidQuantity,
+                    ..
+                })
+            ),
+            "{result:?}"
+        );
+    }
 }

@@ -476,6 +476,19 @@ typedef struct EranosExpenseSplit EranosExpenseSplit;
     return EranosExpenseSplit_split(expenseSplit);
 }
 
+/// The identifiers of every member who shares the cost, each once and in the order of their identifiers.
+///
+/// @param expenseSplit The expense split
+/// @param participants Receives the participants on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ID for an
+///   identifier that is not one, or the library's refusal of an item that does not build
+[[nodiscard]] static inline EranosError *eranosExpenseSplitParticipants(EranosExpenseSplit const *const expenseSplit,
+                                                                        EranosTextList **const participants) {
+    EranosExpenseSplit_participants_result const result = EranosExpenseSplit_participants(expenseSplit);
+    *participants = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
 /// Destroys @p expenseSplit; destroying nullptr does nothing, as free() does.
 ///
 /// @param expenseSplit The expense split, which no call uses after this one, or nullptr

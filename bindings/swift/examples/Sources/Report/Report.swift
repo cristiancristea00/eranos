@@ -55,20 +55,3 @@ public func printTable<Row: TableRow>(_ rows: [Row], numbersFrom: Int) {
 public func names(_ group: ExpenseGroup, _ members: [Member.ID]) throws(EranosError) -> String {
     try members.map { id throws(EranosError) in try group.member(withID: id)?.firstName ?? "?" }.joined(separator: ", ")
 }
-
-/// Every member who shares the cost of `split`, once each, in the order of their identifiers.
-public func participants(_ split: ExpenseSplit) -> [Member.ID] {
-    let members = switch split {
-    case let .whole(split):
-        split.members
-    case let .itemised(items):
-        items.flatMap(\.split.members)
-    }
-    // The library orders identifiers by their bytes of UTF-8, which `String`'s `<` does not.
-    return Set(members).sorted { first, second in first.rawValue.utf8.lexicographicallyPrecedes(second.rawValue.utf8) }
-}
-
-/// The totals of `member` in `summary`.
-public func totals(of member: Member.ID, in summary: Summary) -> MemberSummary? {
-    summary.members.first { totals in totals.member == member }
-}

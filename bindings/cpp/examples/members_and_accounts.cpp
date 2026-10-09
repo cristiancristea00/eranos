@@ -127,7 +127,7 @@ void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id).value();
+        auto const found = summary.member(member.id);
         rows.push_back({
             .name = member.firstName,
             .status = must(group.isArchived(member.id))
@@ -221,7 +221,7 @@ void movingOut(ExpenseGroup &group, Flatmates const &flatmates) noexcept {
 
     check(Failure::EXPENSE_GROUP_ARCHIVED_MEMBER == refused->failure() && flatmates.bob == refused->member(), "the refusal names Bob");
     check(Failure::EXPENSE_GROUP_MEMBER_IN_USE == removal->failure(), "Bob is in use");
-    check(Balance(OwesBalance{euros("450.00")}) == totalsOf(group.summary(), flatmates.bob).value().balance, "Bob owes 450.00 EUR");
+    check(Balance(OwesBalance{euros("450.00")}) == group.summary().member(flatmates.bob).balance, "Bob owes 450.00 EUR");
     check(must(group.expense(rent)).has_value(), "the group keeps the rent");
 }
 

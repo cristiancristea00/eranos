@@ -15,11 +15,9 @@ import eranos.SettlementStrategy
 import eranos.Split
 import eranos.examples.Row
 import eranos.examples.names
-import eranos.examples.participants
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.title
-import eranos.examples.totals
 
 private data class ExpenseRow(
     val name: String,
@@ -101,7 +99,7 @@ fun main() {
                 ExpenseRow(
                     name = expense.name,
                     payers = names(group, expense.payers.members),
-                    participants = names(group, participants(expense.split)),
+                    participants = names(group, expense.split.participants()),
                     amount = expense.total(),
                 )
             },
@@ -118,15 +116,14 @@ fun main() {
         )
         printTable(
             MemberRow.HEADERS,
-            group.membersBlocking().mapNotNull { member ->
-                totals(member.id, summary)?.let { totals ->
-                    MemberRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = totals.balance)
-                }
+            group.membersBlocking().map { member ->
+                val totals = summary.member(member.id)
+                MemberRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = totals.balance)
             },
             numbersFrom = 1,
         )
-        val anaTotals = totals(ana, summary)
-        println("Ana paid ${anaTotals?.paid ?: "?"} but consumed only ${anaTotals?.share ?: "?"}, so the others owe her the difference.")
+        val anaTotals = summary.member(ana)
+        println("Ana paid ${anaTotals.paid} but consumed only ${anaTotals.share}, so the others owe her the difference.")
 
         section("4. Settling up")
         val settlement = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
@@ -142,7 +139,7 @@ fun main() {
 
         // Everyone's share is 100.00: Ana gets back 140.00 from Bob (40.00) and Carol (100.00).
         check(Money.parse("300.00", euro) == summary.totalSpent)
-        check(Balance.GetsBack(Money.parse("140.00", euro)) == anaTotals?.balance)
+        check(Balance.GetsBack(Money.parse("140.00", euro)) == anaTotals.balance)
         check(2 == settlement.payments.size)
     }
 }

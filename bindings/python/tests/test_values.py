@@ -174,6 +174,17 @@ def test_amounts_in_one_currency_add_and_subtract() -> None:
     lei = CurrencyCode('RON')
     assert Money(1000, euro).plus(Money(250, euro)) == Money(1250, euro)
     assert Money(1000, euro).minus(Money(250, euro)) == Money(750, euro)
+    assert Money(1000, euro) + Money(250, euro) == Money(1250, euro)
+    assert Money(1000, euro) - Money(250, euro) == Money(750, euro)
+    assert -Money(1000, euro) == Money(-1000, euro)
+    zero = Money.zero(euro)
+    assert zero == Money(0, euro)
+    assert (zero.is_zero(), zero.is_positive(), zero.is_negative()) == (True, False, False)
+    assert (Money(1, euro).is_zero(), Money(1, euro).is_positive(), Money(1, euro).is_negative()) == (False, True, False)
+    assert (Money(-1, euro).is_zero(), Money(-1, euro).is_positive(), Money(-1, euro).is_negative()) == (False, False, True)
+    with pytest.raises(MoneyError) as negated:
+        -Money(-(2**63), euro)
+    assert negated.value.failure == MoneyError.Overflow()
     with pytest.raises(MoneyError) as mixed:
         Money(1, euro).plus(Money(1, lei))
     assert mixed.value.failure == MoneyError.CurrencyMismatch(left=euro, right=lei)

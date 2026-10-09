@@ -15,8 +15,9 @@ import {
     createExpense,
     createMember,
     formatBalance,
+    summaryMember,
 } from '../src/index.js';
-import { type Columns, load, names, printLines, printTable, refusal, section, totals } from './report.js';
+import { type Columns, load, names, printLines, printTable, refusal, section } from './report.js';
 
 /** A member's rule, payment, and consumption in one expense, as the table of shares prints them. */
 interface ShareRow {
@@ -271,11 +272,9 @@ function printTotals(group: ExpenseGroup): void {
     printLines(`${summary.totalSpent.toString()} spent over five expenses:`);
     printTable(
         totalColumns,
-        group.membersSync().flatMap((member) => {
-            const found = totals(member.id, summary);
-            return undefined === found
-                ? []
-                : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: formatBalance(found.balance) }];
+        group.membersSync().map((member) => {
+            const found = summaryMember(summary, member.id);
+            return { name: member.firstName, paid: found.paid, consumed: found.share, balance: formatBalance(found.balance) };
         }),
         1,
     );

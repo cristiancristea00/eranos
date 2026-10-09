@@ -2,11 +2,9 @@ package eranos.examples.quickstart;
 
 import static eranos.examples.Report.check;
 import static eranos.examples.Report.names;
-import static eranos.examples.Report.participants;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
 import static eranos.examples.Report.title;
-import static eranos.examples.Report.totals;
 
 import eranos.Balance;
 import eranos.CalendarDate;
@@ -29,7 +27,6 @@ import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * A weekend trip in a few lines: three friends, two shared expenses, the totals, and who pays whom.
@@ -125,7 +122,7 @@ public final class Main {
                         new ExpenseRow(
                                 expense.name(),
                                 names(group, expense.payers().members()),
-                                names(group, participants(expense.split())),
+                                names(group, expense.split().participants()),
                                 expense.total()));
             }
             printTable(ExpenseRow.HEADERS, expenses, 3);
@@ -140,22 +137,16 @@ public final class Main {
                             .formatted(summary.totalSpent()));
             List<MemberRow> balances = new ArrayList<>();
             for (Member member : group.members()) {
-                Optional<MemberSummary> totals = totals(member.id(), summary);
-                totals.ifPresent(
-                        found ->
-                                balances.add(
-                                        new MemberRow(
-                                                member.firstName(),
-                                                found.paid(),
-                                                found.share(),
-                                                found.balance())));
+                MemberSummary found = summary.member(member.id());
+                balances.add(
+                        new MemberRow(
+                                member.firstName(), found.paid(), found.share(), found.balance()));
             }
             printTable(MemberRow.HEADERS, balances, 1);
-            Optional<MemberSummary> anaTotals = totals(ana, summary);
+            MemberSummary anaTotals = summary.member(ana);
             System.out.printf(
                     "Ana paid %s but consumed only %s, so the others owe her the difference.%n",
-                    anaTotals.map(MemberSummary::paid).map(Money::toString).orElse("?"),
-                    anaTotals.map(MemberSummary::share).map(Money::toString).orElse("?"));
+                    anaTotals.paid(), anaTotals.share());
 
             section("4. Settling up");
             SettlementPlan settlement = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
@@ -175,9 +166,7 @@ public final class Main {
 
             // Everyone's share is 100.00: Ana gets back 140.00 from Bob (40.00) and Carol (100.00).
             check(Money.parse("300.00", euro).equals(summary.totalSpent()));
-            check(
-                    Optional.of(new Balance.GetsBack(Money.parse("140.00", euro)))
-                            .equals(anaTotals.map(MemberSummary::balance)));
+            check(new Balance.GetsBack(Money.parse("140.00", euro)).equals(anaTotals.balance()));
             check(2 == settlement.payments().size());
         }
     }

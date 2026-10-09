@@ -18,10 +18,8 @@ import eranos.Split
 import eranos.Transfer
 import eranos.examples.Row
 import eranos.examples.names
-import eranos.examples.participants
 import eranos.examples.printTable
 import eranos.examples.section
-import eranos.examples.totals
 
 private data class ExpenseRow(
     val name: String,
@@ -118,10 +116,9 @@ private fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     printTable(
         BalanceRow.HEADERS,
-        group.membersBlocking().mapNotNull { member ->
-            totals(member.id, summary)?.let { totals ->
-                BalanceRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = totals.balance)
-            }
+        group.membersBlocking().map { member ->
+            val totals = summary.member(member.id)
+            BalanceRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = totals.balance)
         },
         numbersFrom = 1,
     )
@@ -287,7 +284,7 @@ fun main() {
                 ExpenseRow(
                     name = expense.name,
                     payer = names(group, expense.payers.members),
-                    participants = names(group, participants(expense.split)),
+                    participants = names(group, expense.split.participants()),
                     amount = expense.total(),
                 )
             },
@@ -305,7 +302,7 @@ fun main() {
         val plan = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
         for (payment in plan.payments) {
             group.addBlocking(
-                Transfer(payment.sender, payment.receiver, Cost.Local(payment.amount), CalendarDate.of(year = 2026, month = 9, day = 27)),
+                Transfer(payment, CalendarDate.of(year = 2026, month = 9, day = 27)),
             )
         }
         println(
@@ -324,7 +321,7 @@ fun main() {
         check(19 == festivalPayments)
         val summary = group.summaryBlocking()
         for (member in listOf(ana, bob, carol, dan, eva, filip)) {
-            check(Balance.Settled == totals(member, summary)?.balance)
+            check(Balance.Settled == summary.member(member).balance)
         }
     }
 }

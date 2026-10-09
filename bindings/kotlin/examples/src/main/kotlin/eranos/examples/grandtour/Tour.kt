@@ -72,7 +72,7 @@ internal fun message(refused: EranosException?): String = refused?.message ?: "a
 internal fun sum(
     currency: CurrencyCode,
     amounts: List<Money>,
-): Money = amounts.fold(Money(0, currency)) { total, amount -> total + amount }
+): Money = amounts.fold(Money.zero(currency)) { total, amount -> total + amount }
 
 /** The rate [cost] was entered at: 1 for a cost in the group currency. */
 internal fun rate(cost: Cost): ExchangeRate =

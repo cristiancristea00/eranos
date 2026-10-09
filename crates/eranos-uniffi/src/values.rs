@@ -2,8 +2,8 @@
 //! comes from the library through them.
 
 use eranos_bindings::{
-    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, ExpenseItem, Iban, Money,
-    PhoneNumber, TimeOfDay, TipRule,
+    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, ExpenseItem, ExpenseSplit, Iban,
+    Money, PhoneNumber, TimeOfDay, TipRule,
 };
 
 /// A new identifier, which any entry or group can take.
@@ -554,4 +554,15 @@ pub(crate) fn expense_item_line_total(item: &ExpenseItem) -> Result<Money, Erano
 #[uniffi::export]
 pub(crate) fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
     eranos_bindings::expense_members(expense)
+}
+
+/// Every member who shares the cost of `split`, once each, as identifiers in
+/// identifier order.
+///
+/// # Errors
+///
+/// As for `expense_members`.
+#[uniffi::export]
+pub(crate) fn expense_split_participants(split: &ExpenseSplit) -> Result<Vec<String>, EranosError> {
+    eranos_bindings::expense_split_participants(split)
 }

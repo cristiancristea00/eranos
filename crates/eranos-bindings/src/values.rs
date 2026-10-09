@@ -645,18 +645,21 @@ pub fn expense_item_line_total(item: &ExpenseItem) -> Result<Money, EranosError>
 /// code.
 pub fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
     let payers = expense.payers.to_library()?;
-    let split = match &expense.split {
-        ExpenseSplit::Itemised { items } => expenses::ExpenseSplit::Itemised(
-            items
-                .iter()
-                .map(ExpenseItem::to_library)
-                .collect::<Result<Vec<_>, EranosError>>()?,
-        ),
-        ExpenseSplit::Whole { split } => expenses::ExpenseSplit::Whole(split.to_library()?),
-    };
+    let split = library_split(&expense.split)?;
     let mut members: BTreeSet<MemberId> = payers.members().collect();
     members.extend(split.participants());
     Ok(members.iter().map(ToString::to_string).collect())
+}
+
+/// Every member who shares the cost of `split`, once each, as identifiers in
+/// identifier order.
+///
+/// # Errors
+///
+/// As for [`expense_members`].
+pub fn expense_split_participants(split: &ExpenseSplit) -> Result<Vec<String>, EranosError> {
+    let participants = library_split(split)?.participants();
+    Ok(participants.iter().map(ToString::to_string).collect())
 }
 
 /// Every member `split` divides among, as identifiers in the order it lists
@@ -670,6 +673,19 @@ pub fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
 /// code.
 pub fn split_members(split: &Split) -> Result<Vec<String>, EranosError> {
     Ok(Split::members_of(&split.to_library()?))
+}
+
+/// The library's form of `split`.
+fn library_split(split: &ExpenseSplit) -> Result<expenses::ExpenseSplit, EranosError> {
+    Ok(match split {
+        ExpenseSplit::Itemised { items } => expenses::ExpenseSplit::Itemised(
+            items
+                .iter()
+                .map(ExpenseItem::to_library)
+                .collect::<Result<Vec<_>, EranosError>>()?,
+        ),
+        ExpenseSplit::Whole { split } => expenses::ExpenseSplit::Whole(split.to_library()?),
+    })
 }
 
 /// The tip of `expense`, in the library's money.

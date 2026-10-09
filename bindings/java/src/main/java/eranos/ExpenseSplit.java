@@ -1,10 +1,27 @@
 package eranos;
 
+import eranos.internal.Eranos;
+
 import java.util.List;
 import java.util.Objects;
 
 /** How an expense's cost is shared: as a whole, or line by line of an itemised bill. */
 public sealed interface ExpenseSplit {
+    /**
+     * Every member who shares the cost, once each, in identifier order.
+     *
+     * @return the members
+     * @throws EranosException.Id for a member whose identifier is not one, and the failures of an
+     *     item that does not build
+     */
+    default List<MemberId> participants() throws EranosException {
+        return Converting.call(
+                () ->
+                        Eranos.expenseSplitParticipants(Conversions.generated(this)).stream()
+                                .map(MemberId::new)
+                                .toList());
+    }
+
     /**
      * The whole amount is divided by one split.
      *

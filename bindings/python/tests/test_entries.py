@@ -419,6 +419,14 @@ def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:
     with pytest.raises(IdError) as unknown:
         flat.expense('Snack', MemberId(' ana'), (flat.ana,)).members()
     assert unknown.value.failure == IdError.SurroundingWhitespace()
+    assert WholeExpenseSplit(EqualSplit((flat.bob, flat.ana, flat.bob))).participants() == tuple(sorted((flat.ana, flat.bob)))
+    lines = (
+        ExpenseItem(name='Soup', unit_price=flat.euros(500), split=EqualSplit((flat.bob,))),
+        ExpenseItem(name='Bread', unit_price=flat.euros(200), split=EqualSplit((flat.ana, flat.bob))),
+    )
+    assert ItemisedExpenseSplit(lines).participants() == tuple(sorted((flat.ana, flat.bob)))
+    with pytest.raises(IdError):
+        WholeExpenseSplit(EqualSplit((MemberId(' ana'),))).participants()
 
 
 def test_an_items_line_total_is_its_unit_price_times_its_quantity_rounded_half_away_from_zero(flat: Flat) -> None:

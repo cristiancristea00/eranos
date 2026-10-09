@@ -140,7 +140,7 @@ void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id).value();
+        auto const found = summary.member(member.id);
         rows.push_back({
             .name = member.firstName,
             .paid = found.paid.toString(),
@@ -297,7 +297,7 @@ void run() noexcept {
         expenses.push_back({
             .name = expense.name,
             .payer = names(group, must(participants(expense.payers))),
-            .participants = names(group, sharedBy(expense.split)),
+            .participants = names(group, must(participants(expense.split))),
             .amount = must(total(expense)).toString(),
         });
     }
@@ -312,8 +312,7 @@ void run() noexcept {
 
     section("9. Settling up for real");
     for (auto const &payment : must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS)).payments) {
-        static_cast<void>(
-            must(group.addTransfer(Transfer(payment.sender, payment.receiver, LocalCost{payment.amount}, must(CalendarDate::of(2026, 9, 27))))));
+        static_cast<void>(must(group.addTransfer(Transfer(payment, must(CalendarDate::of(2026, 9, 27))))));
     }
     printLine("Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n"
               "every balance is zero and a new settlement has nothing left to pay:");
@@ -328,7 +327,7 @@ void run() noexcept {
     check(19 == festivalPayments, "the festival's plan takes 19 payments");
     auto const summary = group.summary();
     for (auto const &member : std::array<MemberId, 6>{ana, bob, carol, dan, eva, filip}) {
-        check(Balance(SettledBalance{}) == totalsOf(summary, member).value().balance, "every member is settled");
+        check(Balance(SettledBalance{}) == summary.member(member).balance, "every member is settled");
     }
 }
 

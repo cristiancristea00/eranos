@@ -26,7 +26,7 @@ from eranos import (
     WholeExpenseSplit,
 )
 from examples.grand_tour.tour import Categories, People, RefusalRow, eur, name, october, print_balances, print_entries, ron
-from examples.report import Row, message, print_lines, print_table, refusal, section, status, totals
+from examples.report import Row, message, print_lines, print_table, refusal, section, status
 
 
 @final
@@ -109,7 +109,7 @@ def another_currency(group: ExpenseGroup, people: People, categories: Categories
     print_entries(group, lambda currency: currency != euro)
     transfer = group.transfer(cash)
     assert transfer is not None, 'the cash was recorded'
-    counted = group.transfer_amount(cash) or Money(0, euro)
+    counted = group.transfer_amount(cash) or Money.zero(euro)
     converted = ExchangeRate('0.2011').convert(ron('250.00'), euro)
     print_lines(
         f'Bob\'s transfer, at {transfer.time or ""} ("{transfer.note or ""}"), counts as {counted}.',
@@ -283,7 +283,7 @@ def comings_and_goings(group: ExpenseGroup, people: People) -> None:
         [
             StatusRow(name=member.first_name, status=status(group.is_archived(found.member)), balance=found.balance)
             for member in group.members()
-            if (found := totals(member.id, summary)) is not None
+            for found in (summary.member(member.id),)
         ],
         2,
     )

@@ -108,7 +108,7 @@ def _amounts() -> None:
     mixed = refusal(lambda: eur('1.00').plus(ron('1.00')))
     yen = Money.parse('1500', CurrencyCode('JPY'))
     dinars = Money(1_234, CurrencyCode('BHD'))
-    nothing = Money(0, CurrencyCode('RON'))
+    nothing = Money.zero(CurrencyCode('RON'))
     cost = ConvertedCost(eur('10.00'), ExchangeRate('4.9765'))
     doubled = copy.replace(cost, amount=eur('20.00'))
     # The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.

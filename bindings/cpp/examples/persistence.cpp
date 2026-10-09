@@ -34,11 +34,8 @@ struct ComparisonRow final {
 /// The amount @p text of euros.
 [[nodiscard]] Money euros(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
-/// The balance of @p member in @p summary, as the library writes it, or ? for a member without totals.
-[[nodiscard]] std::string balanceOf(Summary const &summary, MemberId const &member) noexcept {
-    auto const found = totalsOf(summary, member);
-    return found.has_value() ? toString(found->balance) : "?";
-}
+/// The balance of @p member in @p summary, as the library writes it.
+[[nodiscard]] std::string balanceOf(Summary const &summary, MemberId const &member) noexcept { return toString(summary.member(member).balance); }
 
 /// @p text with the first @p pattern in it replaced by @p replacement.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the text, then what to find in it and what replaces it, as a search reads.

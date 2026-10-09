@@ -207,7 +207,6 @@ static void printBalances(EranosExpenseGroup const *const group) {
         bool archived = false;
         must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &held, &archived));
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
-        check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         addBalanceRow(table, &(BalanceRow){
                                  .name = textLine(text),
@@ -330,7 +329,6 @@ static void movingOut(EranosExpenseGroup *const group, Id const ana, Id const bo
 
     EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummary *const totals = totalsOf(summary, bob.text);
-    check(nullptr != totals, "Bob has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);
     EranosMoney *const owed = eranosBalanceAmount(balance);
     check(ERANOS_BALANCE_KIND_OWES == eranosBalanceKind(balance) && 45'000 == eranosMoneyMinorUnits(owed), "Bob owes 450.00 EUR");

@@ -110,7 +110,6 @@ static void printMembers(EranosExpenseGroup const *const group, EranosSummary co
         EranosMember *const member = eranosMemberListGet(members, index);
         eranosMemberId(member, text);
         EranosMemberSummary *const totals = totalsOf(summary, eranosTextData(text));
-        check(nullptr != totals, "every member has totals");
         eranosMemberFirstName(member, text);
         addMemberRow(table, &(MemberRow){
                                 .name = textLine(text),
@@ -187,7 +186,6 @@ int main(void) {
                    spent.text);
     printMembers(group, summary);
     EranosMemberSummary *const anaTotals = totalsOf(summary, ana.text);
-    check(nullptr != anaTotals, "Ana has totals");
     Line const paid = moneyLine(eranosMemberSummaryPaid(anaTotals));
     Line const consumed = moneyLine(eranosMemberSummaryShare(anaTotals));
     printFormatted("Ana paid %s but consumed only %s, so the others owe her the difference.", paid.text, consumed.text);

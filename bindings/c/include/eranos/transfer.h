@@ -8,9 +8,12 @@
 #include "EranosTransferList.h"
 #include "eranos/calendar.h"
 #include "eranos/detail.h"
+#include "eranos/error.h"
 #include "eranos/expense.h"
 #include "eranos/identifiers.h"
+#include "eranos/money.h"
 #include "eranos/text.h"
+#include "eranos/totals.h"
 
 #include <stddef.h>
 
@@ -55,6 +58,48 @@ typedef struct EranosTransfer EranosTransfer;
     EranosError *const error = eranosTransferCreateWithId(eranosTextData(id), sender, receiver, cost, date, transfer);
     eranosTextDestroy(id);
     return error;
+}
+
+/// The transfer that records @p payment of a settlement, made on @p date, under the identifier @p id: from its sender to its receiver, of its
+/// amount in the group currency; eranosTransferCreateFromPayment() generates the identifier instead.
+///
+/// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
+///   text
+/// @param payment The payment
+/// @param date The day it was paid
+/// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosTransferCreateFromPaymentWithId(char const *const id, EranosPayment const *const payment,
+                                                                               EranosCalendarDate const date, EranosTransfer **const transfer) {
+    EranosText *const sender = eranosTextCreate();
+    EranosText *const receiver = eranosTextCreate();
+    eranosPaymentSender(payment, sender);
+    eranosPaymentReceiver(payment, receiver);
+    EranosMoney *const amount = eranosPaymentAmount(payment);
+    EranosCost *const cost = eranosCostCreateLocal(amount);
+    EranosError *const error = eranosTransferCreateWithId(id, eranosTextData(sender), eranosTextData(receiver), cost, date, transfer);
+    eranosCostDestroy(cost);
+    eranosMoneyDestroy(amount);
+    eranosTextDestroy(receiver);
+    eranosTextDestroy(sender);
+    return error;
+}
+
+/// The transfer that records @p payment of a settlement, made on @p date, under an identifier generated when it is called, which
+/// eranosTransferCreateFromPaymentWithId() takes instead.
+///
+/// @param payment The payment
+/// @param date The day it was paid
+/// @return The transfer, which the caller destroys
+[[nodiscard]] static inline EranosTransfer *eranosTransferCreateFromPayment(EranosPayment const *const payment, EranosCalendarDate const date) {
+    EranosText *const id = eranosTextCreate();
+    eranosIdentifierGenerate(id);
+    EranosTransfer *transfer = nullptr;
+    // A generated identifier and the payment's members are UTF-8, so the transfer is made.
+    eranosErrorDestroy(eranosTransferCreateFromPaymentWithId(eranosTextData(id), payment, date, &transfer));
+    eranosTextDestroy(id);
+    return transfer;
 }
 
 /// The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.

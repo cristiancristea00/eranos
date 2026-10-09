@@ -20,7 +20,6 @@ import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
-import eranos.examples.totals
 
 private data class EntryRow(
     val name: String,
@@ -61,7 +60,7 @@ private fun name(
 
 /** Every expense and transfer, as entered and in the group currency. */
 private fun printEntries(group: ExpenseGroup) {
-    val zero = Money(0, group.currencyBlocking())
+    val zero = Money.zero(group.currencyBlocking())
     val expenses =
         group.expensesBlocking().map { expense ->
             EntryRow(
@@ -96,17 +95,16 @@ private fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     printTable(
         BalanceRow.HEADERS,
-        group.membersBlocking().mapNotNull { member ->
-            totals(member.id, summary)?.let { totals ->
-                BalanceRow(
-                    name = member.firstName,
-                    paid = totals.paid,
-                    consumed = totals.share,
-                    sent = totals.sent,
-                    received = totals.received,
-                    balance = totals.balance,
-                )
-            }
+        group.membersBlocking().map { member ->
+            val totals = summary.member(member.id)
+            BalanceRow(
+                name = member.firstName,
+                paid = totals.paid,
+                consumed = totals.share,
+                sent = totals.sent,
+                received = totals.received,
+                balance = totals.balance,
+            )
         },
         numbersFrom = 1,
     )
@@ -224,15 +222,15 @@ fun main() {
             """.trimIndent(),
         )
         printBalances(group)
-        check(Balance.GetsBack(Money.parse("20.00", euro)) == totals(bob, group.summaryBlocking())?.balance)
+        check(Balance.GetsBack(Money.parse("20.00", euro)) == group.summaryBlocking().member(bob).balance)
 
         repayment(group, ana, bob)
-        check(Balance.Settled == totals(bob, group.summaryBlocking())?.balance)
+        check(Balance.Settled == group.summaryBlocking().member(bob).balance)
 
         newCurrency(group)
         // 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
         val summary = group.summaryBlocking()
         check(Money.parse("1000.00", leu) == summary.totalSpent)
-        check(Balance.Settled == totals(bob, summary)?.balance)
+        check(Balance.Settled == summary.member(bob).balance)
     }
 }

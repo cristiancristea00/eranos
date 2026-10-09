@@ -4,7 +4,6 @@ import static eranos.examples.Report.check;
 import static eranos.examples.Report.names;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
-import static eranos.examples.Report.totals;
 
 import eranos.Balance;
 import eranos.CalendarDate;
@@ -72,7 +71,7 @@ public final class Main {
 
     /** Every expense and transfer, as entered and in the group currency. */
     private static void printEntries(ExpenseGroup group) throws EranosException {
-        Money zero = new Money(0, group.currency());
+        Money zero = Money.zero(group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
             Optional<ExpenseShares> shares = group.expenseShares(expense.id());
@@ -109,17 +108,15 @@ public final class Main {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = totals(member.id(), summary);
-            found.ifPresent(
-                    totals ->
-                            rows.add(
-                                    new BalanceRow(
-                                            member.firstName(),
-                                            totals.paid(),
-                                            totals.share(),
-                                            totals.sent(),
-                                            totals.received(),
-                                            totals.balance())));
+            MemberSummary totals = summary.member(member.id());
+            rows.add(
+                    new BalanceRow(
+                            member.firstName(),
+                            totals.paid(),
+                            totals.share(),
+                            totals.sent(),
+                            totals.received(),
+                            totals.balance()));
         }
         printTable(BalanceRow.HEADERS, rows, 1);
     }
@@ -240,21 +237,17 @@ public final class Main {
                             .formatted(group.summary().totalSpent()));
             printBalances(group);
             check(
-                    Optional.of(new Balance.GetsBack(Money.parse("20.00", euro)))
-                            .equals(totals(bob, group.summary()).map(MemberSummary::balance)));
+                    new Balance.GetsBack(Money.parse("20.00", euro))
+                            .equals(group.summary().member(bob).balance()));
 
             repayment(group, ana, bob);
-            check(
-                    Optional.of(new Balance.Settled())
-                            .equals(totals(bob, group.summary()).map(MemberSummary::balance)));
+            check(new Balance.Settled().equals(group.summary().member(bob).balance()));
 
             newCurrency(group);
             // 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
             Summary summary = group.summary();
             check(Money.parse("1000.00", leu).equals(summary.totalSpent()));
-            check(
-                    Optional.of(new Balance.Settled())
-                            .equals(totals(bob, summary).map(MemberSummary::balance)));
+            check(new Balance.Settled().equals(summary.member(bob).balance()));
         }
     }
 }

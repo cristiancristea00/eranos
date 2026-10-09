@@ -14,11 +14,10 @@ func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) 
     print("The spending per category:")
     try printCategories(group)
     print("And each member's consumption per category:")
-    let zero = Money(minorUnits: 0, currency: group.currency)
+    let zero = Money.zero(in: group.currency)
     printTable(
         group.members().map { member in
-            let totals = summary.memberCategoryTotals.first { totals in totals.member == member.id }?.totals ?? []
-            let total = { (category: Category.ID) in totals.first { total in total.category == category }?.total ?? zero }
+            let total = { (category: Category.ID) in summary.memberCategoryTotal(of: member.id, in: category) }
             return MemberCategoryRow(
                 name: member.firstName,
                 food: total(categories.food),
@@ -30,14 +29,14 @@ func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) 
         numbersFrom: 1
     )
 
-    let member = { (id: Member.ID) in totals(of: id, in: summary) }
-    let category = { (id: Category.ID) in summary.categoryTotals.first { total in total.category == id }?.total }
+    let member = { (id: Member.ID) in summary.member(withID: id) }
+    let category = { (id: Category.ID) in summary.categoryTotal(of: id) }
     expect(try eur("1222.90"), summary.totalSpent, "the total spent")
-    expect(try eur("890.00"), member(people.ana)?.paid, "what Ana paid")
-    expect(try eur("140.00"), member(people.ana)?.received, "what Ana received")
-    expect(try eur("20.00"), member(people.bob)?.sent, "what Bob sent")
-    expect(Balance.getsBack(try eur("12.55")), member(people.dan)?.balance, "Dan's balance")
-    expect(Balance.owes(try eur("42.60")), member(people.eva)?.balance, "Eva's balance")
+    expect(try eur("890.00"), member(people.ana).paid, "what Ana paid")
+    expect(try eur("140.00"), member(people.ana).received, "what Ana received")
+    expect(try eur("20.00"), member(people.bob).sent, "what Bob sent")
+    expect(Balance.getsBack(try eur("12.55")), member(people.dan).balance, "Dan's balance")
+    expect(Balance.owes(try eur("42.60")), member(people.eva).balance, "Eva's balance")
     expect(try eur("174.40"), category(categories.food), "the food")
     expect(try eur("800.00"), category(categories.lodging), "the lodging")
     expect(try eur("188.50"), category(categories.transport), "the transport")
@@ -66,7 +65,7 @@ func removingACategory(_ group: ExpenseGroup, _ categories: Categories) throws(E
     }
     let transport = try group.category(withID: categories.transport)
     precondition(nil == transport, "Transport is removed")
-    expect(try eur("248.50"), group.summary.categoryTotals.first { total in Category.ID.uncategorised == total.category }?.total, "the uncategorised spending")
+    expect(try eur("248.50"), group.summary.categoryTotal(of: .uncategorised), "the uncategorised spending")
     let moved = group.expenses().allSatisfy { expense in expense.category != categories.transport }
     precondition(moved, "no expense is in Transport")
 }
@@ -97,8 +96,8 @@ func newCurrency(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     let summary = group.summary
     expect(leu, group.currency, "the new currency")
     expect(try ron("6114.50"), summary.totalSpent, "the total spent in RON")
-    expect(Balance.getsBack(try ron("62.75")), totals(of: people.dan, in: summary)?.balance, "Dan's balance in RON")
-    expect(Balance.owes(try ron("213.00")), totals(of: people.eva, in: summary)?.balance, "Eva's balance in RON")
+    expect(Balance.getsBack(try ron("62.75")), summary.member(withID: people.dan).balance, "Dan's balance in RON")
+    expect(Balance.owes(try ron("213.00")), summary.member(withID: people.eva).balance, "Eva's balance in RON")
 }
 
 /// The name of `strategy` as the apps show it.
@@ -146,7 +145,7 @@ func settlingUp(_ group: ExpenseGroup) throws(EranosError) {
         numbersFrom: 2
     )
     for payment in plan.payments {
-        _ = try group.add(Transfer(sender: payment.sender, receiver: payment.receiver, cost: .local(payment.amount), date: try october(7)))
+        _ = try group.add(Transfer(payment: payment, date: try october(7)))
     }
     print("Each payment, once made, is recorded as a transfer, and every balance is settled:")
     try printBalances(group)

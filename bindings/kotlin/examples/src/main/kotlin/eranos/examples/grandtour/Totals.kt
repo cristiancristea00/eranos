@@ -3,7 +3,6 @@ package eranos.examples.grandtour
 
 import eranos.Balance
 import eranos.CategoryId
-import eranos.Cost
 import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.ExchangeRate
@@ -16,7 +15,6 @@ import eranos.Transfer
 import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
-import eranos.examples.totals
 
 private data class MemberCategoryRow(
     val name: String,
@@ -63,16 +61,11 @@ internal fun summary(
     println("The spending per category:")
     printCategories(group)
     println("And each member's consumption per category:")
-    val zero = Money(0, group.currencyBlocking())
+    val zero = Money.zero(group.currencyBlocking())
     printTable(
         MemberCategoryRow.HEADERS,
         group.membersBlocking().map { member ->
-            val totals =
-                summary.memberCategoryTotals
-                    .firstOrNull { entry -> entry.member == member.id }
-                    ?.totals
-                    .orEmpty()
-            val total = { category: CategoryId -> totals.firstOrNull { total -> total.category == category }?.total ?: zero }
+            val total = { category: CategoryId -> summary.memberCategoryTotal(member.id, category) }
             MemberCategoryRow(
                 name = member.firstName,
                 food = total(categories.food),
@@ -84,14 +77,14 @@ internal fun summary(
         numbersFrom = 1,
     )
 
-    val member = { id: MemberId -> totals(id, summary) }
-    val category = { id: CategoryId -> summary.categoryTotals.firstOrNull { total -> total.category == id }?.total }
+    val member = { id: MemberId -> summary.member(id) }
+    val category = { id: CategoryId -> summary.categoryTotal(id) }
     check(eur("1222.90") == summary.totalSpent)
-    check(eur("890.00") == member(people.ana)?.paid)
-    check(eur("140.00") == member(people.ana)?.received)
-    check(eur("20.00") == member(people.bob)?.sent)
-    check(Balance.GetsBack(eur("12.55")) == member(people.dan)?.balance)
-    check(Balance.Owes(eur("42.60")) == member(people.eva)?.balance)
+    check(eur("890.00") == member(people.ana).paid)
+    check(eur("140.00") == member(people.ana).received)
+    check(eur("20.00") == member(people.bob).sent)
+    check(Balance.GetsBack(eur("12.55")) == member(people.dan).balance)
+    check(Balance.Owes(eur("42.60")) == member(people.eva).balance)
     check(eur("174.40") == category(categories.food))
     check(eur("800.00") == category(categories.lodging))
     check(eur("188.50") == category(categories.transport))
@@ -126,12 +119,7 @@ internal fun removingACategory(
     check(ExpenseGroupFailure.BuiltInCategory == (builtIn as? EranosException.ExpenseGroup)?.failure)
     check(null == group.categoryBlocking(categories.transport))
     check(
-        eur("248.50") ==
-            group
-                .summaryBlocking()
-                .categoryTotals
-                .firstOrNull { total -> CategoryId.UNCATEGORISED == total.category }
-                ?.total,
+        eur("248.50") == group.summaryBlocking().categoryTotal(CategoryId.UNCATEGORISED),
     )
     check(group.expensesBlocking().none { expense -> categories.transport == expense.category })
 }
@@ -167,8 +155,8 @@ internal fun newCurrency(
     check(ExpenseGroupFailure.MissingExchangeRate(euro) == (missing as? EranosException.ExpenseGroup)?.failure)
     check(leu == group.currencyBlocking())
     check(ron("6114.50") == summary.totalSpent)
-    check(Balance.GetsBack(ron("62.75")) == totals(people.dan, summary)?.balance)
-    check(Balance.Owes(ron("213.00")) == totals(people.eva, summary)?.balance)
+    check(Balance.GetsBack(ron("62.75")) == summary.member(people.dan).balance)
+    check(Balance.Owes(ron("213.00")) == summary.member(people.eva).balance)
 }
 
 /** The name of [strategy] as the apps show it. */
@@ -209,7 +197,7 @@ internal fun settlingUp(group: ExpenseGroup) {
         numbersFrom = 2,
     )
     for (payment in plan.payments) {
-        group.addBlocking(Transfer(payment.sender, payment.receiver, Cost.Local(payment.amount), october(7)))
+        group.addBlocking(Transfer(payment, october(7)))
     }
     println("Each payment, once made, is recorded as a transfer, and every balance is settled:")
     printBalances(group)

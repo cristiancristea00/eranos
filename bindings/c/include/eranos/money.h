@@ -30,6 +30,30 @@ typedef struct EranosMoney EranosMoney;
 /// @return The amount in minor units: cents for the euro, none for the yen
 [[nodiscard]] static inline int64_t eranosMoneyMinorUnits(EranosMoney const *const money) { return EranosMoney_minor_units(money); }
 
+/// Zero in @p currency.
+///
+/// @param currency The currency's details
+/// @return The amount, which the caller destroys
+[[nodiscard]] static inline EranosMoney *eranosMoneyZero(EranosCurrencyDetails const *const currency) { return eranosMoneyCreate(0, currency); }
+
+/// Whether @p money is zero.
+///
+/// @param money The amount
+/// @return Whether it is zero
+[[nodiscard]] static inline bool eranosMoneyIsZero(EranosMoney const *const money) { return 0 == eranosMoneyMinorUnits(money); }
+
+/// Whether @p money is above zero.
+///
+/// @param money The amount
+/// @return Whether it is above zero
+[[nodiscard]] static inline bool eranosMoneyIsPositive(EranosMoney const *const money) { return 0 < eranosMoneyMinorUnits(money); }
+
+/// Whether @p money is below zero.
+///
+/// @param money The amount
+/// @return Whether it is below zero
+[[nodiscard]] static inline bool eranosMoneyIsNegative(EranosMoney const *const money) { return 0 > eranosMoneyMinorUnits(money); }
+
 /// The currency, with what ISO 4217 says of it.
 ///
 /// @param money The money

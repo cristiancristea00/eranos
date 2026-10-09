@@ -22,7 +22,7 @@ from eranos import (
     SettlementStrategy,
     WholeExpenseSplit,
 )
-from examples.report import Row, names, participants, print_lines, print_table, section, title, totals
+from examples.report import Row, names, print_lines, print_table, section, title
 
 
 @final
@@ -126,7 +126,7 @@ def main() -> None:
             ExpenseRow(
                 name=expense.name,
                 payers=names(group, expense.payers.members),
-                participants=names(group, participants(expense.split)),
+                participants=names(group, expense.split.participants()),
                 amount=expense.total(),
             )
             for expense in group.expenses()
@@ -145,12 +145,11 @@ def main() -> None:
         [
             MemberRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=found.balance)
             for member in group.members()
-            if (found := totals(member.id, summary)) is not None
+            for found in (summary.member(member.id),)
         ],
         1,
     )
-    ana_totals = totals(ana, summary)
-    assert ana_totals is not None
+    ana_totals = summary.member(ana)
     print_lines(f'Ana paid {ana_totals.paid} but consumed only {ana_totals.share}, so the others owe her the difference.')
 
     section('4. Settling up')

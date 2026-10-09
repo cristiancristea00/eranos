@@ -12,6 +12,7 @@
 #include "eranos/identifiers.hpp"
 #include "eranos/money.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -184,6 +185,43 @@ struct Summary final {
 
     /// The totals per category of every member.
     std::vector<MemberCategoryTotals> memberCategoryTotals;
+
+    /// The totals of the member with the identifier @p id: all zero, and settled, for a member without entries.
+    ///
+    /// @param id The member's identifier
+    /// @return The member's totals
+    [[nodiscard]] inline MemberSummary member(MemberId const &id) const noexcept {
+        auto const found = std::ranges::find(members, id, &MemberSummary::member);
+        if (members.end() != found) {
+            return *found;
+        }
+        Money const zero = Money::zero(totalSpent.currency);
+        return {id, zero, zero, zero, zero, zero, SettledBalance{}};
+    }
+
+    /// The spending in the category with the identifier @p id: zero for a category without expenses.
+    ///
+    /// @param id The category's identifier
+    /// @return The spending
+    [[nodiscard]] inline Money categoryTotal(CategoryId const &id) const noexcept {
+        auto const found = std::ranges::find(categoryTotals, id, &CategoryTotal::category);
+        return categoryTotals.end() == found ? Money::zero(totalSpent.currency) : found->total;
+    }
+
+    /// The share of the member with the identifier @p member of the spending in the category with the identifier @p category: zero when they have
+    /// none there.
+    ///
+    /// @param member The member's identifier
+    /// @param category The category's identifier
+    /// @return The member's share of the spending
+    [[nodiscard]] inline Money memberCategoryTotal(MemberId const &member, CategoryId const &category) const noexcept {
+        auto const own = std::ranges::find(memberCategoryTotals, member, &MemberCategoryTotals::member);
+        if (memberCategoryTotals.end() == own) {
+            return Money::zero(totalSpent.currency);
+        }
+        auto const found = std::ranges::find(own->totals, category, &CategoryTotal::category);
+        return own->totals.end() == found ? Money::zero(totalSpent.currency) : found->total;
+    }
 
     /// Whether every field of two records is equal.
     ///

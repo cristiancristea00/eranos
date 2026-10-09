@@ -5,7 +5,6 @@
 #include "report.hpp"
 
 #include <cstdlib>
-#include <optional>
 #include <print>
 #include <string>
 #include <string_view>
@@ -103,7 +102,7 @@ void run() noexcept {
         expenses.push_back({
             .name = expense.name,
             .payers = names(group, must(participants(expense.payers))),
-            .participants = names(group, sharedBy(expense.split)),
+            .participants = names(group, must(participants(expense.split))),
             .amount = must(total(expense)).toString(),
         });
     }
@@ -116,18 +115,16 @@ void run() noexcept {
                  summary.totalSpent.toString());
     std::vector<MemberRow> members;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id);
-        if (found.has_value()) {
-            members.push_back({
-                .name = member.firstName,
-                .paid = found->paid.toString(),
-                .consumed = found->share.toString(),
-                .balance = toString(found->balance),
-            });
-        }
+        auto const found = summary.member(member.id);
+        members.push_back({
+            .name = member.firstName,
+            .paid = found.paid.toString(),
+            .consumed = found.share.toString(),
+            .balance = toString(found.balance),
+        });
     }
     printTable(members, 1);
-    auto const anaTotals = totalsOf(summary, ana).value();
+    auto const anaTotals = summary.member(ana);
     std::println("Ana paid {} but consumed only {}, so the others owe her the difference.", anaTotals.paid.toString(), anaTotals.share.toString());
 
     section("4. Settling up");

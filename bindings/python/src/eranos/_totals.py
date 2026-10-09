@@ -171,6 +171,53 @@ class Summary:
     member_category_totals: tuple[MemberCategoryTotals, ...]
     """What each member consumed in each category."""
 
+    def member(self, member_id: MemberId) -> MemberSummary:
+        """
+        Find the totals of the member with the identifier member_id: all zero, and settled, for a member without entries.
+
+        Args:
+            member_id: The member's identifier.
+
+        Returns:
+            The member's totals.
+
+        """
+        zero = Money.zero(self.total_spent.currency)
+        absent = MemberSummary(member=member_id, paid=zero, share=zero, sent=zero, received=zero, net=zero, balance=SettledBalance())
+        return next((totals for totals in self.members if totals.member == member_id), absent)
+
+    def category_total(self, category_id: CategoryId) -> Money:
+        """
+        Find the spending in the category with the identifier category_id: zero for a category without expenses.
+
+        Args:
+            category_id: The category's identifier.
+
+        Returns:
+            The spending.
+
+        """
+        zero = Money.zero(self.total_spent.currency)
+        return next((total.total for total in self.category_totals if total.category == category_id), zero)
+
+    def member_category_total(self, member_id: MemberId, category_id: CategoryId) -> Money:
+        """
+        Find the share of the member with the identifier member_id of the spending in the category category_id.
+
+        The share is zero when they have none there.
+
+        Args:
+            member_id: The member's identifier.
+            category_id: The category's identifier.
+
+        Returns:
+            The member's share of the spending.
+
+        """
+        zero = Money.zero(self.total_spent.currency)
+        totals = next((entry.totals for entry in self.member_category_totals if entry.member == member_id), ())
+        return next((total.total for total in totals if total.category == category_id), zero)
+
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True)

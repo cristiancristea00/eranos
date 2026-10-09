@@ -2,10 +2,8 @@ package eranos.examples.settlingup;
 
 import static eranos.examples.Report.check;
 import static eranos.examples.Report.names;
-import static eranos.examples.Report.participants;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
-import static eranos.examples.Report.totals;
 
 import eranos.Balance;
 import eranos.CalendarDate;
@@ -29,7 +27,6 @@ import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Settling up with each strategy on a group where they differ, then recording the chosen plan as
@@ -118,15 +115,10 @@ public final class Main {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = totals(member.id(), summary);
-            found.ifPresent(
-                    totals ->
-                            rows.add(
-                                    new BalanceRow(
-                                            member.firstName(),
-                                            totals.paid(),
-                                            totals.share(),
-                                            totals.balance())));
+            MemberSummary totals = summary.member(member.id());
+            rows.add(
+                    new BalanceRow(
+                            member.firstName(), totals.paid(), totals.share(), totals.balance()));
         }
         printTable(BalanceRow.HEADERS, rows, 1);
     }
@@ -313,7 +305,7 @@ public final class Main {
                         new ExpenseRow(
                                 expense.name(),
                                 names(group, expense.payers().members()),
-                                names(group, participants(expense.split())),
+                                names(group, expense.split().participants()),
                                 expense.total()));
             }
             printTable(ExpenseRow.HEADERS, expenses, 3);
@@ -328,13 +320,7 @@ public final class Main {
             section("9. Settling up for real");
             SettlementPlan plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
             for (Payment payment : plan.payments()) {
-                group.addTransfer(
-                        Transfer.builder(
-                                        payment.sender(),
-                                        payment.receiver(),
-                                        new Cost.Local(payment.amount()),
-                                        CalendarDate.of(2026, 9, 27))
-                                .build());
+                group.addTransfer(Transfer.builder(payment, CalendarDate.of(2026, 9, 27)).build());
             }
             System.out.print(
                     """
@@ -354,9 +340,7 @@ public final class Main {
             check(19 == festivalPayments);
             Summary summary = group.summary();
             for (MemberId member : List.of(ana, bob, carol, dan, eva, filip)) {
-                check(
-                        Optional.of(new Balance.Settled())
-                                .equals(totals(member, summary).map(MemberSummary::balance)));
+                check(new Balance.Settled().equals(summary.member(member).balance()));
             }
         }
     }

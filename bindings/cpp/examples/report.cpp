@@ -16,9 +16,7 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace eranos::examples {
@@ -175,27 +173,6 @@ std::string names(ExpenseGroup const &group, std::vector<MemberId> const &member
         text += (0 == index ? "" : ", ") + firstName(group, members.at(index));
     }
     return text;
-}
-
-std::vector<MemberId> sharedBy(ExpenseSplit const &split) noexcept {
-    std::vector<MemberId> members = std::visit(
-        [](auto const &alternative) noexcept {
-            using Alternative = std::decay_t<decltype(alternative)>;
-            if constexpr (std::is_same_v<Alternative, ItemisedExpenseSplit>) {
-                std::vector<MemberId> all;
-                for (auto const &item : alternative.items) {
-                    auto const own = must(participants(item.split));
-                    all.insert(all.end(), own.begin(), own.end());
-                }
-                return all;
-            } else {
-                return must(participants(alternative.split));
-            }
-        },
-        split);
-    std::ranges::sort(members);
-    members.erase(std::ranges::unique(members).begin(), members.end());
-    return members;
 }
 
 std::string message(std::optional<Error> const &refused) noexcept { return refused.has_value() ? refused->message() : "accepted"; }

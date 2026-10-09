@@ -4,7 +4,6 @@ import static eranos.examples.Report.check;
 import static eranos.examples.Report.names;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
-import static eranos.examples.Report.totals;
 
 import eranos.CalendarDate;
 import eranos.Cost;
@@ -288,15 +287,13 @@ public final class Main {
         System.out.printf("%s spent over five expenses:%n", summary.totalSpent());
         List<TotalRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = totals(member.id(), summary);
-            found.ifPresent(
-                    totals ->
-                            rows.add(
-                                    new TotalRow(
-                                            member.firstName(),
-                                            totals.paid(),
-                                            totals.share(),
-                                            totals.balance().toString())));
+            MemberSummary totals = summary.member(member.id());
+            rows.add(
+                    new TotalRow(
+                            member.firstName(),
+                            totals.paid(),
+                            totals.share(),
+                            totals.balance().toString()));
         }
         printTable(TotalRow.HEADERS, rows, 1);
     }

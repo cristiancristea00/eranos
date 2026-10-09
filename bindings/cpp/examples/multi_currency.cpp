@@ -112,7 +112,7 @@ void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id).value();
+        auto const found = summary.member(member.id);
         rows.push_back({
             .name = member.firstName,
             .paid = found.paid.toString(),
@@ -191,16 +191,16 @@ void run() noexcept {
                  "difference:",
                  group.summary().totalSpent.toString());
     printBalances(group);
-    check(Balance(GetsBackBalance{amountOf("20.00", "EUR")}) == totalsOf(group.summary(), bob).value().balance, "Bob gets back 20.00 EUR");
+    check(Balance(GetsBackBalance{amountOf("20.00", "EUR")}) == group.summary().member(bob).balance, "Bob gets back 20.00 EUR");
 
     repayment(group, ana, bob);
-    check(Balance(SettledBalance{}) == totalsOf(group.summary(), bob).value().balance, "Bob is settled");
+    check(Balance(SettledBalance{}) == group.summary().member(bob).balance, "Bob is settled");
 
     newCurrency(group);
     // 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
     auto const summary = group.summary();
     check(amountOf("1000.00", "RON") == summary.totalSpent, "the trip cost 1000.00 RON");
-    check(Balance(SettledBalance{}) == totalsOf(summary, bob).value().balance, "Bob is still settled");
+    check(Balance(SettledBalance{}) == summary.member(bob).balance, "Bob is still settled");
 }
 
 } // namespace

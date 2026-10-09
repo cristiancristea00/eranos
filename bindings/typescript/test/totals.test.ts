@@ -5,7 +5,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { SettlementStrategy, createTransfer, formatBalance } from '../src/index.js';
+import {
+    SettlementStrategy,
+    UNCATEGORISED,
+    createTransfer,
+    createTransferFromPayment,
+    formatBalance,
+    memberId,
+    summaryCategoryTotal,
+    summaryMember,
+    summaryMemberCategoryTotal,
+} from '../src/index.js';
 import { convertedStrategy, generatedStrategy } from '../src/totals.js';
 import { Flat } from './flat.js';
 
@@ -31,6 +41,23 @@ void describe('the summary, the balances, the shares of an expense, and the sett
             { member: flat.ana, totals: [{ category: flat.food, total: flat.euros(1_500n) }] },
             { member: flat.bob, totals: [{ category: flat.food, total: flat.euros(1_500n) }] },
         ]);
+        assert.deepEqual(summaryMember(summary, flat.ana), ana);
+        const stranger = memberId('nobody');
+        const zero = flat.euros(0n);
+        assert.deepEqual(summaryMember(summary, stranger), {
+            member: stranger,
+            paid: zero,
+            share: zero,
+            sent: zero,
+            received: zero,
+            net: zero,
+            balance: { kind: 'settled' },
+        });
+        assert.ok(summaryCategoryTotal(summary, flat.food).equals(flat.euros(3_000n)));
+        assert.ok(summaryCategoryTotal(summary, UNCATEGORISED).equals(zero));
+        assert.ok(summaryMemberCategoryTotal(summary, flat.ana, flat.food).equals(flat.euros(1_500n)));
+        assert.ok(summaryMemberCategoryTotal(summary, flat.ana, UNCATEGORISED).equals(zero));
+        assert.ok(summaryMemberCategoryTotal(summary, stranger, flat.food).equals(zero));
     });
 
     /** A balance that printed on its own would tell a member they owe what they are owed. */
@@ -66,6 +93,17 @@ void describe('the summary, the balances, the shares of an expense, and the sett
             assert.equal(settlement.strategy, SettlementStrategy.ADAPTIVE === strategy ? SettlementStrategy.MINIMUM_TRANSFERS : strategy);
             assert.deepEqual(settlement.payments, [{ sender: flat.bob, receiver: flat.ana, amount: flat.euros(500n) }]);
         }
+        const [payment] = flat.group.settlementSync(SettlementStrategy.GREEDY).payments;
+        assert.ok(undefined !== payment);
+        const repayment = createTransferFromPayment(payment, flat.day);
+        assert.deepEqual(repayment, {
+            id: repayment.id,
+            sender: flat.bob,
+            receiver: flat.ana,
+            cost: { kind: 'local', amount: flat.euros(500n) },
+            date: flat.day,
+        });
+        assert.notEqual(createTransferFromPayment(payment, flat.day).id, repayment.id);
     });
 
     /**

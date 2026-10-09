@@ -6,7 +6,6 @@
 
 #include "eranos.hpp"
 
-#include <algorithm>
 #include <array>
 #include <concepts>
 #include <cstddef>
@@ -122,22 +121,6 @@ template <TableRow Row> inline void printTable(std::vector<Row> const &rows, std
 /// @param members The members
 /// @return The names
 [[nodiscard]] std::string names(ExpenseGroup const &group, std::vector<MemberId> const &members) noexcept;
-
-/// Every member who shares the cost of @p split, once each, in the order of their identifiers.
-///
-/// @param split The expense's split
-/// @return The members
-[[nodiscard]] std::vector<MemberId> sharedBy(ExpenseSplit const &split) noexcept;
-
-/// The totals of @p member in @p summary, absent when the summary lists none of theirs.
-///
-/// @param summary The summary
-/// @param member The member
-/// @return The totals
-[[nodiscard]] inline constexpr std::optional<MemberSummary> totalsOf(Summary const &summary, MemberId const &member) noexcept {
-    auto const found = std::ranges::find_if(summary.members, [&member](MemberSummary const &totals) noexcept { return member == totals.member; });
-    return summary.members.end() == found ? std::nullopt : std::optional<MemberSummary>(*found);
-}
 
 /// What the library refused the call of @p result with, or none when it accepted it.
 ///

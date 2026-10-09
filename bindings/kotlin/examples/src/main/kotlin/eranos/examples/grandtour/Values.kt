@@ -72,7 +72,7 @@ internal fun amounts() {
     val mixed = refusal { eur("1.00") + ron("1.00") }
     val yen = Money.parse("1500", CurrencyCode.of("JPY"))
     val dinars = Money(1_234, CurrencyCode.of("BHD"))
-    val nothing = Money(0, CurrencyCode.of("RON"))
+    val nothing = Money.zero(CurrencyCode.of("RON"))
     val cost = Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"))
     val doubled = Cost.Converted(eur("20.00"), rate(cost))
     // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.

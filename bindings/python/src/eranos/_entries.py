@@ -30,6 +30,7 @@ from eranos._internal import eranos as generated
 from eranos._money import Money, generated_money, money_of
 from eranos._quantity import Quantity
 from eranos._ratios import ExchangeRate, Parts, Percentage
+from eranos._totals import Payment
 from eranos._crossing import variant
 
 
@@ -375,6 +376,18 @@ class WholeExpenseSplit:
     split: Split
     """How the amount divides."""
 
+    def participants(self) -> tuple[MemberId, ...]:
+        """
+        List every member who shares the cost, each once and in the order of their identifiers.
+
+        The library refuses text that is not an identifier with an ``IdError``.
+
+        Returns:
+            The members.
+
+        """
+        return _participants(self)
+
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -384,9 +397,37 @@ class ItemisedExpenseSplit:
     items: tuple[ExpenseItem, ...]
     """The lines of the bill."""
 
+    def participants(self) -> tuple[MemberId, ...]:
+        """
+        List every member who shares the cost of any line, each once and in the order of their identifiers.
+
+        The library refuses text that is not an identifier with an ``IdError``, and a line it does not build with the
+        error that says why.
+
+        Returns:
+            The members.
+
+        """
+        return _participants(self)
+
 
 type ExpenseSplit = WholeExpenseSplit | ItemisedExpenseSplit
 """How an expense divides: as a whole, by one split, or line by line."""
+
+
+def _participants(split: ExpenseSplit) -> tuple[MemberId, ...]:
+    """
+    List every member who shares the cost of split, as the library lists them.
+
+    Args:
+        split: The split.
+
+    Returns:
+        The members, each once and in the order of their identifiers.
+
+    """
+    with library_errors():
+        return tuple(MemberId(member) for member in generated.expense_split_participants(generated_expense_split(split)))
 
 
 @final
@@ -578,6 +619,46 @@ class Transfer:
 
         """
         return cls(id=generate_transfer_id(), sender=sender, receiver=receiver, cost=cost, date=date, time=time, note=note)
+
+    @classmethod
+    def from_payment(cls, payment: Payment, date: CalendarDate, *, time: TimeOfDay | None = None, note: str | None = None) -> Self:
+        """
+        Record payment of a settlement as a transfer made on date, under an identifier ``generate_transfer_id`` generates.
+
+        The transfer is from the payment's sender to its receiver, of its amount in the group currency;
+        ``from_payment_with_id`` takes the app's own identifier instead.
+
+        Args:
+            payment: The payment.
+            date: The day it was paid.
+            time: The time of day it was paid, or none.
+            note: A note, or none.
+
+        Returns:
+            The transfer.
+
+        """
+        return cls.from_payment_with_id(generate_transfer_id(), payment, date, time=time, note=note)
+
+    @classmethod
+    def from_payment_with_id(
+        cls, transfer_id: TransferId, payment: Payment, date: CalendarDate, *, time: TimeOfDay | None = None, note: str | None = None
+    ) -> Self:
+        """
+        Record payment of a settlement as a transfer made on date, under transfer_id, as ``from_payment`` does.
+
+        Args:
+            transfer_id: The transfer's identifier.
+            payment: The payment.
+            date: The day it was paid.
+            time: The time of day it was paid, or none.
+            note: A note, or none.
+
+        Returns:
+            The transfer.
+
+        """
+        return cls(id=transfer_id, sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=date, time=time, note=note)
 
 
 @final

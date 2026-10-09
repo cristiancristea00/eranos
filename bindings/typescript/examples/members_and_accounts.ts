@@ -4,15 +4,15 @@
 import assert from 'node:assert/strict';
 
 import {
-    type PaymentAccount,
     type Balance,
     type MemberId,
+    type PaymentAccount,
     type Split,
     CalendarDate,
     CurrencyCode,
     Email,
-    ExpenseGroupError,
     ExpenseGroup,
+    ExpenseGroupError,
     Iban,
     Money,
     PhoneNumber,
@@ -20,8 +20,9 @@ import {
     createExpense,
     createMember,
     formatBalance,
+    summaryMember,
 } from '../src/index.js';
-import { type Columns, load, printLines, printTable, refusal, section, status, totals } from './report.js';
+import { type Columns, load, printLines, printTable, refusal, section, status } from './report.js';
 
 /** A member with their contact and account details, as the table of members prints them. */
 interface MemberRow {
@@ -104,18 +105,14 @@ function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     printTable(
         balanceColumns,
-        group.membersSync().flatMap((member) => {
-            const found = totals(member.id, summary);
-            return undefined === found
-                ? []
-                : [
-                      {
-                          name: member.firstName,
-                          status: status(group, member.id),
-                          consumed: found.share,
-                          balance: found.balance,
-                      },
-                  ];
+        group.membersSync().map((member) => {
+            const found = summaryMember(summary, member.id);
+            return {
+                name: member.firstName,
+                status: status(group, member.id),
+                consumed: found.share,
+                balance: found.balance,
+            };
         }),
         2,
     );
@@ -222,7 +219,7 @@ function movingOut(group: ExpenseGroup, flatmates: Flatmates): void {
 
     assert.deepEqual(refused.failure, { kind: 'archivedMember', member: bob });
     assert.equal(removal.failure.kind, 'memberInUse');
-    assert.deepEqual(totals(bob, group.summarySync())?.balance, { kind: 'owes', amount: Money.parse('450.00', euro) });
+    assert.deepEqual(summaryMember(group.summarySync(), bob).balance, { kind: 'owes', amount: Money.parse('450.00', euro) });
     assert.ok(undefined !== group.expenseSync(rent));
 }
 

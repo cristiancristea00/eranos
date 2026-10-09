@@ -824,6 +824,7 @@ public final class eranos/ExpenseShares {
 }
 
 public abstract interface class eranos/ExpenseSplit {
+	public abstract fun participants ()Ljava/util/List;
 }
 
 public final class eranos/ExpenseSplit$Itemised : eranos/ExpenseSplit {
@@ -831,6 +832,7 @@ public final class eranos/ExpenseSplit$Itemised : eranos/ExpenseSplit {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getItems ()Ljava/util/List;
 	public fun hashCode ()I
+	public fun participants ()Ljava/util/List;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -839,6 +841,7 @@ public final class eranos/ExpenseSplit$Whole : eranos/ExpenseSplit {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getSplit ()Leranos/Split;
 	public fun hashCode ()I
+	public fun participants ()Ljava/util/List;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -1074,6 +1077,9 @@ public final class eranos/Money {
 	public final fun getCurrency ()Leranos/CurrencyCode;
 	public final fun getMinorUnits ()J
 	public fun hashCode ()I
+	public final fun isNegative ()Z
+	public final fun isPositive ()Z
+	public final fun isZero ()Z
 	public final fun minus (Leranos/Money;)Leranos/Money;
 	public final fun plus (Leranos/Money;)Leranos/Money;
 	public fun toString ()Ljava/lang/String;
@@ -1082,6 +1088,7 @@ public final class eranos/Money {
 public final class eranos/Money$Companion {
 	public final fun fromDouble (DLeranos/CurrencyCode;)Leranos/Money;
 	public final fun parse (Ljava/lang/String;Leranos/CurrencyCode;)Leranos/Money;
+	public final fun zero (Leranos/CurrencyCode;)Leranos/Money;
 }
 
 public abstract interface class eranos/MoneyFailure {
@@ -1349,12 +1356,15 @@ public final class eranos/Split$Percentages : eranos/Split {
 }
 
 public final class eranos/Summary {
+	public final fun categoryTotal-1P1mEt8 (Ljava/lang/String;)Leranos/Money;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCategoryTotals ()Ljava/util/List;
 	public final fun getMemberCategoryTotals ()Ljava/util/List;
 	public final fun getMembers ()Ljava/util/List;
 	public final fun getTotalSpent ()Leranos/Money;
 	public fun hashCode ()I
+	public final fun member-Ew0_zjs (Ljava/lang/String;)Leranos/MemberSummary;
+	public final fun memberCategoryTotal-FAyG-MI (Ljava/lang/String;Ljava/lang/String;)Leranos/Money;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -1415,6 +1425,10 @@ public final class eranos/TipValue$Percentage : eranos/TipValue {
 }
 
 public final class eranos/Transfer {
+	public fun <init> (Leranos/Payment;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;)V
+	public synthetic fun <init> (Leranos/Payment;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Payment;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Payment;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V

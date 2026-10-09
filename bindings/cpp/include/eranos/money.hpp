@@ -29,6 +29,12 @@ struct Money final {
     /// @param currency The currency
     inline Money(std::int64_t const minorUnits, CurrencyCode currency) noexcept : minorUnits(minorUnits), currency(std::move(currency)) {}
 
+    /// Zero in @p currency.
+    ///
+    /// @param currency The currency
+    /// @return Zero minor units of the currency
+    [[nodiscard]] static inline Money zero(CurrencyCode currency) noexcept { return {0, std::move(currency)}; }
+
     /// The amount written @p text in @p currency: "12.50", "12.5", or "-3".
     ///
     /// @param text The amount's text
@@ -62,6 +68,21 @@ struct Money final {
     /// @param other Another amount in the same currency
     /// @return The difference, or an error of the kind ErrorKind::MONEY for amounts in two currencies, or a difference out of range
     [[nodiscard]] std::expected<Money, Error> minus(Money const &other) const noexcept;
+
+    /// Whether the amount is zero.
+    ///
+    /// @return Whether it is zero
+    [[nodiscard]] inline bool isZero() const noexcept { return 0 == minorUnits; }
+
+    /// Whether the amount is above zero.
+    ///
+    /// @return Whether it is above zero
+    [[nodiscard]] inline bool isPositive() const noexcept { return 0 < minorUnits; }
+
+    /// Whether the amount is below zero.
+    ///
+    /// @return Whether it is below zero
+    [[nodiscard]] inline bool isNegative() const noexcept { return 0 > minorUnits; }
 
     /// The amount as the library writes it, with the decimal places of its currency: "12.50 EUR".
     ///

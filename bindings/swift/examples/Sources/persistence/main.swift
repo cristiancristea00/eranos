@@ -65,8 +65,8 @@ func main() throws(EranosError) {
         try [ana, bob].map { member throws(EranosError) in
             ComparisonRow(
                 name: try names(group, [member]),
-                before: totals(of: member, in: before)?.balance.description ?? "?",
-                after: totals(of: member, in: after)?.balance.description ?? "?"
+                before: before.member(withID: member).balance.description,
+                after: after.member(withID: member).balance.description
             )
         },
         numbersFrom: 1

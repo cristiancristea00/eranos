@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import {
     type Balance,
     type Expense,
-    type ExpenseId,
     type ExpenseGroup,
+    type ExpenseId,
     CurrencyCode,
     ExchangeRate,
     ExpenseError,
@@ -18,8 +18,9 @@ import {
     createExpense,
     createTransfer,
     formatBalance,
+    summaryMember,
 } from '../../src/index.js';
-import { type Columns, message, printLines, printTable, refusal, section, status, totals } from '../report.js';
+import { type Columns, message, printLines, printTable, refusal, section, status } from '../report.js';
 import { type Categories, type People, eur, name, october, printBalances, printEntries, refusalColumns, ron } from './tour.js';
 
 /** An entry and what an edit did to it, as the table of edits prints it. */
@@ -80,7 +81,7 @@ export function anotherCurrency(group: ExpenseGroup, people: People, categories:
     assert.ok(undefined !== transfer, 'the cash was recorded');
     const converted = ExchangeRate.parse('0.2011').convert(ron('250.00'), euro);
     printLines(
-        `Bob's transfer, at ${transfer.time?.toString() ?? ''} ("${transfer.note ?? ''}"), counts as ${(group.transferAmountSync(cash) ?? new Money(0n, euro)).toString()}.`,
+        `Bob's transfer, at ${transfer.time?.toString() ?? ''} ("${transfer.note ?? ''}"), counts as ${(group.transferAmountSync(cash) ?? Money.zero(euro)).toString()}.`,
         'A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,',
         `which becomes ${converted.toString()}.`,
     );
@@ -127,7 +128,7 @@ function replaceAndRemove(group: ExpenseGroup, people: People, categories: Categ
     assert.equal(group.expenseSync(copy), undefined);
     assert.ok(eur('120.00').equals(group.transferAmountSync(first) ?? eur('0')));
     assert.equal(group.transferSync(mistake), undefined);
-    const zero = new Money(0n, CurrencyCode.of('EUR'));
+    const zero = Money.zero(CurrencyCode.of('EUR'));
     const corrected = group.expenseSync(seafood);
     const apartment = group.transferSync(first);
     return [
@@ -240,9 +241,9 @@ export function comingsAndGoings(group: ExpenseGroup, people: People): void {
     const summary = group.summarySync();
     printTable(
         statusColumns,
-        group.membersSync().flatMap((member) => {
-            const found = totals(member.id, summary);
-            return undefined === found ? [] : [{ name: member.firstName, status: status(group, member.id), balance: found.balance }];
+        group.membersSync().map((member) => {
+            const found = summaryMember(summary, member.id);
+            return { name: member.firstName, status: status(group, member.id), balance: found.balance };
         }),
         2,
     );

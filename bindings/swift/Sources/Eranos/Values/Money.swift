@@ -56,6 +56,26 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
         self.init(minorUnits: money.minorUnits, currency: CurrencyCode(money.currency))
     }
 
+    /// Zero in `currency`.
+    public static func zero(in currency: CurrencyCode) -> Self {
+        Self(minorUnits: 0, currency: currency)
+    }
+
+    /// Whether the amount is zero.
+    public var isZero: Bool {
+        0 == minorUnits
+    }
+
+    /// Whether the amount is above zero.
+    public var isPositive: Bool {
+        0 < minorUnits
+    }
+
+    /// Whether the amount is below zero.
+    public var isNegative: Bool {
+        0 > minorUnits
+    }
+
     /// This amount plus `other`.
     ///
     /// - Throws: ``EranosError/money(_:detail:)`` with

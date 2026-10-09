@@ -4,6 +4,7 @@ import eranos.internal.expenseItemDiscountAmount
 import eranos.internal.expenseItemLineTotal
 import eranos.internal.expenseItemLineTotalBeforeDiscount
 import eranos.internal.expenseMembers
+import eranos.internal.expenseSplitParticipants
 import eranos.internal.expenseTipAmount
 import eranos.internal.expenseTotal
 import eranos.internal.tipRuleNone
@@ -208,6 +209,14 @@ internal fun eranos.internal.Cost.converted(): Cost =
 
 /** How an expense's cost is shared: as a whole, or line by line of an itemised bill. */
 public sealed interface ExpenseSplit {
+    /**
+     * Every member who shares the cost, once each, in identifier order.
+     *
+     * @throws EranosException.Id for a member whose identifier is not one, and the failures of an item that does not build.
+     */
+    @Throws(EranosException::class)
+    public fun participants(): List<MemberId>
+
     /** The whole amount is divided by one split. */
     public class Whole(
         /** How the amount divides. */
@@ -218,6 +227,9 @@ public sealed interface ExpenseSplit {
 
         /** A hash of what [equals] compares. */
         override fun hashCode(): Int = split.hashCode()
+
+        /** The members of [split], once each, in identifier order. */
+        override fun participants(): List<MemberId> = converting { expenseSplitParticipants(generated).map(::MemberId) }
 
         /** A description of every field, for logs. */
         override fun toString(): String = "Whole(split=$split)"
@@ -235,6 +247,9 @@ public sealed interface ExpenseSplit {
 
         /** A hash of what [equals] compares. */
         override fun hashCode(): Int = items.hashCode()
+
+        /** The members of every line's split, once each, in identifier order. */
+        override fun participants(): List<MemberId> = converting { expenseSplitParticipants(generated).map(::MemberId) }
 
         /** A description of every field, for logs. */
         override fun toString(): String = "Itemised(items=$items)"

@@ -36,6 +36,12 @@ class ValuesTest {
         assertEquals("12.50 EUR", price.toString())
         assertEquals(Money(1_300, euro), price + Money(50, euro))
         assertEquals(Money(1_200, euro), price - Money(50, euro))
+        val zero = Money.zero(euro)
+        assertEquals(Money(0, euro), zero)
+        assertEquals(listOf(true, false, false), listOf(zero.isZero, zero.isPositive, zero.isNegative))
+        assertEquals(listOf(false, true, false), listOf(price.isZero, price.isPositive, price.isNegative))
+        val refund = zero - price
+        assertEquals(listOf(false, false, true), listOf(refund.isZero, refund.isPositive, refund.isNegative))
         val mismatch = assertThrows<EranosException.Money> { price + Money(1, lei) }
         assertEquals(MoneyFailure.CurrencyMismatch(euro, lei), mismatch.failure)
         assertThrows<EranosException.Money> { Money(Long.MAX_VALUE, euro) + Money(1, euro) }

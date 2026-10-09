@@ -248,7 +248,6 @@ static void totals(EranosExpenseGroup const *const group) {
         EranosMember *const member = eranosMemberListGet(members, index);
         eranosMemberId(member, text);
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
-        check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         addTotalRow(table, &(TotalRow){
                                .name = textLine(text),

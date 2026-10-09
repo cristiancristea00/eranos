@@ -14,9 +14,12 @@ import {
     Money,
     SettlementStrategy,
     UNCATEGORISED,
-    createTransfer,
+    createTransferFromPayment,
+    summaryCategoryTotal,
+    summaryMember,
+    summaryMemberCategoryTotal,
 } from '../../src/index.js';
-import { type Columns, message, printLines, printTable, refusal, section, totals } from '../report.js';
+import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
 import { type Categories, type People, eur, name, october, paymentColumns, printBalances, printCategories, printEntries, ron, sum } from './tour.js';
 
 /** A member's consumption in each category, as the table of consumption per category prints it. */
@@ -54,11 +57,6 @@ function byCategory(summary: Summary, member: MemberId): readonly CategoryTotal[
     return summary.memberCategoryTotals.find((entry) => entry.member === member)?.totals ?? [];
 }
 
-/** The total of `category` among `categoryTotals`. */
-function total(categoryTotals: readonly CategoryTotal[], category: CategoryId): Money | undefined {
-    return categoryTotals.find((entry) => entry.category === category)?.total;
-}
-
 /** Whether `found` is `expected`. */
 function is(expected: Money, found: Money | undefined): boolean {
     return undefined !== found && expected.equals(found);
@@ -75,32 +73,32 @@ export function summary(group: ExpenseGroup, people: People, categories: Categor
     printLines('The spending per category:');
     printCategories(group);
     printLines("And each member's consumption per category:");
-    const zero = new Money(0n, group.currencySync());
+    const zero = Money.zero(group.currencySync());
     printTable(
         memberCategoryColumns,
         group.membersSync().map((member) => {
-            const own = byCategory(summary, member.id);
+            const total = (category: CategoryId): Money => summaryMemberCategoryTotal(summary, member.id, category);
             return {
                 name: member.firstName,
-                food: total(own, categories.food) ?? zero,
-                lodging: total(own, categories.lodging) ?? zero,
-                transport: total(own, categories.transport) ?? zero,
-                uncategorised: total(own, UNCATEGORISED) ?? zero,
+                food: total(categories.food),
+                lodging: total(categories.lodging),
+                transport: total(categories.transport),
+                uncategorised: total(UNCATEGORISED),
             };
         }),
         1,
     );
 
     assert.ok(is(eur('1222.90'), summary.totalSpent));
-    assert.ok(is(eur('890.00'), totals(people.ana, summary)?.paid));
-    assert.ok(is(eur('140.00'), totals(people.ana, summary)?.received));
-    assert.ok(is(eur('20.00'), totals(people.bob, summary)?.sent));
-    assert.deepEqual(totals(people.dan, summary)?.balance, { kind: 'getsBack', amount: eur('12.55') });
-    assert.deepEqual(totals(people.eva, summary)?.balance, { kind: 'owes', amount: eur('42.60') });
-    assert.ok(is(eur('174.40'), total(summary.categoryTotals, categories.food)));
-    assert.ok(is(eur('800.00'), total(summary.categoryTotals, categories.lodging)));
-    assert.ok(is(eur('188.50'), total(summary.categoryTotals, categories.transport)));
-    assert.ok(is(eur('60.00'), total(summary.categoryTotals, UNCATEGORISED)));
+    assert.ok(is(eur('890.00'), summaryMember(summary, people.ana).paid));
+    assert.ok(is(eur('140.00'), summaryMember(summary, people.ana).received));
+    assert.ok(is(eur('20.00'), summaryMember(summary, people.bob).sent));
+    assert.deepEqual(summaryMember(summary, people.dan).balance, { kind: 'getsBack', amount: eur('12.55') });
+    assert.deepEqual(summaryMember(summary, people.eva).balance, { kind: 'owes', amount: eur('42.60') });
+    assert.ok(is(eur('174.40'), summaryCategoryTotal(summary, categories.food)));
+    assert.ok(is(eur('800.00'), summaryCategoryTotal(summary, categories.lodging)));
+    assert.ok(is(eur('188.50'), summaryCategoryTotal(summary, categories.transport)));
+    assert.ok(is(eur('60.00'), summaryCategoryTotal(summary, UNCATEGORISED)));
     for (const found of summary.members) {
         assert.ok(
             is(
@@ -134,7 +132,7 @@ export function removingACategory(group: ExpenseGroup, categories: Categories): 
 
     assert.ok(builtIn instanceof ExpenseGroupError && 'builtInCategory' === builtIn.failure.kind);
     assert.equal(group.categorySync(categories.transport), undefined);
-    assert.ok(is(eur('248.50'), total(group.summarySync().categoryTotals, UNCATEGORISED)));
+    assert.ok(is(eur('248.50'), summaryCategoryTotal(group.summarySync(), UNCATEGORISED)));
     assert.ok(group.expensesSync().every((expense) => categories.transport !== expense.category));
 }
 
@@ -165,8 +163,8 @@ export function newCurrency(group: ExpenseGroup, people: People): void {
     assert.deepEqual(missing.failure, { kind: 'missingExchangeRate', currency: euro });
     assert.equal(group.currencySync().code, leu.code);
     assert.ok(is(ron('6114.50'), summary.totalSpent));
-    assert.deepEqual(totals(people.dan, summary)?.balance, { kind: 'getsBack', amount: ron('62.75') });
-    assert.deepEqual(totals(people.eva, summary)?.balance, { kind: 'owes', amount: ron('213.00') });
+    assert.deepEqual(summaryMember(summary, people.dan).balance, { kind: 'getsBack', amount: ron('62.75') });
+    assert.deepEqual(summaryMember(summary, people.eva).balance, { kind: 'owes', amount: ron('213.00') });
 }
 
 /** The name of `strategy` as the apps show it. */
@@ -206,9 +204,7 @@ export function settlingUp(group: ExpenseGroup): void {
         2,
     );
     for (const payment of plan.payments) {
-        group.addTransferSync(
-            createTransfer({ sender: payment.sender, receiver: payment.receiver, cost: { kind: 'local', amount: payment.amount }, date: october(7) }),
-        );
+        group.addTransferSync(createTransferFromPayment(payment, october(7)));
     }
     printLines('Each payment, once made, is recorded as a transfer, and every balance is settled:');
     printBalances(group);

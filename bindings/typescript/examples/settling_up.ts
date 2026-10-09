@@ -14,12 +14,14 @@ import {
     SettlementStrategy,
     createExpense,
     createMember,
-    createTransfer,
+    createTransferFromPayment,
+    expenseSplitParticipants,
     expenseTotal,
     formatBalance,
     splitMembers,
+    summaryMember,
 } from '../src/index.js';
-import { type Columns, load, names, participants, printLines, printTable, section, totals } from './report.js';
+import { type Columns, load, names, printLines, printTable, section } from './report.js';
 
 /** An expense, as the table of expenses prints it. */
 interface ExpenseRow {
@@ -118,9 +120,9 @@ function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     printTable(
         balanceColumns,
-        group.membersSync().flatMap((member) => {
-            const found = totals(member.id, summary);
-            return undefined === found ? [] : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance }];
+        group.membersSync().map((member) => {
+            const found = summaryMember(summary, member.id);
+            return { name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance };
         }),
         1,
     );
@@ -270,7 +272,7 @@ printTable(
     group.expensesSync().map((expense) => ({
         name: expense.name,
         payer: names(group, splitMembers(expense.payers)),
-        participants: names(group, participants(expense.split)),
+        participants: names(group, expenseSplitParticipants(expense.split)),
         amount: expenseTotal(expense),
     })),
     3,
@@ -286,14 +288,7 @@ const festivalPayments = festival();
 section('9. Settling up for real');
 const plan = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 for (const payment of plan.payments) {
-    group.addTransferSync(
-        createTransfer({
-            sender: payment.sender,
-            receiver: payment.receiver,
-            cost: { kind: 'local', amount: payment.amount },
-            date: CalendarDate.of(2026, 9, 27),
-        }),
-    );
+    group.addTransferSync(createTransferFromPayment(payment, CalendarDate.of(2026, 9, 27)));
 }
 printLines(
     'Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards',
@@ -309,5 +304,5 @@ assert.deepEqual(counts, { adaptive: 4, minimum: 4, greedy: 5, direct: 7 });
 assert.equal(festivalPayments, 19);
 const summary = group.summarySync();
 for (const member of [ana, bob, carol, dan, eva, filip]) {
-    assert.deepEqual(totals(member, summary)?.balance, { kind: 'settled' });
+    assert.deepEqual(summaryMember(summary, member).balance, { kind: 'settled' });
 }

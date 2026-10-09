@@ -21,6 +21,25 @@ public struct Summary: Hashable, Sendable {
         categoryTotals = summary.categoryTotals.map(CategoryTotal.init)
         memberCategoryTotals = summary.memberCategoryTotals.map(MemberCategoryTotals.init)
     }
+
+    /// The totals of the member with the identifier `id`: all zero, and settled, for a member
+    /// without entries.
+    public func member(withID id: Member.ID) -> MemberSummary {
+        members.first { totals in totals.member == id } ?? MemberSummary(zeroFor: id, in: totalSpent.currency)
+    }
+
+    /// The spending in the category with the identifier `id`: zero for a category without
+    /// expenses.
+    public func categoryTotal(of id: Category.ID) -> Money {
+        categoryTotals.first { total in total.category == id }?.total ?? .zero(in: totalSpent.currency)
+    }
+
+    /// The share of the member with the identifier `member` of the spending in the category with the
+    /// identifier `category`: zero when they have none there.
+    public func memberCategoryTotal(of member: Member.ID, in category: Category.ID) -> Money {
+        let totals = memberCategoryTotals.first { totals in totals.member == member }?.totals ?? []
+        return totals.first { total in total.category == category }?.total ?? .zero(in: totalSpent.currency)
+    }
 }
 
 /// A member's totals, in the group currency.
@@ -54,6 +73,17 @@ public struct MemberSummary: Hashable, Sendable {
         received = Money(summary.received)
         net = Money(summary.net)
         balance = Balance(summary.balance)
+    }
+
+    init(zeroFor member: Member.ID, in currency: CurrencyCode) {
+        let zero = Money.zero(in: currency)
+        self.member = member
+        paid = zero
+        share = zero
+        sent = zero
+        received = zero
+        net = zero
+        balance = .settled
     }
 }
 

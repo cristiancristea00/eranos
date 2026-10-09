@@ -116,7 +116,7 @@ final class Tour {
 
     /** The sum of {@code amounts}, all in {@code currency}. */
     static Money sum(CurrencyCode currency, List<Money> amounts) throws EranosException {
-        Money total = new Money(0, currency);
+        Money total = Money.zero(currency);
         for (Money amount : amounts) {
             total = total.plus(amount);
         }

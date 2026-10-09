@@ -586,6 +586,51 @@ typedef struct EranosSummary EranosSummary;
     return EranosSummary_member_category_totals(summary);
 }
 
+/// The totals of the member with the identifier `member`: all zero, and settled, for a member without entries.
+///
+/// @param summary The summary
+/// @param member The member's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param memberSummary Receives the member's totals on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosSummaryMember(EranosSummary const *const summary, char const *const member,
+                                                             EranosMemberSummary **const memberSummary) {
+    EranosSummary_member_result const result = EranosSummary_member(summary, eranosDetailView(member));
+    *memberSummary = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The spending in the category with the identifier `category`: zero for a category without expenses.
+///
+/// @param summary The summary
+/// @param category The category's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param total Receives the spending on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosSummaryCategoryTotal(EranosSummary const *const summary, char const *const category,
+                                                                    EranosMoney **const total) {
+    EranosSummary_category_total_result const result = EranosSummary_category_total(summary, eranosDetailView(category));
+    *total = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// The share of the member with the identifier `member` of the spending in the category with the identifier `category`: zero when they have none
+/// there.
+///
+/// @param summary The summary
+/// @param member The member's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param category The category's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param total Receives the member's share of the spending on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosSummaryMemberCategoryTotal(EranosSummary const *const summary, char const *const member,
+                                                                          char const *const category, EranosMoney **const total) {
+    EranosSummary_member_category_total_result const result =
+        EranosSummary_member_category_total(summary, eranosDetailView(member), eranosDetailView(category));
+    *total = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
 /// Destroys @p summary; destroying nullptr does nothing, as free() does.
 ///
 /// @param summary The summary, which no call uses after this one, or nullptr

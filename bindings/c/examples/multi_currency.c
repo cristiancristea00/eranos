@@ -157,7 +157,6 @@ static void printBalances(EranosExpenseGroup const *const group) {
         EranosMember *const member = eranosMemberListGet(members, index);
         eranosMemberId(member, text);
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
-        check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         addBalanceRow(table, &(BalanceRow){
                                  .name = textLine(text),
@@ -191,7 +190,6 @@ static void printBalances(EranosExpenseGroup const *const group) {
 [[nodiscard]] static bool balanceIs(EranosExpenseGroup const *const group, Id const member, EranosBalanceKind const kind, int64_t const minorUnits) {
     EranosSummary *const summary = eranosExpenseGroupSummary(group);
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
-    check(nullptr != totals, "the member has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);
     EranosMoney *const amount = eranosBalanceAmount(balance);
     bool const same = kind == eranosBalanceKind(balance) && (nullptr == amount || minorUnits == eranosMoneyMinorUnits(amount));

@@ -56,6 +56,7 @@ import {
     expenseItemLineTotal,
     expenseItemLineTotalBeforeDiscount,
     expenseMembers,
+    expenseSplitParticipants,
     expenseTipAmount,
     expenseTotal,
     generateExpenseId,
@@ -298,6 +299,11 @@ void describe('the expenses, members, categories, and transfers', () => {
         assert.deepEqual(expenseMembers(taxi), [flat.ana, flat.bob]);
         assert.ok(expenseTipAmount(dinner).equals(flat.euros(300n)));
         assert.throws(() => expenseMembers({ ...taxi, payers: { kind: 'equal', members: [memberId(' ana')] } }), IdError);
+        assert.deepEqual(expenseSplitParticipants({ kind: 'whole', split: { kind: 'equal', members: [flat.bob, flat.ana, flat.bob] } }), [
+            flat.ana,
+            flat.bob,
+        ]);
+        assert.throws(() => expenseSplitParticipants({ kind: 'whole', split: { kind: 'equal', members: [memberId(' ana')] } }), IdError);
         assert.throws(() => expenseTipAmount({ ...taxi, tip: { value: { kind: 'fixed', amount: flat.euros(1n) } } }), ExpenseError);
         assert.throws(() => expenseTotal({ ...taxi, tip: { value: { kind: 'fixed', amount: new Money(-1n, lei) } } }), ExpenseError);
     });

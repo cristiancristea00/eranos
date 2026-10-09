@@ -538,6 +538,16 @@ static void anAmountParsesFormatsAndAdds(Check *const check) {
     EranosMoney *difference = nullptr;
     checkSucceeded(check, eranosMoneySubtract(price, quarter, &difference), "and subtract");
     checkThat(check, isAmount(difference, 1'000, "EUR"), "12.50 EUR less 2.50 EUR is 10.00 EUR");
+    EranosCurrencyDetails *const euro = eranosMoneyCurrency(price);
+    EranosMoney *const zero = eranosMoneyZero(euro);
+    checkThat(check, eranosMoneyIsZero(zero) && !eranosMoneyIsPositive(zero) && !eranosMoneyIsNegative(zero), "zero is neither above nor below it");
+    checkThat(check, !eranosMoneyIsZero(price) && eranosMoneyIsPositive(price) && !eranosMoneyIsNegative(price), "12.50 EUR is above zero");
+    EranosMoney *refund = nullptr;
+    checkSucceeded(check, eranosMoneySubtract(zero, price, &refund), "a refund");
+    checkThat(check, !eranosMoneyIsZero(refund) && !eranosMoneyIsPositive(refund) && eranosMoneyIsNegative(refund), "is below zero");
+    checkThat(check, isAmount(zero, 0, "EUR"), "zero holds no minor units of the currency");
+    eranosMoneyDestroy(refund);
+    eranosCurrencyDetailsDestroy(euro);
     EranosMoney *const lei = amountOf(100, "RON");
     EranosMoney *none = nullptr;
     EranosError *const refused = eranosMoneyAdd(price, lei, &none);
@@ -1412,6 +1422,19 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
     checkThat(check,
               ERANOS_EXPENSE_SPLIT_KIND_WHOLE == eranosExpenseSplitKind(whole) && nullptr != readSplit && nullptr == eranosExpenseSplitItems(whole),
               "a whole split holds its split");
+    EranosTextList *sharing = nullptr;
+    checkSucceeded(check, eranosExpenseSplitParticipants(whole, &sharing), "who shares a whole split");
+    checkThat(check, listsMembers(sharing, "ana", "bob"), "each once, in identifier order");
+    checkSucceeded(check, eranosExpenseSplitParticipants(itemised, &sharing), "who shares an itemised split");
+    checkThat(check, listsMembers(sharing, "ana", nullptr), "every line's members, each once");
+    EranosSplit *const unread = equally(" ana", nullptr);
+    EranosExpenseSplit *const unreadable = eranosExpenseSplitCreateWhole(unread);
+    checkThat(check,
+              isFailure(eranosExpenseSplitParticipants(unreadable, &sharing), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE) &&
+                  nullptr == sharing,
+              "the members who share it are identifiers");
+    eranosExpenseSplitDestroy(unreadable);
+    eranosSplitDestroy(unread);
     EranosMoney *const three = euros(300);
     EranosTipValue *const fixed = eranosTipValueCreateFixed(three);
     EranosTipValue *const tenPercent = eranosTipValueCreatePercentage(1'000);
@@ -2518,6 +2541,34 @@ static void theSummaryAndTheSharesAddUp(Check *const check) {
                   isAmount(eranosMemberSummaryReceived(ana), 1'000, "EUR") && isAmount(eranosMemberSummarySent(ana), 0, "EUR") &&
                   isAmount(eranosMemberSummaryNet(ana), 500, "EUR"),
               "Ana paid 30.00, consumed 15.00, and got 10.00 back, so she is owed 5.00");
+    EranosMemberSummary *found = nullptr;
+    checkSucceeded(check, eranosSummaryMember(summary, eranosTextData(flat.ana), &found), "Ana's totals, looked up");
+    checkThat(check, isAmount(eranosMemberSummaryPaid(found), 3'000, "EUR"), "are hers");
+    eranosMemberSummaryDestroy(found);
+    EranosMemberSummary *absent = nullptr;
+    checkSucceeded(check, eranosSummaryMember(summary, "nobody", &absent), "the totals of a member without entries");
+    EranosBalance *const settled = eranosMemberSummaryBalance(absent);
+    eranosMemberSummaryMember(absent, text);
+    checkThat(check,
+              isText(text, "nobody") && isAmount(eranosMemberSummaryPaid(absent), 0, "EUR") &&
+                  ERANOS_BALANCE_KIND_SETTLED == eranosBalanceKind(settled),
+              "are zero and settled");
+    eranosBalanceDestroy(settled);
+    eranosMemberSummaryDestroy(absent);
+    EranosMoney *spent = nullptr;
+    checkSucceeded(check, eranosSummaryCategoryTotal(summary, eranosTextData(flat.food), &spent), "the food's total, looked up");
+    checkThat(check, isAmount(spent, 3'000, "EUR"), "is the dinner");
+    checkSucceeded(check, eranosSummaryCategoryTotal(summary, "nothing", &spent), "the total of a category without expenses");
+    checkThat(check, isAmount(spent, 0, "EUR"), "is zero");
+    checkSucceeded(check, eranosSummaryMemberCategoryTotal(summary, eranosTextData(flat.ana), eranosTextData(flat.food), &spent), "Ana's food");
+    checkThat(check, isAmount(spent, 1'500, "EUR"), "is half the dinner");
+    checkSucceeded(check, eranosSummaryMemberCategoryTotal(summary, "nobody", eranosTextData(flat.food), &spent), "a stranger's food");
+    checkThat(check, isAmount(spent, 0, "EUR"), "is zero");
+    checkThat(check,
+              isKind(eranosSummaryMember(summary, "\xff", &absent), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == absent &&
+                  isKind(eranosSummaryCategoryTotal(summary, "\xff", &spent), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == spent &&
+                  isKind(eranosSummaryMemberCategoryTotal(summary, "\xff", "\xff", &spent), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == spent,
+              "a lookup's identifiers are text");
     EranosExpenseShares *shares = nullptr;
     checkSucceeded(check, eranosExpenseGroupExpenseShares(flat.group, eranosTextData(flat.dinner), &shares), "the dinner's shares");
     EranosMemberShareList *const memberShares = eranosExpenseSharesMembers(shares);
@@ -2578,6 +2629,37 @@ static void eachStrategySettlesEveryBalance(Check *const check) {
         eranosPaymentListDestroy(payments);
         eranosSettlementPlanDestroy(settlement);
     }
+    EranosSettlementPlan *plan = nullptr;
+    checkSucceeded(check, eranosExpenseGroupSettlement(flat.group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &plan), "the greedy plan");
+    EranosPaymentList *const planned = eranosSettlementPlanPayments(plan);
+    EranosPayment *const payment = eranosPaymentListGet(planned, 0);
+    EranosTransfer *const repayment = eranosTransferCreateFromPayment(payment, DAY);
+    eranosTransferSender(repayment, text);
+    checkThat(check, isText(text, eranosTextData(flat.bob)), "a transfer from the payment's sender");
+    eranosTransferReceiver(repayment, text);
+    EranosCost *const cost = eranosTransferCost(repayment);
+    EranosCalendarDate const paid = eranosTransferDate(repayment);
+    checkThat(check,
+              isText(text, eranosTextData(flat.ana)) && ERANOS_COST_KIND_LOCAL == eranosCostKind(cost) &&
+                  isAmount(eranosCostAmount(cost), 500, "EUR") && DAY.year == paid.year && DAY.month == paid.month && DAY.day == paid.day,
+              "to its receiver, of its amount, on the day given");
+    eranosTransferId(repayment, text);
+    EranosTransfer *named = nullptr;
+    checkSucceeded(check, eranosTransferCreateFromPaymentWithId(eranosTextData(text), payment, DAY, &named), "the transfer under an identifier");
+    EranosText *const id = eranosTextCreate();
+    eranosTransferId(named, id);
+    checkThat(check, isText(id, eranosTextData(text)), "keeps it");
+    EranosTransfer *refused = nullptr;
+    checkThat(check,
+              isKind(eranosTransferCreateFromPaymentWithId("\xff", payment, DAY, &refused), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == refused,
+              "a transfer's identifier is text");
+    eranosTextDestroy(id);
+    eranosTransferDestroy(named);
+    eranosCostDestroy(cost);
+    eranosTransferDestroy(repayment);
+    eranosPaymentDestroy(payment);
+    eranosPaymentListDestroy(planned);
+    eranosSettlementPlanDestroy(plan);
     eranosTextDestroy(text);
     flatDestroy(flat);
 }

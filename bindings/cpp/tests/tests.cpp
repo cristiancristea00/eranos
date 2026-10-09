@@ -239,6 +239,10 @@ void amountsInOneCurrencyAddAndSubtract(Check &check) noexcept {
     check.that(mixed.has_value() && euro == mixed.value().left() && lei == mixed.value().right(), "the error names both currencies");
     auto const largest = Money(INT64_MAX, euro);
     check.that(isFailure(refusal(largest.plus(Money(1, euro))), ErrorKind::MONEY, Failure::MONEY_OVERFLOW), "a sum out of range");
+    auto const zero = Money::zero(euro);
+    check.that(Money(0, euro) == zero && zero.isZero() && !zero.isPositive() && !zero.isNegative(), "zero is neither above nor below it");
+    check.that(!largest.isZero() && largest.isPositive() && !largest.isNegative(), "an amount above zero");
+    check.that(!Money(-1, euro).isZero() && !Money(-1, euro).isPositive() && Money(-1, euro).isNegative(), "an amount below zero");
 }
 
 /// An app that holds amounts as doubles would get other cents from the C++ layer than the library rounds to, or an amount back from NaN, from an
@@ -747,6 +751,10 @@ void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) noexcept {
     check.that("gets back 12.00 EUR" == toString(Balance{GetsBackBalance{flat.euros(1'200)}}), "a balance owed to a member");
     auto const unknown = refusal(participants(Split{EqualSplit{{MemberId(" ana")}}}));
     check.that(isFailure(unknown, ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "an identifier that is not one");
+    check.that(participants(ExpenseSplit{WholeExpenseSplit{EqualSplit{{flat.bob, flat.ana, flat.bob}}}}) == std::vector<MemberId>{flat.ana, flat.bob},
+               "who shares a split's cost, each once, in the order of their identifiers");
+    auto const unreadable = refusal(participants(ExpenseSplit{WholeExpenseSplit{EqualSplit{{MemberId(" ana")}}}}));
+    check.that(isFailure(unreadable, ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "the members who share it are identifiers");
 }
 
 /// A line total the layer multiplied itself would round a fractional quantity otherwise than the library, which divides the line, and so show an
@@ -921,6 +929,17 @@ void theSummaryAndTheSharesAddUp(Check &check) noexcept {
                    ana->balance == Balance{GetsBackBalance{flat.euros(500)}},
                "Ana paid 30.00, consumed 15.00, and got 10.00 back, so she is owed 5.00");
     check.that(2 == summary.memberCategoryTotals.size(), "both members have a share of the food");
+    check.that(summary.member(flat.ana) == *ana, "Ana's totals, looked up");
+    MemberId const stranger("nobody");
+    auto const zero = flat.euros(0);
+    check.that(summary.member(stranger) == MemberSummary(stranger, zero, zero, zero, zero, zero, SettledBalance{}),
+               "the totals of a member without entries are zero and settled");
+    check.that(summary.categoryTotal(flat.food) == flat.euros(3'000) && summary.categoryTotal(CategoryId::uncategorised()) == zero,
+               "the spending in a category, and zero in one without expenses");
+    check.that(summary.memberCategoryTotal(flat.ana, flat.food) == flat.euros(1'500) &&
+                   summary.memberCategoryTotal(flat.ana, CategoryId::uncategorised()) == zero &&
+                   summary.memberCategoryTotal(stranger, flat.food) == zero,
+               "a member's share of a category's spending, and zero where they have none");
     auto const shares = flat.group.expenseShares(flat.dinner).value();
     check.that(shares.has_value() && shares.value().total == flat.euros(3'000) && shares.value().tip == flat.euros(0) &&
                    2 == shares.value().members.size(),
@@ -945,7 +964,13 @@ void eachStrategySettlesEveryBalance(Check &check) noexcept {
         check.that(settlement.strategy == computedBy, "the plan names the strategy whose plan it is");
         check.that(settlement.payments == std::vector<Payment>{Payment(flat.bob, flat.ana, flat.euros(500))}, "Bob pays Ana 5.00");
     }
-    static_cast<void>(flat.group.addTransfer(Transfer(flat.bob, flat.ana, LocalCost{flat.euros(500)}, flat.day)).value());
+    auto const payment = flat.group.settlement(SettlementStrategy::GREEDY).value().payments.front();
+    Transfer const repayment(payment, flat.day);
+    check.that(repayment.sender == flat.bob && repayment.receiver == flat.ana && repayment.cost == Cost{LocalCost{flat.euros(500)}} &&
+                   repayment.date == flat.day,
+               "a transfer from the payment's sender to its receiver, of its amount, on the day given");
+    check.that(Transfer(repayment.id, payment, flat.day) == repayment, "and the same under its identifier");
+    static_cast<void>(flat.group.addTransfer(repayment).value());
     auto const members = flat.group.summary().members;
     check.that(std::ranges::all_of(members, [](MemberSummary const &member) noexcept { return member.balance == Balance{SettledBalance{}}; }),
                "once Bob pays, every balance is settled");

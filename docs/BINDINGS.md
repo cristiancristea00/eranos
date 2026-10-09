@@ -247,6 +247,22 @@ flowchart TD
   `phone_number_parse` and `iban_parse` answer a record that carries the
   text the library derives: a `PhoneNumber` of `e164` and `international`,
   and an `Iban` of `iban` and `country_code`.
+  `expense_members` and `expense_split_participants` list an expense's
+  members and the members who share a split's cost, each once in the
+  library's order of identifiers, which is the order of their UTF-8 bytes
+  and not the order of UTF-16 code units that Kotlin, Java, and
+  TypeScript compare strings by.
+- **What each layer adds over the records.** A record carries no methods
+  through UniFFI, so each layer writes the rest of the library's API on
+  its own types, in its own idiom: the summary's lookups, `member`,
+  `category_total`, and `member_category_total`, which answer zero, and a
+  settled balance, for what the summary does not list, as
+  `Summary::member` does; `Money::zero`, `is_zero`, `is_positive`, and
+  `is_negative`; and a transfer that records a settlement's payment, as
+  `Transfer::builder_from_payment` does, with its identifier generated or
+  given. The C layer reaches the lookups through the binding core's
+  `Summary`, since C builds no record of its own, and the TypeScript
+  layer, whose summary is an interface, writes them as functions.
 - **Shapes every generator takes.** The types keep to what UniFFI 0.29,
   the oldest version the glue crates use, can mirror: records, enums with
   data, one error enum, and objects; no methods on records, and no
@@ -1152,7 +1168,10 @@ reads its annotations without checking its code, and Ruff leaves it out:
   Amounts, entries, and totals are frozen dataclasses: an entry takes its
   fields by keyword and is edited with `copy.replace`, which keeps its
   identifier, and a variant is a union of frozen dataclasses
-  (`EqualSplit`, `LocalCost`), which a `match` takes apart.
+  (`EqualSplit`, `LocalCost`), which a `match` takes apart. An amount
+  takes `+`, `-`, and unary `-` beside `plus` and `minus`, through the
+  library's checks; the negation of the lowest amount does not fit in 64
+  bits and is refused as an overflow, where a Python `int` would hold it.
 - An expense's `tip` and `category` are never optional. `NO_TIP`, the
   no-tip rule, and `UNCATEGORISED`, the built-in category's identifier,
   are module constants that `eranos` exports, read once from the core's

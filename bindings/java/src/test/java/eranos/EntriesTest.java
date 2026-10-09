@@ -182,6 +182,13 @@ class EntriesTest {
         Expense unreadable =
                 taxi.toBuilder().payers(new Split.Equal(List.of(new MemberId(" nobody")))).build();
         assertThrows(EranosException.Id.class, unreadable::members);
+        assertEquals(
+                List.of(flat.ana, flat.bob),
+                new ExpenseSplit.Whole(new Split.Equal(List.of(flat.bob, flat.ana, flat.bob)))
+                        .participants());
+        ExpenseSplit unknown =
+                new ExpenseSplit.Whole(new Split.Equal(List.of(new MemberId(" nobody"))));
+        assertThrows(EranosException.Id.class, unknown::participants);
         assertThrows(
                 EranosException.Expense.class,
                 () ->

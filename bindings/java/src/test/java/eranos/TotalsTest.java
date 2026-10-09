@@ -50,6 +50,17 @@ class TotalsTest {
                 List.of(flat.euros(1_500)),
                 anaTotals.totals().stream().map(CategoryTotal::total).toList());
         assertEquals(summary, flat.group.summary());
+        assertEquals(summary.members().get(0), summary.member(flat.ana));
+        MemberId stranger = new MemberId("nobody");
+        Money zero = flat.euros(0);
+        assertEquals(
+                new MemberSummary(stranger, zero, zero, zero, zero, zero, new Balance.Settled()),
+                summary.member(stranger));
+        assertEquals(flat.euros(3_000), summary.categoryTotal(flat.food));
+        assertEquals(zero, summary.categoryTotal(CategoryId.UNCATEGORISED));
+        assertEquals(flat.euros(1_500), summary.memberCategoryTotal(flat.ana, flat.food));
+        assertEquals(zero, summary.memberCategoryTotal(flat.ana, CategoryId.UNCATEGORISED));
+        assertEquals(zero, summary.memberCategoryTotal(stranger, flat.food));
     }
 
     /**
@@ -107,5 +118,20 @@ class TotalsTest {
                     flat.group.settlement(strategy));
             assertEquals(strategy, SettlementStrategy.converted(strategy.generated()));
         }
+        Payment payment = flat.group.settlement(SettlementStrategy.GREEDY).payments().get(0);
+        Transfer repayment = Transfer.builder(payment, flat.day).note("Settled").build();
+        assertEquals(
+                Transfer.builder(
+                                repayment.id(),
+                                flat.bob,
+                                flat.ana,
+                                new Cost.Local(flat.euros(500)),
+                                flat.day)
+                        .note("Settled")
+                        .build(),
+                repayment);
+        assertEquals(
+                repayment,
+                Transfer.builder(repayment.id(), payment, flat.day).note("Settled").build());
     }
 }

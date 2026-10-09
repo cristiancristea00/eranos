@@ -78,6 +78,20 @@ public struct Transfer: Hashable, Sendable {
         self.init(id: .generate(), sender: sender, receiver: receiver, cost: cost, date: date, time: time, note: note)
     }
 
+    /// The transfer that records `payment` of a settlement, made on `date`: from its sender to its
+    /// receiver, of its amount in the group currency, under `id`, which the app gives;
+    /// ``init(payment:date:time:note:)`` generates it.
+    public init(id: ID, payment: Payment, date: CalendarDate, time: TimeOfDay? = nil, note: String? = nil) {
+        self.init(id: id, sender: payment.sender, receiver: payment.receiver, cost: .local(payment.amount), date: date, time: time, note: note)
+    }
+
+    /// The transfer that records `payment` of a settlement, made on `date`, under an identifier
+    /// ``Identifier/generate()`` makes when this is called; ``init(id:payment:date:time:note:)``
+    /// takes the app's own.
+    public init(payment: Payment, date: CalendarDate, time: TimeOfDay? = nil, note: String? = nil) {
+        self.init(id: .generate(), payment: payment, date: date, time: time, note: note)
+    }
+
     init(_ transfer: EranosGenerated.Transfer) {
         self.init(
             id: ID(rawValue: transfer.id),

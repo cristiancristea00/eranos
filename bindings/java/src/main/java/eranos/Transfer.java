@@ -65,6 +65,35 @@ public final class Transfer {
     }
 
     /**
+     * A builder of the transfer that records {@code payment} of a settlement, made on {@code date}:
+     * from its sender to its receiver, of its amount in the group currency, under an identifier
+     * generated when it is called; {@link #builder(TransferId, Payment, CalendarDate)} takes one
+     * instead.
+     *
+     * @param payment the payment
+     * @param date the day it was paid
+     * @return the builder
+     */
+    public static Builder builder(Payment payment, CalendarDate date) {
+        return builder(TransferId.generate(), payment, date);
+    }
+
+    /**
+     * A builder of the transfer that records {@code payment} of a settlement, made on {@code date},
+     * under the identifier {@code id}; {@link #builder(Payment, CalendarDate)} generates one
+     * instead.
+     *
+     * @param id the identifier
+     * @param payment the payment
+     * @param date the day it was paid
+     * @return the builder
+     */
+    public static Builder builder(TransferId id, Payment payment, CalendarDate date) {
+        return builder(
+                id, payment.sender(), payment.receiver(), new Cost.Local(payment.amount()), date);
+    }
+
+    /**
      * A builder that starts from this transfer and keeps its identifier, so the transfer it builds
      * can replace this one.
      *

@@ -21,7 +21,6 @@ import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.title
-import eranos.examples.totals
 
 private data class ComparisonRow(
     val name: String,
@@ -94,8 +93,8 @@ fun main() {
                 listOf(ana, bob).map { member ->
                     ComparisonRow(
                         name = names(group, listOf(member)),
-                        before = totals(member, before)?.balance?.toString() ?: "?",
-                        after = totals(member, after)?.balance?.toString() ?: "?",
+                        before = before.member(member).balance.toString(),
+                        after = after.member(member).balance.toString(),
                     )
                 },
                 numbersFrom = 1,
