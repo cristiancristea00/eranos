@@ -71,9 +71,9 @@ func everyAsynchronousReadAnswersAsItsSynchronousTwin() async throws {
     #expect(try await group.member(withID: flat.ana) == synchronous.members.first)
     #expect(try await false == group.isArchived(flat.ana))
     #expect(try await nil == group.isArchived(Member.ID(rawValue: "nobody")))
-    #expect(await "Flat" == group.name)
-    #expect(await "Rent" == group.note)
-    #expect(await "pt-PT" == group.language?.description)
+    #expect(try await "Flat" == group.name())
+    #expect(try await "Rent" == group.note())
+    #expect(try await "pt-PT" == group.language()?.description)
     #expect(try await group.settlement(by: .greedy) == synchronous.settlement)
     #expect(try await group.transfers() == synchronous.transfers)
     #expect(try await group.transfer(withID: flat.repayment) == synchronous.transfers.first)
@@ -211,15 +211,15 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     try await group.rename(to: "Home")
     try await group.changeNote(to: "Bills")
     try await group.changeLanguage(to: Language("ro"))
-    #expect(await "Home" == group.name)
-    #expect(await "Bills" == group.note)
-    #expect(await "ro" == group.language?.description)
+    #expect("Home" == group.name)
+    #expect("Bills" == group.note)
+    #expect("ro" == group.language?.description)
     try await group.changeNote(to: nil)
-    #expect(await nil == group.note)
+    #expect(nil == group.note)
     try await group.changeNote(to: " Rent\n")
-    #expect(await "Rent" == group.note)
+    #expect("Rent" == group.note)
     try await group.changeNote(to: " ")
-    #expect(await nil == group.note)
+    #expect(nil == group.note)
     let lei = try CurrencyCode(code: "RON")
     try await group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
     #expect(try await group.currency() == lei)
@@ -306,7 +306,7 @@ func anAsynchronousReadHandleReleasesTheLockWhenItsClosureReturns() async throws
     let name = try await group.withRead { reader async throws(EranosError) in try reader.name() }
     #expect("Flat" == name)
     try await group.rename(to: "Home")
-    #expect(await "Home" == group.name)
+    #expect("Home" == group.name)
 }
 
 /// A write handle that answered another way than the group, let another call in, or kept running
@@ -393,7 +393,7 @@ func anAsynchronousWriteHandleReleasesTheLockWhenItsClosureReturns() async throw
     let name = try await group.withWrite { writer async throws(EranosError) in try writer.name() }
     #expect("Home" == name)
     try await group.rename(to: "Flat")
-    #expect(await "Flat" == group.name)
+    #expect("Flat" == group.name)
 }
 
 /// A handle's closure that throws the app's own error, or one Swift infers as throwing any error,
@@ -422,7 +422,7 @@ func aHandlesClosureMayThrowAnyError() async throws {
     #expect(try await "Flat" == group.withRead { reader async throws in try reader.name() })
     #expect(try await "Flat" == group.withWrite { writer async throws in try writer.name() })
     try await group.rename(to: "Home")
-    #expect(await "Home" == group.name)
+    #expect("Home" == group.name)
 }
 
 /// A cancelled task whose call still ran would change the group after the app gave the change

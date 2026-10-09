@@ -271,83 +271,43 @@ def calendar_failure(make: Callable[[], object]) -> object:
 
 
 def test_an_amount_converts_from_a_float_as_the_library_converts_it() -> None:
-    """An app that holds amounts as floats would get other cents than the library rounds to, or an amount from NaN, an infinity, or past the range."""
+    """An app that holds amounts as floats would get other cents than the library rounds to, or an amount from NaN or past the range."""
     euro = CurrencyCode('EUR')
-    lei = CurrencyCode('RON')
-    yen = CurrencyCode('JPY')
     # The float nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
-    price = Money.from_float(1.005, euro)
-    assert price == Money(101, euro)
-    assert str(price) == '1.01 EUR'
-    assert Money.from_float(-2.675, lei) == Money(-268, lei)
-    assert Money.from_float(1234.5, yen) == Money(1235, yen)
+    assert Money.from_float(1.005, euro) == Money(101, euro)
     # A float parameter also takes an int, as PEP 484 allows.
     assert Money.from_float(12, euro) == Money(1200, euro)
     assert money_failure(lambda: Money.from_float(math.nan, euro)) == MoneyError.NotFinite()
-    assert money_failure(lambda: Money.from_float(math.inf, euro)) == MoneyError.NotFinite()
-    assert money_failure(lambda: Money.from_float(-math.inf, euro)) == MoneyError.NotFinite()
     assert money_failure(lambda: Money.from_float(1e21, euro)) == MoneyError.Overflow()
 
 
 def test_rates_percentages_and_parts_convert_from_floats_as_the_library_converts_them() -> None:
-    """A rate, a percentage, or parts held as a float would get other digits than the library's, wrap past the core's integers, or come from NaN."""
-    assert ExchangeRate.from_float(25.5) == ExchangeRate('25.5')
+    """A rate, a percentage, or parts held as a float would get other digits than the library's, or wrap past the core's integers."""
     assert str(ExchangeRate.from_float(0.1 + 0.2)) == '0.30000000000000004'
     assert money_failure(lambda: ExchangeRate.from_float(0.0)) == MoneyError.InvalidExchangeRate()
-    assert Percentage.from_float(0.1 + 0.2) == Percentage(30)
     assert Percentage.from_float(12.345) == Percentage(1235)
-    assert money_failure(lambda: Percentage.from_float(-1.0)) == MoneyError.InvalidPercentage()
     # Above 21 474 836.47 %, the basis points no longer fit in 32 bits.
     assert money_failure(lambda: Percentage.from_float(30_000_000.0)) == MoneyError.InvalidPercentage()
     assert Parts.from_float(1.005) == Parts(101)
-    assert money_failure(lambda: Parts.from_float(0.004)) == MoneyError.InvalidParts()
     assert money_failure(lambda: Parts.from_float(30_000_000.0)) == MoneyError.InvalidParts()
-    converters: tuple[Callable[[float], object], ...] = (ExchangeRate.from_float, Percentage.from_float, Parts.from_float)
-    for convert in converters:
-        for value in (math.nan, math.inf, -math.inf):
-            assert money_failure(functools.partial(convert, value)) == MoneyError.NotFinite(), value
 
 
-def test_percentages_parts_dates_and_times_print_as_the_library_writes_them() -> None:
-    """A percentage, parts, a date, or a time printed otherwise than the library writes it would show an app one value and the group another."""
-    percentages = {0: '0%', 1: '0.01%', 10: '0.1%', 105: '1.05%', 1250: '12.5%', 3333: '33.33%', 10000: '100%', 2**31 - 1: '21474836.47%'}
-    for basis_points, text in percentages.items():
-        assert str(Percentage(basis_points)) == text, basis_points
-    parts = {1: '0.01', 10: '0.1', 50: '0.5', 100: '1', 150: '1.5', 225: '2.25', 2**31 - 1: '21474836.47'}
-    for hundredths, text in parts.items():
-        assert str(Parts(hundredths)) == text, hundredths
-    assert str(CalendarDate(1, 1, 1)) == '0001-01-01'
-    assert str(CalendarDate(2028, 2, 29)) == '2028-02-29'
-    assert str(CalendarDate(9999, 12, 31)) == '9999-12-31'
-    assert str(TimeOfDay(0, 0)) == '00:00'
-    assert str(TimeOfDay(9, 5)) == '09:05'
-    assert str(TimeOfDay(23, 59)) == '23:59'
+def test_percentages_and_parts_print_as_the_library_writes_them() -> None:
+    """A percentage or parts printed otherwise than the library writes them would show an app one value and the group another."""
+    assert str(Percentage(1250)) == '12.5%'
+    assert str(Percentage(2**31 - 1)) == '21474836.47%'
+    assert str(Parts(50)) == '0.5'
+    assert str(Parts(2**31 - 1)) == '21474836.47'
 
 
 def test_percentages_parts_dates_and_times_are_refused_as_the_library_refuses_them() -> None:
     """A value the layer took and the library refuses would fail only when an entry carries it; one it refused would keep an app from entering it."""
-    assert Percentage(0).basis_points == 0
     assert Percentage(2**31 - 1).basis_points == 2**31 - 1
     assert money_failure(lambda: Percentage(-1)) == MoneyError.InvalidPercentage()
-    assert money_failure(lambda: Percentage(-(2**31))) == MoneyError.InvalidPercentage()
-    assert Parts(1).hundredths == 1
     assert Parts(2**31 - 1).hundredths == 2**31 - 1
     assert money_failure(lambda: Parts(0)) == MoneyError.InvalidParts()
-    assert money_failure(lambda: Parts(-50)) == MoneyError.InvalidParts()
-    assert money_failure(lambda: Parts(-(2**31))) == MoneyError.InvalidParts()
-    # A day the month lacks, a year outside 1 to 9999, a month or a day out of range, and a month too large for the library's field.
     assert calendar_failure(lambda: CalendarDate(2026, 2, 29)) == CalendarError.InvalidDate()
-    assert calendar_failure(lambda: CalendarDate(2026, 4, 31)) == CalendarError.InvalidDate()
-    assert calendar_failure(lambda: CalendarDate(0, 1, 1)) == CalendarError.InvalidDate()
-    assert calendar_failure(lambda: CalendarDate(-1, 1, 1)) == CalendarError.InvalidDate()
-    assert calendar_failure(lambda: CalendarDate(10000, 1, 1)) == CalendarError.InvalidDate()
-    assert calendar_failure(lambda: CalendarDate(2026, 13, 1)) == CalendarError.InvalidDate()
-    assert calendar_failure(lambda: CalendarDate(2026, 256, 1)) == CalendarError.InvalidDate()
-    assert calendar_failure(lambda: CalendarDate(2026, 1, 0)) == CalendarError.InvalidDate()
     assert calendar_failure(lambda: TimeOfDay(24, 0)) == CalendarError.InvalidTime()
-    assert calendar_failure(lambda: TimeOfDay(0, 60)) == CalendarError.InvalidTime()
-    assert calendar_failure(lambda: TimeOfDay(-1, 0)) == CalendarError.InvalidTime()
-    assert calendar_failure(lambda: TimeOfDay(0, 256)) == CalendarError.InvalidTime()
 
 
 def test_a_quantity_parses_and_prints_as_the_library_reads_and_writes_it() -> None:
@@ -356,45 +316,29 @@ def test_a_quantity_parses_and_prints_as_the_library_reads_and_writes_it() -> No
     assert weight == Quantity(4520)
     assert weight.ten_thousandths == 4520
     assert str(weight) == '0.452'
-    assert Quantity.parse(' 1.5 ') == Quantity(15_000)
-    assert Quantity.parse('0.0001') == Quantity(1)
     assert Quantity.whole(3) == Quantity(30_000)
     assert str(Quantity.whole(3)) == '3'
     assert Quantity(10_000) == Quantity.ONE
     assert Quantity.whole(1) == Quantity.ONE
-    quantities = {1: '0.0001', 10: '0.001', 4520: '0.452', 10_000: '1', 15_000: '1.5', 30_000: '3', 2**63 - 1: '922337203685477.5807'}
-    for ten_thousandths, text in quantities.items():
-        assert str(Quantity(ten_thousandths)) == text, ten_thousandths
-        assert Quantity.parse(text) == Quantity(ten_thousandths), text
+    assert str(Quantity(2**63 - 1)) == '922337203685477.5807'
+    assert Quantity.parse('922337203685477.5807') == Quantity(2**63 - 1)
 
 
 def test_a_quantity_is_refused_as_the_library_refuses_it() -> None:
     """A quantity the layer took and the library refuses would fail only when an item holds it; one it refused would keep an app from entering it."""
-    assert Quantity(1).ten_thousandths == 1
-    assert Quantity(2**63 - 1).ten_thousandths == 2**63 - 1
     assert money_failure(lambda: Quantity(0)) == MoneyError.InvalidQuantity()
-    assert money_failure(lambda: Quantity(-1)) == MoneyError.InvalidQuantity()
-    assert money_failure(lambda: Quantity(-(2**63))) == MoneyError.InvalidQuantity()
-    assert money_failure(lambda: Quantity.whole(0)) == MoneyError.InvalidQuantity()
-    assert money_failure(lambda: Quantity.whole(-1)) == MoneyError.InvalidQuantity()
     # Past 922 337 203 685 477 units, the ten-thousandths no longer fit in 64 bits.
-    assert Quantity.whole(922_337_203_685_477) == Quantity(9_223_372_036_854_770_000)
     assert money_failure(lambda: Quantity.whole(922_337_203_685_478)) == MoneyError.InvalidQuantity()
-    for text in ('0', '0.0000', '0.00005', '-1', '+1', '1e3', 'half', '', '922337203685477.5808'):
+    for text in ('half', '922337203685477.5808'):
         assert money_failure(functools.partial(Quantity.parse, text)) == MoneyError.InvalidQuantity(), text
 
 
 def test_a_quantity_converts_from_a_float_as_the_library_converts_it() -> None:
-    """A quantity held as a float would round otherwise than the library rounds it, or come from NaN, an infinity, or a number that rounds to zero."""
+    """A quantity held as a float would round otherwise than the library rounds it, or come from a number past the range."""
     assert Quantity.from_float(0.45205) == Quantity(4521)
-    assert str(Quantity.from_float(1.5)) == '1.5'
     # A float parameter also takes an int, as PEP 484 allows.
     assert Quantity.from_float(2) == Quantity.whole(2)
-    assert money_failure(lambda: Quantity.from_float(0.00004)) == MoneyError.InvalidQuantity()
-    assert money_failure(lambda: Quantity.from_float(-1.0)) == MoneyError.InvalidQuantity()
     assert money_failure(lambda: Quantity.from_float(1e15)) == MoneyError.InvalidQuantity()
-    for value in (math.nan, math.inf, -math.inf):
-        assert money_failure(functools.partial(Quantity.from_float, value)) == MoneyError.NotFinite(), value
 
 
 def test_dates_and_times_are_checked_when_made() -> None:

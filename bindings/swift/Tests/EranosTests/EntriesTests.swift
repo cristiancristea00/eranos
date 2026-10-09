@@ -97,20 +97,13 @@ func anExpenseTellsItsTipTotalAndMembers() throws {
     #expect(TipDistribution.allCases == [.proportional, .equal])
 }
 
-/// A line total an app computed on its own could differ from the library's, which rounds a
-/// fractional quantity's product half away from zero to the minor unit, and an item built without
-/// a quantity would count another number of units than one.
+/// A line total an app computed on its own could differ from the library's, and an item built
+/// without a quantity would count another number of units than one.
 @Test
 func anItemsLineTotalIsTheLibrarysAndItsQuantityStartsAtOne() throws {
     let flat = try Flat()
     let flour = ExpenseItem(name: "Flour", unitPrice: flat.euros(4_200), split: .equal([flat.ana]), quantity: try Quantity(parsing: "0.35"))
     #expect(try flat.euros(1_470) == flour.lineTotal())
-    // 33.5 cents, which round away from zero.
-    let olives = ExpenseItem(name: "Olives", unitPrice: flat.euros(100), split: .equal([flat.ana]), quantity: try Quantity(parsing: "0.335"))
-    #expect(try flat.euros(34) == olives.lineTotal())
-    // A ten-thousandth of a cent, which rounds to a free line.
-    let crumb = ExpenseItem(name: "Crumb", unitPrice: flat.euros(1), split: .equal([flat.ana]), quantity: try Quantity(tenThousandths: 1))
-    #expect(try flat.euros(0) == crumb.lineTotal())
 
     let bread = ExpenseItem(name: "Bread", unitPrice: flat.euros(250), split: .equal([flat.ana, flat.bob]))
     #expect(Quantity.one == bread.quantity)

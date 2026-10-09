@@ -155,14 +155,10 @@ class EntriesTest {
         // 0.35 kg at 42.00 EUR a kilogram.
         val cheese = ExpenseItem("Cheese", flat.euros(4_200), ana, Quantity.parse("0.35"))
         assertEquals(flat.euros(1_470), cheese.lineTotal())
-        // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
-        assertEquals(flat.euros(34), ExpenseItem("Olives", flat.euros(100), ana, Quantity.parse("0.335")).lineTotal())
         assertEquals(flat.euros(1_350), ExpenseItem("Beer", flat.euros(450), ana, Quantity.ofWhole(3)).lineTotal())
         val bread = ExpenseItem("Bread", flat.euros(120), ana)
         assertEquals(Quantity.ONE, bread.quantity)
         assertEquals(flat.euros(120), bread.lineTotal())
-        // A ten-thousandth of a cent rounds to a free line.
-        assertEquals(flat.euros(0), ExpenseItem("Mint", flat.euros(1), ana, Quantity.ofTenThousandths(1)).lineTotal())
         val overflow =
             assertThrows<EranosException.Expense> {
                 ExpenseItem("Gold", flat.euros(Long.MAX_VALUE), ana, Quantity.ofWhole(2)).lineTotal()

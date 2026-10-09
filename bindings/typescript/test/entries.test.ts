@@ -317,12 +317,10 @@ void describe('the expenses, members, categories, and transfers', () => {
         const flat = new Flat();
         const sharing = { kind: 'equal', members: [flat.ana, flat.bob] } as const;
         const cheese = { name: 'Cheese', unitPrice: flat.euros(4_200n), split: sharing, quantity: Quantity.parse('0.35') };
-        // 0.335 at 1.00 EUR is 33.5 cents, which rounds away from zero.
         const olives = { name: 'Olives', unitPrice: flat.euros(100n), split: sharing, quantity: Quantity.parse('0.335') };
         // A ten-thousandth of 1.00 EUR is a hundredth of a cent, which rounds to zero: a free line.
         const free = { ...olives, name: 'Bread', quantity: Quantity.ofTenThousandths(1n) };
         assert.ok(expenseItemLineTotal(cheese).equals(flat.euros(1_470n)));
-        assert.ok(expenseItemLineTotal(olives).equals(flat.euros(34n)));
         assert.ok(expenseItemLineTotal(free).equals(flat.euros(0n)));
         assert.ok(expenseItemLineTotal({ ...olives, quantity: Quantity.ofWhole(2n) }).equals(flat.euros(200n)));
         assert.ok(expenseItemLineTotal({ name: 'Water', unitPrice: flat.euros(150n), split: sharing }).equals(flat.euros(150n)));

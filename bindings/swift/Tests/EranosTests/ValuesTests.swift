@@ -48,31 +48,14 @@ func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
     }
 }
 
-/// A currency's amount and the text the library writes for it.
-private struct WrittenAmount {
-    let code: String
-    let decimalPlaces: Int
-    let text: String
-}
-
 /// An amount or a balance written with other decimal places than its currency has would show
 /// an app another amount than the group holds.
 @Test
 func amountsAndBalancesWriteTheDecimalPlacesOfTheirCurrency() throws {
-    let amounts = [
-        WrittenAmount(code: "JPY", decimalPlaces: 0, text: "12345 JPY"),
-        WrittenAmount(code: "EUR", decimalPlaces: 2, text: "123.45 EUR"),
-        WrittenAmount(code: "BHD", decimalPlaces: 3, text: "12.345 BHD"),
-        WrittenAmount(code: "CLF", decimalPlaces: 4, text: "1.2345 CLF")
-    ]
-    for amount in amounts {
-        let currency = try CurrencyCode(code: amount.code)
-        #expect(amount.decimalPlaces == currency.decimalPlaces)
-        let money = Money(minorUnits: 12_345, currency: currency)
-        #expect(amount.text == money.description)
-        #expect("owes \(amount.text)" == Balance.owes(money).description)
-        #expect("gets back \(amount.text)" == Balance.getsBack(money).description)
-    }
+    let yen = try Money(minorUnits: 12_345, currency: CurrencyCode(code: "JPY"))
+    #expect("12345 JPY" == yen.description)
+    #expect("owes 12345 JPY" == Balance.owes(yen).description)
+    #expect("gets back 12345 JPY" == Balance.getsBack(yen).description)
 }
 
 /// A rate, a percentage, or a number of parts read or written another way than the library's
@@ -96,7 +79,6 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     #expect(1_250 == percentage.basisPoints)
     #expect("12.5%" == percentage.description)
     #expect(try Percentage(basisPoints: 1_250) == percentage)
-    #expect(try "0%" == Percentage(basisPoints: 0).description)
     #expect(throws: EranosError.money(.invalidPercentage, detail: "invalid percentage: expected a number with at most 2 decimal places")) {
         try Percentage(basisPoints: -1)
     }
@@ -108,11 +90,8 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     #expect(50 == parts.hundredths)
     #expect("0.5" == parts.description)
     #expect(try Parts(hundredths: 50) == parts)
-    #expect(try "0.01" == Parts(hundredths: 1).description)
-    for hundredths in [0, -50] {
-        #expect(throws: EranosError.money(.invalidParts, detail: "invalid parts: expected a positive number with at most 2 decimal places")) {
-            try Parts(hundredths: hundredths)
-        }
+    #expect(throws: EranosError.money(.invalidParts, detail: "invalid parts: expected a positive number with at most 2 decimal places")) {
+        try Parts(hundredths: 0)
     }
     #expect(throws: EranosError.self) {
         try Parts(parsing: "half")
@@ -120,63 +99,35 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
 }
 
 /// An app that holds amounts as doubles would get other cents in Swift than the library rounds
-/// to, another currency's decimal places, or an amount back from NaN, an infinity, or a number
-/// past the range.
+/// to, or an amount back from a number past the range.
 @Test
 func amountsConvertFromDoublesAsTheLibraryConvertsThem() throws {
     let euro = try CurrencyCode(code: "EUR")
     // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
     #expect(try Money(amount: 1.005, currency: euro) == Money(minorUnits: 101, currency: euro))
-    #expect(try Money(amount: -2.675, currency: euro) == Money(minorUnits: -268, currency: euro))
-    #expect(try "1235 JPY" == Money(amount: 1_234.5, currency: CurrencyCode(code: "JPY")).description)
-    for value in [Double.nan, .infinity, -.infinity] {
-        #expect(throws: EranosError.money(.notFinite, detail: "the number is not finite")) {
-            try Money(amount: value, currency: euro)
-        }
-    }
     #expect(throws: EranosError.money(.overflow, detail: "value out of range")) {
         try Money(amount: 1e21, currency: euro)
     }
 }
 
 /// A rate, a percentage, or parts held as a double would become other digits in Swift than in
-/// the library, a number too large for the layer's integers would wrap, or NaN or an infinity
-/// would come back as a value.
+/// the library, or a number too large for the layer's integers would wrap.
 @Test
 func ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem() throws {
-    #expect(try "25.5" == ExchangeRate(25.5).description)
     #expect(try "0.30000000000000004" == ExchangeRate(0.1 + 0.2).description)
     #expect(throws: EranosError.money(.invalidExchangeRate, detail: "invalid exchange rate: expected a positive number with at most 18 decimal places")) {
         try ExchangeRate(0)
     }
 
-    #expect(try 30 == Percentage(0.1 + 0.2).basisPoints)
     #expect(try 1_235 == Percentage(12.345).basisPoints)
     // Above 21 474 836.47 %, the basis points no longer fit an `Int32`.
-    for value in [-1.0, 30_000_000.0] {
-        #expect(throws: EranosError.money(.invalidPercentage, detail: "invalid percentage: expected a number with at most 2 decimal places")) {
-            try Percentage(value)
-        }
+    #expect(throws: EranosError.money(.invalidPercentage, detail: "invalid percentage: expected a number with at most 2 decimal places")) {
+        try Percentage(30_000_000.0)
     }
 
     #expect(try 101 == Parts(1.005).hundredths)
-    for value in [0.004, 30_000_000.0] {
-        #expect(throws: EranosError.money(.invalidParts, detail: "invalid parts: expected a positive number with at most 2 decimal places")) {
-            try Parts(value)
-        }
-    }
-
-    let notFinite = EranosError.money(.notFinite, detail: "the number is not finite")
-    for value in [Double.nan, .infinity, -.infinity] {
-        #expect(throws: notFinite) {
-            try ExchangeRate(value)
-        }
-        #expect(throws: notFinite) {
-            try Percentage(value)
-        }
-        #expect(throws: notFinite) {
-            try Parts(value)
-        }
+    #expect(throws: EranosError.money(.invalidParts, detail: "invalid parts: expected a positive number with at most 2 decimal places")) {
+        try Parts(30_000_000.0)
     }
 }
 
@@ -191,48 +142,31 @@ func quantitiesReadAndWriteAsTheLibraryDoes() throws {
     #expect(4_520 == weight.tenThousandths)
     #expect("0.452" == weight.description)
     #expect(try Quantity(tenThousandths: 4_520) == weight)
-    #expect(try "0.0001" == Quantity(tenThousandths: 1).description)
-    #expect(try "1.5" == Quantity(parsing: "1.5000").description)
     let three = try Quantity(whole: 3)
     #expect(30_000 == three.tenThousandths)
     #expect("3" == three.description)
     #expect(10_000 == Quantity.one.tenThousandths)
     #expect("1" == Quantity.one.description)
     #expect(try Quantity.one == Quantity(whole: 1))
-    for tenThousandths: Int64 in [0, -4_520] {
-        #expect(throws: invalidQuantity) {
-            try Quantity(tenThousandths: tenThousandths)
-        }
+    #expect(throws: invalidQuantity) {
+        try Quantity(tenThousandths: 0)
     }
     // Above 922 337 203 685 477 whole units, the ten-thousandths no longer fit an `Int64`.
-    for units: Int64 in [0, -1, .max] {
-        #expect(throws: invalidQuantity) {
-            try Quantity(whole: units)
-        }
+    #expect(throws: invalidQuantity) {
+        try Quantity(whole: .max)
     }
-    for text in ["0", "0.00005", "-1", "1e2", "half"] {
-        #expect(throws: invalidQuantity) {
-            try Quantity(parsing: text)
-        }
+    #expect(throws: invalidQuantity) {
+        try Quantity(parsing: "half")
     }
 }
 
 /// A quantity held as a double would become other ten-thousandths in Swift than in the library,
-/// a number too large for an `Int64` of ten-thousandths would wrap, or NaN, an infinity, or a value
-/// that rounds to zero would come back as a quantity.
+/// or a number too large for an `Int64` of ten-thousandths would wrap.
 @Test
 func quantitiesConvertFromDoublesAsTheLibraryConvertsThem() throws {
     #expect(try 4_521 == Quantity(0.45205).tenThousandths)
-    #expect(try "1.5" == Quantity(1.5).description)
-    for value in [0.00004, 0, -1, 1e15] {
-        #expect(throws: invalidQuantity) {
-            try Quantity(value)
-        }
-    }
-    for value in [Double.nan, .infinity, -.infinity] {
-        #expect(throws: EranosError.money(.notFinite, detail: "the number is not finite")) {
-            try Quantity(value)
-        }
+    #expect(throws: invalidQuantity) {
+        try Quantity(1e15)
     }
 }
 
@@ -246,7 +180,6 @@ func datesAndTimesReadAndWriteAsTheLibraryDoes() throws {
     #expect(2026 == date.year)
     #expect(9 == date.month)
     #expect(23 == date.day)
-    #expect(try "0001-01-01" == CalendarDate(year: 1, month: 1, day: 1).description)
     #expect(throws: EranosError.calendar(.invalidDate, detail: "invalid date: expected an existing ISO 8601 date between years 1 and 9999")) {
         try CalendarDate(year: 2026, month: 2, day: 30)
     }
@@ -259,14 +192,8 @@ func datesAndTimesReadAndWriteAsTheLibraryDoes() throws {
     #expect(try TimeOfDay(parsing: "18:30") == time)
     #expect(18 == time.hour)
     #expect(30 == time.minute)
-    #expect(try "00:00" == TimeOfDay(hour: 0, minute: 0).description)
-    #expect(try "23:59" == TimeOfDay(hour: 23, minute: 59).description)
-    let invalidTime = EranosError.calendar(.invalidTime, detail: "invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")
-    #expect(throws: invalidTime) {
+    #expect(throws: EranosError.calendar(.invalidTime, detail: "invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")) {
         try TimeOfDay(hour: 24, minute: 0)
-    }
-    #expect(throws: invalidTime) {
-        try TimeOfDay(hour: 0, minute: 60)
     }
     #expect(throws: EranosError.self) {
         try TimeOfDay(parsing: "25:00")

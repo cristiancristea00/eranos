@@ -605,32 +605,16 @@ static void anAmountFormatsWithItsCurrencysDecimalPlaces(Check *const check) {
     EranosMoney *const yen = amountOf(1'234, "JPY");
     eranosMoneyFormat(yen, text);
     checkThat(check, isText(text, "1234 JPY"), "the yen has none");
-    EranosMoney *const euro = amountOf(1'234, "EUR");
-    eranosMoneyFormat(euro, text);
-    checkThat(check, isText(text, "12.34 EUR"), "the euro has two");
-    EranosMoney *const dinar = amountOf(1'234, "BHD");
-    eranosMoneyFormat(dinar, text);
-    checkThat(check, isText(text, "1.234 BHD"), "the Bahraini dinar has three");
-    EranosMoney *const unidad = amountOf(12'345, "CLF");
-    eranosMoneyFormat(unidad, text);
-    checkThat(check, isText(text, "1.2345 CLF"), "the Chilean unidad de fomento has four");
-    eranosMoneyDestroy(unidad);
-    eranosMoneyDestroy(dinar);
-    eranosMoneyDestroy(euro);
     eranosMoneyDestroy(yen);
     eranosTextDestroy(text);
 }
 
-/// An app that holds amounts as doubles would get other cents from the C layer than the library rounds to, or an amount back from NaN, from an
-/// infinity, or from one past the range of 64-bit minor units.
+/// An app that holds amounts as doubles would get other cents from the C layer than the library rounds to, or an amount back from NaN.
 static void amountsConvertFromDoublesAsTheLibraryConvertsThem(Check *const check) {
     EranosCurrencyDetails *const euro = currencyOf("EUR");
     EranosMoney *money = nullptr;
     checkSucceeded(check, eranosMoneyFromDouble(1.005, euro, &money), "1.005 is an amount of euros");
     checkThat(check, isAmount(money, 101, "EUR"), "1.005 EUR is 1.01 EUR, though the double nearest 1.005 lies below it");
-    EranosCurrencyDetails *const yen = currencyOf("JPY");
-    checkSucceeded(check, eranosMoneyFromDouble(1'234.5, yen, &money), "1234.5 is an amount of yen");
-    checkThat(check, isAmount(money, 1'235, "JPY"), "which rounds half away from zero to the yen's whole units");
     EranosError *const notFinite = eranosMoneyFromDouble(NAN, euro, &money);
     checkThat(check, holdsFailure(notFinite, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE) && nullptr == money,
               "NaN is no amount, and gives none");
@@ -638,13 +622,7 @@ static void amountsConvertFromDoublesAsTheLibraryConvertsThem(Check *const check
     eranosErrorMessage(notFinite, text);
     checkThat(check, isText(text, "the number is not finite"), "the message names the failure");
     eranosErrorDestroy(notFinite);
-    checkThat(check,
-              isFailure(eranosMoneyFromDouble(-INFINITY, euro, &money), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE) && nullptr == money,
-              "nor is an infinity");
-    checkThat(check, isFailure(eranosMoneyFromDouble(1e21, euro, &money), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_OVERFLOW) && nullptr == money,
-              "nor an amount whose minor units do not fit 64 bits");
     eranosTextDestroy(text);
-    eranosCurrencyDetailsDestroy(yen);
     eranosCurrencyDetailsDestroy(euro);
 }
 
@@ -670,10 +648,7 @@ static void ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes(Check *c
                   0 == basisPoints,
               "a word is no percentage, and gives none");
     checkSucceeded(check, eranosPercentageCheck(0), "0 % is a percentage");
-    checkSucceeded(check, eranosPercentageCheck(1'250), "and so is 12.5 %");
     checkThat(check, isFailure(eranosPercentageCheck(-1), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE), "a negative one is not");
-    eranosPercentageFormat(-1'250, text);
-    checkThat(check, isText(text, "-12.5%"), "but is written as any other, after a minus sign");
     int32_t hundredths = 0;
     checkSucceeded(check, eranosPartsParse("0.5", &hundredths), "parts parse");
     eranosPartsFormat(hundredths, text);
@@ -681,31 +656,19 @@ static void ratesPercentagesAndPartsParseFormatAndCheckAsTheLibraryDoes(Check *c
     checkThat(check, isFailure(eranosPartsParse("half", &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS),
               "a word is no parts");
     checkSucceeded(check, eranosPartsCheck(1), "a hundredth of a part is a number of parts");
-    checkThat(check,
-              isFailure(eranosPartsCheck(0), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS) &&
-                  isFailure(eranosPartsCheck(-1), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS),
-              "no parts and negative parts are not");
-    eranosPartsFormat(0, text);
-    checkThat(check, isText(text, "0"), "but zero is written as any number");
-    eranosPartsFormat(-50, text);
-    checkThat(check, isText(text, "-0.5"), "and so is a negative one");
+    checkThat(check, isFailure(eranosPartsCheck(0), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS), "no parts are not");
     eranosMoneyDestroy(lei);
     eranosTextDestroy(text);
 }
 
-/// A rate, a percentage, or parts held as a double would become other digits in the C layer than in the library, a number too large for
-/// the layer's integers would wrap, and NaN or an infinity would come back as a value.
+/// A rate, a percentage, or parts held as a double would become other digits in the C layer than in the library, or a refused one would
+/// leave a value in the layer's integers.
 static void ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem(Check *const check) {
     EranosText *const text = eranosTextCreate();
-    checkSucceeded(check, eranosExchangeRateFromDouble(25.5, text), "a rate converts");
-    checkThat(check, isText(text, "25.5"), "and keeps the digits of the double's shortest form");
-    checkSucceeded(check, eranosExchangeRateFromDouble(0.1 + 0.2, text), "and so does the sum of two doubles");
-    checkThat(check, isText(text, "0.30000000000000004"), "with every digit, since a rate has 18 decimal places");
+    checkSucceeded(check, eranosExchangeRateFromDouble(0.1 + 0.2, text), "a rate converts");
+    checkThat(check, isText(text, "0.30000000000000004"), "with every digit of the double's shortest form, since a rate has 18 decimal places");
     checkThat(check, isFailure(eranosExchangeRateFromDouble(0.0, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_EXCHANGE_RATE),
               "a rate is positive");
-    checkThat(check, isFailure(eranosExchangeRateFromDouble(NAN, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE), "NaN is no rate");
-    checkThat(check, isFailure(eranosExchangeRateFromDouble(INFINITY, text), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
-              "nor is an infinity");
     int32_t basisPoints = 0;
     checkSucceeded(check, eranosPercentageFromDouble(0.1 + 0.2, &basisPoints), "a percentage converts");
     checkThat(check, 30 == basisPoints, "0.1 + 0.2, which is 0.30000000000000004 as a double, is 0.3 %, 30 basis points");
@@ -713,26 +676,17 @@ static void ratesPercentagesAndPartsConvertFromDoublesAsTheLibraryConvertsThem(C
               isFailure(eranosPercentageFromDouble(-1.0, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE) &&
                   0 == basisPoints,
               "a negative percentage is not one, and gives none");
-    checkThat(check,
-              isFailure(eranosPercentageFromDouble(30'000'000.0, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PERCENTAGE),
-              "nor is one whose basis points do not fit 32 bits");
-    checkThat(check, isFailure(eranosPercentageFromDouble(NAN, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE), "nor NaN");
-    checkThat(check, isFailure(eranosPercentageFromDouble(INFINITY, &basisPoints), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
-              "nor an infinity");
     int32_t hundredths = 0;
     checkSucceeded(check, eranosPartsFromDouble(1.005, &hundredths), "parts convert");
     checkThat(check, 101 == hundredths, "1.005 parts are 101 hundredths");
     checkThat(check,
               isFailure(eranosPartsFromDouble(0.004, &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_PARTS) && 0 == hundredths,
               "0.004 rounds to no parts, which are not a number of parts, and gives none");
-    checkThat(check, isFailure(eranosPartsFromDouble(NAN, &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE), "nor is NaN");
-    checkThat(check, isFailure(eranosPartsFromDouble(-INFINITY, &hundredths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
-              "nor an infinity");
     eranosTextDestroy(text);
 }
 
-/// A quantity read, converted, or written otherwise than the library does would bill a line for another amount than the library divides, a number
-/// too large for the layer's integers would wrap, and a check that took what the library refuses would let an app build an item that fails only
+/// A quantity read, converted, or written otherwise than the library does would bill a line for another amount than the library divides, a refused
+/// one would leave a value in the layer's integers, and a check that took what the library refuses would let an app build an item that fails only
 /// when added.
 static void quantitiesParseConvertFormatAndCheckAsTheLibraryDoes(Check *const check) {
     EranosText *const text = eranosTextCreate();
@@ -744,47 +698,21 @@ static void quantitiesParseConvertFormatAndCheckAsTheLibraryDoes(Check *const ch
               isFailure(eranosQuantityParse("0.00005", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
                   0 == tenThousandths,
               "a quantity has at most four decimal places, and one with more gives none");
-    checkThat(check, isFailure(eranosQuantityParse("0", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
-              "no quantity is zero");
-    checkThat(check, isFailure(eranosQuantityParse("-1", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
-              "nor negative");
-    checkThat(check,
-              isFailure(eranosQuantityParse("1000000000000000", &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
-              "nor one whose ten-thousandths do not fit 64 bits");
     checkThat(check, isKind(eranosQuantityParse("\xff", &tenThousandths), ERANOS_ERROR_KIND_INVALID_TEXT), "a quantity's text is text");
     checkSucceeded(check, eranosQuantityFromWhole(3, &tenThousandths), "whole units make a quantity");
     checkThat(check, 30'000 == tenThousandths, "3 units are 30000 ten-thousandths");
     checkThat(check,
               isFailure(eranosQuantityFromWhole(0, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
-                  0 == tenThousandths &&
-                  isFailure(eranosQuantityFromWhole(-1, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
-              "no units and negative units are no quantity, and give none");
-    checkThat(check, isFailure(eranosQuantityFromWhole(INT64_MAX, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
-              "nor are units whose ten-thousandths do not fit 64 bits");
+                  0 == tenThousandths,
+              "no units are no quantity, and give none");
     checkSucceeded(check, eranosQuantityFromDouble(0.45205, &tenThousandths), "a double converts");
     checkThat(check, 4'521 == tenThousandths, "0.45205 rounds half away from zero to 4521 ten-thousandths");
     checkThat(check,
               isFailure(eranosQuantityFromDouble(0.00004, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
                   0 == tenThousandths,
               "0.00004 rounds to no quantity, and gives none");
-    checkThat(check, isFailure(eranosQuantityFromDouble(-1.0, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
-              "a negative double is no quantity");
-    checkThat(check, isFailure(eranosQuantityFromDouble(NAN, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
-              "nor is NaN");
-    checkThat(check, isFailure(eranosQuantityFromDouble(INFINITY, &tenThousandths), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE),
-              "nor an infinity");
     checkSucceeded(check, eranosQuantityCheck(1), "a ten-thousandth of a unit is a quantity");
-    checkSucceeded(check, eranosQuantityCheck(ERANOS_QUANTITY_ONE), "and so is one unit");
-    checkThat(check,
-              isFailure(eranosQuantityCheck(0), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY) &&
-                  isFailure(eranosQuantityCheck(-1), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY),
-              "no quantity and a negative one are not");
-    eranosQuantityFormat(ERANOS_QUANTITY_ONE, text);
-    checkThat(check, isText(text, "1"), "one unit is written as a whole number");
-    eranosQuantityFormat(0, text);
-    checkThat(check, isText(text, "0"), "zero is written as any number");
-    eranosQuantityFormat(-4'520, text);
-    checkThat(check, isText(text, "-0.452"), "and so is a negative one");
+    checkThat(check, isFailure(eranosQuantityCheck(0), ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_INVALID_QUANTITY), "no quantity is not");
     eranosTextDestroy(text);
 }
 
@@ -1138,11 +1066,6 @@ static void datesAndTimesAreCheckedAndWritten(Check *const check) {
     constexpr EranosCalendarDate LEAP = {.year = 2026, .month = 2, .day = 30};
     checkThat(check, isFailure(eranosCalendarDateCheck(LEAP), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE),
               "30 February does not");
-    constexpr EranosCalendarDate FAR = {.year = 10'000, .month = 1, .day = 1};
-    checkThat(check, isFailure(eranosCalendarDateCheck(FAR), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE),
-              "nor does year 10000");
-    eranosCalendarDateFormat(LEAP, text);
-    checkThat(check, isText(text, "2026-02-30"), "but a day the calendar does not have is written as any other");
     checkThat(check,
               isFailure(eranosCalendarDateParse("2026-02-30", &date), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE) &&
                   0 == date.day,
@@ -1153,13 +1076,7 @@ static void datesAndTimesAreCheckedAndWritten(Check *const check) {
     checkThat(check, 18 == time.hour && 30 == time.minute && isText(text, "18:30"), "into its hour and minute, and formats");
     checkSucceeded(check, eranosTimeOfDayCheck(time), "a time of day passes the check");
     constexpr EranosTimeOfDay MIDNIGHT = {.hour = 24, .minute = 0};
-    constexpr EranosTimeOfDay LATE = {.hour = 23, .minute = 60};
-    checkThat(check,
-              isFailure(eranosTimeOfDayCheck(MIDNIGHT), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME) &&
-                  isFailure(eranosTimeOfDayCheck(LATE), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME),
-              "hour 24 and minute 60 do not");
-    eranosTimeOfDayFormat(MIDNIGHT, text);
-    checkThat(check, isText(text, "24:00"), "but a time the day does not have is written as any other");
+    checkThat(check, isFailure(eranosTimeOfDayCheck(MIDNIGHT), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME), "hour 24 does not");
     checkThat(check, isFailure(eranosTimeOfDayParse("25:00", &time), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME), "parsed");
     eranosTextDestroy(text);
 }

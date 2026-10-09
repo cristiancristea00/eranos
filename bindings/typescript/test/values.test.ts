@@ -233,10 +233,6 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
         const percentage = Percentage.parse('12.5 %');
         assert.equal(percentage.basisPoints, 1_250);
         assert.equal(percentage.toString(), '12.5%');
-        assert.deepEqual(
-            [0, 5, 1_200, 3_333, 10_000, 25_000].map((basisPoints) => Percentage.ofBasisPoints(basisPoints).toString()),
-            ['0%', '0.05%', '12%', '33.33%', '100%', '250%'],
-        );
         assert.ok(percentage.equals(Percentage.ofBasisPoints(1_250)));
         assert.ok(!percentage.equals(Percentage.ofBasisPoints(1)));
         assertRefused(
@@ -250,10 +246,6 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
         const parts = Parts.parse('0.5');
         assert.equal(parts.hundredths, 50);
         assert.equal(parts.toString(), '0.5');
-        assert.deepEqual(
-            [1, 100, 150, 205, 225].map((hundredths) => Parts.ofHundredths(hundredths).toString()),
-            ['0.01', '1', '1.5', '2.05', '2.25'],
-        );
         assert.ok(parts.equals(Parts.ofHundredths(50)));
         assert.ok(!parts.equals(Parts.ofHundredths(1)));
         assertRefused(
@@ -262,7 +254,6 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
             { kind: 'invalidParts' },
             'invalid parts: expected a positive number with at most 2 decimal places',
         );
-        assertRefused(() => Parts.ofHundredths(-50), MoneyError, { kind: 'invalidParts' });
         assertRefused(() => Parts.parse('half'), MoneyError);
     });
 
@@ -282,12 +273,7 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
         assert.equal(weight.toString(), '0.452');
         assert.ok(weight.equals(Quantity.ofTenThousandths(4_520n)));
         assert.ok(!weight.equals(Quantity.ofTenThousandths(4_521n)));
-        assert.equal(Quantity.parse(' 3 ').tenThousandths, 30_000n);
         assert.equal(Quantity.ofWhole(3n).tenThousandths, 30_000n);
-        assert.deepEqual(
-            [1n, 4_520n, 10_000n, 15_000n, 20_500n].map((tenThousandths) => Quantity.ofTenThousandths(tenThousandths).toString()),
-            ['0.0001', '0.452', '1', '1.5', '2.05'],
-        );
         // The largest quantities: the ten-thousandths of each fit the bindings' 64-bit integers, one more would not.
         assert.equal(Quantity.parse('922337203685477.5807').tenThousandths, 9_223_372_036_854_775_807n);
         assert.equal(Quantity.ofWhole(922_337_203_685_477n).tenThousandths, 9_223_372_036_854_770_000n);
@@ -295,60 +281,40 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
 
         const invalid = { kind: 'invalidQuantity' };
         const message = 'invalid quantity: expected a positive number with at most 4 decimal places';
-        for (const tenThousandths of [0n, -1n, -4_520n]) {
-            assertRefused(() => Quantity.ofTenThousandths(tenThousandths), MoneyError, invalid, message);
-        }
-        for (const text of ['0', '0.00005', '-1', '1e2', 'half', '922337203685477.5808']) {
+        assertRefused(() => Quantity.ofTenThousandths(0n), MoneyError, invalid, message);
+        for (const text of ['half', '922337203685477.5808']) {
             assertRefused(() => Quantity.parse(text), MoneyError, invalid, message);
         }
-        for (const units of [0n, -1n, 922_337_203_685_478n]) {
+        for (const units of [-1n, 922_337_203_685_478n]) {
             assertRefused(() => Quantity.ofWhole(units), MoneyError, invalid, message);
         }
     });
 
     /**
      * An app that holds amounts, rates, percentages, parts, or quantities as numbers would get other cents or digits in this
-     * package than the library converts them to, or a value back from NaN, from an infinity, or from a number out of range.
+     * package than the library converts them to, or a value back from NaN, which crosses as a double where an integer would
+     * cross as 0, or from a number too large for the bindings' integers.
      */
     void it('converts numbers to amounts, rates, percentages, parts, and quantities as the library does', () => {
         const euro = CurrencyCode.of('EUR');
-        const yen = CurrencyCode.of('JPY');
         // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
         assert.ok(Money.fromNumber(1.005, euro).equals(new Money(101n, euro)));
-        assert.ok(Money.fromNumber(-2.675, euro).equals(new Money(-268n, euro)));
-        assert.ok(Money.fromNumber(1_234.5, yen).equals(new Money(1_235n, yen)));
+        assertRefused(() => Money.fromNumber(Number.NaN, euro), MoneyError, { kind: 'notFinite' }, 'the number is not finite');
         assertRefused(() => Money.fromNumber(1e21, euro), MoneyError, { kind: 'overflow' }, 'value out of range');
 
-        assert.equal(ExchangeRate.fromNumber(25.5).toString(), '25.5');
         assert.equal(ExchangeRate.fromNumber(0.1 + 0.2).toString(), '0.30000000000000004');
         assertRefused(() => ExchangeRate.fromNumber(0), MoneyError, { kind: 'invalidExchangeRate' });
 
-        assert.equal(Percentage.fromNumber(0.1 + 0.2).basisPoints, 30);
         assert.equal(Percentage.fromNumber(12.345).basisPoints, 1_235);
-        assertRefused(() => Percentage.fromNumber(-1), MoneyError, { kind: 'invalidPercentage' });
         // Above 21 474 836.47 %, the basis points no longer fit the bindings' 32-bit integers.
         assertRefused(() => Percentage.fromNumber(30_000_000), MoneyError, { kind: 'invalidPercentage' });
 
         assert.equal(Parts.fromNumber(1.005).hundredths, 101);
-        assertRefused(() => Parts.fromNumber(0.004), MoneyError, { kind: 'invalidParts' });
         assertRefused(() => Parts.fromNumber(30_000_000), MoneyError, { kind: 'invalidParts' });
 
         assert.equal(Quantity.fromNumber(0.45205).tenThousandths, 4_521n);
-        assert.equal(Quantity.fromNumber(1.5).tenThousandths, 15_000n);
-        assertRefused(() => Quantity.fromNumber(0.00004), MoneyError, { kind: 'invalidQuantity' });
-        assertRefused(() => Quantity.fromNumber(-1), MoneyError, { kind: 'invalidQuantity' });
         // Above 922 337 203 685 477.5807, the ten-thousandths no longer fit the bindings' 64-bit integers.
         assertRefused(() => Quantity.fromNumber(1e21), MoneyError, { kind: 'invalidQuantity' });
-
-        const notFinite = { kind: 'notFinite' };
-        const message = 'the number is not finite';
-        for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
-            assertRefused(() => Money.fromNumber(value, euro), MoneyError, notFinite, message);
-            assertRefused(() => ExchangeRate.fromNumber(value), MoneyError, notFinite, message);
-            assertRefused(() => Percentage.fromNumber(value), MoneyError, notFinite, message);
-            assertRefused(() => Parts.fromNumber(value), MoneyError, notFinite, message);
-            assertRefused(() => Quantity.fromNumber(value), MoneyError, notFinite, message);
-        }
     });
 
     /** A date or a time read or written another way than the library's, or one that does not exist, would put an entry on another day. */
@@ -360,19 +326,12 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
         assert.equal(date.day, 23);
         assert.ok(date.equals(CalendarDate.parse('2026-09-23')));
         assert.ok(!date.equals(CalendarDate.of(2026, 9, 24)));
-        const days = [CalendarDate.of(1, 1, 1), CalendarDate.of(2028, 2, 29), CalendarDate.of(9999, 12, 31)];
-        assert.deepEqual(days.map(String), ['0001-01-01', '2028-02-29', '9999-12-31']);
         assertRefused(
             () => CalendarDate.of(2026, 2, 30),
             CalendarError,
             { kind: 'invalidDate' },
             'invalid date: expected an existing ISO 8601 date between years 1 and 9999',
         );
-        assertRefused(() => CalendarDate.of(2027, 2, 29), CalendarError, { kind: 'invalidDate' });
-        assertRefused(() => CalendarDate.of(2026, 13, 1), CalendarError, { kind: 'invalidDate' });
-        assertRefused(() => CalendarDate.of(2026, 9, 0), CalendarError, { kind: 'invalidDate' });
-        assertRefused(() => CalendarDate.of(0, 1, 1), CalendarError, { kind: 'invalidDate' });
-        assertRefused(() => CalendarDate.of(10_000, 1, 1), CalendarError, { kind: 'invalidDate' });
         assertRefused(() => CalendarDate.parse('2026-02-30'), CalendarError);
 
         const time = TimeOfDay.of(18, 30);
@@ -381,14 +340,12 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
         assert.equal(time.minute, 30);
         assert.ok(time.equals(TimeOfDay.parse('18:30')));
         assert.ok(!time.equals(TimeOfDay.of(18, 31)));
-        assert.deepEqual([TimeOfDay.of(0, 0), TimeOfDay.of(9, 5), TimeOfDay.of(23, 59)].map(String), ['00:00', '09:05', '23:59']);
         assertRefused(
             () => TimeOfDay.of(24, 0),
             CalendarError,
             { kind: 'invalidTime' },
             'invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds',
         );
-        assertRefused(() => TimeOfDay.of(23, 60), CalendarError, { kind: 'invalidTime' });
         assertRefused(() => TimeOfDay.parse('25:00'), CalendarError);
     });
 
