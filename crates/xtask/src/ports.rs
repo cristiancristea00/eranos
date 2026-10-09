@@ -116,7 +116,9 @@ fn actions(
 fn libraries(sequential: &Metadata, languages: &[Language]) -> Vec<Action> {
     let ported = |language| languages.contains(&language);
     let mut steps = Vec::new();
-    if languages.iter().any(|language| language.reads_uniffi()) {
+    // The Kotlin Multiplatform package's checks build a library of their
+    // own, but its ports load this one, as the other JVM ports do.
+    if languages.iter().any(|language| language.reads_uniffi()) || ported(Language::Kmp) {
         steps.push(library(sequential));
     }
     if ported(Language::Web) {

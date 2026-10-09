@@ -388,6 +388,11 @@ fn the_ports_of_one_language_read_its_variables_and_build_its_libraries() {
     run(&mut web, &metadata, &references, &[Language::Web]).unwrap();
     assert_eq!(web.steps[0], web::sequential_library(&sequential()));
     assert!(!web.steps.contains(&library(&sequential())));
+    // The Kotlin Multiplatform ports load eranos-uniffi's library, though
+    // the package's checks read none, so the ports alone build it.
+    let mut kmp = Recorder::new();
+    run(&mut kmp, &metadata, &references, &[Language::Kmp]).unwrap();
+    assert_eq!(kmp.steps[0], library(&sequential()));
     assert_eq!(web.cleared, web::copied_directories(&sequential()));
 }
 
