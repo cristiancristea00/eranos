@@ -234,7 +234,8 @@ trait ExpenseGroupCalls {
     #[infallible]
     fn language(&self) -> Result<Option<String>, EranosError>;
 
-    /// Sets the language from a BCP 47 tag, or clears it when there is none.
+    /// Sets the language from a BCP 47 tag, or clears it when there is none
+    /// or the text is blank.
     #[write]
     fn set_language(&self, language: Option<&str>) -> Result<(), EranosError>;
 

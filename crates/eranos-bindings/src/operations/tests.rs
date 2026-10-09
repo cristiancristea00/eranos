@@ -770,6 +770,9 @@ fn the_name_description_and_language_change_through_text() {
     assert_eq!(operations::language(group).as_deref(), Some("pt-PT"));
     operations::set_language(group, None).unwrap();
     assert_eq!(operations::language(group), None);
+    operations::set_language(group, Some("pt-pt")).unwrap();
+    operations::set_language(group, Some("  ")).unwrap();
+    assert_eq!(operations::language(group), None);
 }
 
 /// A currency change would reach the library with a currency or a rate it

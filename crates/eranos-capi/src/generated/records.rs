@@ -1775,13 +1775,13 @@ pub mod ffi {
             self.0.note = None;
         }
 
-        /// The language the apps show the group in, as a BCP 47 tag. Writes it, if present; absent
-        /// otherwise.
+        /// The language the apps show the group in, as a BCP 47 tag; blank text is none. Writes it,
+        /// if present; absent otherwise.
         pub fn language(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.language.as_deref())
         }
 
-        /// Sets the language the apps show the group in, as a BCP 47 tag.
+        /// Sets the language the apps show the group in, as a BCP 47 tag; blank text is none.
         ///
         /// # Errors
         ///
@@ -1791,7 +1791,7 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Clears the language the apps show the group in, as a BCP 47 tag.
+        /// Clears the language the apps show the group in, as a BCP 47 tag; blank text is none.
         pub fn clear_language(&mut self) {
             self.0.language = None;
         }

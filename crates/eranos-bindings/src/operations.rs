@@ -328,14 +328,29 @@ pub(crate) fn language(group: &ExpenseGroup) -> Option<String> {
         .map(|language| language.as_str().to_owned())
 }
 
-/// Sets the language from a BCP 47 tag, or clears it.
+/// Sets the language from a BCP 47 tag, or clears it when there is none or
+/// the text is blank.
 pub(crate) fn set_language(
     group: &mut ExpenseGroup,
     language: Option<&str>,
 ) -> Result<(), EranosError> {
-    let language = language.map(Language::parse).transpose()?;
-    group.set_language(language);
+    group.set_language(parsed_language(language)?);
     Ok(())
+}
+
+/// The language written `text`, or none when there is no text or it is
+/// blank, as a note without text is none.
+///
+/// # Errors
+///
+/// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage)
+/// for text that is not a BCP 47 tag.
+pub(crate) fn parsed_language(text: Option<&str>) -> Result<Option<Language>, EranosError> {
+    text.map(str::trim)
+        .filter(|tag| !tag.is_empty())
+        .map(Language::parse)
+        .transpose()
+        .map_err(EranosError::from)
 }
 
 // --- The saved form ----------------------------------------------------------

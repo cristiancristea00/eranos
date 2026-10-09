@@ -251,9 +251,11 @@ fn a_new_group_takes_what_it_starts_with() {
     assert_eq!(plain.language(), Ok(None));
     let blank = ExpenseGroupHandle::new(&NewExpenseGroup {
         note: Some(" ".to_owned()),
+        language: Some(" ".to_owned()),
         ..new_group()
     })
     .unwrap();
+    assert_eq!(blank.language(), Ok(None));
     assert_eq!(blank.note(), Ok(None));
 
     let refusals = [
@@ -521,8 +523,8 @@ fn transfers_change_alike_in_both_forms() {
 }
 
 /// A change of the name, the note, or the language would take
-/// effect in one form only, or a blank or absent note would stay
-/// set.
+/// effect in one form only, or a blank or absent note or language would
+/// stay set.
 #[test]
 fn the_name_description_and_language_change_alike_in_both_forms() {
     let handle = flat().handle;
@@ -543,6 +545,12 @@ fn the_name_description_and_language_change_alike_in_both_forms() {
     handle.set_language(Some("ro")).unwrap();
     assert_eq!(handle.language(), Ok(Some("ro".to_owned())));
     block_on(handle.set_language_async(None, None)).unwrap();
+    assert_eq!(handle.language(), Ok(None));
+    handle.set_language(Some("ro")).unwrap();
+    handle.set_language(Some(" ")).unwrap();
+    assert_eq!(handle.language(), Ok(None));
+    block_on(handle.set_language_async(Some("ro".to_owned()), None)).unwrap();
+    block_on(handle.set_language_async(Some(" ".to_owned()), None)).unwrap();
     assert_eq!(handle.language(), Ok(None));
 }
 

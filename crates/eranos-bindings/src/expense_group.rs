@@ -5,7 +5,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use eranos::expense_group::{ExpenseGroupReadGuard, ExpenseGroupWriteGuard, SavedExpenseGroup};
-use eranos::{ExpenseGroup, ExpenseGroupId, Language, SharedExpenseGroup};
+use eranos::{ExpenseGroup, ExpenseGroupId, SharedExpenseGroup};
 
 use crate::cancellation::{Cancellation, cancellable};
 use crate::money::{CurrencyRate, currency};
@@ -27,7 +27,8 @@ pub struct NewExpenseGroup {
     pub currency: String,
     /// A note on it.
     pub note: Option<String>,
-    /// The language the apps show the group in, as a BCP 47 tag.
+    /// The language the apps show the group in, as a BCP 47 tag; blank
+    /// text is none.
     pub language: Option<String>,
 }
 
@@ -58,7 +59,7 @@ impl ExpenseGroupHandle {
     /// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage).
     pub fn new(group: &NewExpenseGroup) -> Result<Self, EranosError> {
         let id: ExpenseGroupId = identifier(&group.id)?;
-        let language = group.language.as_deref().map(Language::parse).transpose()?;
+        let language = crate::operations::parsed_language(group.language.as_deref())?;
         let builder =
             ExpenseGroup::builder_with_id(id, group.name.clone(), currency(&group.currency)?)
                 .language(language);

@@ -1655,7 +1655,8 @@ pub mod ffi {
             );
         }
 
-        /// Sets the language from a BCP 47 tag, or clears it when there is none.
+        /// Sets the language from a BCP 47 tag, or clears it when there is none or the text is
+        /// blank.
         ///
         /// # Errors
         ///

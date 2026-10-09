@@ -1800,10 +1800,10 @@ static inline void eranosExpenseGroupLanguageAsync(EranosExpenseGroup const *con
     EranosExpenseGroup_language_async(group, cancellation, wrapped);
 }
 
-/// Sets the language the apps show the group in, a BCP 47 tag.
+/// Sets the language the apps show the group in, a BCP 47 tag, or clears it when the text is blank.
 ///
 /// @param group The group
-/// @param language The language, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param language The language, as UTF-8 ended by a NUL; nullptr or blank text clears it
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_LANGUAGE for text
 ///   that is not a language tag, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseGroupSetLanguage(EranosExpenseGroup *const group, char const *const language) {
@@ -1819,7 +1819,7 @@ static inline void eranosExpenseGroupClearLanguage(EranosExpenseGroup *const gro
 /// The asynchronous form of eranosExpenseGroupSetLanguage(), reported to `callback` on the group's worker thread.
 ///
 /// @param group The group
-/// @param language The language, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param language The language, as UTF-8 ended by a NUL; nullptr or blank text clears it
 /// @param cancellation A cancellation for the call, or nullptr for none
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
@@ -2058,7 +2058,8 @@ static inline void eranosNewExpenseGroupClearNote(EranosNewExpenseGroup *const n
 /// Sets the language the apps show the group in, as a BCP 47 tag.
 ///
 /// @param newGroup The new group
-/// @param language The language the apps show the group in, as a BCP 47 tag, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param language The language the apps show the group in, as a BCP 47 tag, as UTF-8 ended by a NUL; nullptr or blank text leaves the group without
+/// one
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosNewExpenseGroupSetLanguage(EranosNewExpenseGroup *const newGroup, char const *const language) {

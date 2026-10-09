@@ -1894,10 +1894,12 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
                   isKind(eranosNewExpenseGroupSetNote(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosNewExpenseGroupSetLanguage(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "its fields are text");
+    checkSucceeded(check, eranosNewExpenseGroupSetLanguage(details, " "), "blank text for the language");
     EranosExpenseGroup *home = nullptr;
     checkSucceeded(check, eranosExpenseGroupCreate(details, &home), "a group under the app's identifier");
     eranosExpenseGroupId(home, text);
     checkThat(check, isText(text, "home"), "the one the app gave");
+    checkThat(check, !eranosExpenseGroupLanguage(home, text), "and without a language, which blank text leaves it");
     eranosExpenseGroupDestroy(home);
     eranosErrorDestroy(eranosNewExpenseGroupSetId(details, " x"));
     EranosExpenseGroup *refused = nullptr;
@@ -1937,6 +1939,9 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     checkThat(check, eranosExpenseGroupLanguage(group, text) && isText(text, "pt-PT"), "and read, canonical");
     eranosExpenseGroupClearLanguage(group);
     checkThat(check, !eranosExpenseGroupLanguage(group, text) && isText(text, ""), "a language clears and reads as none");
+    checkSucceeded(check, eranosExpenseGroupSetLanguage(group, "pt-pt"), "a language is set again");
+    checkSucceeded(check, eranosExpenseGroupSetLanguage(group, " "), "blank text clears it");
+    checkThat(check, !eranosExpenseGroupLanguage(group, text) && isText(text, ""), "and it reads as none");
     checkThat(check, isFailure(eranosExpenseGroupSetName(group, " "), ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME),
               "a blank name");
     checkThat(check,
