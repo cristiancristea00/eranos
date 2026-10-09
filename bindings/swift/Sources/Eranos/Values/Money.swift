@@ -4,7 +4,7 @@ internal import EranosGenerated
 ///
 /// An amount prints as the library writes it, "12.50 EUR", and adds and subtracts with its
 /// checks: both amounts in one currency, and the result within range.
-public struct Money: Hashable, Sendable, CustomStringConvertible {
+public struct Money: Hashable, Sendable, Codable, CustomStringConvertible {
     /// The amount in minor units: cents for the euro, none for the yen.
     public let minorUnits: Int64
 

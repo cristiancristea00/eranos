@@ -30,7 +30,7 @@ func ron(_ text: String) throws(EranosError) -> Money {
 }
 
 /// A date of the trip, in October 2026.
-func october(_ date: Int32) throws(EranosError) -> CalendarDate {
+func october(_ date: Int) throws(EranosError) -> CalendarDate {
     try CalendarDate(year: 2026, month: 10, day: date)
 }
 

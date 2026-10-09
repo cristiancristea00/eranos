@@ -183,4 +183,67 @@ public final class ExpenseGroup: Sendable {
         }
         return try await body(writer)
     }
+
+    // A closure that throws errors other than the library's, or whose thrown type Swift infers as
+    // `any Error`, as it does for every closure not marked with one, takes the forms below. They
+    // are disfavoured: without that, a closure that throws nothing would match both forms and make
+    // the call ambiguous.
+
+    /// Runs `body` with a read handle, and releases it when `body` returns or throws, as the form
+    /// whose `body` throws ``EranosError`` alone does, for a `body` that throws other errors too.
+    ///
+    /// - Throws: As `read()` does, and what `body` throws.
+    @_disfavoredOverload
+    public func withRead<Value>(_ body: (ExpenseGroupReader) throws -> Value) throws -> Value {
+        let reader = try read()
+        defer {
+            reader.release()
+        }
+        return try body(reader)
+    }
+
+    /// Runs `body` with a read handle, and releases it when `body` returns or throws, as the form
+    /// whose `body` throws ``EranosError`` alone does, for a `body` that throws other errors too.
+    ///
+    /// Waits for the lock without blocking a thread.
+    ///
+    /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first, and what
+    ///   `body` throws.
+    @_disfavoredOverload
+    public func withRead<Value>(_ body: (ExpenseGroupReader) async throws -> Value) async throws -> Value {
+        let reader = try await read()
+        defer {
+            reader.release()
+        }
+        return try await body(reader)
+    }
+
+    /// Runs `body` with a write handle, and releases it when `body` returns or throws, as the form
+    /// whose `body` throws ``EranosError`` alone does, for a `body` that throws other errors too.
+    ///
+    /// - Throws: As `write()` does, and what `body` throws.
+    @_disfavoredOverload
+    public func withWrite<Value>(_ body: (ExpenseGroupWriter) throws -> Value) throws -> Value {
+        let writer = try write()
+        defer {
+            writer.release()
+        }
+        return try body(writer)
+    }
+
+    /// Runs `body` with a write handle, and releases it when `body` returns or throws, as the form
+    /// whose `body` throws ``EranosError`` alone does, for a `body` that throws other errors too.
+    ///
+    /// Waits for the lock without blocking a thread.
+    ///
+    /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first, and what
+    ///   `body` throws.
+    @_disfavoredOverload
+    public func withWrite<Value>(_ body: (ExpenseGroupWriter) async throws -> Value) async throws -> Value {
+        let writer = try await write()
+        defer {
+            writer.release()
+        }
+        return try await body(writer)
+    }
 }

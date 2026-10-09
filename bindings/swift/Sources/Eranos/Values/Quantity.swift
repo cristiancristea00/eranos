@@ -4,8 +4,10 @@ internal import EranosGenerated
 /// as 4 520 ten-thousandths.
 ///
 /// A quantity multiplies an item's unit price into its line total, which
-/// ``ExpenseItem/lineTotal()`` reads from the library.
-public struct Quantity: Hashable, Sendable, CustomStringConvertible {
+/// ``ExpenseItem/lineTotal()`` reads from the library. Quantities order by their
+/// ten-thousandths; a quantity encodes as its ten-thousandths, and decodes through
+/// ``init(tenThousandths:)``.
+public struct Quantity: Hashable, Sendable, Comparable, Codable, CustomStringConvertible {
     // One unit is 10 000 ten-thousandths, the scale of every quantity the core's records hold;
     // the core has no helper that answers it.
     /// One unit, 10 000 ten-thousandths: the quantity of an item that is not given another.
@@ -61,5 +63,25 @@ public struct Quantity: Hashable, Sendable, CustomStringConvertible {
     /// The quantity of `tenThousandths`, a number the library gave.
     init(known tenThousandths: Int64) {
         self.tenThousandths = tenThousandths
+    }
+
+    /// The quantity `decoder` holds as its ten-thousandths.
+    ///
+    /// - Throws: `DecodingError.dataCorrupted` with the library's refusal of a number that is not
+    ///   positive.
+    public init(from decoder: any Decoder) throws {
+        let tenThousandths = try decoder.singleValueContainer().decode(Int64.self)
+        self = try decoded(decoder) { () throws(EranosError) in try Self(tenThousandths: tenThousandths) }
+    }
+
+    /// Writes the ten-thousandths to `encoder`.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(tenThousandths)
+    }
+
+    /// Whether `left` is less than `right`.
+    public static func < (left: Self, right: Self) -> Bool {
+        left.tenThousandths < right.tenThousandths
     }
 }

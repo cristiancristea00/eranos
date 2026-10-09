@@ -5,7 +5,7 @@ internal import EranosGenerated
 /// A member has an identifier from the moment they are made: the app's own, which
 /// ``init(id:firstName:lastName:email:phone:accounts:)`` takes, or one that
 /// ``init(firstName:lastName:email:phone:accounts:)`` generates.
-public struct Member: Hashable, Sendable {
+public struct Member: Hashable, Sendable, Identifiable, Codable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a member.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name
@@ -90,7 +90,7 @@ public struct Member: Hashable, Sendable {
 }
 
 /// A place to send a member money, with a label: "Main account".
-public struct PaymentAccount: Hashable, Sendable {
+public struct PaymentAccount: Hashable, Sendable, Codable {
     /// The label.
     public var name: String
 
@@ -113,7 +113,7 @@ public struct PaymentAccount: Hashable, Sendable {
 }
 
 /// Where a member can be paid: a bank account or a payment-app username.
-public enum PaymentAccountDetails: Hashable, Sendable {
+public enum PaymentAccountDetails: Hashable, Sendable, Codable {
     /// A bank account.
     case iban(IBAN)
 

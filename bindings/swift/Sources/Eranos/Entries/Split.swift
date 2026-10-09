@@ -4,7 +4,7 @@ internal import EranosGenerated
 ///
 /// The library divides every amount so that the shares add up to it exactly, and gives any
 /// minor unit left over by the rounding to a member it picks from the expense's identifier.
-public enum Split: Hashable, Sendable {
+public enum Split: Hashable, Sendable, Codable {
     /// Every member pays the same.
     case equal([Member.ID])
 
@@ -59,7 +59,7 @@ public enum Split: Hashable, Sendable {
 }
 
 /// The exact amount one member pays of a split.
-public struct MemberAmount: Hashable, Sendable {
+public struct MemberAmount: Hashable, Sendable, Codable {
     /// The member.
     public var member: Member.ID
 
@@ -82,7 +82,7 @@ public struct MemberAmount: Hashable, Sendable {
 }
 
 /// The parts one member pays in proportion to.
-public struct MemberParts: Hashable, Sendable {
+public struct MemberParts: Hashable, Sendable, Codable {
     /// The member.
     public var member: Member.ID
 
@@ -90,7 +90,7 @@ public struct MemberParts: Hashable, Sendable {
     public var parts: Parts
 
     var generated: EranosGenerated.MemberParts {
-        .init(member: member.rawValue, hundredths: parts.hundredths)
+        .init(member: member.rawValue, hundredths: parts.generated)
     }
 
     /// The share of `member`, who pays in proportion to `parts`.
@@ -105,7 +105,7 @@ public struct MemberParts: Hashable, Sendable {
 }
 
 /// The percentage one member pays.
-public struct MemberPercentage: Hashable, Sendable {
+public struct MemberPercentage: Hashable, Sendable, Codable {
     /// The member.
     public var member: Member.ID
 
@@ -113,7 +113,7 @@ public struct MemberPercentage: Hashable, Sendable {
     public var percentage: Percentage
 
     var generated: EranosGenerated.MemberPercentage {
-        .init(member: member.rawValue, basisPoints: percentage.basisPoints)
+        .init(member: member.rawValue, basisPoints: percentage.generated)
     }
 
     /// The share of `member`, who pays `percentage`.

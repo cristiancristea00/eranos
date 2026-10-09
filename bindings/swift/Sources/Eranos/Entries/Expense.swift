@@ -7,7 +7,7 @@ internal import EranosGenerated
 /// ``init(name:cost:payers:split:date:tip:time:category:note:)`` generates. To change an
 /// expense, read it from the group, change its properties, and pass it to
 /// `ExpenseGroup.replace(_:)`.
-public struct Expense: Hashable, Sendable {
+public struct Expense: Hashable, Sendable, Identifiable, Codable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of an expense.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name
@@ -158,7 +158,7 @@ public struct Expense: Hashable, Sendable {
 
 /// What an entry cost: an amount in the group currency, or one in another currency with the rate
 /// that converts it into the group currency.
-public enum Cost: Hashable, Sendable {
+public enum Cost: Hashable, Sendable, Codable {
     /// An amount in the group currency.
     case local(Money)
 
@@ -195,7 +195,7 @@ public enum Cost: Hashable, Sendable {
 }
 
 /// How an expense's cost is shared: as a whole, or line by line of an itemised bill.
-public enum ExpenseSplit: Hashable, Sendable {
+public enum ExpenseSplit: Hashable, Sendable, Codable {
     /// The whole amount is divided by one split.
     case whole(Split)
 
@@ -231,7 +231,7 @@ public enum ExpenseSplit: Hashable, Sendable {
 }
 
 /// A line of an itemised bill.
-public struct ExpenseItem: Hashable, Sendable {
+public struct ExpenseItem: Hashable, Sendable, Codable {
     /// What was bought.
     public var name: String
 
@@ -328,7 +328,7 @@ public struct ExpenseItem: Hashable, Sendable {
 /// at 3.33 EUR with 50 % off cost 4.98 EUR with the discount off each unit and 4.99 EUR with it
 /// off the line. A discount of the whole price, 100 % or a fixed amount equal to what it reduces,
 /// makes a free line; a larger one is refused when the item is built.
-public struct Discount: Hashable, Sendable {
+public struct Discount: Hashable, Sendable, Codable {
     /// How the discount is expressed.
     public var value: DiscountValue
 
@@ -351,7 +351,7 @@ public struct Discount: Hashable, Sendable {
 }
 
 /// How a discount is expressed.
-public enum DiscountValue: Hashable, Sendable {
+public enum DiscountValue: Hashable, Sendable, Codable {
     /// A percentage of what the discount reduces, at most 100 %.
     case percentage(Percentage)
 
@@ -361,7 +361,7 @@ public enum DiscountValue: Hashable, Sendable {
     var generated: EranosGenerated.DiscountValue {
         switch self {
         case let .percentage(percentage):
-            .percentage(basisPoints: percentage.basisPoints)
+            .percentage(basisPoints: percentage.generated)
         case let .fixed(amount):
             .fixed(amount: amount.generated)
         }
@@ -378,7 +378,7 @@ public enum DiscountValue: Hashable, Sendable {
 }
 
 /// What a discount is taken off.
-public enum DiscountScope: Hashable, Sendable, CaseIterable {
+public enum DiscountScope: Hashable, Sendable, Codable, CaseIterable {
     /// The line's total, the unit price times the quantity.
     case line
 
@@ -405,7 +405,7 @@ public enum DiscountScope: Hashable, Sendable, CaseIterable {
 }
 
 /// A tip on top of an expense's amount, which its payers cover.
-public struct TipRule: Hashable, Sendable {
+public struct TipRule: Hashable, Sendable, Codable {
     /// No tip: 0 % of the amount, shared proportionally, which an expense has until it is given
     /// another tip.
     public static let noTip = Self(EranosGenerated.tipRuleNone())
@@ -433,7 +433,7 @@ public struct TipRule: Hashable, Sendable {
 }
 
 /// How a tip is expressed.
-public enum TipValue: Hashable, Sendable {
+public enum TipValue: Hashable, Sendable, Codable {
     /// A percentage of the expense's amount.
     case percentage(Percentage)
 
@@ -443,7 +443,7 @@ public enum TipValue: Hashable, Sendable {
     var generated: EranosGenerated.TipValue {
         switch self {
         case let .percentage(percentage):
-            .percentage(basisPoints: percentage.basisPoints)
+            .percentage(basisPoints: percentage.generated)
         case let .fixed(amount):
             .fixed(amount: amount.generated)
         }
@@ -460,7 +460,7 @@ public enum TipValue: Hashable, Sendable {
 }
 
 /// How a tip is shared among an expense's participants.
-public enum TipDistribution: Hashable, Sendable, CaseIterable {
+public enum TipDistribution: Hashable, Sendable, Codable, CaseIterable {
     /// In proportion to each participant's share of the amount.
     case proportional
 

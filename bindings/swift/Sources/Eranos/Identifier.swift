@@ -14,8 +14,9 @@ internal import EranosGenerated
 /// accent, are two identifiers.
 ///
 /// Every entity has an identifier type of its own, `Member.ID`, `Expense.ID`, and the like, so an
-/// expense's identifier cannot stand where a member's is expected.
-public struct Identifier<Entity>: Hashable, Sendable, RawRepresentable, CustomStringConvertible {
+/// expense's identifier cannot stand where a member's is expected. An identifier encodes as its
+/// text and decodes through ``init(rawValue:)``, unchecked, as one the app stored.
+public struct Identifier<Entity>: Hashable, Sendable, RawRepresentable, Codable, CustomStringConvertible {
     /// The identifier's text, as the library holds it.
     public let rawValue: String
 

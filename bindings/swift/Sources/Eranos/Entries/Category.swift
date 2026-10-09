@@ -5,7 +5,7 @@ internal import EranosGenerated
 /// A category has an identifier from the moment it is made: the app's own, which
 /// ``init(id:name:)`` takes, or one that ``init(name:)`` generates. The built-in category,
 /// Uncategorised, under ``Identifier/uncategorised``, holds every expense without another.
-public struct Category: Hashable, Sendable {
+public struct Category: Hashable, Sendable, Identifiable, Codable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a category.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name

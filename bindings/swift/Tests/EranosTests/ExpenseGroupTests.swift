@@ -396,6 +396,35 @@ func anAsynchronousWriteHandleReleasesTheLockWhenItsClosureReturns() async throw
     #expect(await "Flat" == group.name)
 }
 
+/// A handle's closure that throws the app's own error, or one Swift infers as throwing any error,
+/// that did not compile, or held the lock after it threw, would leave an app to wrap every error in
+/// the library's.
+@Test
+func aHandlesClosureMayThrowAnyError() async throws {
+    struct Stop: Error {}
+    let flat = try Flat()
+    let group = flat.group
+    #expect(throws: Stop.self) {
+        try group.withRead { _ -> Int in throw Stop() }
+    }
+    #expect(throws: Stop.self) {
+        try group.withWrite { _ -> Int in throw Stop() }
+    }
+    await #expect(throws: Stop.self) {
+        try await group.withRead { _ async throws -> Int in throw Stop() }
+    }
+    await #expect(throws: Stop.self) {
+        try await group.withWrite { _ async throws -> Int in throw Stop() }
+    }
+    #expect(try "Flat" == group.withRead { reader in try reader.name() })
+    #expect(try 1 == group.withRead { _ in 1 })
+    #expect(try "Flat" == group.withWrite { writer in try writer.name() })
+    #expect(try await "Flat" == group.withRead { reader async throws in try reader.name() })
+    #expect(try await "Flat" == group.withWrite { writer async throws in try writer.name() })
+    try await group.rename(to: "Home")
+    #expect(await "Home" == group.name)
+}
+
 /// A cancelled task whose call still ran would change the group after the app gave the change
 /// up; one whose call was never cancelled would keep waiting for a lock it no longer needs.
 @Test

@@ -5,7 +5,7 @@ internal import EranosGenerated
 /// A transfer has an identifier from the moment it is made: the app's own, which
 /// ``init(id:sender:receiver:cost:date:time:note:)`` takes, or one that
 /// ``init(sender:receiver:cost:date:time:note:)`` generates.
-public struct Transfer: Hashable, Sendable {
+public struct Transfer: Hashable, Sendable, Identifiable, Codable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a transfer.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name

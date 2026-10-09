@@ -564,7 +564,30 @@ Swift API Design Guidelines:
   `money_from_f64`, `percentage_from_f64`, `parts_from_f64`,
   `quantity_from_f64`, and `exchange_rate_from_f64`
   ([§ 2](#2-what-every-binding-shares)), so a double is the same value in
-  Swift as in every other language.
+  Swift as in every other language. Whole numbers are `Int`: an initialiser
+  refuses one beyond the 32 bits the library holds with the library's own
+  error for the value, as `CalendarDate(year: 0, month: 1, day: 1)` is
+  refused, before the number crosses, and amounts and quantities keep
+  their 64 bits as `Int64`. `CalendarDate`, `TimeOfDay`, `Percentage`,
+  `Parts`, `Quantity`, and `CurrencyCode` are `Comparable` as the library
+  orders them, a currency by its code. `Email`, `Username`, `Language`,
+  `ExchangeRate`, and `IBAN` hold their `text`, which `description` also
+  writes. Foundation's types cross through the library's checks:
+  `Money(_:currency:)` parses a `Decimal`'s text and refuses more decimal
+  places than the currency has, `decimalValue` holds the minor units at
+  the currency's decimal places exactly, and `CalendarDate(components:)`
+  and `TimeOfDay(components:)` refuse `DateComponents` without the fields
+  they need, as `dateComponents` writes them.
+- Every entry is `Identifiable` by its `id` and `Codable`, as is every
+  value it holds, so an app can cache an entry, keep a draft, or put one
+  on a `NavigationPath`. The encoding is Swift's own shape, not the
+  library's saved form, which `save()` and `ExpenseGroup.load(_:)` keep:
+  a value encodes as its text or its numbers, and decodes through its
+  checking initialiser, so data the library refuses throws
+  `DecodingError.dataCorrupted` with the library's error. A `PhoneNumber`
+  or an `IBAN` whose derived text is not the library's is refused as
+  `EranosError.mismatchedRecord`, and an identifier decodes unchecked, as
+  one the app stored.
 - An item's `quantity` defaults to `Quantity.one` and its `discount` to
   none. A `Discount` holds a `DiscountValue`, `.percentage` or `.fixed`,
   and a `DiscountScope`, `.line` or `.unit`, which
@@ -587,7 +610,11 @@ Swift API Design Guidelines:
 - Every group call is one name overloaded by `async`: asynchronous code
   picks the form that waits for the lock without blocking a thread of the
   pool, and cancelling its task cancels the call. `ExpenseGroup.withRead`
-  holds a read handle for a closure, and `withWrite` a write handle.
+  holds a read handle for a closure, and `withWrite` a write handle; each
+  has a form whose closure throws `EranosError` alone and, disfavoured
+  so that a closure that throws nothing is not ambiguous, one whose
+  closure throws any error, which a closure Swift does not infer a thrown
+  type for takes.
 
 `bindings/swift/examples` is a package of its own over this one, with a
 program per example of eranos that prints the example's report

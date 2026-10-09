@@ -109,7 +109,7 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     #expect("0.5" == parts.description)
     #expect(try Parts(hundredths: 50) == parts)
     #expect(try "0.01" == Parts(hundredths: 1).description)
-    for hundredths: Int32 in [0, -50] {
+    for hundredths in [0, -50] {
         #expect(throws: EranosError.money(.invalidParts, detail: "invalid parts: expected a positive number with at most 2 decimal places")) {
             try Parts(hundredths: hundredths)
         }
