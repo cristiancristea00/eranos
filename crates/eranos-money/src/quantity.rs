@@ -146,22 +146,10 @@ impl FromStr for Quantity {
     }
 }
 
-#[cfg(feature = "serde")]
-impl serde::Serialize for Quantity {
-    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.collect_str(self)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Quantity {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        eranos_core::serde_text::deserialise(
-            deserialiser,
-            "a positive decimal quantity with at most 4 decimal places",
-        )
-    }
-}
+eranos_core::serde_text!(
+    Quantity,
+    "a positive decimal quantity with at most 4 decimal places"
+);
 
 /// Formats `ten_thousandths` as a quantity: a decimal without trailing
 /// zeros.

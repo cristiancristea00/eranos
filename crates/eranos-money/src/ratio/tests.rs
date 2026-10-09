@@ -99,12 +99,8 @@ fn percentages_beyond_the_bindings_integers_are_rejected() {
             Percentage::from_basis_points(basis_points),
             Err(MoneyError::InvalidPercentage)
         );
-        assert_eq!(
-            Percentage::try_from(basis_points),
-            Err(MoneyError::InvalidPercentage)
-        );
     }
-    assert_eq!(u32::from(Percentage::MAX), 2_147_483_647);
+    assert_eq!(Percentage::MAX.basis_points(), 2_147_483_647);
 }
 
 /// Percentages would be shown with noise such as `12.50%` or lose decimals.
@@ -354,11 +350,14 @@ fn parts_convert_from_a_double_rounded_to_two_places() {
 #[test]
 fn parts_convert_to_and_from_hundredths() {
     // From hundredths.
-    assert_eq!(Parts::try_from(150), Ok(parts("1.5")));
-    assert_eq!(Parts::try_from(0), Err(MoneyError::InvalidParts));
-    assert_eq!(Parts::try_from(u32::MAX), Err(MoneyError::InvalidParts));
+    assert_eq!(Parts::from_hundredths(150), Ok(parts("1.5")));
+    assert_eq!(Parts::from_hundredths(0), Err(MoneyError::InvalidParts));
+    assert_eq!(
+        Parts::from_hundredths(u32::MAX),
+        Err(MoneyError::InvalidParts)
+    );
     // Into hundredths.
-    assert_eq!(u32::from(parts("1.5")), 150);
+    assert_eq!(parts("1.5").hundredths(), 150);
     // Ordering follows the value.
     assert!(Parts::ONE > parts("0.5"));
 }

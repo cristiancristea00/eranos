@@ -164,15 +164,9 @@ struct CategoryRecord {
     name: String,
 }
 
-// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
-// from the private record would appear on the facade's page for `Category`.
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Category {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        let record = CategoryRecord::deserialize(deserialiser)?;
-        Self::with_id(record.id, record.name).map_err(serde::de::Error::custom)
-    }
-}
+eranos_core::deserialise_through!(Category, CategoryRecord, |record: CategoryRecord| {
+    Self::with_id(record.id, record.name)
+});
 
 #[cfg(test)]
 mod tests;

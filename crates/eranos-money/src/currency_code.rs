@@ -167,19 +167,7 @@ impl FromStr for CurrencyCode {
     }
 }
 
-#[cfg(feature = "serde")]
-impl serde::Serialize for CurrencyCode {
-    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.serialize_str(self.code())
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for CurrencyCode {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        eranos_core::serde_text::deserialise(deserialiser, "an ISO 4217 currency code")
-    }
-}
+eranos_core::serde_text!(CurrencyCode, code, "an ISO 4217 currency code");
 
 #[cfg(test)]
 mod tests;

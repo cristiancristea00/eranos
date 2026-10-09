@@ -371,9 +371,11 @@ test in `crates/xtask` checks every root.
   kinds follow the crates from the bottom up.
 - **Serialised data outlives releases.** A new field gets
   `#[serde(default)]`; a type with invariants deserialises through its
-  validating constructor, in a written-out `Deserialize` impl that reads a
-  private record (the `TryFrom` impl that `serde(try_from = …)` needs would
-  show the record on the facade's pages); a group loads through
+  validating constructor, in the `Deserialize` impl that
+  `eranos_core::deserialise_through!` writes from a private record (the
+  `TryFrom` impl that `serde(try_from = …)` needs would show the record on
+  the facade's pages), and a type whose serialised form is its text takes
+  both impls from `eranos_core::serde_text!`; a group loads through
   `SavedExpenseGroup::into_expense_group`, which checks its entries as the
   `add_*` methods do and range-checks the totals once; a change older
   readers cannot accept bumps the `FORMAT` constant of

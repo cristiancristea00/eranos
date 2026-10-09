@@ -384,14 +384,7 @@ fn from_record(record: TransferRecord) -> Result<Transfer, TransferError> {
     }
 }
 
-// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
-// from the private record would appear on the facade's page for `Transfer`.
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Transfer {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        from_record(TransferRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
-    }
-}
+eranos_core::deserialise_through!(Transfer, TransferRecord, from_record);
 
 /// A transfer's amount in the group currency `currency`, in minor units.
 ///

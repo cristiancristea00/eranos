@@ -378,39 +378,10 @@ impl FromStr for PhoneNumber {
     }
 }
 
-#[cfg(feature = "serde")]
-mod serde_impls {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    use super::{Email, PhoneNumber};
-
-    impl Serialize for Email {
-        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-            serialiser.serialize_str(self.as_str())
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Email {
-        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            eranos_core::serde_text::deserialise(deserialiser, "an email address")
-        }
-    }
-
-    impl Serialize for PhoneNumber {
-        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-            serialiser.serialize_str(self.e164())
-        }
-    }
-
-    impl<'de> Deserialize<'de> for PhoneNumber {
-        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            eranos_core::serde_text::deserialise(
-                deserialiser,
-                "a phone number such as +40712345678",
-            )
-        }
-    }
-}
+eranos_core::serde_text!(Email, as_str, "an email address");
+// Serialised in E.164, which every parser reads back, rather than in the
+// international form `Display` writes.
+eranos_core::serde_text!(PhoneNumber, e164, "a phone number such as +40712345678");
 
 #[cfg(test)]
 mod tests;

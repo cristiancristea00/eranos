@@ -264,14 +264,7 @@ fn from_record(record: MemberRecord) -> Result<Member, MemberError> {
     }
 }
 
-// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
-// from the private record would appear on the facade's page for `Member`.
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Member {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        from_record(MemberRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
-    }
-}
+eranos_core::deserialise_through!(Member, MemberRecord, from_record);
 
 #[cfg(test)]
 mod tests;

@@ -187,19 +187,7 @@ impl FromStr for ExchangeRate {
     }
 }
 
-#[cfg(feature = "serde")]
-impl serde::Serialize for ExchangeRate {
-    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.collect_str(self)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for ExchangeRate {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        eranos_core::serde_text::deserialise(deserialiser, "a positive decimal exchange rate")
-    }
-}
+eranos_core::serde_text!(ExchangeRate, "a positive decimal exchange rate");
 
 /// The rate that converts one currency into another, as a currency change
 /// needs one for every currency in use: `ExpenseGroup::change_currency`.

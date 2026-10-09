@@ -327,39 +327,8 @@ impl FromStr for TimeOfDay {
     }
 }
 
-#[cfg(feature = "serde")]
-mod serde_impls {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    use super::{CalendarDate, TimeOfDay};
-
-    impl Serialize for CalendarDate {
-        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-            serialiser.collect_str(self)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for CalendarDate {
-        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            eranos_core::serde_text::deserialise(
-                deserialiser,
-                "an ISO 8601 date such as `2026-09-24`",
-            )
-        }
-    }
-
-    impl Serialize for TimeOfDay {
-        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-            serialiser.collect_str(self)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for TimeOfDay {
-        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            eranos_core::serde_text::deserialise(deserialiser, "an ISO 8601 time such as `18:30`")
-        }
-    }
-}
+eranos_core::serde_text!(CalendarDate, "an ISO 8601 date such as `2026-09-24`");
+eranos_core::serde_text!(TimeOfDay, "an ISO 8601 time such as `18:30`");
 
 #[cfg(test)]
 mod tests;

@@ -221,29 +221,13 @@ struct PaymentAccountRecord {
     details: PaymentAccountDetails,
 }
 
-// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
-// from the private record would appear on the facade's page for `PaymentAccount`.
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for PaymentAccount {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        let record = PaymentAccountRecord::deserialize(deserialiser)?;
-        Self::new(record.name, record.details).map_err(serde::de::Error::custom)
-    }
-}
+eranos_core::deserialise_through!(
+    PaymentAccount,
+    PaymentAccountRecord,
+    |record: PaymentAccountRecord| { Self::new(record.name, record.details) }
+);
 
-#[cfg(feature = "serde")]
-impl serde::Serialize for Username {
-    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.serialize_str(self.as_str())
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Username {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        eranos_core::serde_text::deserialise(deserialiser, "a non-empty username")
-    }
-}
+eranos_core::serde_text!(Username, as_str, "a non-empty username");
 
 #[cfg(test)]
 mod tests;

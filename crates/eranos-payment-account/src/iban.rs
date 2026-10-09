@@ -171,19 +171,7 @@ impl FromStr for Iban {
     }
 }
 
-#[cfg(feature = "serde")]
-impl serde::Serialize for Iban {
-    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.serialize_str(self.as_str())
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Iban {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        eranos_core::serde_text::deserialise(deserialiser, "an IBAN")
-    }
-}
+eranos_core::serde_text!(Iban, as_str, "an IBAN");
 
 #[cfg(test)]
 mod tests;

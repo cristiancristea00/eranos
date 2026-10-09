@@ -34,11 +34,7 @@ const BOUND: u32 = i32::MAX.unsigned_abs();
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "u32", into = "u32")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
 pub struct Percentage(u32);
 
 impl Percentage {
@@ -150,11 +146,7 @@ impl FromStr for Percentage {
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "u32", into = "u32")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
 pub struct Parts(u32);
 
 impl Parts {
@@ -253,33 +245,8 @@ impl FromStr for Parts {
     }
 }
 
-impl TryFrom<u32> for Percentage {
-    type Error = MoneyError;
-
-    fn try_from(basis_points: u32) -> Result<Self, Self::Error> {
-        Self::from_basis_points(basis_points)
-    }
-}
-
-impl From<Percentage> for u32 {
-    fn from(percentage: Percentage) -> Self {
-        percentage.0
-    }
-}
-
-impl TryFrom<u32> for Parts {
-    type Error = MoneyError;
-
-    fn try_from(hundredths: u32) -> Result<Self, Self::Error> {
-        Self::from_hundredths(hundredths)
-    }
-}
-
-impl From<Parts> for u32 {
-    fn from(parts: Parts) -> Self {
-        parts.0
-    }
-}
+eranos_core::deserialise_through!(Percentage, u32, Self::from_basis_points);
+eranos_core::deserialise_through!(Parts, u32, Self::from_hundredths);
 
 /// Parses `digits[.d[d]]` into hundredths; `None` for anything else or when
 /// the value does not fit in a `u32`.

@@ -289,14 +289,7 @@ fn from_record(record: ExpenseItemRecord) -> Result<ExpenseItem, ExpenseError> {
         .build()
 }
 
-// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
-// from the private record would appear on the facade's page for `ExpenseItem`.
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for ExpenseItem {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        from_record(ExpenseItemRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
-    }
-}
+eranos_core::deserialise_through!(ExpenseItem, ExpenseItemRecord, from_record);
 
 #[cfg(test)]
 mod tests;

@@ -66,19 +66,7 @@ impl FromStr for Language {
     }
 }
 
-#[cfg(feature = "serde")]
-impl serde::Serialize for Language {
-    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.serialize_str(self.as_str())
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Language {
-    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        eranos_core::serde_text::deserialise(deserialiser, "a BCP 47 language tag")
-    }
-}
+eranos_core::serde_text!(Language, as_str, "a BCP 47 language tag");
 
 #[cfg(test)]
 mod tests;

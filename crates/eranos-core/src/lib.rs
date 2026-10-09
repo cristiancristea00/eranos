@@ -16,9 +16,11 @@
 //! feature is for examples and tests: two devices would generate the same
 //! identifiers.
 //!
-//! The `text` module trims text and keeps blank optional text absent, and
-//! `serde_text` (feature `serde`) reads the values whose serialised form is
-//! their text form. [`cooperative`] holds the futures of the library's long
+//! The `text` module trims text and keeps blank optional text absent;
+//! `serde_text!` and `deserialise_through!` write the serde impls of the
+//! values whose serialised form is their text and of the values a
+//! constructor checks on the way in, and `serde_text` (feature `serde`)
+//! reads the text. [`cooperative`] holds the futures of the library's long
 //! computations, which yield at points of their own choosing, and their two
 //! drivers.
 //!
@@ -35,6 +37,7 @@ pub mod cooperative;
 mod error;
 #[cfg(feature = "serde")]
 pub mod serde_text;
+mod serialised;
 pub mod text;
 
 use std::cmp::Ordering;
@@ -245,19 +248,7 @@ macro_rules! define_id {
             }
         }
 
-        #[cfg(feature = "serde")]
-        impl serde::Serialize for $name {
-            fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-                serialiser.serialize_str(self.as_str())
-            }
-        }
-
-        #[cfg(feature = "serde")]
-        impl<'de> serde::Deserialize<'de> for $name {
-            fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-                serde_text::deserialise(deserialiser, "an identifier")
-            }
-        }
+        $crate::serde_text!($name, as_str, "an identifier");
     };
 }
 
