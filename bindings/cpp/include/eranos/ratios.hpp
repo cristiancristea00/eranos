@@ -15,6 +15,8 @@
 
 #include <cstdint>
 #include <expected>
+#include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -236,6 +238,35 @@ inline std::expected<Quantity, Error> Quantity::fromDouble(double const value) n
 }
 
 inline std::string Quantity::toString() const noexcept { return detail::EranosQuantity::format(tenThousandths); }
+
+/// The rate into a new group currency of an amount in another.
+struct CurrencyRate final {
+    /// The record of its fields.
+    ///
+    /// @param currency The ISO 4217 code of the currency the rate converts from.
+    /// @param rate The rate, as a decimal.
+    inline CurrencyRate(CurrencyCode currency, ExchangeRate rate) noexcept : currency(std::move(currency)), rate(std::move(rate)) {}
+
+    /// The ISO 4217 code of the currency the rate converts from.
+    CurrencyCode currency;
+
+    /// The rate, as a decimal.
+    ExchangeRate rate;
+
+    /// Whether every field of two records is equal.
+    ///
+    /// @param left A record
+    /// @param right Another record
+    /// @return Whether they are equal
+    [[nodiscard]] friend constexpr bool operator==(CurrencyRate const &left, CurrencyRate const &right) noexcept = default;
+};
+
+namespace detail {
+
+[[nodiscard]] inline std::unique_ptr<EranosCurrencyRate> toDetail(CurrencyRate const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::span<CurrencyRate const> const records) noexcept;
+
+} // namespace detail
 
 } // namespace eranos
 

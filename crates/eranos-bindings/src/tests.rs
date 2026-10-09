@@ -19,6 +19,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<Cancellation>();
         assert_send_and_sync::<ExpenseGroupHandle>();
         assert_send_and_sync::<ExpenseGroupReader>();
+        assert_send_and_sync::<ExpenseGroupWriter>();
         // The error, and the failure of every module.
         assert_send_and_sync::<PaymentAccountFailure>();
         assert_send_and_sync::<CalendarFailure>();

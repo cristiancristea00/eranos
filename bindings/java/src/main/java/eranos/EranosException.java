@@ -25,8 +25,9 @@ import java.util.function.Function;
  * }</pre>
  *
  * <p>A call the program should not make throws the standard exception instead: {@link
- * IllegalStateException} for a read through an {@link ExpenseGroupReader} after it is closed. A
- * future whose call is cancelled fails with a {@link CancellationException}.
+ * IllegalStateException} for a call through an {@link ExpenseGroupReader} or an {@link
+ * ExpenseGroupWriter} after it is closed. A future whose call is cancelled fails with a {@link
+ * CancellationException}.
  */
 // The exceptions are not serialisable in full: their failures hold the package's values, which
 // make no promise about a serialised form.

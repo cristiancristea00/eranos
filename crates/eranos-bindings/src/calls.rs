@@ -19,6 +19,7 @@ use crate::operations;
 use crate::reader::ExpenseGroupReader;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
+use crate::writer::ExpenseGroupWriter;
 
 #[eranos_glue_macros::calls]
 trait ExpenseGroupCalls {

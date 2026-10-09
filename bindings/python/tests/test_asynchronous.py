@@ -178,6 +178,98 @@ def test_a_reader_reads_the_group_until_it_is_released(flat: Flat) -> None:
     assert asyncio.run(read()) == 'Flat'
 
 
+def test_a_writer_reads_the_group_as_the_group_does(flat: Flat) -> None:
+    """
+    A write handle that let another call in would show a report two states of one group.
+
+    One that answered another way than the group would show an app entries, totals, or plans the group does not hold.
+    """
+    group = flat.group
+    group.archive_member(flat.bob)
+    group_id = group.id()
+    saved = group.save()
+    categories = group.categories()
+    expenses = group.expenses()
+    shares = group.expense_shares(flat.dinner)
+    summary = group.summary()
+    members = group.members()
+    settlement = group.settlement(SettlementStrategy.DIRECT)
+    transfers = group.transfers()
+    with group.write() as writer:
+        assert writer.id() == group_id
+        assert writer.name() == 'Flat'
+        assert writer.currency() == flat.euro
+        assert writer.note() == 'Rent'
+        assert writer.language() == Language('pt-PT')
+        assert writer.save() == saved
+        assert writer.categories() == categories
+        assert writer.category(flat.food) == categories[-1]
+        assert writer.expenses() == expenses
+        assert writer.expense(flat.dinner) == expenses[0]
+        assert writer.expense_shares(flat.dinner) == shares
+        assert writer.summary() == summary
+        assert writer.members() == members
+        assert writer.member(flat.ana) == members[0]
+        assert writer.is_archived(flat.ana) is False
+        assert writer.is_archived(flat.bob) is True
+        assert writer.settlement(SettlementStrategy.DIRECT) == settlement
+        assert writer.transfers() == transfers
+        assert writer.transfer(flat.repayment) == transfers[0]
+        assert writer.transfer_amount(flat.repayment) == flat.euros(1000)
+    with pytest.raises(RuntimeError, match='released'):
+        writer.name()
+
+
+def test_a_writer_changes_the_group_until_it_is_released(flat: Flat) -> None:
+    """
+    A write handle whose change did not take effect, or ran after its release, would change a group the app no longer holds the lock of.
+
+    One held after its block would stop every later call.
+    """
+    group = flat.group
+    with group.write() as writer:
+        writer.set_name('Home')
+        writer.set_note(None)
+        writer.set_language(None)
+        assert (writer.name(), writer.note(), writer.language()) == ('Home', None, None)
+        food = writer.category(flat.food)
+        assert food is not None
+        assert writer.replace_category(food) == food
+        dinner = writer.expense(flat.dinner)
+        assert dinner is not None
+        assert writer.replace_expense(dinner) == dinner
+        assert writer.remove_expense(flat.dinner) == dinner
+        assert writer.add_expense(dinner) == flat.dinner
+        repayment = writer.transfer(flat.repayment)
+        assert repayment is not None
+        assert writer.replace_transfer(repayment) == repayment
+        assert writer.remove_transfer(flat.repayment) == repayment
+        assert writer.add_transfer(repayment) == flat.repayment
+        carol = writer.add_member(Member.create(first_name='Carol'))
+        popa = writer.member(carol)
+        assert popa is not None
+        assert writer.replace_member(popa) == popa
+        writer.archive_member(carol)
+        assert writer.is_archived(carol) is True
+        writer.unarchive_member(carol)
+        assert writer.remove_member(carol) == popa
+        assert writer.remove_category(flat.food) == food
+        assert writer.add_category(food) == flat.food
+        lei = CurrencyCode('RON')
+        writer.change_currency(lei, [CurrencyRate(flat.euro, ExchangeRate('5'))])
+        assert writer.currency() == lei
+    with pytest.raises(RuntimeError, match='released'):
+        writer.set_name('Flat')
+    assert group.name() == 'Home'
+
+    async def write() -> str:
+        with await group.write_async() as asynchronous:
+            asynchronous.set_name('Flat')
+            return asynchronous.name()
+
+    assert asyncio.run(write()) == 'Flat'
+
+
 def test_a_change_waiting_behind_a_reader_is_cancelled_and_leaves_the_group_as_it_was(flat: Flat) -> None:
     """
     A cancelled change that still ran would change the group after the app gave it up.

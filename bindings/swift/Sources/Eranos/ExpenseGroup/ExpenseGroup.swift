@@ -132,4 +132,55 @@ public final class ExpenseGroup: Sendable {
         }
         return try await body(reader)
     }
+
+    /// A write handle, which holds the exclusive lock until it is released or freed, so that its
+    /// reads and changes run with no other call in between. Any synchronous call of the group on the
+    /// thread that holds one waits forever: release or free the handle first.
+    ///
+    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
+    ///   call holds the lock.
+    public func write() throws(EranosError) -> ExpenseGroupWriter {
+        let writer = try converting { try handle.write() }
+        return ExpenseGroupWriter(writer)
+    }
+
+    /// A write handle, which holds the exclusive lock until it is released or freed, so that its
+    /// reads and changes run with no other call in between.
+    ///
+    /// Waits for the lock without blocking a thread; cancelling the task cancels the wait.
+    ///
+    /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
+    public func write() async throws(EranosError) -> ExpenseGroupWriter {
+        let writer = try await converting { [handle] cancellation in
+            try await handle.writeAsync(cancellation: cancellation)
+        }
+        return ExpenseGroupWriter(writer)
+    }
+
+    /// Runs `body` with a write handle, and releases it when `body` returns or throws, so that no
+    /// other call runs between the reads and changes of `body`.
+    ///
+    /// - Throws: As `write()` does, and what `body` throws.
+    public func withWrite<Value>(_ body: (ExpenseGroupWriter) throws(EranosError) -> Value) throws(EranosError) -> Value {
+        let writer = try write()
+        defer {
+            writer.release()
+        }
+        return try body(writer)
+    }
+
+    /// Runs `body` with a write handle, and releases it when `body` returns or throws, so that no
+    /// other call runs between the reads and changes of `body`.
+    ///
+    /// Waits for the lock without blocking a thread.
+    ///
+    /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first, and what
+    ///   `body` throws.
+    public func withWrite<Value>(_ body: (ExpenseGroupWriter) async throws(EranosError) -> Value) async throws(EranosError) -> Value {
+        let writer = try await write()
+        defer {
+            writer.release()
+        }
+        return try await body(writer)
+    }
 }

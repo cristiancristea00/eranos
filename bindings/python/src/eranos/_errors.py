@@ -30,8 +30,9 @@ class EranosError(Exception):
                 case _:
                     raise
 
-    A call the program should not make raises the standard error instead: ``RuntimeError`` for a read through an
-    ``ExpenseGroupReader`` after its release. A call whose task is cancelled raises ``asyncio.CancelledError``.
+    A call the program should not make raises the standard error instead: ``RuntimeError`` for a call through an
+    ``ExpenseGroupReader`` or an ``ExpenseGroupWriter`` after its release. A call whose task is cancelled raises
+    ``asyncio.CancelledError``.
     """
 
 

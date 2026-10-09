@@ -350,3 +350,20 @@ export class Quantity {
         return internal.quantityFormat(this.tenThousandths);
     }
 }
+
+/** The rate into a new group currency of an amount in `currency`. */
+export interface CurrencyRate {
+    /** The currency the rate converts from. */
+    readonly currency: CurrencyCode;
+    /** The rate. */
+    readonly rate: ExchangeRate;
+}
+
+/**
+ * The rates as the generated code takes them.
+ *
+ * @internal
+ */
+export function generatedRates(rates: readonly CurrencyRate[]): internal.CurrencyRate[] {
+    return rates.map((rate) => internal.CurrencyRate.create({ currency: rate.currency.code, rate: rate.rate.toString() }));
+}

@@ -12,6 +12,7 @@ use crate::money::{CurrencyRate, currency};
 use crate::operations::CurrencyChange;
 use crate::reader::ExpenseGroupReader;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
+use crate::writer::ExpenseGroupWriter;
 use crate::{EranosError, identifier};
 
 /// What a new group starts with.
@@ -130,6 +131,39 @@ impl ExpenseGroupHandle {
         async move {
             Ok(ExpenseGroupReader::new(
                 cancellable(shared.read(), cancellation).await?,
+            ))
+        }
+    }
+
+    /// A write handle, which holds the exclusive lock until it is released or
+    /// dropped, so that its reads and changes run with no other call in
+    /// between.
+    ///
+    /// Any synchronous call on the thread that holds a write handle waits
+    /// forever: it waits for the handle, which that thread cannot release
+    /// meanwhile. Release or drop the handle first.
+    ///
+    /// # Errors
+    ///
+    /// [`ExpenseGroupFailure::Busy`](crate::ExpenseGroupFailure::Busy) on wasm while another
+    /// call holds the lock.
+    pub fn write(&self) -> Result<ExpenseGroupWriter, EranosError> {
+        self.write_lock().map(ExpenseGroupWriter::new)
+    }
+
+    /// A write handle, as a future that waits for the lock.
+    ///
+    /// # Errors
+    ///
+    /// [`EranosError::Cancelled`].
+    pub fn write_async(
+        &self,
+        cancellation: Option<Arc<Cancellation>>,
+    ) -> impl Future<Output = Result<ExpenseGroupWriter, EranosError>> + Send + 'static {
+        let shared = self.shared.clone();
+        async move {
+            Ok(ExpenseGroupWriter::new(
+                cancellable(shared.write(), cancellation).await?,
             ))
         }
     }

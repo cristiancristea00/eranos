@@ -17,8 +17,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * }
  * ```
  *
- * A call the program should not make throws the standard exception instead: [IllegalStateException] for a read through an
- * [ExpenseGroupReader] after it is closed. A call whose coroutine is cancelled throws [CancellationException].
+ * A call the program should not make throws the standard exception instead: [IllegalStateException] for a call through an
+ * [ExpenseGroupReader] or an [ExpenseGroupWriter] after it is closed. A call whose coroutine is cancelled throws
+ * [CancellationException].
  */
 public sealed class EranosException(
     /** What went wrong, as the library words it. */

@@ -198,7 +198,7 @@ static constexpr EranosErrorKind ERANOS_ERROR_KIND_INVALID_JSON = EranosErrorKin
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_INVALID_TEXT = EranosErrorKind_InvalidText;
 /// The call was cancelled through its EranosCancellation, before it changed anything.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_CANCELLED = EranosErrorKind_Cancelled;
-/// The read handle was released, so it reads the group no more.
+/// A read or write handle was released, so it runs the group's calls no more.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_RELEASED = EranosErrorKind_Released;
 
 #endif // ERANOS_FAILURES_H

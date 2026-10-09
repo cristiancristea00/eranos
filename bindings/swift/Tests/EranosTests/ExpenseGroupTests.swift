@@ -287,7 +287,7 @@ func aReadHandleReadsAsTheGroupDoesUntilItIsReleased() throws {
     #expect(try reader.save() == snapshot.json)
     reader.release()
     reader.release()
-    #expect(throws: EranosError.released(detail: "the read handle was released")) {
+    #expect(throws: EranosError.released(detail: "the handle was released")) {
         try reader.name()
     }
     try group.rename(to: "Home")
@@ -307,6 +307,93 @@ func anAsynchronousReadHandleReleasesTheLockWhenItsClosureReturns() async throws
     #expect("Flat" == name)
     try await group.rename(to: "Home")
     #expect(await "Home" == group.name)
+}
+
+/// A write handle that answered another way than the group, let another call in, or kept running
+/// after it was released would show an app a report and a change of two states of one group.
+@Test
+func aWriteHandleReadsAndChangesTheGroupUntilItIsReleased() throws {
+    let flat = try Flat()
+    let group = flat.group
+    try group.archive(flat.bob)
+    let snapshot = try Snapshot(of: flat)
+    let writer = try group.write()
+    #expect(try writer.id() == snapshot.id)
+    #expect(try writer.categories() == snapshot.categories)
+    #expect(try writer.category(withID: flat.food) == snapshot.categories.last)
+    #expect(try writer.currency() == flat.euro)
+    #expect(try writer.expenses() == snapshot.expenses)
+    #expect(try writer.expense(withID: flat.dinner) == snapshot.expenses.first)
+    #expect(try writer.shares(of: flat.dinner) == snapshot.shares)
+    #expect(try writer.summary() == snapshot.summary)
+    #expect(try writer.members() == snapshot.members)
+    #expect(try writer.member(withID: flat.ana) == snapshot.members.first)
+    #expect(try false == writer.isArchived(flat.ana))
+    #expect(try true == writer.isArchived(flat.bob))
+    #expect(try "Flat" == writer.name())
+    #expect(try "Rent" == writer.note())
+    #expect(try "pt-PT" == writer.language()?.description)
+    #expect(try writer.settlement(by: .greedy) == snapshot.settlement)
+    #expect(try writer.transfers() == snapshot.transfers)
+    #expect(try writer.transfer(withID: flat.repayment) == snapshot.transfers.first)
+    #expect(try writer.amount(of: flat.repayment) == flat.euros(1_000))
+    #expect(try writer.save() == snapshot.json)
+    try writer.unarchive(flat.bob)
+    try writer.rename(to: "Home")
+    try writer.changeNote(to: nil)
+    try writer.changeLanguage(to: nil)
+    #expect(try "Home" == writer.name())
+    #expect(try nil == writer.note())
+    #expect(try nil == writer.language())
+    let food = try #require(try writer.category(withID: flat.food))
+    #expect(try writer.replace(food) == food)
+    let dinner = try #require(try writer.expense(withID: flat.dinner))
+    #expect(try writer.replace(dinner) == dinner)
+    #expect(try writer.remove(flat.dinner) == dinner)
+    #expect(try writer.add(dinner) == flat.dinner)
+    let repayment = try #require(try writer.transfer(withID: flat.repayment))
+    #expect(try writer.replace(repayment) == repayment)
+    #expect(try writer.remove(flat.repayment) == repayment)
+    #expect(try writer.add(repayment) == flat.repayment)
+    let carol = try writer.add(Member(firstName: "Carol"))
+    let popa = try #require(try writer.member(withID: carol))
+    #expect(try writer.replace(popa) == popa)
+    try writer.archive(carol)
+    #expect(try true == writer.isArchived(carol))
+    try writer.unarchive(carol)
+    #expect(try writer.remove(carol) == popa)
+    #expect(try writer.remove(flat.food) == food)
+    #expect(try writer.add(food) == flat.food)
+    let lei = try CurrencyCode(code: "RON")
+    try writer.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
+    #expect(try writer.currency() == lei)
+    writer.release()
+    writer.release()
+    #expect(throws: EranosError.released(detail: "the handle was released")) {
+        try writer.name()
+    }
+    #expect(throws: EranosError.released(detail: "the handle was released")) {
+        try writer.rename(to: "Flat")
+    }
+    #expect("Home" == group.name)
+    try group.withWrite { writer throws(EranosError) in try writer.rename(to: "Flat") }
+    #expect("Flat" == group.name)
+}
+
+/// An asynchronous write handle that answered another way than the synchronous one, or held the
+/// lock after its closure returned, would stop every later call.
+@Test
+func anAsynchronousWriteHandleReleasesTheLockWhenItsClosureReturns() async throws {
+    let flat = try Flat()
+    let group = flat.group
+    let writer = try await group.write()
+    try writer.rename(to: "Home")
+    #expect(try "Home" == writer.name())
+    writer.release()
+    let name = try await group.withWrite { writer async throws(EranosError) in try writer.name() }
+    #expect("Home" == name)
+    try await group.rename(to: "Flat")
+    #expect(await "Flat" == group.name)
 }
 
 /// A cancelled task whose call still ran would change the group after the app gave the change

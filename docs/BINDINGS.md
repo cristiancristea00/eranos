@@ -66,7 +66,7 @@ flowchart TD
     UNIFFI["eranos-uniffi<br/>the glue, on UniFFI 0.32.2"]
     WEB["eranos-web<br/>eranos-uniffi's sources on UniFFI 0.31.2"]
     CAPI["eranos-capi<br/>the Diplomat bridge, on Diplomat 0.16.1"]
-    BINDINGS["eranos-bindings<br/>records, EranosError, FlatError,<br/>ExpenseGroupHandle, ExpenseGroupReader, Cancellation"]
+    BINDINGS["eranos-bindings<br/>records, EranosError, FlatError,<br/>ExpenseGroupHandle, ExpenseGroupReader,<br/>ExpenseGroupWriter, Cancellation"]
     FACADE["eranos<br/>the library"]
     SWIFT --> UNIFFI
     KOTLIN --> UNIFFI
@@ -104,7 +104,7 @@ flowchart TD
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-bindings      records, EranosError, FlatError,                    │
  │                      ExpenseGroupHandle, ExpenseGroupReader,             │
- │                      Cancellation, the value helpers                     │
+ │                      ExpenseGroupWriter, Cancellation, the value helpers │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos               the library                                         │
  └──────────────────────────────────────────────────────────────────────────┘
@@ -208,9 +208,15 @@ flowchart TD
   host.
   `ExpenseGroupHandle::read` returns an `ExpenseGroupReader`, which holds
   the shared lock until it is released or dropped, so the reads of one
-  report see no change in between; `release` frees the lock at once, for
-  languages whose collector frees objects late, and is not named `close`,
-  which the Kotlin and Java generators give every object to free it.
+  report see no change in between, and `write` an `ExpenseGroupWriter`,
+  which holds the exclusive lock the same way, so its reads and changes
+  run with no other call in between. Each handle has the synchronous form
+  of its calls, which fail with `Released` after `release`; `release`
+  frees the lock at once, for languages whose collector frees objects
+  late, and is not named `close`, which the Kotlin and Java generators
+  give every object to free it. Any synchronous call of the group on the
+  thread that holds a write handle waits forever, since the handle holds
+  the lock the call needs and the thread cannot release it meanwhile.
 - **Cancellation.** Every asynchronous call takes an optional
   `Cancellation`. Cancelling it stops the call at its next yield, or at
   once while the call waits for the lock, and fails it with `Cancelled`;
@@ -263,6 +269,7 @@ under the core's names, and every value prints the library's text.
 | --------------- | --------------------------------- | ------------------------------------- | ------------------------------------------------ | ------------------------------------- | ------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
 | the group       | `final class ExpenseGroup`        | `class ExpenseGroup`, `AutoCloseable` | `final class ExpenseGroup`, `AutoCloseable`      | `class ExpenseGroup`, `Disposable`    | `EranosExpenseGroup *`          | `ExpenseGroup`, which only moves           | `class ExpenseGroup`, a context manager              |
 | a read handle   | `ExpenseGroupReader`, `withRead`  | `ExpenseGroupReader`, `withRead`      | `ExpenseGroupReader`                             | `ExpenseGroupReader`, `Disposable`    | `EranosExpenseGroupReader *`    | `ExpenseGroupReader`                       | `ExpenseGroupReader`, a context manager              |
+| a write handle  | `ExpenseGroupWriter`, `withWrite` | `ExpenseGroupWriter`, `withWrite`     | `ExpenseGroupWriter`                             | `ExpenseGroupWriter`, `Disposable`    | `EranosExpenseGroupWriter *`    | `ExpenseGroupWriter`                       | `ExpenseGroupWriter`, a context manager              |
 | an identifier   | `Member.ID`                       | the value class `MemberId`            | the record `MemberId`                            | the branded string `MemberId`         | text                            | the class `MemberId`                       | the `NewType` `MemberId`                             |
 | a checked value | a struct: `CurrencyCode`, `Money` | a class: `CurrencyCode`, `Money`      | `CurrencyCode`, a final class; `Money`, a record | a class: `CurrencyCode`, `Money`      | an opaque object: `EranosMoney` | `CurrencyCode`, a class; `Money`, a struct | `CurrencyCode`, a class; `Money`, a frozen dataclass |
 | an entry        | a struct: `Expense`               | a class: `Expense`                    | a final class with a builder                     | interfaces: `Expense`, `ExpenseInput` | an opaque object with setters   | a struct: `Expense`                        | a frozen dataclass: `Expense`                        |
@@ -379,11 +386,13 @@ carries the derives of one UniFFI release, so the core's items cannot carry
 them; instead each carries `#[mirrored]`, which adds a macro of its fields,
 and the core's `mirrors!` hands every mirror to the glue's `uniffi_mirror!`,
 which stamps the copies, so a copy always repeats its item. It wraps the
-group handle, the read handle, and the cancellation in the objects
-`ExpenseGroup`, `ExpenseGroupReader`, and `Cancellation`, whose methods
-forward to the core: every group call's two forms and every read's are
-stamped from the core's `expense_group_calls!` table, the trait that lists
-the calls, with the core's documentation, its links as code spans; the
+group handle, the read handle, the write handle, and the cancellation in
+the objects `ExpenseGroup`, `ExpenseGroupReader`, `ExpenseGroupWriter`,
+and `Cancellation`, whose methods forward to the core: every group call's
+two forms, every read's on the read handle, and every call's on the write
+handle are stamped from the core's `expense_group_calls!` table, the trait
+that lists the calls, with the core's documentation, its links as code
+spans; the
 constructors, `read`, and `release` are written by hand. It exports the
 value helpers as functions and the asynchronous load as
 `load_expense_group_async`. Its three source files are compiled by
@@ -419,8 +428,8 @@ bridge is code the repository holds: `cargo xtask generate` writes
 `src/generated/records.rs`, an object for every record, list, and enum the
 calls reach and for the records the library parses, and
 `src/generated/expense_group.rs`, the group with both forms of
-every call, the read handle with every read's, the cancellation, and an
-outcome per kind of answer, from the core's `#[mirrored]` items and its
+every call, the read handle with every read's, the write handle with
+every call's, the cancellation, and an outcome per kind of answer, from the core's `#[mirrored]` items and its
 trait of calls, through eranos-glue's generator, and lays them out with
 rustfmt. An outcome holds the call's failure or its answer, and hands the
 answer over, a flag's included, only when the call succeeded; it holds an
@@ -438,8 +447,9 @@ has a twin of each form that passes none, since C passes no absent text,
 named `clear_` for its `set_`: `clear_note` returns nothing, and
 `clear_language` a `Result`, as `set_language` does, since the core marks
 only the note's call `#[infallible]`. The generator's templates hold
-what the core cannot say: the group's constructors and read handle, the
-cancellation, and the methods of a record that are not a field's, such as an
+what the core cannot say: the group's constructors and its read and write
+handles, the cancellation, and the methods of a record that are not a
+field's, such as an
 expense's total and an item's line totals and its discount's amount. A
 test of xtask fails while a committed file holds other code than the
 generator writes; it compares tokens, so rustfmt's commas, a `match` arm's
@@ -561,7 +571,7 @@ Swift API Design Guidelines:
 - Every group call is one name overloaded by `async`: asynchronous code
   picks the form that waits for the lock without blocking a thread of the
   pool, and cancelling its task cancels the call. `ExpenseGroup.withRead`
-  holds a read handle for a closure.
+  holds a read handle for a closure, and `withWrite` a write handle.
 
 `bindings/swift/examples` is a package of its own over this one, with a
 program per example of eranos that prints the example's report
@@ -629,14 +639,14 @@ its code. The layer follows the Kotlin library guidelines:
 - A failure the library reports throws `EranosException`, a subclass per
   module holding the module's failure (`ExpenseGroupFailure.MemberInUse`)
   and the library's message. A call the program should not make throws the
-  standard exception for it: `IllegalStateException` for a read through a
-  closed `ExpenseGroupReader`.
+  standard exception for it: `IllegalStateException` for a call through a
+  closed `ExpenseGroupReader` or `ExpenseGroupWriter`.
 - Every group call is a `suspend` function that waits for the lock without
   blocking its thread; cancelling its coroutine drops the library's call,
   which leaves the group as it was. Its twin, whose name ends in `Blocking`,
-  blocks instead. `ExpenseGroup` and `ExpenseGroupReader` are
-  `AutoCloseable`, and `ExpenseGroup.withRead` holds a read handle for a
-  block.
+  blocks instead. `ExpenseGroup`, `ExpenseGroupReader`, and
+  `ExpenseGroupWriter` are `AutoCloseable`, and `ExpenseGroup.withRead`
+  holds a read handle for a block, `withWrite` a write handle.
 - The binary-compatibility validator checks the layer's API against the
   committed dump, `eranos/api/eranos.api`.
 
@@ -813,15 +823,16 @@ build. The layer follows the Google TypeScript Style Guide:
   and `quantity_from_whole`.
 - A failure the library reports throws an `EranosError`, a subclass per
   module holding the module's failure, itself a union by `kind`. A call the
-  program should not make throws `TypeError`: a read through a released
-  `ExpenseGroupReader`.
+  program should not make throws `TypeError`: a call through a released
+  `ExpenseGroupReader` or `ExpenseGroupWriter`.
 - Every group call returns a Promise that waits for the lock; aborting the
   `AbortSignal` of its options cancels the call, which leaves the group as
   it was, and rejects with the signal's reason. Its twin, whose name ends in
   `Sync`, does not wait: it throws `ExpenseGroupError` with the failure
   `busy` while another call holds the lock, since the page's one thread
-  cannot wait for it. `ExpenseGroup` and `ExpenseGroupReader` are
-  `Disposable`, so `using` frees them at the end of a block.
+  cannot wait for it. `ExpenseGroup`, `ExpenseGroupReader`, and
+  `ExpenseGroupWriter` are `Disposable`, so `using` frees them at the end
+  of a block.
 
 `examples` holds a module per example of eranos, over the layer, that prints
 the example's report on Node ([TESTING.md § 2](TESTING.md#2-layout));
@@ -1057,8 +1068,8 @@ Core Guidelines with the naming rule above:
 - `ExpenseGroup` owns its handle, so it moves and never copies; an asynchronous
   call returns a `std::future` of what the synchronous form returns, as a
   `std::expected`, and takes an optional `Cancellation`, which leaves an
-  error of the kind `CANCELLED` in the future. `ExpenseGroupReader` releases the
-  lock when it is destroyed or released.
+  error of the kind `CANCELLED` in the future. `ExpenseGroupReader` and
+  `ExpenseGroupWriter` release the lock when they are destroyed or released.
 - Text goes in as `std::string_view` and comes back as `std::string`.
   Every class and struct is `final`, `const` sits after what it qualifies,
   on every parameter the function does not move from, and on every member
@@ -1164,15 +1175,16 @@ reads its annotations without checking its code, and Ruff leaves it out:
   (`ExpenseGroupError.MemberInUse`), with the library's message; a saved
   group that is not JSON raises `InvalidJsonError`, with the line and
   column. A call the program should not make raises the standard error for
-  it: `RuntimeError` for a call on a closed `ExpenseGroup` or a read
-  through a released `ExpenseGroupReader`. A synchronous read that cannot
+  it: `RuntimeError` for a call on a closed `ExpenseGroup` or a call
+  through a released `ExpenseGroupReader` or `ExpenseGroupWriter`. A
+  synchronous read that cannot
   fail, such as `name` or `summary`, raises nothing of the library's.
 - Every group call blocks, and its twin, whose name ends in `_async`, is a
   coroutine that waits for the lock without blocking the event loop;
   cancelling its task drops the library's call, which leaves the group as
-  it was, and raises `asyncio.CancelledError` in the task. `ExpenseGroup` and
-  `ExpenseGroupReader` are context managers: leaving the block closes the group
-  or releases the reader.
+  it was, and raises `asyncio.CancelledError` in the task. `ExpenseGroup`,
+  `ExpenseGroupReader`, and `ExpenseGroupWriter` are context managers:
+  leaving the block closes the group or releases the handle.
 - The generated module attaches a data enum's cases to it only after it
   defines them, and nothing seals its classes, so the conversion from them
   is a table by class, which the conversion tests check against every

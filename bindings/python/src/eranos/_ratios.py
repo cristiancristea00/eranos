@@ -1,6 +1,7 @@
-"""Hold the ratios that convert and divide amounts: exchange rates, percentages, and parts."""
+"""Hold the ratios that convert and divide amounts: exchange rates, with the currency each converts, percentages, and parts."""
 
 import dataclasses
+from collections.abc import Iterable
 from typing import final, override
 
 from eranos._checked import CheckedText
@@ -204,3 +205,29 @@ class Parts:
 
         """
         return generated.parts_format(self.hundredths)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True)
+class CurrencyRate:
+    """The rate into a new group currency of an amount in currency."""
+
+    currency: CurrencyCode
+    """The currency the rate converts from."""
+
+    rate: ExchangeRate
+    """The rate."""
+
+
+def generated_rates(rates: Iterable[CurrencyRate]) -> list[generated.CurrencyRate]:
+    """
+    Convert rates into the rates the generated module holds.
+
+    Args:
+        rates: The rates.
+
+    Returns:
+        The generated rates.
+
+    """
+    return [generated.CurrencyRate(currency=rate.currency.code, rate=str(rate.rate)) for rate in rates]

@@ -1195,9 +1195,66 @@ void aReaderReadsTheGroupUntilItIsReleased(Check &check) noexcept {
     reader.release();
     auto const released = refusal(reader.name());
     check.that(isFailure(released, ErrorKind::RELEASED, std::nullopt), "a read after the release");
-    check.that(released.has_value() && "the read handle was released" == released.value().message(), "the message");
+    check.that(released.has_value() && "the handle was released" == released.value().message(), "the message");
     auto const asynchronous = flat.group.readAsync().get().value();
     check.that("Flat" == asynchronous.name(), "a read handle from an asynchronous call");
+}
+
+/// A write handle that let another call in, or ran after its release, would show a report and a change two states of one group;
+/// one that answered another way than the group would show an app entries the group does not hold.
+void aWriterReadsAndChangesTheGroupUntilItIsReleased(Check &check) noexcept {
+    Flat flat;
+    auto const id = flat.group.id();
+    auto const saved = flat.group.save();
+    auto const categories = flat.group.categories();
+    auto const expenses = flat.group.expenses();
+    auto const shares = flat.group.expenseShares(flat.dinner).value();
+    auto const summary = flat.group.summary();
+    auto const members = flat.group.members();
+    auto const settlement = flat.group.settlement(SettlementStrategy::DIRECT).value();
+    auto const transfers = flat.group.transfers();
+    auto writer = flat.group.write();
+    check.that(writer.id() == id && "Flat" == writer.name() && writer.currency() == flat.euro, "the details");
+    check.that("Rent" == writer.note() && writer.language() == Language::parse("pt-PT").value() && writer.save() == saved, "the options");
+    check.that(writer.categories() == categories && writer.category(flat.food).value() == categories.back(), "the categories");
+    check.that(writer.expenses() == expenses && writer.expense(flat.dinner).value() == expenses.front(), "the expenses");
+    check.that(writer.expenseShares(flat.dinner).value() == shares && writer.summary() == summary, "the totals");
+    check.that(writer.members() == members && writer.member(flat.ana).value() == members.front(), "the members");
+    check.that(std::optional(false) == writer.isArchived(flat.ana).value(), "whether a member is archived");
+    check.that(writer.settlement(SettlementStrategy::DIRECT) == settlement, "a settlement");
+    check.that(writer.transfers() == transfers && writer.transfer(flat.repayment).value() == transfers.front(), "the transfers");
+    check.that(writer.transferAmount(flat.repayment) == flat.euros(1'000), "a transfer's amount");
+    check.that(writer.setName("Home").has_value() && writer.setNote("Lease").has_value() && writer.clearNote().has_value() &&
+                   writer.setLanguage(Language::parse("ro").value()).has_value() && writer.clearLanguage().has_value(),
+               "the details change");
+    check.that("Home" == writer.name() && !writer.note().value().has_value() && !writer.language().value().has_value(), "and read back changed");
+    auto const &food = categories.back();
+    check.that(writer.replaceCategory(food) == food, "a category's replacement");
+    auto const &dinner = expenses.front();
+    check.that(writer.replaceExpense(dinner) == dinner && writer.removeExpense(flat.dinner) == dinner && writer.addExpense(dinner) == flat.dinner,
+               "an expense's replacement, removal, and return");
+    auto const &repayment = transfers.front();
+    check.that(writer.replaceTransfer(repayment) == repayment && writer.removeTransfer(flat.repayment) == repayment &&
+                   writer.addTransfer(repayment) == flat.repayment,
+               "a transfer's replacement, removal, and return");
+    auto const carol = writer.addMember(Member("Carol")).value();
+    auto const popa = writer.member(carol).value().value();
+    check.that(writer.replaceMember(popa) == popa && writer.archiveMember(carol).has_value() &&
+                   std::optional(true) == writer.isArchived(carol).value() && writer.unarchiveMember(carol).has_value() &&
+                   writer.removeMember(carol) == popa,
+               "a member's addition, replacement, archiving, unarchiving, and removal");
+    check.that(writer.removeCategory(flat.food) == food && writer.addCategory(food) == flat.food, "a category's removal and return");
+    auto const lei = CurrencyCode::of("RON").value();
+    check.that(writer.changeCurrency(lei, std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5").value())}).has_value() &&
+                   writer.currency() == lei,
+               "a change of currency");
+    writer.release();
+    auto const released = refusal(writer.name());
+    check.that(isFailure(released, ErrorKind::RELEASED, std::nullopt), "a read after the release");
+    check.that(released.has_value() && "the handle was released" == released.value().message(), "the message");
+    check.that(isFailure(refusal(writer.setName("Flat")), ErrorKind::RELEASED, std::nullopt), "a change after the release");
+    auto asynchronous = flat.group.writeAsync().get().value();
+    check.that(asynchronous.setName("Flat").has_value() && "Flat" == asynchronous.name(), "a write handle from an asynchronous call");
 }
 
 /// A cancelled change that still ran would change the group after the app gave the change up; one that kept waiting would hold
@@ -1299,6 +1356,7 @@ constexpr std::array TESTS = {
     Test{.name = "everyAsynchronousCallReturnsWhatItsSynchronousFormReturns", .body = everyAsynchronousCallReturnsWhatItsSynchronousFormReturns},
     Test{.name = "anAsynchronousCallReportsTheErrorItsSynchronousFormReturns", .body = anAsynchronousCallReportsTheErrorItsSynchronousFormReturns},
     Test{.name = "aReaderReadsTheGroupUntilItIsReleased", .body = aReaderReadsTheGroupUntilItIsReleased},
+    Test{.name = "aWriterReadsAndChangesTheGroupUntilItIsReleased", .body = aWriterReadsAndChangesTheGroupUntilItIsReleased},
     Test{
         .name = "aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas",
         .body = aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas,

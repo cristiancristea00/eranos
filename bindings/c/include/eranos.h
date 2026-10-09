@@ -22,6 +22,7 @@
 #include "eranos/expense.h"              // IWYU pragma: export
 #include "eranos/expense_group.h"        // IWYU pragma: export
 #include "eranos/expense_group_reader.h" // IWYU pragma: export
+#include "eranos/expense_group_writer.h" // IWYU pragma: export
 #include "eranos/failures.h"             // IWYU pragma: export
 #include "eranos/identifiers.h"          // IWYU pragma: export
 #include "eranos/members.h"              // IWYU pragma: export

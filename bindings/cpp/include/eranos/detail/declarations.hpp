@@ -39,6 +39,8 @@
 #include "eranos/detail/EranosExpenseGroupOutcome.hpp"
 #include "eranos/detail/EranosExpenseGroupReader.hpp"
 #include "eranos/detail/EranosExpenseGroupReaderOutcome.hpp"
+#include "eranos/detail/EranosExpenseGroupWriter.hpp"
+#include "eranos/detail/EranosExpenseGroupWriterOutcome.hpp"
 #include "eranos/detail/EranosExpenseItem.hpp"
 #include "eranos/detail/EranosExpenseItemList.hpp"
 #include "eranos/detail/EranosExpenseList.hpp"
@@ -131,6 +133,7 @@ class ExpenseId;
 class ExpenseGroup;
 class ExpenseGroupId;
 class ExpenseGroupReader;
+class ExpenseGroupWriter;
 class Iban;
 class Language;
 class MemberId;

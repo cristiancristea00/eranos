@@ -20,6 +20,7 @@ cancels the call, which leaves the group as it was.
 
 - ``ExpenseGroup``
 - ``ExpenseGroupReader``
+- ``ExpenseGroupWriter``
 
 ### Entries
 

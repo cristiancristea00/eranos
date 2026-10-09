@@ -410,12 +410,95 @@ class ExpenseGroupTest {
         reader.close();
         reader.close();
         IllegalStateException released = assertThrows(IllegalStateException.class, reader::name);
-        assertEquals("the read handle was released", released.getMessage());
+        assertEquals("the handle was released", released.getMessage());
         try (ExpenseGroupReader async = group.readAsync().join()) {
             assertEquals("Flat", async.name());
         }
         group.setName("Home");
         assertEquals("Home", group.name());
+    }
+
+    /**
+     * A write handle that answered another way than the group, let another call in, or kept running
+     * after it was closed would show an app a report and a change of two states of one group.
+     */
+    @Test
+    void aWriteHandleReadsAndChangesTheGroupUntilItIsClosed() throws EranosException {
+        Flat flat = new Flat();
+        ExpenseGroup group = flat.group;
+        group.archiveMember(flat.bob);
+        ExpenseGroupId id = group.id();
+        List<Category> categories = group.categories();
+        List<Expense> expenses = group.expenses();
+        Optional<ExpenseShares> shares = group.expenseShares(flat.dinner);
+        Summary summary = group.summary();
+        List<Member> members = group.members();
+        Optional<Language> language = group.language();
+        SettlementPlan settlement = group.settlement(SettlementStrategy.GREEDY);
+        List<Transfer> transfers = group.transfers();
+        String saved = group.save();
+        ExpenseGroupWriter writer = group.write();
+        assertEquals(id, writer.id());
+        assertEquals(categories, writer.categories());
+        assertEquals(Optional.of(categories.getLast()), writer.category(flat.food));
+        assertEquals(flat.euro, writer.currency());
+        assertEquals(expenses, writer.expenses());
+        assertEquals(Optional.of(expenses.getFirst()), writer.expense(flat.dinner));
+        assertEquals(shares, writer.expenseShares(flat.dinner));
+        assertEquals(summary, writer.summary());
+        assertEquals(members, writer.members());
+        assertEquals(Optional.of(members.getFirst()), writer.member(flat.ana));
+        assertEquals(Optional.of(false), writer.isArchived(flat.ana));
+        assertEquals(Optional.of(true), writer.isArchived(flat.bob));
+        assertEquals("Flat", writer.name());
+        assertEquals(Optional.of("Rent"), writer.note());
+        assertEquals(language, writer.language());
+        assertEquals(settlement, writer.settlement(SettlementStrategy.GREEDY));
+        assertEquals(transfers, writer.transfers());
+        assertEquals(Optional.of(transfers.getFirst()), writer.transfer(flat.repayment));
+        assertEquals(Optional.of(flat.euros(1_000)), writer.transferAmount(flat.repayment));
+        assertEquals(saved, writer.save());
+        writer.unarchiveMember(flat.bob);
+        writer.setName("Home");
+        writer.setNote("Lease");
+        writer.clearNote();
+        writer.setLanguage(language.orElseThrow());
+        writer.clearLanguage();
+        assertEquals("Home", writer.name());
+        assertEquals(Optional.empty(), writer.note());
+        assertEquals(Optional.empty(), writer.language());
+        Category food = categories.getLast();
+        assertEquals(food, writer.replaceCategory(food));
+        Expense dinner = expenses.getFirst();
+        assertEquals(dinner, writer.replaceExpense(dinner));
+        assertEquals(dinner, writer.removeExpense(flat.dinner));
+        assertEquals(flat.dinner, writer.addExpense(dinner));
+        Transfer repayment = transfers.getFirst();
+        assertEquals(repayment, writer.replaceTransfer(repayment));
+        assertEquals(repayment, writer.removeTransfer(flat.repayment));
+        assertEquals(flat.repayment, writer.addTransfer(repayment));
+        MemberId carol = writer.addMember(Member.builder("Carol").build());
+        Member popa = writer.member(carol).orElseThrow();
+        assertEquals(popa, writer.replaceMember(popa));
+        writer.archiveMember(carol);
+        assertEquals(Optional.of(true), writer.isArchived(carol));
+        writer.unarchiveMember(carol);
+        assertEquals(popa, writer.removeMember(carol));
+        assertEquals(food, writer.removeCategory(flat.food));
+        assertEquals(flat.food, writer.addCategory(food));
+        CurrencyCode lei = CurrencyCode.of("RON");
+        writer.changeCurrency(lei, Map.of(flat.euro, ExchangeRate.parse("5")));
+        assertEquals(lei, writer.currency());
+        writer.close();
+        writer.close();
+        IllegalStateException released = assertThrows(IllegalStateException.class, writer::name);
+        assertEquals("the handle was released", released.getMessage());
+        assertThrows(IllegalStateException.class, () -> writer.setName("Flat"));
+        assertEquals("Home", group.name());
+        try (ExpenseGroupWriter async = group.writeAsync().join()) {
+            async.setName("Flat");
+        }
+        assertEquals("Flat", group.name());
     }
 
     /**

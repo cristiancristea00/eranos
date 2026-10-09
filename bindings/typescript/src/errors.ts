@@ -28,8 +28,8 @@ import { Money } from './money.js';
  * }
  * ```
  *
- * A call the program should not make throws a `TypeError` instead: a read through an {@link ExpenseGroupReader} after its
- * release.
+ * A call the program should not make throws a `TypeError` instead: a call through an {@link ExpenseGroupReader} or an
+ * {@link ExpenseGroupWriter} after its release.
  */
 export abstract class EranosError extends Error {}
 

@@ -144,7 +144,8 @@ pub enum EranosError {
         /// What went wrong.
         detail: String,
     },
-    /// The read handle was released, so it reads the group no more.
+    /// A read or write handle was released, so it reaches the group no
+    /// more.
     Released {
         /// What went wrong.
         detail: String,
@@ -181,7 +182,7 @@ impl EranosError {
     /// The error of the case `Released`.
     pub(crate) fn released() -> Self {
         Self::Released {
-            detail: "the read handle was released".to_owned(),
+            detail: "the handle was released".to_owned(),
         }
     }
 

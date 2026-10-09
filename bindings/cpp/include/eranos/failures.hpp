@@ -49,7 +49,7 @@ enum class ErrorKind : std::uint8_t {
     INVALID_TEXT,
     /// The call was cancelled through its cancellation, before it changed the group.
     CANCELLED,
-    /// A read through a read handle after its release.
+    /// A call through a read or write handle after its release.
     RELEASED,
 };
 

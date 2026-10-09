@@ -1792,6 +1792,38 @@ pub mod ffi {
                 EranosExpenseGroupReaderOutcome,
             );
         }
+
+        /// A write handle, which holds the exclusive lock until it is released or dropped, so that
+        /// its reads and changes run with no other call in between.
+        #[must_use]
+        pub fn write(&self) -> Box<EranosExpenseGroupWriter> {
+            Box::new(EranosExpenseGroupWriter(crate::waited(self.handle.write())))
+        }
+
+        /// The asynchronous form of `write`: it runs on the group's worker thread, in the order of
+        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
+        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
+        pub fn write_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosExpenseGroupWriterOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .write_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosExpenseGroupWriterOutcome,
+            );
+        }
     }
 
     /// The outcome of the asynchronous load, which its callback receives and destroys.
@@ -2126,6 +2158,616 @@ pub mod ffi {
                 .ok()
                 .and_then(Option::take)
                 .map(|reader| Box::new(EranosExpenseGroupReader(reader)))
+        }
+    }
+
+    /// A write handle: it holds the group's exclusive lock until it is released or destroyed, so
+    /// its reads and changes run with no other call in between.
+    ///
+    /// Every other call waits for the handle, so any synchronous call of the group on the thread
+    /// that holds one waits forever: release or destroy the handle first.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosExpenseGroupWriter(pub(crate) eranos_bindings::ExpenseGroupWriter);
+
+    impl EranosExpenseGroupWriter {
+        /// Releases the lock at once; later calls report the kind `Released`.
+        pub fn release(&self) {
+            self.0.release();
+        }
+
+        /// The group's identifier. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn id(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.id().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Every category: the built-in one first, then the others in identifier order, which is
+        /// creation order for generated identifiers.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn categories(&self) -> Result<Box<EranosCategoryList>, Box<EranosError>> {
+            self.0
+                .categories()
+                .map(|list| Box::new(EranosCategoryList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The category with the identifier `id`. `None` when it finds none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn category(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosCategory>>, Box<EranosError>> {
+            self.0
+                .category(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosCategory(value))))
+                .map_err(crate::failed)
+        }
+
+        /// Adds `category` under its identifier, and returns the identifier. Writes it into
+        /// `write`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn add_category(
+            &self,
+            category: &EranosCategory,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self.0.add_category(&category.0).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Renames the category that `category` names by its identifier, and returns it as it was.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn replace_category(
+            &self,
+            category: &EranosCategory,
+        ) -> Result<Box<EranosCategory>, Box<EranosError>> {
+            self.0
+                .replace_category(&category.0)
+                .map(|value| Box::new(EranosCategory(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Removes the category with the identifier `id` and returns it; its expenses move to the
+        /// built-in one.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn remove_category(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosCategory>, Box<EranosError>> {
+            self.0
+                .remove_category(&crate::text(id)?)
+                .map(|value| Box::new(EranosCategory(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The group currency, with what ISO 4217 says of it.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn currency(&self) -> Result<Box<EranosCurrencyDetails>, Box<EranosError>> {
+            self.0
+                .currency()
+                .map(|value| Box::new(EranosCurrencyDetails(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Moves the group to `currency`, with a rate into it for every other currency its entries
+        /// use.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn change_currency(
+            &self,
+            currency: &DiplomatStr,
+            rates: &EranosCurrencyRateList,
+        ) -> Result<(), Box<EranosError>> {
+            self.0
+                .change_currency(&crate::text(currency)?, &rates.0)
+                .map_err(crate::failed)
+        }
+
+        /// Every expense, in identifier order, which is creation order for generated identifiers.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn expenses(&self) -> Result<Box<EranosExpenseList>, Box<EranosError>> {
+            self.0
+                .expenses()
+                .map(|list| Box::new(EranosExpenseList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The expense with the identifier `id`. `None` when it finds none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn expense(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosExpense>>, Box<EranosError>> {
+            self.0
+                .expense(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosExpense(value))))
+                .map_err(crate::failed)
+        }
+
+        /// How the expense with the identifier `id` divides, in the group currency. `None` when it
+        /// finds none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn expense_shares(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosExpenseShares>>, Box<EranosError>> {
+            self.0
+                .expense_shares(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosExpenseShares(value))))
+                .map_err(crate::failed)
+        }
+
+        /// Adds `expense` under its identifier, and returns the identifier. Writes it into `write`.
+        ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn add_expense(
+            &self,
+            expense: &EranosExpense,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self.0.add_expense(&expense.0).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Replaces the expense that `expense` names by its identifier, and returns it as it was.
+        ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn replace_expense(
+            &self,
+            expense: &EranosExpense,
+        ) -> Result<Box<EranosExpense>, Box<EranosError>> {
+            self.0
+                .replace_expense(&expense.0)
+                .map(|value| Box::new(EranosExpense(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Removes the expense with the identifier `id` and returns it.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn remove_expense(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosExpense>, Box<EranosError>> {
+            self.0
+                .remove_expense(&crate::text(id)?)
+                .map(|value| Box::new(EranosExpense(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The group's totals.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn summary(&self) -> Result<Box<EranosSummary>, Box<EranosError>> {
+            self.0
+                .summary()
+                .map(|value| Box::new(EranosSummary(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Every member, archived ones included, in identifier order, which is creation order for
+        /// generated identifiers.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn members(&self) -> Result<Box<EranosMemberList>, Box<EranosError>> {
+            self.0
+                .members()
+                .map(|list| Box::new(EranosMemberList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The member with the identifier `id`. `None` when it finds none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn member(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosMember>>, Box<EranosError>> {
+            self.0
+                .member(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosMember(value))))
+                .map_err(crate::failed)
+        }
+
+        /// Whether the member with the identifier `id` is archived. `None` when it finds none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn is_archived(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<DiplomatOption<bool>, Box<EranosError>> {
+            self.0
+                .is_archived(&crate::text(id)?)
+                .map(DiplomatOption::from)
+                .map_err(crate::failed)
+        }
+
+        /// Adds `member` under their identifier, and returns the identifier. Writes it into
+        /// `write`.
+        ///
+        /// A phone number whose international form, or an IBAN whose country code, is not the one
+        /// the library derives is refused with `EranosError::MismatchedRecord`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn add_member(
+            &self,
+            member: &EranosMember,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self.0.add_member(&member.0).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Replaces the member that `member` names by their identifier, and returns them as they
+        /// were.
+        ///
+        /// A phone number whose international form, or an IBAN whose country code, is not the one
+        /// the library derives is refused with `EranosError::MismatchedRecord`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn replace_member(
+            &self,
+            member: &EranosMember,
+        ) -> Result<Box<EranosMember>, Box<EranosError>> {
+            self.0
+                .replace_member(&member.0)
+                .map(|value| Box::new(EranosMember(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Archives the member with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn archive_member(&self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0
+                .archive_member(&crate::text(id)?)
+                .map_err(crate::failed)
+        }
+
+        /// Unarchives the member with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn unarchive_member(&self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0
+                .unarchive_member(&crate::text(id)?)
+                .map_err(crate::failed)
+        }
+
+        /// Removes the member with the identifier `id`, whom no entry references, and returns them.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn remove_member(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosMember>, Box<EranosError>> {
+            self.0
+                .remove_member(&crate::text(id)?)
+                .map(|value| Box::new(EranosMember(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The group's name. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn name(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.name().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Renames the group.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn set_name(&self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.set_name(&crate::text(name)?).map_err(crate::failed)
+        }
+
+        /// The payments that settle every balance by `strategy`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn settlement(
+            &self,
+            strategy: EranosSettlementStrategy,
+        ) -> Result<Box<EranosSettlementPlan>, Box<EranosError>> {
+            self.0
+                .settlement(strategy.into())
+                .map(|value| Box::new(EranosSettlementPlan(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Every transfer, in identifier order, which is creation order for generated identifiers.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn transfers(&self) -> Result<Box<EranosTransferList>, Box<EranosError>> {
+            self.0
+                .transfers()
+                .map(|list| Box::new(EranosTransferList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The transfer with the identifier `id`. `None` when it finds none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn transfer(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosTransfer>>, Box<EranosError>> {
+            self.0
+                .transfer(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosTransfer(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The amount in the group currency of the transfer with the identifier `id`. `None` when
+        /// it finds none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn transfer_amount(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosMoney>>, Box<EranosError>> {
+            self.0
+                .transfer_amount(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosMoney(value))))
+                .map_err(crate::failed)
+        }
+
+        /// Adds `transfer` under its identifier, and returns the identifier. Writes it into
+        /// `write`.
+        ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn add_transfer(
+            &self,
+            transfer: &EranosTransfer,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self.0.add_transfer(&transfer.0).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
+        ///
+        /// An amount in a currency whose details are not the library's for its code is refused with
+        /// `MoneyFailure::UnknownCurrency`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn replace_transfer(
+            &self,
+            transfer: &EranosTransfer,
+        ) -> Result<Box<EranosTransfer>, Box<EranosError>> {
+            self.0
+                .replace_transfer(&transfer.0)
+                .map(|value| Box::new(EranosTransfer(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Removes the transfer with the identifier `id` and returns it.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn remove_transfer(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosTransfer>, Box<EranosError>> {
+            self.0
+                .remove_transfer(&crate::text(id)?)
+                .map(|value| Box::new(EranosTransfer(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The group's note. Writes it into `write` when there is one, and nothing otherwise.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn note(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.note().map_err(crate::failed)?;
+            crate::write_optional(write, text.as_deref());
+            Ok(())
+        }
+
+        /// Sets the note, trimmed, or clears it when there is none or the text is blank.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn set_note(&self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0
+                .set_note(Some(&crate::text(note)?))
+                .map_err(crate::failed)
+        }
+
+        /// The form of `set_note` that passes no `note`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn clear_note(&self) -> Result<(), Box<EranosError>> {
+            self.0.set_note(None).map_err(crate::failed)
+        }
+
+        /// The language the apps show the group in, as a BCP 47 tag. Writes it into `write` when
+        /// there is one, and nothing otherwise.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn language(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.language().map_err(crate::failed)?;
+            crate::write_optional(write, text.as_deref());
+            Ok(())
+        }
+
+        /// Sets the language from a BCP 47 tag, or clears it when there is none or the text is
+        /// blank.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn set_language(&self, language: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0
+                .set_language(Some(&crate::text(language)?))
+                .map_err(crate::failed)
+        }
+
+        /// The form of `set_language` that passes no `language`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn clear_language(&self) -> Result<(), Box<EranosError>> {
+            self.0.set_language(None).map_err(crate::failed)
+        }
+
+        /// The JSON of the group's saved form. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn save(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.save().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+    }
+
+    /// The outcome of an asynchronous call that returns a write handle, which its callback receives
+    /// and destroys.
+    #[diplomat::opaque_mut]
+    #[derive(Debug)]
+    pub struct EranosExpenseGroupWriterOutcome(
+        pub(crate) Result<Option<eranos_bindings::ExpenseGroupWriter>, crate::Failure>,
+    );
+
+    impl EranosExpenseGroupWriterOutcome {
+        /// Whether the call succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the call's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// Takes the write handle, if the call succeeded and it was not taken before.
+        pub fn take(&mut self) -> Option<Box<EranosExpenseGroupWriter>> {
+            self.0
+                .as_mut()
+                .ok()
+                .and_then(Option::take)
+                .map(|writer| Box::new(EranosExpenseGroupWriter(writer)))
         }
     }
 

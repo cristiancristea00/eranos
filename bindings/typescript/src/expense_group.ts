@@ -26,6 +26,7 @@ import {
     generatedTransfer,
 } from './entries.js';
 import { ExpenseGroupReader } from './expense_group_reader.js';
+import { ExpenseGroupWriter } from './expense_group_writer.js';
 import {
     type CategoryId,
     type ExpenseId,
@@ -41,7 +42,7 @@ import {
 } from './identifiers.js';
 import * as internal from './internal/eranos.js';
 import { Money } from './money.js';
-import type { ExchangeRate } from './ratios.js';
+import { type CurrencyRate, generatedRates } from './ratios.js';
 import {
     type ExpenseShares,
     type SettlementPlan,
@@ -59,14 +60,6 @@ export interface ExpenseGroupOptions {
     readonly note?: string;
     /** The language the apps show the group in. */
     readonly language?: Language;
-}
-
-/** The rate into a new group currency of an amount in `currency`. */
-export interface CurrencyRate {
-    /** The currency the rate converts from. */
-    readonly currency: CurrencyCode;
-    /** The rate. */
-    readonly rate: ExchangeRate;
 }
 
 /**
@@ -191,6 +184,32 @@ export class ExpenseGroup implements Disposable {
      */
     readSync(): ExpenseGroupReader {
         return ExpenseGroupReader.wrapping(calling(() => this.handle.read()));
+    }
+
+    /**
+     * A write handle, which holds the exclusive lock until it is released, so that its reads and changes run with no other
+     * call in between.
+     *
+     * Waits for the lock without blocking; aborting `options.signal` cancels the wait.
+     *
+     * @param options - The call's signal
+     * @returns A promise of the write handle
+     */
+    async write(options?: CallOptions): Promise<ExpenseGroupWriter> {
+        return ExpenseGroupWriter.wrapping(await awaiting((signal) => this.handle.writeAsync(undefined, signal), options));
+    }
+
+    /**
+     * A write handle, which holds the exclusive lock until it is released, so that its reads and changes run with no other
+     * call in between.
+     *
+     * Does not wait for the lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure `busy`.
+     *
+     * @returns The write handle
+     * @throws {@link ExpenseGroupError} with the failure `busy` while another call holds the lock
+     */
+    writeSync(): ExpenseGroupWriter {
+        return ExpenseGroupWriter.wrapping(calling(() => this.handle.write()));
     }
 
     // The group's own details: its identifier, name, currency, note, language, and saved form.
@@ -1403,11 +1422,6 @@ export class ExpenseGroup implements Disposable {
     settlementSync(strategy: SettlementStrategy): SettlementPlan {
         return convertedSettlementPlan(calling(() => this.handle.settlement(generatedStrategy(strategy))));
     }
-}
-
-/** The rates as the generated code takes them. */
-function generatedRates(rates: readonly CurrencyRate[]): internal.CurrencyRate[] {
-    return rates.map((rate) => internal.CurrencyRate.create({ currency: rate.currency.code, rate: rate.rate.toString() }));
 }
 
 /** `value` converted by `conversion`, or `undefined` for a value the group does not hold. */

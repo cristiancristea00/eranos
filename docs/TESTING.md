@@ -211,8 +211,9 @@ code expected and measure it, and eranos-glue-macros, whose macros run
 inside the compiler only when a crate that invokes them compiles, is left
 out of the runs and of the report, which skips its files: the runs build it
 instrumented all the same, and a warm build would read its macros as unrun.
-rustc maps no coverage for the code a proc macro writes, so the group
-handle's and the read handle's forms are not in the report either; the
+rustc maps no coverage for the code a proc macro writes, so the forms of
+the group handle and of the read and write handles are not in the report
+either; the
 operations and the locks they call are, and the core's tests call every
 form. It does not count doctests on the stable toolchain, so an
 item covered only by its example shows as missed. Coverage is a diagnostic,

@@ -1,12 +1,14 @@
 //! The code the binding core's calls write: the group handle's synchronous
 //! and asynchronous form of every call, the read handle's form of every
-//! read, and the table that hands the calls to the glue crates.
+//! read, the write handle's form of every call, and the table that hands the
+//! calls to the glue crates.
 //!
-//! The code names `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, and
-//! `operations` as the module that lists the calls imports them, and calls
-//! the handles' `reading`, `writing`, `reading_unfailing`,
-//! `writing_unfailing`, `reading_async`, and `writing_async` and the group
-//! handle's `shared`, which that module can reach.
+//! The code names `ExpenseGroupHandle`, `ExpenseGroupReader`,
+//! `ExpenseGroupWriter`, `Cancellation`, and `operations` as the module that
+//! lists the calls imports them, and calls the handles' `reading`,
+//! `writing`, `reading_unfailing`, `writing_unfailing`, `reading_async`, and
+//! `writing_async` and the group handle's `shared`, which that module can
+//! reach.
 //!
 //! The synchronous form of a call that cannot fail is written twice: outside
 //! wasm it waits for the lock and returns the call's answer itself, and on
@@ -32,6 +34,7 @@ pub(crate) fn expand(calls: &Calls, item: &ItemTrait) -> TokenStream {
         .iter()
         .filter(|call| Access::Read == call.access)
         .map(reader);
+    let writes = calls.calls.iter().map(writer);
     let table = table(calls, item);
     quote! {
         impl ExpenseGroupHandle {
@@ -40,6 +43,10 @@ pub(crate) fn expand(calls: &Calls, item: &ItemTrait) -> TokenStream {
 
         impl ExpenseGroupReader {
             #(#reads)*
+        }
+
+        impl ExpenseGroupWriter {
+            #(#writes)*
         }
 
         #table
@@ -176,6 +183,25 @@ fn reader(call: &Call) -> TokenStream {
         #[doc = #doc]
         #signature {
             self.reading(|group| #operation)
+        }
+    }
+}
+
+/// The write handle's form of `call`, a read or a change, which runs under
+/// the exclusive lock the handle holds.
+fn writer(call: &Call) -> TokenStream {
+    let doc = call.docs.writer(call.infallible);
+    let arguments: Vec<TokenStream> = call
+        .parameters
+        .iter()
+        .map(|parameter| parameter.name.to_token_stream())
+        .collect();
+    let operation = operation(call, &arguments);
+    let signature = signature(call);
+    quote_spanned! { call.span =>
+        #[doc = #doc]
+        #signature {
+            self.writing(|group| #operation)
         }
     }
 }

@@ -1,6 +1,5 @@
 """Hold a group: its details, members, categories, expenses, transfers, totals, and settlements."""
 
-import dataclasses
 from collections.abc import Iterable
 from types import TracebackType
 from typing import Self, final
@@ -24,10 +23,11 @@ from eranos._entries import (
 )
 from eranos._errors import library_errors
 from eranos._expense_group_reader import ExpenseGroupReader
+from eranos._expense_group_writer import ExpenseGroupWriter
 from eranos._identifiers import CategoryId, ExpenseId, ExpenseGroupId, MemberId, TransferId, generate_expense_group_id
 from eranos._internal import eranos as generated
 from eranos._money import Money, money_of
-from eranos._ratios import ExchangeRate
+from eranos._ratios import CurrencyRate, generated_rates
 from eranos._totals import (
     ExpenseShares,
     SettlementPlan,
@@ -38,18 +38,6 @@ from eranos._totals import (
     settlement_of,
     summary_of,
 )
-
-
-@final
-@dataclasses.dataclass(frozen=True, slots=True)
-class CurrencyRate:
-    """The rate into a new group currency of an amount in currency."""
-
-    currency: CurrencyCode
-    """The currency the rate converts from."""
-
-    rate: ExchangeRate
-    """The rate."""
 
 
 # One method per call of the library, twice over: the class is its surface.
@@ -237,6 +225,33 @@ class ExpenseGroup:
         """
         with library_errors():
             return ExpenseGroupReader(await self._generated().read_async(None))
+
+    def write(self) -> ExpenseGroupWriter:
+        """
+        Take a write handle, which holds the exclusive lock until it is released, so its reads and changes run with no other call in between.
+
+        It blocks the calling thread while another call holds the group's lock, and a blocking call of the group on the thread that holds the
+        handle waits forever: release the handle first. A write handle is a context manager, which releases the lock at the end of its block.
+
+        Returns:
+            The write handle.
+
+        """
+        with library_errors():
+            return ExpenseGroupWriter(self._generated().write())
+
+    async def write_async(self) -> ExpenseGroupWriter:
+        """
+        Take a write handle, which holds the exclusive lock until it is released, so its reads and changes run with no other call in between.
+
+        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the wait.
+
+        Returns:
+            The write handle.
+
+        """
+        with library_errors():
+            return ExpenseGroupWriter(await self._generated().write_async(None))
 
     def id(self) -> ExpenseGroupId:
         """
@@ -464,7 +479,7 @@ class ExpenseGroup:
 
         """
         with library_errors():
-            self._generated().change_currency(currency.code, _generated_rates(rates))
+            self._generated().change_currency(currency.code, generated_rates(rates))
 
     async def change_currency_async(self, currency: CurrencyCode, rates: Iterable[CurrencyRate]) -> None:
         """
@@ -479,7 +494,7 @@ class ExpenseGroup:
 
         """
         with library_errors():
-            await self._generated().change_currency_async(currency.code, _generated_rates(rates), None)
+            await self._generated().change_currency_async(currency.code, generated_rates(rates), None)
 
     def expenses(self) -> tuple[Expense, ...]:
         """
@@ -1358,17 +1373,3 @@ class ExpenseGroup:
         """
         with library_errors():
             return await self._generated().save_async(None)
-
-
-def _generated_rates(rates: Iterable[CurrencyRate]) -> list[generated.CurrencyRate]:
-    """
-    Convert rates into the rates the generated module holds.
-
-    Args:
-        rates: The rates.
-
-    Returns:
-        The generated rates.
-
-    """
-    return [generated.CurrencyRate(currency=rate.currency.code, rate=str(rate.rate)) for rate in rates]

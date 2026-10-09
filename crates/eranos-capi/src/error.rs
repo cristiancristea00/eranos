@@ -47,7 +47,7 @@ pub mod ffi {
         InvalidText,
         /// The call was cancelled through its `Cancellation`, before it changed anything.
         Cancelled,
-        /// The read handle was released, so it reads the group no more.
+        /// A read or write handle was released, so it reaches the group no more.
         Released,
     }
 

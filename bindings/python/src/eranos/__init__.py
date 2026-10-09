@@ -97,8 +97,9 @@ from eranos._errors import (
     TransferError,
     TransferFailure,
 )
-from eranos._expense_group import CurrencyRate, ExpenseGroup
+from eranos._expense_group import ExpenseGroup
 from eranos._expense_group_reader import ExpenseGroupReader
+from eranos._expense_group_writer import ExpenseGroupWriter
 from eranos import _identifiers
 from eranos._identifiers import (
     generate_category_id,
@@ -114,7 +115,7 @@ from eranos._identifiers import (
 )
 from eranos._money import Money
 from eranos._quantity import Quantity
-from eranos._ratios import ExchangeRate, Parts, Percentage
+from eranos._ratios import CurrencyRate, ExchangeRate, Parts, Percentage
 from eranos._totals import (
     Balance,
     CategoryTotal,
@@ -205,6 +206,7 @@ __all__ = [
     'ExpenseGroupFailure',
     'ExpenseGroupId',
     'ExpenseGroupReader',
+    'ExpenseGroupWriter',
     'ExpenseId',
     'ExpenseItem',
     'ExpenseShares',

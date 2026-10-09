@@ -126,6 +126,13 @@ impl Docs {
             "[`EranosError::Released`] after [`release`](Self::release).",
         )
     }
+
+    /// The documentation of the write handle's form, which fails as the
+    /// call's operation does, unless it is `infallible`, and once the handle
+    /// is released: the read handle's, since both handles refuse alike.
+    pub(crate) fn writer(&self, infallible: bool) -> String {
+        self.reader(infallible)
+    }
 }
 
 /// `summary` and `details` with an `# Errors` section: the operation's

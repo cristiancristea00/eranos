@@ -1,12 +1,13 @@
 //! The code the `uniffi` glue writes from the binding core's tables: the
-//! methods of its `ExpenseGroup` and `ExpenseGroupReader` objects, which forward to the
-//! core's handles, and the `#[uniffi::remote]` copies of the core's records,
-//! enums, and error.
+//! methods of its `ExpenseGroup`, `ExpenseGroupReader`, and `ExpenseGroupWriter`
+//! objects, which forward to the core's handles, and the `#[uniffi::remote]`
+//! copies of the core's records, enums, and error.
 //!
-//! The code names `ExpenseGroup`, `ExpenseGroupReader`, `Cancellation`, `shared`, and every
-//! type a call takes or answers as the module that invokes the table imports
-//! them, and `::uniffi` as the invoking crate's own release, so the three
-//! glue crates, each on its release, share one source.
+//! The code names `ExpenseGroup`, `ExpenseGroupReader`, `ExpenseGroupWriter`,
+//! `Cancellation`, `shared`, and every type a call takes or answers as the
+//! module that invokes the table imports them, and `::uniffi` as the
+//! invoking crate's own release, so the three glue crates, each on its
+//! release, share one source.
 
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
@@ -17,8 +18,9 @@ use crate::calls::{Access, Call, Calls, Parameter};
 use crate::docs::foreign;
 
 /// The exported methods of the objects: each call's synchronous and
-/// asynchronous forms on `ExpenseGroup`, and each read's form on `ExpenseGroupReader`,
-/// with the core's documentation in the form a foreign binding shows.
+/// asynchronous forms on `ExpenseGroup`, each read's form on `ExpenseGroupReader`,
+/// and each call's form on `ExpenseGroupWriter`, with the core's documentation
+/// in the form a foreign binding shows.
 ///
 /// The synchronous form of a call that cannot fail is exported twice, in a
 /// block of its own for each target, since `uniffi` reads an attribute on a
@@ -76,6 +78,18 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
                 }
             }
         });
+    let writes = calls.calls.iter().map(|call| {
+        let (method, answer, error) = (&call.name, &call.answer, &call.error);
+        let doc = foreign(&call.docs.writer(call.infallible));
+        let parameters = foreign_parameters(call);
+        let lent = call.parameters.iter().map(Parameter::lent);
+        quote! {
+            #[doc = #doc]
+            pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
+                self.writer.#method(#(#lent),*)
+            }
+        }
+    });
     quote! {
         #[::uniffi::export]
         impl ExpenseGroup {
@@ -87,6 +101,11 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
         #[::uniffi::export]
         impl ExpenseGroupReader {
             #(#reads)*
+        }
+
+        #[::uniffi::export]
+        impl ExpenseGroupWriter {
+            #(#writes)*
         }
     }
 }

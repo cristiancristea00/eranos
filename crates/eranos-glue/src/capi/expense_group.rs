@@ -1,7 +1,8 @@
 //! The bridge's group: every call's synchronous form, which blocks while
 //! another call holds the lock, and its asynchronous form, which runs on the
 //! group's worker thread and reports its outcome to a callback there; the
-//! read handle's form of every read; the cancellation of asynchronous calls;
+//! read handle's form of every read; the write handle's form of every call;
+//! the cancellation of asynchronous calls;
 //! and the outcome of each kind of answer, which a callback receives. A
 //! lookup, which may find nothing, has an outcome of its own, apart from
 //! that of a call that always returns a record of its type, so that only
@@ -36,11 +37,12 @@ const READ_BUSY: &str = "[`EranosError`] of the kind `ExpenseGroup` with the fai
 /// for the lock.
 const WRITE_BUSY: &str = "[`EranosError`] of the kind `ExpenseGroup` with the failure `ExpenseGroupBusy` on wasm while another call holds the lock.";
 
-/// The failure of a read handle's form once the handle is released.
+/// The failure of a read or write handle's form once the handle is
+/// released.
 const RELEASED: &str = "[`EranosError`] of the kind `Released` after `release`.";
 
-/// The items of the group, its read handle, the cancellation, and the
-/// outcomes, from the calls of `core`.
+/// The items of the group, its read handle, its write handle, the
+/// cancellation, and the outcomes, from the calls of `core`.
 ///
 /// # Errors
 ///
@@ -49,6 +51,7 @@ const RELEASED: &str = "[`EranosError`] of the kind `Released` after `release`."
 pub(crate) fn items(core: &Core) -> syn::Result<Vec<Named>> {
     let mut group = Vec::new();
     let mut reader = Vec::new();
+    let mut writer = Vec::new();
     let mut outcomes = BTreeMap::new();
     for call in &core.calls.calls {
         let answer = Answer::of(&call.answer, core)?;
@@ -71,6 +74,11 @@ pub(crate) fn items(core: &Core) -> syn::Result<Vec<Named>> {
                     .map(|form| synchronous(call, &answer, form, &quote!(self.0), Some(RELEASED))),
             );
         }
+        writer.extend(
+            forms
+                .iter()
+                .map(|form| synchronous(call, &answer, form, &quote!(self.0), Some(RELEASED))),
+        );
         let outcome = outcome(&answer);
         outcomes.insert(outcome.name.clone(), outcome);
     }
@@ -80,6 +88,8 @@ pub(crate) fn items(core: &Core) -> syn::Result<Vec<Named>> {
         group_outcome(),
         reader_item(&reader),
         reader_outcome(),
+        writer_item(&writer),
+        writer_outcome(),
     ];
     items.extend(outcomes.into_values());
     Ok(items)
@@ -860,6 +870,38 @@ fn group_item(methods: &[TokenStream]) -> Named {
                         EranosExpenseGroupReaderOutcome,
                     );
                 }
+
+                /// A write handle, which holds the exclusive lock until it is released or
+                /// dropped, so that its reads and changes run with no other call in between.
+                #[must_use]
+                pub fn write(&self) -> Box<EranosExpenseGroupWriter> {
+                    Box::new(EranosExpenseGroupWriter(crate::waited(self.handle.write())))
+                }
+
+                /// The asynchronous form of `write`: it runs on the group's worker thread, in the
+                /// order of the calls, and reports its outcome to `callback` there. Cancelling
+                /// `cancellation` stops the call at its next yield, or at once while it waits for
+                /// the lock, and reports the kind `Cancelled`, leaving the group as it was.
+                pub fn write_async(
+                    &self,
+                    cancellation: Option<&EranosCancellation>,
+                    callback: impl Fn(Box<EranosExpenseGroupWriterOutcome>) + 'static,
+                ) {
+                    let handle = self.handle.clone();
+                    let cancellation = cancellation.map(EranosCancellation::shared);
+                    crate::spawn(
+                        &self.jobs,
+                        async move {
+                            handle
+                                .write_async(cancellation)
+                                .await
+                                .map_err(crate::Failure::Library)
+                                .map(Some)
+                        },
+                        callback,
+                        EranosExpenseGroupWriterOutcome,
+                    );
+                }
             }
         },
     }
@@ -919,6 +961,76 @@ fn reader_item(methods: &[TokenStream]) -> Named {
                 }
 
                 #(#methods)*
+            }
+        },
+    }
+}
+
+/// The write handle, with its release before `methods`, the forms of every
+/// call.
+fn writer_item(methods: &[TokenStream]) -> Named {
+    Named {
+        name: "EranosExpenseGroupWriter".to_owned(),
+        tokens: quote! {
+            /// A write handle: it holds the group's exclusive lock until it is released or
+            /// destroyed, so its reads and changes run with no other call in between.
+            ///
+            /// Every other call waits for the handle, so any synchronous call of the group on the
+            /// thread that holds one waits forever: release or destroy the handle first.
+            #[diplomat::opaque]
+            #[derive(Debug)]
+            pub struct EranosExpenseGroupWriter(pub(crate) eranos_bindings::ExpenseGroupWriter);
+
+            impl EranosExpenseGroupWriter {
+                /// Releases the lock at once; later calls report the kind `Released`.
+                pub fn release(&self) {
+                    self.0.release();
+                }
+
+                #(#methods)*
+            }
+        },
+    }
+}
+
+/// The outcome of the asynchronous write handle, which hands the handle
+/// over once.
+fn writer_outcome() -> Named {
+    Named {
+        name: "EranosExpenseGroupWriterOutcome".to_owned(),
+        tokens: quote! {
+            /// The outcome of an asynchronous call that returns a write handle, which its callback
+            /// receives and destroys.
+            #[diplomat::opaque_mut]
+            #[derive(Debug)]
+            pub struct EranosExpenseGroupWriterOutcome(
+                pub(crate) Result<Option<eranos_bindings::ExpenseGroupWriter>, crate::Failure>,
+            );
+
+            impl EranosExpenseGroupWriterOutcome {
+                /// Whether the call succeeded.
+                #[must_use]
+                pub const fn is_ok(&self) -> bool {
+                    self.0.is_ok()
+                }
+
+                /// A copy of the call's failure, absent when it succeeded.
+                #[must_use]
+                pub fn error(&self) -> Option<Box<EranosError>> {
+                    self.0
+                        .as_ref()
+                        .err()
+                        .map(|failure| Box::new(EranosError::from(failure.clone())))
+                }
+
+                /// Takes the write handle, if the call succeeded and it was not taken before.
+                pub fn take(&mut self) -> Option<Box<EranosExpenseGroupWriter>> {
+                    self.0
+                        .as_mut()
+                        .ok()
+                        .and_then(Option::take)
+                        .map(|writer| Box::new(EranosExpenseGroupWriter(writer)))
+                }
             }
         },
     }

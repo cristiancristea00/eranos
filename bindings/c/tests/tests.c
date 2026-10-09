@@ -412,6 +412,14 @@ static void receiveReader(void *const context, EranosError *const error, EranosE
     finish(waiter);
 }
 
+/// Receives a write handle.
+static void receiveWriter(void *const context, EranosError *const error, EranosExpenseGroupWriter *const writer) {
+    Waiter *const waiter = context;
+    waiter->error = error;
+    waiter->object = writer;
+    finish(waiter);
+}
+
 /// Receives a list of members.
 static void receiveMembers(void *const context, EranosError *const error, EranosMemberList *const members) {
     Waiter *const waiter = context;
@@ -1825,6 +1833,7 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosExpenseGroupDestroy(nullptr);
     eranosNewExpenseGroupDestroy(nullptr);
     eranosExpenseGroupReaderDestroy(nullptr);
+    eranosExpenseGroupWriterDestroy(nullptr);
     eranosTextListDestroy(nullptr);
     eranosPaymentAccountDestroy(nullptr);
     eranosPaymentAccountDetailsDestroy(nullptr);
@@ -3256,6 +3265,271 @@ static void everyReadOfAReleasedReaderFails(Check *const check) {
     flatDestroy(flat);
 }
 
+/// A write handle that let another call in, or ran after its release, would show a report and a change two states of one group;
+/// one that answered another way than the group would show an app entries the group does not hold.
+static void aWriterReadsAndChangesTheGroupUntilItIsReleased(Check *const check) {
+    Flat const flat = flatOf();
+    EranosText *const text = eranosTextCreate();
+    EranosText *const id = eranosTextCreate();
+    Waiter waiter;
+    EranosExpenseGroupWriterCallback const writerCallback = {waiting(&waiter), receiveWriter};
+    eranosExpenseGroupWriteAsync(flat.group, nullptr, &writerCallback);
+    await(&waiter);
+    EranosExpenseGroupWriter *const writer = waiter.object;
+    checkThat(check, nullptr == waiter.error && nullptr != writer, "a write handle from an asynchronous call");
+    checkSucceeded(check, eranosExpenseGroupWriterName(writer, text), "the name");
+    checkThat(check, isText(text, "Flat"), "the group's");
+    checkSucceeded(check, eranosExpenseGroupWriterId(writer, text), "the identifier");
+    EranosCurrencyDetails *currency = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterCurrency(writer, &currency), "the currency");
+    checkThat(check, isCurrency(currency, "EUR"), "the euro");
+    checkSucceeded(check, eranosExpenseGroupWriterNote(writer, text), "the note");
+    checkThat(check, isText(text, "Rent"), "as given");
+    checkSucceeded(check, eranosExpenseGroupWriterLanguage(writer, text), "the language");
+    checkThat(check, isText(text, "pt-PT"), "as given");
+    checkSucceeded(check, eranosExpenseGroupWriterSave(writer, text), "the saved group");
+    EranosCategoryList *categories = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterCategories(writer, &categories), "the categories");
+    EranosCategory *category = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterCategory(writer, eranosTextData(flat.food), &category), "a category");
+    EranosExpenseList *expenses = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterExpenses(writer, &expenses), "the expenses");
+    EranosExpense *expense = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterExpense(writer, eranosTextData(flat.dinner), &expense), "an expense");
+    EranosExpenseShares *shares = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterExpenseShares(writer, eranosTextData(flat.dinner), &shares), "its shares");
+    EranosSummary *summary = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterSummary(writer, &summary), "the summary");
+    EranosMemberList *members = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterMembers(writer, &members), "the members");
+    EranosMember *member = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterMember(writer, eranosTextData(flat.ana), &member), "a member");
+    bool found = false;
+    bool archived = true;
+    checkSucceeded(check, eranosExpenseGroupWriterIsArchived(writer, eranosTextData(flat.ana), &found, &archived), "whether a member is archived");
+    EranosSettlementPlan *settlement = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterSettlement(writer, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), "a settlement");
+    EranosTransferList *transfers = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterTransfers(writer, &transfers), "the transfers");
+    EranosTransfer *transfer = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterTransfer(writer, eranosTextData(flat.repayment), &transfer), "a transfer");
+    EranosMoney *amount = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterTransferAmount(writer, eranosTextData(flat.repayment), &amount), "its amount");
+    checkThat(check,
+              2 == eranosCategoryListLength(categories) && nullptr != category && 1 == eranosExpenseListLength(expenses) && nullptr != expense &&
+                  nullptr != shares && nullptr != summary && 2 == eranosMemberListLength(members) && nullptr != member && found && !archived &&
+                  nullptr != settlement && 1 == eranosTransferListLength(transfers) && nullptr != transfer && isAmount(amount, 1'000, "EUR"),
+              "every read sees the group");
+    checkSucceeded(check, eranosExpenseGroupWriterSetName(writer, "Home"), "a rename");
+    checkSucceeded(check, eranosExpenseGroupWriterSetNote(writer, "Lease"), "a new note");
+    checkSucceeded(check, eranosExpenseGroupWriterClearNote(writer), "and its clearing");
+    checkSucceeded(check, eranosExpenseGroupWriterSetLanguage(writer, "ro"), "a new language");
+    checkSucceeded(check, eranosExpenseGroupWriterClearLanguage(writer), "and its clearing");
+    checkSucceeded(check, eranosExpenseGroupWriterName(writer, text), "the name after the rename");
+    checkThat(check, isText(text, "Home"), "is the new one");
+    checkSucceeded(check, eranosExpenseGroupWriterNote(writer, text), "the note after the clearing");
+    checkThat(check, 0 == eranosTextLength(text), "is none");
+    checkSucceeded(check, eranosExpenseGroupWriterLanguage(writer, text), "the language after the clearing");
+    checkThat(check, 0 == eranosTextLength(text), "is none");
+    EranosCategory *previousCategory = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterReplaceCategory(writer, category, &previousCategory), "a category's replacement");
+    EranosExpense *previousExpense = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterReplaceExpense(writer, expense, &previousExpense), "an expense's replacement");
+    EranosExpense *removedExpense = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterRemoveExpense(writer, eranosTextData(flat.dinner), &removedExpense), "its removal");
+    checkSucceeded(check, eranosExpenseGroupWriterAddExpense(writer, expense, id), "and its return");
+    checkThat(check, isText(id, eranosTextData(flat.dinner)), "under its identifier");
+    EranosTransfer *previousTransfer = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterReplaceTransfer(writer, transfer, &previousTransfer), "a transfer's replacement");
+    EranosTransfer *removedTransfer = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterRemoveTransfer(writer, eranosTextData(flat.repayment), &removedTransfer), "its removal");
+    checkSucceeded(check, eranosExpenseGroupWriterAddTransfer(writer, transfer, id), "and its return");
+    checkThat(check, isText(id, eranosTextData(flat.repayment)), "under its identifier");
+    EranosMember *carol = nullptr;
+    checkSucceeded(check, eranosMemberCreate("Carol", &carol), "a member");
+    checkSucceeded(check, eranosExpenseGroupWriterAddMember(writer, carol, id), "joins");
+    EranosMember *stored = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterMember(writer, eranosTextData(id), &stored), "and reads back");
+    EranosMember *previousMember = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterReplaceMember(writer, stored, &previousMember), "a member's replacement");
+    checkSucceeded(check, eranosExpenseGroupWriterArchiveMember(writer, eranosTextData(id)), "their archiving");
+    checkSucceeded(check, eranosExpenseGroupWriterUnarchiveMember(writer, eranosTextData(id)), "and unarchiving");
+    EranosMember *removedMember = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterRemoveMember(writer, eranosTextData(id), &removedMember), "and removal");
+    EranosCategory *removedCategory = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterRemoveCategory(writer, eranosTextData(flat.food), &removedCategory), "a category's removal");
+    checkSucceeded(check, eranosExpenseGroupWriterAddCategory(writer, category, id), "and its return");
+    checkThat(check, isText(id, eranosTextData(flat.food)), "under its identifier");
+    EranosCurrencyRate *rate = nullptr;
+    checkSucceeded(check, eranosCurrencyRateCreate("EUR", "5", &rate), "a rate");
+    EranosCurrencyRateList *const rates = eranosCurrencyRateListCreate();
+    eranosCurrencyRateListPush(rates, rate);
+    checkSucceeded(check, eranosExpenseGroupWriterChangeCurrency(writer, "RON", rates), "a change of currency");
+    EranosCurrencyDetails *lei = nullptr;
+    checkSucceeded(check, eranosExpenseGroupWriterCurrency(writer, &lei), "the currency after it");
+    checkThat(check, isCurrency(lei, "RON"), "is the new one");
+    checkThat(check,
+              nullptr != previousCategory && nullptr != previousExpense && nullptr != removedExpense && nullptr != previousTransfer &&
+                  nullptr != removedTransfer && nullptr != stored && nullptr != previousMember && nullptr != removedMember &&
+                  nullptr != removedCategory,
+              "every change answers");
+    eranosExpenseGroupWriterRelease(writer);
+    EranosError *const released = eranosExpenseGroupWriterName(writer, text);
+    checkThat(check, isKind(released, ERANOS_ERROR_KIND_RELEASED), "a read after the release");
+    EranosExpenseGroupWriter *const synchronous = eranosExpenseGroupWrite(flat.group);
+    checkThat(check, nullptr != synchronous, "a write handle from a synchronous call");
+    eranosExpenseGroupWriterDestroy(synchronous);
+    eranosCurrencyRateListDestroy(rates);
+    eranosCurrencyRateDestroy(rate);
+    eranosCategoryDestroy(removedCategory);
+    eranosMemberDestroy(removedMember);
+    eranosMemberDestroy(previousMember);
+    eranosMemberDestroy(stored);
+    eranosMemberDestroy(carol);
+    eranosTransferDestroy(removedTransfer);
+    eranosTransferDestroy(previousTransfer);
+    eranosExpenseDestroy(removedExpense);
+    eranosExpenseDestroy(previousExpense);
+    eranosCategoryDestroy(previousCategory);
+    eranosTransferDestroy(transfer);
+    eranosTransferListDestroy(transfers);
+    eranosSettlementPlanDestroy(settlement);
+    eranosMemberDestroy(member);
+    eranosMemberListDestroy(members);
+    eranosSummaryDestroy(summary);
+    eranosExpenseSharesDestroy(shares);
+    eranosExpenseDestroy(expense);
+    eranosExpenseListDestroy(expenses);
+    eranosCategoryDestroy(category);
+    eranosCategoryListDestroy(categories);
+    eranosExpenseGroupWriterDestroy(writer);
+    eranosTextDestroy(id);
+    eranosTextDestroy(text);
+    flatDestroy(flat);
+}
+
+/// A write handle whose calls went on after its release would read and change a group whose lock it no longer holds; every
+/// call fails once the handle is released, and gives no object, no text, and no answer.
+static void everyCallOfAReleasedWriterFails(Check *const check) {
+    Flat const flat = flatOf();
+    EranosExpenseGroupWriter *const writer = eranosExpenseGroupWrite(flat.group);
+    eranosExpenseGroupWriterRelease(writer);
+    char const *const food = eranosTextData(flat.food);
+    char const *const dinner = eranosTextData(flat.dinner);
+    char const *const repayment = eranosTextData(flat.repayment);
+    EranosText *const text = eranosTextCreate();
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterId(writer, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterName(writer, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterNote(writer, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterLanguage(writer, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterSave(writer, text), ERANOS_ERROR_KIND_RELEASED) && 0 == eranosTextLength(text),
+              "every read of text, which writes none");
+    EranosCategoryList *categories = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterCategories(writer, &categories), ERANOS_ERROR_KIND_RELEASED) && nullptr == categories,
+              "the categories");
+    EranosCategory *category = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterCategory(writer, food, &category), ERANOS_ERROR_KIND_RELEASED) && nullptr == category,
+              "a category");
+    EranosCurrencyDetails *currency = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterCurrency(writer, &currency), ERANOS_ERROR_KIND_RELEASED) && nullptr == currency, "the currency");
+    EranosExpenseList *expenses = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterExpenses(writer, &expenses), ERANOS_ERROR_KIND_RELEASED) && nullptr == expenses, "the expenses");
+    EranosExpense *expense = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterExpense(writer, dinner, &expense), ERANOS_ERROR_KIND_RELEASED) && nullptr == expense,
+              "an expense");
+    EranosExpenseShares *shares = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterExpenseShares(writer, dinner, &shares), ERANOS_ERROR_KIND_RELEASED) && nullptr == shares,
+              "an expense's shares");
+    EranosSummary *summary = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterSummary(writer, &summary), ERANOS_ERROR_KIND_RELEASED) && nullptr == summary, "the summary");
+    EranosMemberList *members = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterMembers(writer, &members), ERANOS_ERROR_KIND_RELEASED) && nullptr == members, "the members");
+    EranosMember *member = nullptr;
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterMember(writer, eranosTextData(flat.ana), &member), ERANOS_ERROR_KIND_RELEASED) && nullptr == member,
+              "a member");
+    bool found = true;
+    bool archived = true;
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterIsArchived(writer, eranosTextData(flat.ana), &found, &archived), ERANOS_ERROR_KIND_RELEASED) && !found &&
+                  archived,
+              "whether a member is archived, which gives no answer");
+    EranosSettlementPlan *settlement = nullptr;
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterSettlement(writer, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), ERANOS_ERROR_KIND_RELEASED) &&
+                  nullptr == settlement,
+              "a settlement");
+    EranosTransferList *transfers = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterTransfers(writer, &transfers), ERANOS_ERROR_KIND_RELEASED) && nullptr == transfers,
+              "the transfers");
+    EranosTransfer *transfer = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterTransfer(writer, repayment, &transfer), ERANOS_ERROR_KIND_RELEASED) && nullptr == transfer,
+              "a transfer");
+    EranosMoney *amount = nullptr;
+    checkThat(check, isKind(eranosExpenseGroupWriterTransferAmount(writer, repayment, &amount), ERANOS_ERROR_KIND_RELEASED) && nullptr == amount,
+              "a transfer's amount");
+    EranosCurrencyRateList *const rates = eranosCurrencyRateListCreate();
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterSetName(writer, "Home"), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterChangeCurrency(writer, "RON", rates), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterSetNote(writer, "Lease"), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterClearNote(writer), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterSetLanguage(writer, "ro"), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterClearLanguage(writer), ERANOS_ERROR_KIND_RELEASED),
+              "every change of the details");
+    eranosCurrencyRateListDestroy(rates);
+    EranosMember *carol = nullptr;
+    checkSucceeded(check, eranosMemberCreate("Carol", &carol), "a member");
+    EranosMember *previousMember = nullptr;
+    EranosMember *removedMember = nullptr;
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterAddMember(writer, carol, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterReplaceMember(writer, carol, &previousMember), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterArchiveMember(writer, eranosTextData(flat.ana)), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterUnarchiveMember(writer, eranosTextData(flat.ana)), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterRemoveMember(writer, eranosTextData(flat.ana), &removedMember), ERANOS_ERROR_KIND_RELEASED) &&
+                  0 == eranosTextLength(text) && nullptr == previousMember && nullptr == removedMember,
+              "every change of a member");
+    eranosMemberDestroy(carol);
+    EranosCategory *travel = nullptr;
+    checkSucceeded(check, eranosCategoryCreate("Travel", &travel), "a category");
+    EranosCategory *previousCategory = nullptr;
+    EranosCategory *removedCategory = nullptr;
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterAddCategory(writer, travel, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterReplaceCategory(writer, travel, &previousCategory), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterRemoveCategory(writer, food, &removedCategory), ERANOS_ERROR_KIND_RELEASED) &&
+                  0 == eranosTextLength(text) && nullptr == previousCategory && nullptr == removedCategory,
+              "every change of a category");
+    eranosCategoryDestroy(travel);
+    EranosExpense *stored = nullptr;
+    checkSucceeded(check, eranosExpenseGroupExpense(flat.group, dinner, &stored), "an expense of the group");
+    EranosExpense *previousExpense = nullptr;
+    EranosExpense *removedExpense = nullptr;
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterAddExpense(writer, stored, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterReplaceExpense(writer, stored, &previousExpense), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterRemoveExpense(writer, dinner, &removedExpense), ERANOS_ERROR_KIND_RELEASED) &&
+                  0 == eranosTextLength(text) && nullptr == previousExpense && nullptr == removedExpense,
+              "every change of an expense");
+    eranosExpenseDestroy(stored);
+    EranosTransfer *kept = nullptr;
+    checkSucceeded(check, eranosExpenseGroupTransfer(flat.group, repayment, &kept), "a transfer of the group");
+    EranosTransfer *previousTransfer = nullptr;
+    EranosTransfer *removedTransfer = nullptr;
+    checkThat(check,
+              isKind(eranosExpenseGroupWriterAddTransfer(writer, kept, text), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterReplaceTransfer(writer, kept, &previousTransfer), ERANOS_ERROR_KIND_RELEASED) &&
+                  isKind(eranosExpenseGroupWriterRemoveTransfer(writer, repayment, &removedTransfer), ERANOS_ERROR_KIND_RELEASED) &&
+                  0 == eranosTextLength(text) && nullptr == previousTransfer && nullptr == removedTransfer,
+              "every change of a transfer");
+    eranosTransferDestroy(kept);
+    eranosTextDestroy(text);
+    eranosExpenseGroupWriterDestroy(writer);
+    flatDestroy(flat);
+}
+
 /// A cancelled change that still ran would change the group after the app gave the change up; one that kept waiting would
 /// hold the worker thread for a lock it no longer needs.
 static void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check *const check) {
@@ -3361,6 +3635,8 @@ int main(void) {
         {.body = everyErrorHoldsWhatItsFailureHolds, .name = "everyErrorHoldsWhatItsFailureHolds"},
         {.body = everyAsynchronousCallReportsWhatItsSynchronousFormReturns, .name = "everyAsynchronousCallReportsWhatItsSynchronousFormReturns"},
         {.body = aReaderReadsTheGroupUntilItIsReleased, .name = "aReaderReadsTheGroupUntilItIsReleased"},
+        {.body = aWriterReadsAndChangesTheGroupUntilItIsReleased, .name = "aWriterReadsAndChangesTheGroupUntilItIsReleased"},
+        {.body = everyCallOfAReleasedWriterFails, .name = "everyCallOfAReleasedWriterFails"},
         {.body = everyReadOfAReleasedReaderFails, .name = "everyReadOfAReleasedReaderFails"},
         {
             .body = aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas,

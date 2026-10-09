@@ -1,6 +1,6 @@
-//! The objects the bindings hand out: the group, its read handle, and the
-//! cancellation of an asynchronous call, each wrapping the binding core's
-//! type and forwarding every method to it.
+//! The objects the bindings hand out: the group, its read handle, its write
+//! handle, and the cancellation of an asynchronous call, each wrapping the
+//! binding core's type and forwarding every method to it.
 
 use std::sync::Arc;
 
@@ -84,6 +84,41 @@ impl ExpenseGroup {
             .await
             .map(ExpenseGroupReader::shared)
     }
+
+    /// A write handle, which holds the exclusive lock until it is released or
+    /// dropped, so that its reads and changes run with no other call in
+    /// between.
+    ///
+    /// Any synchronous call on the thread that holds a write handle can wait
+    /// forever: it waits for the handle, which that thread cannot release
+    /// meanwhile. Release or drop the handle first.
+    ///
+    /// # Errors
+    ///
+    /// `ExpenseGroupFailure::Busy` on wasm while another call holds the
+    /// lock.
+    #[expect(
+        clippy::same_name_method,
+        reason = "the derive's `Lower::write` is an associated function with no receiver, which only the generated FFI code calls, so a call of `write` on a group cannot name it; the name matches `read` and the core's"
+    )]
+    pub(crate) fn write(&self) -> Result<Arc<ExpenseGroupWriter>, EranosError> {
+        self.handle.write().map(ExpenseGroupWriter::shared)
+    }
+
+    /// A write handle, as a future that waits for the lock.
+    ///
+    /// # Errors
+    ///
+    /// `EranosError::Cancelled`.
+    pub(crate) async fn write_async(
+        &self,
+        cancellation: Option<Arc<Cancellation>>,
+    ) -> Result<Arc<ExpenseGroupWriter>, EranosError> {
+        self.handle
+            .write_async(shared(cancellation))
+            .await
+            .map(ExpenseGroupWriter::shared)
+    }
 }
 
 impl ExpenseGroup {
@@ -131,8 +166,32 @@ impl ExpenseGroupReader {
     }
 }
 
-// Every group call's synchronous and asynchronous forms on `ExpenseGroup`, and every
-// read's form on `ExpenseGroupReader`, stamped from the core's list of calls.
+/// A group's reads and changes under one exclusive lock, so that no other
+/// call runs in between: every other call waits until the handle is
+/// released or freed.
+#[derive(Debug, uniffi::Object)]
+pub(crate) struct ExpenseGroupWriter {
+    writer: eranos_bindings::ExpenseGroupWriter,
+}
+
+#[uniffi::export]
+impl ExpenseGroupWriter {
+    /// Releases the lock; releasing a released handle does nothing.
+    pub(crate) fn release(&self) {
+        self.writer.release();
+    }
+}
+
+impl ExpenseGroupWriter {
+    /// The object of `writer`.
+    fn shared(writer: eranos_bindings::ExpenseGroupWriter) -> Arc<Self> {
+        Arc::new(Self { writer })
+    }
+}
+
+// Every group call's synchronous and asynchronous forms on `ExpenseGroup`, every
+// read's form on `ExpenseGroupReader`, and every call's form on `ExpenseGroupWriter`,
+// stamped from the core's list of calls.
 eranos_bindings::expense_group_calls!(::eranos_glue_macros::uniffi_objects);
 
 /// Cancels the asynchronous calls it is given to: a call stops at its next

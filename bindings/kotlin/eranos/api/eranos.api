@@ -531,6 +531,10 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public final fun unarchiveBlocking-Ew0_zjs (Ljava/lang/String;)V
 	public final fun withRead (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun withReadBlocking (Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public final fun withWrite (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun withWriteBlocking (Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public final fun write (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun writeBlocking ()Leranos/ExpenseGroupWriter;
 }
 
 public final class eranos/ExpenseGroup$Companion {
@@ -731,6 +735,47 @@ public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
 	public final fun transfer-FnJQt9E (Ljava/lang/String;)Leranos/Transfer;
 	public final fun transferAmount-FnJQt9E (Ljava/lang/String;)Leranos/Money;
 	public final fun transfers ()Ljava/util/List;
+}
+
+public final class eranos/ExpenseGroupWriter : java/lang/AutoCloseable {
+	public final fun add-E54-VVg (Leranos/Expense;)Ljava/lang/String;
+	public final fun add-NfwCWDA (Leranos/Member;)Ljava/lang/String;
+	public final fun add-QR7iAcY (Leranos/Category;)Ljava/lang/String;
+	public final fun add-hoS3jnY (Leranos/Transfer;)Ljava/lang/String;
+	public final fun archive-Ew0_zjs (Ljava/lang/String;)V
+	public final fun categories ()Ljava/util/List;
+	public final fun category-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
+	public final fun changeCurrency (Leranos/CurrencyCode;Ljava/util/Map;)V
+	public fun close ()V
+	public final fun currency ()Leranos/CurrencyCode;
+	public final fun expense-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
+	public final fun expenseShares-rZhyMcA (Ljava/lang/String;)Leranos/ExpenseShares;
+	public final fun expenses ()Ljava/util/List;
+	public final fun id-3XV2ae8 ()Ljava/lang/String;
+	public final fun isArchived-Ew0_zjs (Ljava/lang/String;)Ljava/lang/Boolean;
+	public final fun language ()Leranos/Language;
+	public final fun member-Ew0_zjs (Ljava/lang/String;)Leranos/Member;
+	public final fun members ()Ljava/util/List;
+	public final fun name ()Ljava/lang/String;
+	public final fun note ()Ljava/lang/String;
+	public final fun remove-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
+	public final fun remove-Ew0_zjs (Ljava/lang/String;)Leranos/Member;
+	public final fun remove-FnJQt9E (Ljava/lang/String;)Leranos/Transfer;
+	public final fun remove-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
+	public final fun rename (Ljava/lang/String;)V
+	public final fun replace (Leranos/Category;)Leranos/Category;
+	public final fun replace (Leranos/Expense;)Leranos/Expense;
+	public final fun replace (Leranos/Member;)Leranos/Member;
+	public final fun replace (Leranos/Transfer;)Leranos/Transfer;
+	public final fun save ()Ljava/lang/String;
+	public final fun setLanguage (Leranos/Language;)V
+	public final fun setNote (Ljava/lang/String;)V
+	public final fun settlement (Leranos/SettlementStrategy;)Leranos/SettlementPlan;
+	public final fun summary ()Leranos/Summary;
+	public final fun transfer-FnJQt9E (Ljava/lang/String;)Leranos/Transfer;
+	public final fun transferAmount-FnJQt9E (Ljava/lang/String;)Leranos/Money;
+	public final fun transfers ()Ljava/util/List;
+	public final fun unarchive-Ew0_zjs (Ljava/lang/String;)V
 }
 
 public final class eranos/ExpenseId {

@@ -1,6 +1,6 @@
 //! The forms written for the core: every call's synchronous and
 //! asynchronous form on the group handle, every read's form on the read
-//! handle, and the table. A form under the wrong lock, an answer left
+//! handle, every call's form on the write handle, and the table. A form under the wrong lock, an answer left
 //! unwrapped, a future that borrows what it outlives, or a table that lost
 //! part of the trait would break every binding at once.
 
@@ -76,7 +76,7 @@ fn text(tokens: impl ToTokens) -> String {
 #[test]
 fn every_call_writes_both_forms_on_the_group_handle() {
     let items = written();
-    assert_eq!(3, items.len());
+    assert_eq!(4, items.len());
     assert_eq!(
         text(&items[0]),
         text(syn::parse2::<syn::Item>(expected_group_handle()).unwrap())
@@ -187,15 +187,42 @@ fn expected_group_handle() -> TokenStream {
 }
 
 /// Every read's form on the read handle runs under the lock the handle
-/// holds, and the table hands the whole trait to the macro it is given; a
-/// read handle's form that took a lock of its own, or a table that lost
-/// part of the trait, would break every binding at once.
+/// holds, every call's form on the write handle likewise, and the table
+/// hands the whole trait to the macro it is given; a handle's form that took
+/// a lock of its own, a write handle without a read's form, or a table that
+/// lost part of the trait, would break every binding at once.
 #[test]
 fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait() {
     let (name, settlement) = (
         docs("The group's name.").reader(true),
         docs("The payments that settle every balance.").reader(false),
     );
+    let (name_written, language_written, note_written, settlement_written) = (
+        docs("The group's name.").writer(true),
+        docs("Sets the language.").writer(false),
+        docs("Sets the note.").writer(true),
+        docs("The payments that settle every balance.").writer(false),
+    );
+    let writer: TokenStream = quote! {
+        impl ExpenseGroupWriter {
+            #[doc = #name_written]
+            pub fn name(&self) -> ::std::result::Result<String, EranosError> {
+                self.writing(|group| ::std::result::Result::Ok(operations::name(group)))
+            }
+            #[doc = #language_written]
+            pub fn set_language(&self, language: Option<&str>) -> ::std::result::Result<(), EranosError> {
+                self.writing(|group| operations::set_language(group, language))
+            }
+            #[doc = #note_written]
+            pub fn set_note(&self, note: &str) -> ::std::result::Result<(), EranosError> {
+                self.writing(|group| { operations::set_note(group, note); ::std::result::Result::Ok(()) })
+            }
+            #[doc = #settlement_written]
+            pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<SettlementPlan, EranosError> {
+                self.writing(|group| operations::settlement(group, strategy))
+            }
+        }
+    };
     let reader: TokenStream = quote! {
         impl ExpenseGroupReader {
             #[doc = #name]
@@ -229,6 +256,10 @@ fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait()
     );
     assert_eq!(
         text(&items[2]),
+        text(syn::parse2::<syn::Item>(writer).unwrap())
+    );
+    assert_eq!(
+        text(&items[3]),
         text(syn::parse2::<syn::Item>(table).unwrap())
     );
 }

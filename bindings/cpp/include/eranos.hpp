@@ -22,6 +22,7 @@
 #include "eranos/expense.hpp"              // IWYU pragma: export
 #include "eranos/expense_group.hpp"        // IWYU pragma: export
 #include "eranos/expense_group_reader.hpp" // IWYU pragma: export
+#include "eranos/expense_group_writer.hpp" // IWYU pragma: export
 #include "eranos/failures.hpp"             // IWYU pragma: export
 #include "eranos/identifiers.hpp"          // IWYU pragma: export
 #include "eranos/members.hpp"              // IWYU pragma: export

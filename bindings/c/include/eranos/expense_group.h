@@ -14,6 +14,7 @@
 #include "EranosExpenseGroup.h"
 #include "EranosExpenseGroupOutcome.h"
 #include "EranosExpenseGroupReaderOutcome.h"
+#include "EranosExpenseGroupWriterOutcome.h"
 #include "EranosExpenseListOutcome.h"
 #include "EranosExpenseOutcome.h"
 #include "EranosFoundCategoryOutcome.h"
@@ -244,6 +245,24 @@ static inline void eranosDetailRunExpenseGroupReaderCallback(void const *const d
     EranosExpenseGroupReader *const reader = EranosExpenseGroupReaderOutcome_take(outcome);
     EranosExpenseGroupReaderOutcome_destroy(outcome);
     callback->run(callback->context, error, reader);
+}
+
+/// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the writer, or nullptr when the call failed.
+/// The callback destroys each object it receives.
+typedef struct EranosExpenseGroupWriterCallback {
+    /// What the caller passes back to itself.
+    void *context;
+    /// Called once with @p context and the outcome.
+    void (*run)(void *context, EranosError *error, EranosExpenseGroupWriter *writer);
+} EranosExpenseGroupWriterCallback;
+
+/// Reports @p outcome to the callback @p data points to, and destroys it.
+static inline void eranosDetailRunExpenseGroupWriterCallback(void const *const data, EranosExpenseGroupWriterOutcome *const outcome) {
+    EranosExpenseGroupWriterCallback const *const callback = data;
+    EranosError *const error = EranosExpenseGroupWriterOutcome_error(outcome);
+    EranosExpenseGroupWriter *const writer = EranosExpenseGroupWriterOutcome_take(outcome);
+    EranosExpenseGroupWriterOutcome_destroy(outcome);
+    callback->run(callback->context, error, writer);
 }
 
 /// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the members, or nullptr when the call
@@ -1903,6 +1922,34 @@ static inline void eranosExpenseGroupReadAsync(EranosExpenseGroup const *const g
         .destructor = nullptr,
     };
     EranosExpenseGroup_read_async(group, cancellation, wrapped);
+}
+
+/// A write handle, which holds the exclusive lock until it is released or destroyed, so that its reads and changes run with no other call in
+/// between. Any synchronous call of the group on the thread that holds one waits forever, since the handle holds the lock the call needs and the
+/// thread cannot release it meanwhile: release or destroy the handle first.
+///
+/// @param group The group
+/// @return The writer, which the caller destroys
+[[nodiscard]] static inline EranosExpenseGroupWriter *eranosExpenseGroupWrite(EranosExpenseGroup const *const group) {
+    return EranosExpenseGroup_write(group);
+}
+
+/// The asynchronous form of eranosExpenseGroupWrite(): it runs on the group's worker thread, in the order of the calls, and reports its outcome to
+/// `callback` there. Cancelling `cancellation` stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
+/// behind earlier calls, when its turn comes, and reports the kind ERANOS_ERROR_KIND_CANCELLED, leaving the group as it was.
+///
+/// @param group The group
+/// @param cancellation A cancellation for the call, or nullptr for none
+/// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
+///   until it is called, which happens once
+static inline void eranosExpenseGroupWriteAsync(EranosExpenseGroup const *const group, EranosCancellation const *const cancellation,
+                                                EranosExpenseGroupWriterCallback const *const callback) {
+    DiplomatCallback_EranosExpenseGroup_write_async_callback const wrapped = {
+        .data = callback,
+        .run_callback = eranosDetailRunExpenseGroupWriterCallback,
+        .destructor = nullptr,
+    };
+    EranosExpenseGroup_write_async(group, cancellation, wrapped);
 }
 
 /// Destroys @p group; destroying nullptr does nothing, as free() does.

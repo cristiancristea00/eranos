@@ -303,7 +303,7 @@ class ExpenseGroupTest {
         reader.close()
         reader.close()
         val released = assertThrows<IllegalStateException> { reader.name() }
-        assertEquals("the read handle was released", released.message)
+        assertEquals("the handle was released", released.message)
         group.renameBlocking("Home")
         assertEquals("Home", group.withReadBlocking { it.name() })
     }
@@ -321,6 +321,111 @@ class ExpenseGroupTest {
             assertEquals("Flat", group.withRead { it.name() })
             group.rename("Home")
             assertEquals("Home", group.name())
+        }
+
+    /**
+     * A write handle that answered another way than the group, or let another call in, would show an app a report of two
+     * states of one group.
+     */
+    @Test
+    fun aWriteHandleReadsAsTheGroupDoesUntilItIsClosed() {
+        val flat = Flat()
+        val group = flat.group
+        group.archiveBlocking(flat.bob)
+        val id = group.idBlocking()
+        val language = group.languageBlocking()
+        val saved = group.saveBlocking()
+        val members = group.membersBlocking()
+        val categories = group.categoriesBlocking()
+        val expenses = group.expensesBlocking()
+        val shares = group.expenseSharesBlocking(flat.dinner)
+        val transfers = group.transfersBlocking()
+        val summary = group.summaryBlocking()
+        val settlement = group.settlementBlocking(SettlementStrategy.GREEDY)
+        val writer = group.writeBlocking()
+        assertEquals(id, writer.id())
+        assertEquals("Flat", writer.name())
+        assertEquals(flat.euro, writer.currency())
+        assertEquals("Rent", writer.note())
+        assertEquals(language, writer.language())
+        assertEquals(saved, writer.save())
+        assertEquals(members, writer.members())
+        assertEquals(members.first(), writer.member(flat.ana))
+        assertEquals(false, writer.isArchived(flat.ana))
+        assertEquals(true, writer.isArchived(flat.bob))
+        assertEquals(categories, writer.categories())
+        assertEquals(categories.last(), writer.category(flat.food))
+        assertEquals(expenses, writer.expenses())
+        assertEquals(expenses.first(), writer.expense(flat.dinner))
+        assertEquals(shares, writer.expenseShares(flat.dinner))
+        assertEquals(transfers, writer.transfers())
+        assertEquals(transfers.first(), writer.transfer(flat.repayment))
+        assertEquals(flat.euros(1_000), writer.transferAmount(flat.repayment))
+        assertEquals(summary, writer.summary())
+        assertEquals(settlement, writer.settlement(SettlementStrategy.GREEDY))
+        writer.close()
+        writer.close()
+        val released = assertThrows<IllegalStateException> { writer.name() }
+        assertEquals("the handle was released", released.message)
+    }
+
+    /**
+     * A write handle whose change did not take effect, or that kept running after it was closed, would change a group whose
+     * lock the app no longer holds.
+     */
+    @Test
+    fun aWriteHandleChangesTheGroupUntilItIsClosed() {
+        val flat = Flat()
+        val group = flat.group
+        val writer = group.writeBlocking()
+        writer.rename("Home")
+        writer.setNote(null)
+        writer.setLanguage(null)
+        assertEquals("Home", writer.name())
+        assertNull(writer.note())
+        assertNull(writer.language())
+        val food = checkNotNull(writer.category(flat.food))
+        assertEquals(food, writer.replace(food))
+        val dinner = checkNotNull(writer.expense(flat.dinner))
+        assertEquals(dinner, writer.replace(dinner))
+        assertEquals(dinner, writer.remove(flat.dinner))
+        assertEquals(flat.dinner, writer.add(dinner))
+        val repayment = checkNotNull(writer.transfer(flat.repayment))
+        assertEquals(repayment, writer.replace(repayment))
+        assertEquals(repayment, writer.remove(flat.repayment))
+        assertEquals(flat.repayment, writer.add(repayment))
+        val carol = writer.add(Member("Carol"))
+        val popa = checkNotNull(writer.member(carol))
+        assertEquals(popa, writer.replace(popa))
+        writer.archive(carol)
+        assertEquals(true, writer.isArchived(carol))
+        writer.unarchive(carol)
+        assertEquals(popa, writer.remove(carol))
+        assertEquals(food, writer.remove(flat.food))
+        assertEquals(flat.food, writer.add(food))
+        val lei = CurrencyCode.of("RON")
+        writer.changeCurrency(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
+        assertEquals(lei, writer.currency())
+        writer.close()
+        assertThrows<IllegalStateException> { writer.rename("Flat") }
+        assertEquals("Home", group.nameBlocking())
+        group.withWriteBlocking { it.rename("Flat") }
+        assertEquals("Flat", group.nameBlocking())
+    }
+
+    /**
+     * A suspending write handle that answered another way than the blocking one, or held the lock after its block returned,
+     * would stop every later call.
+     */
+    @Test
+    fun aSuspendingWriteHandleReleasesTheLockWhenItsBlockReturns() =
+        runTest {
+            val flat = Flat()
+            val group = flat.group
+            group.write().use { it.rename("Home") }
+            assertEquals("Home", group.withWrite { it.name() })
+            group.rename("Flat")
+            assertEquals("Flat", group.name())
         }
 
     /**

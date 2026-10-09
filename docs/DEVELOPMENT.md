@@ -620,8 +620,9 @@ When code in one crate needs something another crate holds:
    `ExpenseGroupCalls` of `calls.rs`, in its section, with the synchronous
    form's signature, a summary that ends with a full stop, `#[read]` or
    `#[write]`, and `#[infallible]` when the operation cannot fail. Both
-   forms on `ExpenseGroupHandle` and, for a read, the form on
-   `ExpenseGroupReader` are written from it, with their `# Errors`. A call
+   forms on `ExpenseGroupHandle`, the form on `ExpenseGroupWriter`, and,
+   for a read, the form on `ExpenseGroupReader` are written from it, with
+   their `# Errors`. A call
    whose asynchronous form works before it takes the lock or while it holds
    it, as a currency change checks its rates first and a settlement yields,
    names a hand-written body in `group.rs` with
@@ -629,8 +630,9 @@ When code in one crate needs something another crate holds:
    `operations/tests.rs` and the two forms in `group/tests.rs`
    (`every_read_answers_alike_in_both_forms` or the change's
    `*_change_alike_in_both_forms`).
-4. The UniFFI glue's `ExpenseGroup` and `ExpenseGroupReader` take both forms
-   and the read's from the same trait, with the core's documentation,
+4. The UniFFI glue's `ExpenseGroup`, `ExpenseGroupReader`, and
+   `ExpenseGroupWriter` take both forms, the read's, and the write handle's
+   from the same trait, with the core's documentation,
    through the core's `expense_group_calls!` table in
    `crates/eranos-uniffi/src/objects.rs`: a parameter the trait takes as
    optional text crosses as an owned `Option<String>`, and the rest as the
@@ -638,38 +640,45 @@ When code in one crate needs something another crate holds:
 5. Add both forms, one name overloaded by `async`, to the Swift layer's
    `ExpenseGroup` in
    `bindings/swift/Sources/Eranos/ExpenseGroup/ExpenseGroup+<section>.swift`,
-   named by the Swift API Design Guidelines, and a read to its
-   `ExpenseGroupReader`; call them in
+   named by the Swift API Design Guidelines, a read to its
+   `ExpenseGroupReader`, and the call to its `ExpenseGroupWriter`; call
+   them in
    `Tests/EranosTests/ExpenseGroupTests.swift`.
 6. Add both forms to the Kotlin layer's `ExpenseGroup` in
    `bindings/kotlin/eranos/src/main/kotlin/eranos/ExpenseGroup.kt`, the
    `suspend` one under the call's name and its twin with `Blocking` after
-   it, and a read to its `ExpenseGroupReader`; call them in
-   `ExpenseGroupTest.kt`, and record the API with
+   it, a read to its `ExpenseGroupReader`, and the call to its
+   `ExpenseGroupWriter`; call them in `ExpenseGroupTest.kt`, and record the API with
    `./gradlew :eranos:apiDump`.
 7. Add both forms to the Java layer's `ExpenseGroup` in
    `bindings/java/src/main/java/eranos/ExpenseGroup.java`, the blocking one
-   under the call's name and its twin with `Async` after it, and a read to
-   its `ExpenseGroupReader`; call them in `ExpenseGroupTest.java`.
+   under the call's name and its twin with `Async` after it, a read to its
+   `ExpenseGroupReader`, and the call to its `ExpenseGroupWriter`; call
+   them in `ExpenseGroupTest.java`.
 8. Add both forms to the TypeScript layer's `ExpenseGroup` in
     `bindings/typescript/src/expense_group.ts`, the Promise under the call's
-    name and its twin with `Sync` after it, and a read to its
-    `ExpenseGroupReader` in `expense_group_reader.ts`; call them in
+    name and its twin with `Sync` after it, a read to its
+    `ExpenseGroupReader` in `expense_group_reader.ts`, and the call to its
+    `ExpenseGroupWriter` in `expense_group_writer.ts`; call them in
     `test/expense_group.test.ts`.
 9. Add both forms to the Python layer's `ExpenseGroup` in
     `bindings/python/src/eranos/_expense_group.py`, the blocking one under
-    the call's name and its coroutine with `_async` after it, and a read to
-    its `ExpenseGroupReader` in `_expense_group_reader.py`; call them in
+    the call's name and its coroutine with `_async` after it, a read to its
+    `ExpenseGroupReader` in `_expense_group_reader.py`, and the call to its
+    `ExpenseGroupWriter` in `_expense_group_writer.py`; call them in
     `tests/test_expense_group.py` and `tests/test_asynchronous.py`.
 10. Run `cargo xtask generate`: the C glue's `EranosExpenseGroup` takes both
-    forms and `EranosExpenseGroupReader` the read's, from the same trait,
+    forms, `EranosExpenseGroupReader` the read's, and
+    `EranosExpenseGroupWriter` the call's, from the same trait,
     with an outcome for a new kind of answer; a call that takes optional
     text gets a twin of each form that passes none, `clear_` for its `set_`.
     Add the call to the C layer in
-    `bindings/c/include/eranos/expense_group.h` and a read to
-    `expense_group_reader.h`, then to the C++ layer's `ExpenseGroup` in
-    `bindings/cpp/include/eranos/expense_group.hpp` and a read to
-    `expense_group_reader.hpp`; call them in each package's `tests`.
+    `bindings/c/include/eranos/expense_group.h`, a read to
+    `expense_group_reader.h`, and the call to `expense_group_writer.h`,
+    then to the C++ layer's `ExpenseGroup` in
+    `bindings/cpp/include/eranos/expense_group.hpp`, a read to
+    `expense_group_reader.hpp`, and the call to `expense_group_writer.hpp`;
+    call them in each package's `tests`.
 
 ## 4. Examples and benchmarks
 

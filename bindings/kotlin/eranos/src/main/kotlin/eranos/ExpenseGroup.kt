@@ -104,6 +104,39 @@ public class ExpenseGroup private constructor(
      */
     public inline fun <T> withReadBlocking(block: (ExpenseGroupReader) -> T): T = readBlocking().use(block)
 
+    /**
+     * A write handle, which holds the exclusive lock until it is closed, so that its reads and changes run with no other call
+     * in between.
+     *
+     * Waits for the lock without blocking its thread; cancelling the coroutine cancels the wait. [writeBlocking] blocks instead.
+     */
+    public suspend fun write(): ExpenseGroupWriter = converting { ExpenseGroupWriter(handle.writeAsync(null)) }
+
+    /**
+     * A write handle, which holds the exclusive lock until it is closed, so that its reads and changes run with no other call
+     * in between.
+     *
+     * Waits for the lock by blocking its thread; in a coroutine, [write] waits without blocking it. Any blocking call of the
+     * group on the thread that holds the handle waits forever: close it first.
+     */
+    public fun writeBlocking(): ExpenseGroupWriter = converting { ExpenseGroupWriter(handle.write()) }
+
+    /**
+     * Runs [block] with a write handle, and closes the handle when [block] returns or throws, so that no other call runs
+     * between the reads and changes of [block].
+     *
+     * Waits for the lock without blocking its thread.
+     */
+    public suspend inline fun <T> withWrite(block: (ExpenseGroupWriter) -> T): T = write().use(block)
+
+    /**
+     * Runs [block] with a write handle, and closes the handle when [block] returns or throws, so that no other call runs
+     * between the reads and changes of [block].
+     *
+     * Waits for the lock by blocking its thread.
+     */
+    public inline fun <T> withWriteBlocking(block: (ExpenseGroupWriter) -> T): T = writeBlocking().use(block)
+
     // The group's own details: its identifier, name, currency, note, language, and saved form.
 
     /**
@@ -921,4 +954,5 @@ public class ExpenseGroup private constructor(
 }
 
 /** The rates as the generated code takes them: each currency beside its rate into the group currency. */
-private fun Map<CurrencyCode, ExchangeRate>.generated(): List<CurrencyRate> = map { (currency, rate) -> CurrencyRate(currency.code, rate.toString()) }
+internal fun Map<CurrencyCode, ExchangeRate>.generated(): List<CurrencyRate> =
+    map { (currency, rate) -> CurrencyRate(currency.code, rate.toString()) }

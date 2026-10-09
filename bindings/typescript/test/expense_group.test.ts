@@ -344,7 +344,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         reader.release();
         assert.throws(
             () => reader.name(),
-            (error: unknown) => error instanceof TypeError && 'the read handle was released' === error.message,
+            (error: unknown) => error instanceof TypeError && 'the handle was released' === error.message,
         );
         {
             using held = await group.read();
@@ -352,6 +352,94 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         }
         group.setNameSync('Home');
         assert.equal(group.nameSync(), 'Home');
+    });
+
+    /**
+     * A write handle that answered another way than the group, let another call in, or kept running after its release would
+     * show an app a report and a change of two states of one group.
+     */
+    void it('reads and changes through a write handle as the group does until it is released', async () => {
+        const flat = new Flat();
+        const group = flat.group;
+        group.archiveMemberSync(flat.bob);
+        const id = group.idSync();
+        const categories = group.categoriesSync();
+        const expenses = group.expensesSync();
+        const shares = group.expenseSharesSync(flat.dinner);
+        const summary = group.summarySync();
+        const members = group.membersSync();
+        const settlement = group.settlementSync(SettlementStrategy.GREEDY);
+        const transfers = group.transfersSync();
+        const saved = group.saveSync();
+        const writer = group.writeSync();
+        assert.equal(writer.id(), id);
+        assert.deepEqual(writer.categories(), categories);
+        assert.deepEqual(writer.category(flat.food), categories.at(-1));
+        assert.equal(writer.currency(), flat.euro);
+        assert.deepEqual(writer.expenses(), expenses);
+        assert.deepEqual(writer.expense(flat.dinner), expenses[0]);
+        assert.deepEqual(writer.expenseShares(flat.dinner), shares);
+        assert.deepEqual(writer.summary(), summary);
+        assert.deepEqual(writer.members(), members);
+        assert.deepEqual(writer.member(flat.ana), members[0]);
+        assert.equal(writer.isArchived(flat.ana), false);
+        assert.equal(writer.isArchived(flat.bob), true);
+        assert.equal(writer.name(), 'Flat');
+        assert.equal(writer.note(), 'Rent');
+        assert.equal(writer.language()?.toString(), 'pt-PT');
+        assert.deepEqual(writer.settlement(SettlementStrategy.GREEDY), settlement);
+        assert.deepEqual(writer.transfers(), transfers);
+        assert.deepEqual(writer.transfer(flat.repayment), transfers[0]);
+        assert.ok(writer.transferAmount(flat.repayment)?.equals(flat.euros(1_000n)));
+        assert.equal(writer.save(), saved);
+        writer.unarchiveMember(flat.bob);
+        writer.setName('Home');
+        writer.setNote('Lease');
+        writer.clearNote();
+        writer.setLanguage(Language.parse('ro'));
+        writer.clearLanguage();
+        assert.equal(writer.name(), 'Home');
+        assert.equal(writer.note(), undefined);
+        assert.equal(writer.language(), undefined);
+        const food = writer.category(flat.food);
+        assert.ok(food);
+        assert.deepEqual(writer.replaceCategory(food), food);
+        const dinner = writer.expense(flat.dinner);
+        assert.ok(dinner);
+        assert.deepEqual(writer.replaceExpense(dinner), dinner);
+        assert.deepEqual(writer.removeExpense(flat.dinner), dinner);
+        assert.equal(writer.addExpense(dinner), flat.dinner);
+        const repayment = writer.transfer(flat.repayment);
+        assert.ok(repayment);
+        assert.deepEqual(writer.replaceTransfer(repayment), repayment);
+        assert.deepEqual(writer.removeTransfer(flat.repayment), repayment);
+        assert.equal(writer.addTransfer(repayment), flat.repayment);
+        const carol = writer.addMember(createMember({ firstName: 'Carol' }));
+        const popa = writer.member(carol);
+        assert.ok(popa);
+        assert.deepEqual(writer.replaceMember(popa), popa);
+        writer.archiveMember(carol);
+        assert.equal(writer.isArchived(carol), true);
+        writer.unarchiveMember(carol);
+        assert.deepEqual(writer.removeMember(carol), popa);
+        assert.deepEqual(writer.removeCategory(flat.food), food);
+        assert.equal(writer.addCategory(food), flat.food);
+        const lei = CurrencyCode.of('RON');
+        writer.changeCurrency(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
+        assert.equal(writer.currency(), lei);
+        writer.release();
+        writer.release();
+        const released = (error: unknown): boolean => error instanceof TypeError && 'the handle was released' === error.message;
+        assert.throws(() => writer.name(), released);
+        assert.throws(() => {
+            writer.setName('Flat');
+        }, released);
+        assert.equal(group.nameSync(), 'Home');
+        {
+            using held = await group.write();
+            held.setName('Flat');
+        }
+        assert.equal(group.nameSync(), 'Flat');
     });
 
     /**

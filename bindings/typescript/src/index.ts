@@ -88,8 +88,9 @@ export {
     SettlementError,
     TransferError,
 } from './errors.js';
-export { type CurrencyRate, ExpenseGroup, type ExpenseGroupOptions } from './expense_group.js';
+export { ExpenseGroup, type ExpenseGroupOptions } from './expense_group.js';
 export { ExpenseGroupReader } from './expense_group_reader.js';
+export { ExpenseGroupWriter } from './expense_group_writer.js';
 export {
     type CategoryId,
     type ExpenseId,
@@ -115,7 +116,7 @@ export {
 } from './identifiers.js';
 export { init } from './init.js';
 export { Money } from './money.js';
-export { ExchangeRate, Parts, Percentage, Quantity } from './ratios.js';
+export { type CurrencyRate, ExchangeRate, Parts, Percentage, Quantity } from './ratios.js';
 export {
     type Balance,
     type CategoryTotal,

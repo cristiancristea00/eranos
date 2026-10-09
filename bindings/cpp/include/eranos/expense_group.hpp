@@ -15,6 +15,7 @@
 #include "eranos/error.hpp"
 #include "eranos/expense.hpp"
 #include "eranos/expense_group_reader.hpp"
+#include "eranos/expense_group_writer.hpp"
 #include "eranos/identifiers.hpp"
 #include "eranos/members.hpp"
 #include "eranos/money.hpp"
@@ -39,28 +40,6 @@ namespace detail {
 [[nodiscard]] inline constexpr EranosCancellation const *handleOf(Cancellation const *const cancellation) noexcept;
 
 } // namespace detail
-
-/// The rate into a new group currency of an amount in another.
-struct CurrencyRate final {
-    /// The record of its fields.
-    ///
-    /// @param currency The ISO 4217 code of the currency the rate converts from.
-    /// @param rate The rate, as a decimal.
-    inline CurrencyRate(CurrencyCode currency, ExchangeRate rate) noexcept : currency(std::move(currency)), rate(std::move(rate)) {}
-
-    /// The ISO 4217 code of the currency the rate converts from.
-    CurrencyCode currency;
-
-    /// The rate, as a decimal.
-    ExchangeRate rate;
-
-    /// Whether every field of two records is equal.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they are equal
-    [[nodiscard]] friend constexpr bool operator==(CurrencyRate const &left, CurrencyRate const &right) noexcept = default;
-};
 
 /// The details a new group can start with besides its identifier, name, and currency. Each starts absent, so a designated initialiser names only
 /// those it gives.
@@ -711,6 +690,21 @@ class ExpenseGroup final {
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<ExpenseGroupReader, Error>> readAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
+    /// A write handle, which holds the exclusive lock until it is released or destroyed, so that its reads and changes run with no other call in
+    /// between. Blocks the calling thread while another call holds the group's lock; any synchronous call of the group on the thread that holds a
+    /// handle waits forever, since the handle holds the lock the call needs and the thread cannot release it meanwhile, so release the handle first.
+    ///
+    /// @return The result
+    [[nodiscard]] ExpenseGroupWriter write() noexcept;
+
+    /// The asynchronous form of write(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
+    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
+    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    ///
+    /// @param cancellation A cancellation for the call, or none
+    /// @return A future of the result, or of the error the call ends with
+    [[nodiscard]] std::future<std::expected<ExpenseGroupWriter, Error>> writeAsync(Cancellation const *const cancellation = nullptr) noexcept;
+
     /// Clears the group's note. Blocks the calling thread while another call holds the group's lock.
     void clearNote() noexcept;
 
@@ -747,13 +741,6 @@ class ExpenseGroup final {
 
     std::unique_ptr<detail::EranosExpenseGroup> handle;
 };
-
-namespace detail {
-
-[[nodiscard]] inline std::unique_ptr<EranosCurrencyRate> toDetail(CurrencyRate const &value) noexcept;
-[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::span<CurrencyRate const> const records) noexcept;
-
-} // namespace detail
 
 inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(ExpenseGroupId const &id, std::string_view const name, CurrencyCode const &currency,
                                                                ExpenseGroupOptions const &options) noexcept {
@@ -1221,6 +1208,14 @@ inline std::future<std::expected<ExpenseGroupReader, Error>> ExpenseGroup::readA
     return detail::launch<ExpenseGroupReader>(
         [&](auto callback) noexcept { handle->read_async(detail::handleOf(cancellation), std::move(callback)); },
         [](detail::EranosExpenseGroupReaderOutcome &done) noexcept { return ExpenseGroupReader(done.take()); });
+}
+
+inline ExpenseGroupWriter ExpenseGroup::write() noexcept { return ExpenseGroupWriter(handle->write()); }
+
+inline std::future<std::expected<ExpenseGroupWriter, Error>> ExpenseGroup::writeAsync(Cancellation const *const cancellation) noexcept {
+    return detail::launch<ExpenseGroupWriter>(
+        [&](auto callback) noexcept { handle->write_async(detail::handleOf(cancellation), std::move(callback)); },
+        [](detail::EranosExpenseGroupWriterOutcome &done) noexcept { return ExpenseGroupWriter(done.take()); });
 }
 
 } // namespace eranos

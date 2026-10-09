@@ -13,7 +13,15 @@
 # include one another in cycles, which their include guards resolve, and its
 # asynchronous calls move a callback and then read its type from what is
 # left, which the analyser's moved-from check reports through every call of
-# the layer; bugprone-use-after-move checks the layer's own moves. A
+# the layer; bugprone-use-after-move checks the layer's own moves. The same
+# calls allocate the callback with new and hand it to the C side inside a
+# struct passed by value, whose deleter the worker thread calls once the call
+# ends; the analyser cannot see the C side, so on the paths it explores
+# through the layer's asynchronous calls, which change with every test the
+# file gains, it reports the allocation as leaked, and its leak check is off:
+# the layer, its tests, and its ports allocate nothing with new, and hold
+# every object Diplomat returns in a std::unique_ptr, and the ports run
+# under LeakSanitizer, which finds a leak the layer does cause. A
 # parameter taken by value is const in its declaration too, so that the
 # declaration reads as the definition does. Every function a header defines
 # writes inline, even where the language implies it, so readability's check of
@@ -41,6 +49,7 @@ Checks: >
   readability-*,
   -bugprone-switch-missing-default-case,
   -clang-analyzer-cplusplus.Move,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
   -modernize-use-trailing-return-type,
   -readability-avoid-const-params-in-decls,
   -readability-redundant-inline-specifier

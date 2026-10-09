@@ -1,7 +1,8 @@
 //! The bridge's group, form by form. A synchronous form that lent the core
 //! another value, an asynchronous one that read its caller's objects after
-//! it returned, a read handle's form of a change, or an outcome that handed
-//! out another answer would reach every C and C++ caller of that call.
+//! it returned, a read handle's form of a change, a write handle without a
+//! call's form, or an outcome that handed out another answer would reach
+//! every C and C++ caller of that call.
 
 use std::collections::BTreeMap;
 
@@ -148,7 +149,59 @@ fn the_group_has_every_form_of_every_call_in_order() {
             "move_to_async",
             "read",
             "read_async",
+            "write",
+            "write_async",
         ]
+    );
+}
+
+/// The write handle has its release first, then every call's synchronous
+/// form over the handle, reads and changes alike, each failing as released.
+#[test]
+fn the_write_handle_runs_every_call_through_itself() {
+    let named = named();
+    let writer = methods(&named["EranosExpenseGroupWriter"]);
+    assert_eq!(
+        names(&writer),
+        [
+            "release",
+            "expense",
+            "expenses",
+            "name",
+            "note",
+            "is_archived",
+            "is_open",
+            "has_expense_named",
+            "latest_expense",
+            "is_latest_itemised",
+            "summary",
+            "add_expense",
+            "remove_expense",
+            "set_members",
+            "set_note",
+            "set_language",
+            "clear_language",
+            "move_to",
+        ]
+    );
+    assert_written(
+        &writer,
+        &[
+            quote! {
+                pub fn is_open(&self) -> Result<bool, Box<EranosError>> {
+                    self.0.is_open().map_err(crate::failed)
+                }
+            },
+            quote! {
+                pub fn clear_language(&self, count: i32) -> Result<(), Box<EranosError>> {
+                    self.0.set_language(None, count).map_err(crate::failed)
+                }
+            },
+        ],
+    );
+    assert_eq!(
+        method(&writer, "set_note").docs,
+        format!("Sets the note; blank text clears it.\n\n# Errors\n\n{RELEASED} {INVALID_TEXT}")
     );
 }
 
@@ -590,6 +643,7 @@ fn each_kind_of_answer_has_its_outcome() {
         "EranosFoundFlagOutcome",
         "EranosExpenseGroupOutcome",
         "EranosExpenseGroupReaderOutcome",
+        "EranosExpenseGroupWriterOutcome",
         "EranosOptionalTextOutcome",
         "EranosSummaryOutcome",
         "EranosTextOutcome",

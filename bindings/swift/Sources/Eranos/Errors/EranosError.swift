@@ -64,7 +64,7 @@ public enum EranosError: Error, Sendable, Hashable {
     /// The call was cancelled, by its task's cancellation, before it changed anything.
     case cancelled(detail: String)
 
-    /// The read handle was released, so it reads the group no more.
+    /// A read or write handle was released, so it runs the group's calls no more.
     case released(detail: String)
 
     /// A failure the library does not describe, such as a defect in the bindings.

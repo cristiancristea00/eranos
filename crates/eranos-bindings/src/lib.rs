@@ -49,6 +49,7 @@ mod reader;
 mod settlement;
 mod transfer;
 mod values;
+mod writer;
 
 use std::str::FromStr;
 
@@ -88,6 +89,7 @@ pub use values::{
     quantity_from_f64, quantity_from_whole, quantity_parse, split_members, time_of_day_check,
     time_of_day_format, time_of_day_parse, tip_rule_none, username_parse,
 };
+pub use writer::ExpenseGroupWriter;
 
 /// The identifier `text`, as it is.
 ///

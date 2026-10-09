@@ -833,10 +833,7 @@ fn every_failure_of_the_library_converts_to_its_case() {
 #[test]
 fn the_bindings_own_cases_carry_their_messages() {
     assert_eq!(EranosError::cancelled().detail(), "the call was cancelled");
-    assert_eq!(
-        EranosError::released().detail(),
-        "the read handle was released"
-    );
+    assert_eq!(EranosError::released().detail(), "the handle was released");
     let fields = [
         (
             MismatchedField::IbanCountryCode,

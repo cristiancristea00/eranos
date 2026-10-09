@@ -122,6 +122,32 @@ public final class ExpenseGroup implements AutoCloseable {
         return Converting.future(handle.readAsync(null), ExpenseGroupReader::new);
     }
 
+    /**
+     * A write handle, which holds the exclusive lock until it is closed, so that its reads and
+     * changes run with no other call in between.
+     *
+     * <p>Waits for the lock by blocking its thread; {@link #writeAsync} waits without blocking it.
+     * Any blocking call of the group on the thread that holds the handle waits forever: close it
+     * first.
+     *
+     * @return the write handle
+     */
+    public ExpenseGroupWriter write() {
+        return new ExpenseGroupWriter(Converting.callUnfailing(handle::write));
+    }
+
+    /**
+     * A write handle, which holds the exclusive lock until it is closed, so that its reads and
+     * changes run with no other call in between.
+     *
+     * <p>Waits for the lock without blocking a thread; cancelling the future cancels the wait.
+     *
+     * @return a future of the write handle
+     */
+    public CompletableFuture<ExpenseGroupWriter> writeAsync() {
+        return Converting.future(handle.writeAsync(null), ExpenseGroupWriter::new);
+    }
+
     // The group's own details: its identifier, name, currency, note, language, and saved
     // form.
 
@@ -1366,7 +1392,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @param rates the rates
      * @return the generated rates
      */
-    private static List<CurrencyRate> rates(Map<CurrencyCode, ExchangeRate> rates) {
+    static List<CurrencyRate> rates(Map<CurrencyCode, ExchangeRate> rates) {
         return rates.entrySet().stream()
                 .map(rate -> new CurrencyRate(rate.getKey().code(), rate.getValue().toString()))
                 .toList();

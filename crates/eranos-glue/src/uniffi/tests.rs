@@ -29,8 +29,9 @@ fn docs(summary: &str) -> crate::docs::Docs {
 /// Every call's synchronous form forwards to the core's, its optional text
 /// taken owned and lent; its asynchronous form owns every parameter, hands
 /// the core the cancellation it holds, and awaits the core's future; every
-/// read's form forwards to the read handle's; and every text is the core's
-/// documentation with its links as code spans.
+/// read's form forwards to the read handle's and every call's to the write
+/// handle's; and every text is the core's documentation with its links as
+/// code spans.
 #[test]
 fn the_objects_forward_every_form_to_the_core() {
     let calls = Calls::parse(
@@ -51,6 +52,22 @@ fn the_objects_forward_every_form_to_the_core() {
         .unwrap(),
     )
     .unwrap();
+    assert_eq!(objects(&calls).to_string(), expected_objects().to_string());
+}
+
+/// The objects the test above expects for its trait.
+fn expected_objects() -> TokenStream {
+    let (group, handles) = (expected_group_objects(), expected_handle_objects());
+    quote! {
+        #group
+        #handles
+    }
+}
+
+/// The group object the test above expects for its trait: every call's
+/// forms, the infallible read's two synchronous forms in blocks of their
+/// own.
+fn expected_group_objects() -> TokenStream {
     let (category, language, name) = (
         docs("The category with the identifier `id`."),
         docs("Sets the language."),
@@ -58,15 +75,13 @@ fn the_objects_forward_every_form_to_the_core() {
     );
     let category_doc = foreign(&category.synchronous(Access::Read, false));
     let category_future = foreign(&category.asynchronous(false));
-    let category_read = foreign(&category.reader(false));
     let language_doc = foreign(&language.synchronous(Access::Write, false));
     let language_future = foreign(&language.asynchronous(false));
     let name_unfailing_doc = foreign(&name.unfailing());
     let name_doc = foreign(&name.synchronous(Access::Read, true));
     let name_future = foreign(&name.asynchronous(true));
-    let name_read = foreign(&name.reader(true));
     assert!(!category_doc.contains("]("));
-    let expected: TokenStream = quote! {
+    quote! {
         #[::uniffi::export]
         impl ExpenseGroup {
             #[doc = #category_doc]
@@ -127,6 +142,25 @@ fn the_objects_forward_every_form_to_the_core() {
             }
         }
 
+    }
+}
+
+/// The read and write handles the test above expects: every read's form
+/// on the one, every call's form on the other.
+fn expected_handle_objects() -> TokenStream {
+    let (category, language, name) = (
+        docs("The category with the identifier `id`."),
+        docs("Sets the language."),
+        docs("The group's name."),
+    );
+    let category_read = foreign(&category.reader(false));
+    let name_read = foreign(&name.reader(true));
+    let (category_written, language_written, name_written) = (
+        foreign(&category.writer(false)),
+        foreign(&language.writer(false)),
+        foreign(&name.writer(true)),
+    );
+    quote! {
         #[::uniffi::export]
         impl ExpenseGroupReader {
             #[doc = #category_read]
@@ -139,8 +173,28 @@ fn the_objects_forward_every_form_to_the_core() {
                 self.reader.name()
             }
         }
-    };
-    assert_eq!(objects(&calls).to_string(), expected.to_string());
+
+        #[::uniffi::export]
+        impl ExpenseGroupWriter {
+            #[doc = #category_written]
+            pub(crate) fn category(&self, id: &str) -> ::std::result::Result<Option<Category>, EranosError> {
+                self.writer.category(id)
+            }
+
+            #[doc = #language_written]
+            pub(crate) fn set_language(
+                &self,
+                language: ::std::option::Option<::std::string::String>
+            ) -> ::std::result::Result<(), EranosError> {
+                self.writer.set_language(language.as_deref())
+            }
+
+            #[doc = #name_written]
+            pub(crate) fn name(&self) -> ::std::result::Result<String, EranosError> {
+                self.writer.name()
+            }
+        }
+    }
 }
 
 /// Each mirror becomes the `uniffi` copy of its kind, its item as the
