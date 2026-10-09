@@ -25,13 +25,14 @@ func anAmountKeepsTheDetailsOfItsCurrencyBothWays() {
 }
 
 /// An amount in a currency whose details are not the library's for its code would reach the
-/// group as the library's currency, with other decimal places than the app showed.
+/// group as the library's currency, with other decimal places than the app showed; refused as an
+/// unknown currency, it would send the app to check a code the library lists.
 @Test
 func anAmountWhoseCurrencyIsNotTheLibrarysIsRefused() {
     let details = EranosGenerated.CurrencyDetails(code: "EUR", name: "Euro", numericCode: 978, decimalPlaces: 3)
     let money = Eranos.Money(minorUnits: 1_000, currency: Eranos.CurrencyCode(details))
     #expect("1.000 EUR" == money.description)
-    #expect(throws: Eranos.EranosError.money(.unknownCurrency, detail: "unknown currency code")) {
+    #expect(throws: Eranos.EranosError.mismatchedRecord(.currencyDetails, detail: "the currency's details are not the library's for its code")) {
         try money.adding(money)
     }
 }

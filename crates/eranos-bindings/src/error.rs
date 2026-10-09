@@ -120,6 +120,14 @@ pub enum EranosError {
         /// The library's message.
         detail: String,
     },
+    /// A record whose derived text is not what the library derives from
+    /// its other fields, so it names no value the library writes.
+    MismatchedRecord {
+        /// The field whose text is not the library's.
+        field: MismatchedField,
+        /// What went wrong.
+        detail: String,
+    },
     /// A saved group that is not JSON of the saved form, at `line` and
     /// `column`.
     InvalidJson {
@@ -177,6 +185,25 @@ impl EranosError {
         }
     }
 
+    /// The error of the case `MismatchedRecord`, for `field`.
+    pub(crate) fn mismatched_record(field: MismatchedField) -> Self {
+        let detail = match field {
+            MismatchedField::IbanCountryCode => {
+                "the IBAN's country code is not the one the library derives from it"
+            }
+            MismatchedField::PhoneInternational => {
+                "the phone number's international form is not the one the library writes for it"
+            }
+            MismatchedField::CurrencyDetails => {
+                "the currency's details are not the library's for its code"
+            }
+        };
+        Self::MismatchedRecord {
+            field,
+            detail: detail.to_owned(),
+        }
+    }
+
     /// What went wrong, as the library words it.
     #[must_use]
     pub fn detail(&self) -> &str {
@@ -193,6 +220,7 @@ impl EranosError {
             | Self::Transfer { detail, .. }
             | Self::ExpenseGroup { detail, .. }
             | Self::Language { detail, .. }
+            | Self::MismatchedRecord { detail, .. }
             | Self::InvalidJson { detail, .. }
             | Self::Cancelled { detail, .. }
             | Self::Released { detail, .. } => detail,
@@ -500,6 +528,24 @@ pub enum TransferFailure {
     SameMember,
     /// [`TransferError::NonPositiveAmount`].
     NonPositiveAmount,
+}
+
+/// The field of a record that the library derives from the record's other
+/// fields, and which a record gave another way: what
+/// [`EranosError::MismatchedRecord`] names.
+#[eranos_glue_macros::mirrored]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MismatchedField {
+    /// The country code of an IBAN, which the library derives from the
+    /// IBAN.
+    IbanCountryCode,
+    /// The international form of a phone number, which the library writes
+    /// from its E.164 form.
+    PhoneInternational,
+    /// The name, numeric code, or decimal places of a currency, which the
+    /// library holds for its code; a code in lower case names no currency
+    /// the library lists either.
+    CurrencyDetails,
 }
 
 /// Why an IBAN was refused: the [`IbanError`] inside

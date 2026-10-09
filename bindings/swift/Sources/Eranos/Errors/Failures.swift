@@ -482,3 +482,30 @@ extension IBANReason {
         }
     }
 }
+
+/// The field of a record that the library derives from the record's other fields, and which a
+/// record gave another way: what `EranosError.mismatchedRecord` names.
+public enum MismatchedField: Sendable, Hashable {
+    /// The country code of an IBAN, which the library derives from the IBAN.
+    case ibanCountryCode
+
+    /// The international form of a phone number, which the library writes from its E.164 form.
+    case phoneInternational
+
+    /// The name, numeric code, or decimal places of a currency, which the library holds for its
+    /// code; a code in lower case names no currency the library lists either.
+    case currencyDetails
+}
+
+extension MismatchedField {
+    init(_ field: EranosGenerated.MismatchedField) {
+        switch field {
+        case .ibanCountryCode:
+            self = .ibanCountryCode
+        case .phoneInternational:
+            self = .phoneInternational
+        case .currencyDetails:
+            self = .currencyDetails
+        }
+    }
+}

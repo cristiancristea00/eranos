@@ -258,6 +258,11 @@ public final class eranos/EranosException$Member : eranos/EranosException {
 	public final fun getFailure ()Leranos/MemberFailure;
 }
 
+public final class eranos/EranosException$MismatchedRecord : eranos/EranosException {
+	public fun <init> (Leranos/MismatchedField;Ljava/lang/String;)V
+	public final fun getField ()Leranos/MismatchedField;
+}
+
 public final class eranos/EranosException$Money : eranos/EranosException {
 	public fun <init> (Leranos/MoneyFailure;Ljava/lang/String;)V
 	public final fun getFailure ()Leranos/MoneyFailure;
@@ -1006,6 +1011,15 @@ public final class eranos/MemberSummary {
 	public final fun getShare ()Leranos/Money;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MismatchedField : java/lang/Enum {
+	public static final field CURRENCY_DETAILS Leranos/MismatchedField;
+	public static final field IBAN_COUNTRY_CODE Leranos/MismatchedField;
+	public static final field PHONE_INTERNATIONAL Leranos/MismatchedField;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Leranos/MismatchedField;
+	public static fun values ()[Leranos/MismatchedField;
 }
 
 public final class eranos/Money {

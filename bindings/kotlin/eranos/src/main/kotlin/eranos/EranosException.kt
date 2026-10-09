@@ -109,6 +109,16 @@ public sealed class EranosException(
     ) : EranosException(message)
 
     /**
+     * A record whose derived text is not what the library derives from its other fields, so it names no value the library
+     * writes: the [field] it gave another way, and what went wrong.
+     */
+    public class MismatchedRecord(
+        /** The field whose text is not the library's. */
+        public val field: MismatchedField,
+        message: String,
+    ) : EranosException(message)
+
+    /**
      * A saved group that is not JSON of the saved form, at [line] and [column]; the message names the fault but never the
      * text there, which can hold an account number.
      */
@@ -139,6 +149,7 @@ internal fun eranos.internal.EranosException.converted(): Exception =
         is eranos.internal.EranosException.Transfer -> EranosException.Transfer(failure.converted(), detail)
         is eranos.internal.EranosException.ExpenseGroup -> EranosException.ExpenseGroup(failure.converted(), detail)
         is eranos.internal.EranosException.Language -> EranosException.Language(failure.converted(), detail)
+        is eranos.internal.EranosException.MismatchedRecord -> EranosException.MismatchedRecord(field.converted(), detail)
         is eranos.internal.EranosException.InvalidJson -> EranosException.InvalidJson(line, column, detail)
         is eranos.internal.EranosException.Cancelled -> CancellationException(detail)
         is eranos.internal.EranosException.Released -> IllegalStateException(detail)

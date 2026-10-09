@@ -3,6 +3,7 @@
 import asyncio
 import contextlib
 import dataclasses
+import enum
 from collections.abc import Callable, Iterator
 from typing import Any, final
 
@@ -809,6 +810,42 @@ type LanguageFailure = LanguageError.InvalidLanguage
 
 
 @final
+class MismatchedField(enum.Enum):
+    """The field of a record that the library derives from the record's other fields, and which a record gave another way."""
+
+    IBAN_COUNTRY_CODE = enum.auto()
+    """The country code of an IBAN, which the library derives from the IBAN."""
+
+    PHONE_INTERNATIONAL = enum.auto()
+    """The international form of a phone number, which the library writes from its E.164 form."""
+
+    CURRENCY_DETAILS = enum.auto()
+    """
+    The name, numeric code, or decimal places of a currency, which the library holds for its code.
+
+    A code in lower case names no currency the library lists either.
+    """
+
+
+@final
+class MismatchedRecordError(EranosError):
+    """A record whose derived text is not what the library derives from its other fields, so it names no value the library writes."""
+
+    def __init__(self, message: str, *, field: MismatchedField) -> None:
+        """
+        Make the error of a record that gave field another way, which the library words as message.
+
+        Args:
+            message: The library's message.
+            field: The field whose text is not the library's.
+
+        """
+        super().__init__(message)
+        self.field = field
+        """The field whose text is not the library's."""
+
+
+@final
 class InvalidJsonError(EranosError):
     """
     A saved group that is not JSON of the saved form, at its line and column.
@@ -967,6 +1004,12 @@ _LANGUAGE_FAILURES: dict[generated.LanguageFailure, LanguageFailure] = {
     generated.LanguageFailure.INVALID_LANGUAGE: LanguageError.InvalidLanguage(),
 }
 
+_MISMATCHED_FIELDS: dict[generated.MismatchedField, MismatchedField] = {
+    generated.MismatchedField.IBAN_COUNTRY_CODE: MismatchedField.IBAN_COUNTRY_CODE,
+    generated.MismatchedField.PHONE_INTERNATIONAL: MismatchedField.PHONE_INTERNATIONAL,
+    generated.MismatchedField.CURRENCY_DETAILS: MismatchedField.CURRENCY_DETAILS,
+}
+
 _ERRORS: dict[type[object], Callable[[Any], BaseException]] = {
     generated.EranosError.Id: lambda error: IdError(_ID_FAILURES[error.failure], error.detail),
     generated.EranosError.PaymentAccount: lambda error: PaymentAccountError(
@@ -982,6 +1025,7 @@ _ERRORS: dict[type[object], Callable[[Any], BaseException]] = {
     generated.EranosError.Transfer: lambda error: TransferError(_TRANSFER_FAILURES[error.failure], error.detail),
     generated.EranosError.ExpenseGroup: lambda error: ExpenseGroupError(_EXPENSE_GROUP_FAILURES[type(error.failure)](error.failure), error.detail),
     generated.EranosError.Language: lambda error: LanguageError(_LANGUAGE_FAILURES[error.failure], error.detail),
+    generated.EranosError.MismatchedRecord: lambda error: MismatchedRecordError(error.detail, field=_MISMATCHED_FIELDS[error.field]),
     generated.EranosError.InvalidJson: lambda error: InvalidJsonError(error.detail, line=error.line, column=error.column),
     generated.EranosError.Cancelled: lambda error: asyncio.CancelledError(error.detail),
     generated.EranosError.Released: lambda error: RuntimeError(error.detail),

@@ -129,12 +129,13 @@ class ValuesTest {
                         new eranos.internal.CurrencyDetails("EUR", "Euro", 978, (byte) 3));
         assertNotEquals(flat.euro, altered);
         Money amount = new Money(1_000, altered);
-        EranosException.Money added =
-                assertThrows(EranosException.Money.class, () -> amount.plus(flat.euros(1)));
-        assertEquals(new MoneyFailure.UnknownCurrency(), added.failure());
-        EranosException.Money transferred =
+        EranosException.MismatchedRecord added =
                 assertThrows(
-                        EranosException.Money.class,
+                        EranosException.MismatchedRecord.class, () -> amount.plus(flat.euros(1)));
+        assertEquals(MismatchedField.CURRENCY_DETAILS, added.field());
+        EranosException.MismatchedRecord transferred =
+                assertThrows(
+                        EranosException.MismatchedRecord.class,
                         () ->
                                 flat.group.addTransfer(
                                         Transfer.builder(
@@ -143,7 +144,7 @@ class ValuesTest {
                                                         new Cost.Local(amount),
                                                         flat.day)
                                                 .build()));
-        assertEquals(new MoneyFailure.UnknownCurrency(), transferred.failure());
+        assertEquals(MismatchedField.CURRENCY_DETAILS, transferred.field());
     }
 
     /**
@@ -554,9 +555,11 @@ class ValuesTest {
                                         new eranos.internal.PhoneNumber(
                                                 "+40712345678", "+40 7123 45678")))
                         .build();
-        EranosException.Contact phone =
-                assertThrows(EranosException.Contact.class, () -> flat.group.addMember(grouped));
-        assertEquals(new ContactFailure.InvalidPhoneNumber(), phone.failure());
+        EranosException.MismatchedRecord phone =
+                assertThrows(
+                        EranosException.MismatchedRecord.class,
+                        () -> flat.group.addMember(grouped));
+        assertEquals(MismatchedField.PHONE_INTERNATIONAL, phone.field());
 
         Member banked =
                 Member.builder("Dan")
@@ -569,12 +572,10 @@ class ValuesTest {
                                                                 "RO49AAAA1B31007593840000",
                                                                 "GB")))))
                         .build();
-        EranosException.PaymentAccount iban =
+        EranosException.MismatchedRecord iban =
                 assertThrows(
-                        EranosException.PaymentAccount.class, () -> flat.group.addMember(banked));
-        assertEquals(
-                new PaymentAccountFailure.InvalidIban(new IbanReason.UnknownCountry()),
-                iban.failure());
+                        EranosException.MismatchedRecord.class, () -> flat.group.addMember(banked));
+        assertEquals(MismatchedField.IBAN_COUNTRY_CODE, iban.field());
         assertEquals(
                 List.of(flat.ana, flat.bob),
                 flat.group.members().stream().map(Member::id).toList());

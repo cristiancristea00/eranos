@@ -4,8 +4,8 @@
 
 use crate::{
     CalendarFailure, CategoryFailure, ContactFailure, CurrencyDetails, EranosError, ExpenseFailure,
-    ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, Money,
-    MoneyFailure, PaymentAccountFailure, SettlementFailure, TransferFailure,
+    ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, MismatchedField,
+    Money, MoneyFailure, PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
 
 /// An [`EranosError`] as fields: its kind, the library's message, the
@@ -14,7 +14,8 @@ use crate::{
 pub struct FlatError {
     /// The module that refused the call, or the binding's own case.
     pub kind: ErrorKind,
-    /// The failure within its module, absent for the binding's own cases.
+    /// The failure within its module, or the field a mismatched record gave
+    /// another way; absent for the binding's other own cases.
     pub failure: Option<FailureKind>,
     /// The library's message: lowercase, without a full stop, and never the
     /// text it refused.
@@ -41,7 +42,7 @@ impl FlatError {
 impl From<&EranosError> for FlatError {
     #[expect(
         clippy::too_many_lines,
-        reason = "one arm per case of the error, of which there are 15"
+        reason = "one arm per case of the error, of which there are 16"
     )]
     fn from(error: &EranosError) -> Self {
         let message = error.to_string();
@@ -133,6 +134,12 @@ impl From<&EranosError> for FlatError {
                 message,
                 payload: Payload::default(),
             },
+            EranosError::MismatchedRecord { field, .. } => Self {
+                kind: ErrorKind::MismatchedRecord,
+                failure: Some(mismatched_record(*field)),
+                message,
+                payload: Payload::default(),
+            },
             EranosError::InvalidJson { line, column, .. } => Self {
                 kind: ErrorKind::InvalidJson,
                 failure: None,
@@ -187,6 +194,8 @@ pub enum ErrorKind {
     ExpenseGroup,
     /// [`EranosError::Language`].
     Language,
+    /// [`EranosError::MismatchedRecord`].
+    MismatchedRecord,
     /// [`EranosError::InvalidJson`].
     InvalidJson,
     /// Text that is not UTF-8, which a binding that takes text as bytes
@@ -199,7 +208,8 @@ pub enum ErrorKind {
 }
 
 /// The failure within its module, named after the module and the failure:
-/// a case per case of every module's failure.
+/// a case per case of every module's failure, and one per field of
+/// [`MismatchedField`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FailureKind {
     /// [`IdFailure::Empty`].
@@ -326,6 +336,12 @@ pub enum FailureKind {
     ExpenseGroupOverflow,
     /// [`LanguageFailure::InvalidLanguage`].
     LanguageInvalidLanguage,
+    /// [`MismatchedField::IbanCountryCode`].
+    MismatchedRecordIbanCountryCode,
+    /// [`MismatchedField::PhoneInternational`].
+    MismatchedRecordPhoneInternational,
+    /// [`MismatchedField::CurrencyDetails`].
+    MismatchedRecordCurrencyDetails,
 }
 
 /// Why an IBAN was refused, without what [`IbanReason::WrongLength`] holds,
@@ -676,6 +692,15 @@ const fn id(failure: IdFailure) -> FailureKind {
 const fn language(failure: LanguageFailure) -> FailureKind {
     match failure {
         LanguageFailure::InvalidLanguage => FailureKind::LanguageInvalidLanguage,
+    }
+}
+
+/// The `field` of a mismatched record, as its failure.
+const fn mismatched_record(field: MismatchedField) -> FailureKind {
+    match field {
+        MismatchedField::IbanCountryCode => FailureKind::MismatchedRecordIbanCountryCode,
+        MismatchedField::PhoneInternational => FailureKind::MismatchedRecordPhoneInternational,
+        MismatchedField::CurrencyDetails => FailureKind::MismatchedRecordCurrencyDetails,
     }
 }
 

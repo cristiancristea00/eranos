@@ -154,6 +154,12 @@ static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_BUSY = EranosFailure
 static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_OVERFLOW = EranosFailure_ExpenseGroupOverflow;
 /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
 static constexpr EranosFailure ERANOS_FAILURE_LANGUAGE_INVALID_LANGUAGE = EranosFailure_LanguageInvalidLanguage;
+/// An IBAN record whose country code is not the one the library derives from the IBAN.
+static constexpr EranosFailure ERANOS_FAILURE_MISMATCHED_RECORD_IBAN_COUNTRY_CODE = EranosFailure_MismatchedRecordIbanCountryCode;
+/// A phone number record whose international form is not the one the library writes from its E.164 form.
+static constexpr EranosFailure ERANOS_FAILURE_MISMATCHED_RECORD_PHONE_INTERNATIONAL = EranosFailure_MismatchedRecordPhoneInternational;
+/// Currency details other than the library's for their code, a code in lower case included.
+static constexpr EranosFailure ERANOS_FAILURE_MISMATCHED_RECORD_CURRENCY_DETAILS = EranosFailure_MismatchedRecordCurrencyDetails;
 
 /// The module of the library that refused a call, or the core's own case. The values of EranosErrorKind, by the names of the C layer.
 typedef enum EranosErrorKind EranosErrorKind;
@@ -183,6 +189,9 @@ static constexpr EranosErrorKind ERANOS_ERROR_KIND_TRANSFER = EranosErrorKind_Tr
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE_GROUP = EranosErrorKind_ExpenseGroup;
 /// A failure about a language tag.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_LANGUAGE = EranosErrorKind_Language;
+/// A record whose derived text is not what the library derives from its other fields, so it names no value the library writes; the failure that
+/// eranosErrorFailure() reports names the field.
+static constexpr EranosErrorKind ERANOS_ERROR_KIND_MISMATCHED_RECORD = EranosErrorKind_MismatchedRecord;
 /// A saved group that is not JSON of the saved form, at the line and the column that eranosErrorLine() and eranosErrorColumn() report.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_INVALID_JSON = EranosErrorKind_InvalidJson;
 /// Text that is not UTF-8, which the C and C++ APIs refuse before the library sees it.

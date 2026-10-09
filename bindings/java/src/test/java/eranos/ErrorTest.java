@@ -29,7 +29,7 @@ class ErrorTest {
      */
     @Test
     void everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
-        assertEquals(68, CONVERSIONS.size());
+        assertEquals(71, CONVERSIONS.size());
         for (Conversion conversion : CONVERSIONS) {
             EranosException converted =
                     assertInstanceOf(
@@ -73,7 +73,7 @@ class ErrorTest {
                 Arrays.stream(eranos.internal.EranosException.class.getDeclaredClasses())
                         .filter(eranos.internal.EranosException.class::isAssignableFrom)
                         .count();
-        assertEquals(15, cases);
+        assertEquals(16, cases);
     }
 
     /** Checks that {@code generated} converts to a {@code standard} exception with its message. */
@@ -84,7 +84,10 @@ class ErrorTest {
         assertEquals("detail", converted.getMessage());
     }
 
-    /** The failure {@code exception} holds, or its position for a saved group that is not JSON. */
+    /**
+     * The failure or the field {@code exception} holds, or its position for a saved group that is
+     * not JSON.
+     */
     private static Object failure(EranosException exception) {
         return switch (exception) {
             case EranosException.Id id -> id.failure();
@@ -99,6 +102,7 @@ class ErrorTest {
             case EranosException.Transfer transfer -> transfer.failure();
             case EranosException.ExpenseGroup group -> group.failure();
             case EranosException.Language language -> language.failure();
+            case EranosException.MismatchedRecord mismatched -> mismatched.field();
             case EranosException.InvalidJson json -> new Position(json.line(), json.column());
         };
     }
@@ -441,6 +445,18 @@ class ErrorTest {
                             new LanguageFailure.InvalidLanguage(),
                             new eranos.internal.EranosException.Language(
                                     eranos.internal.LanguageFailure.INVALID_LANGUAGE, "detail")),
+                    new Conversion(
+                            MismatchedField.IBAN_COUNTRY_CODE,
+                            new eranos.internal.EranosException.MismatchedRecord(
+                                    eranos.internal.MismatchedField.IBAN_COUNTRY_CODE, "detail")),
+                    new Conversion(
+                            MismatchedField.PHONE_INTERNATIONAL,
+                            new eranos.internal.EranosException.MismatchedRecord(
+                                    eranos.internal.MismatchedField.PHONE_INTERNATIONAL, "detail")),
+                    new Conversion(
+                            MismatchedField.CURRENCY_DETAILS,
+                            new eranos.internal.EranosException.MismatchedRecord(
+                                    eranos.internal.MismatchedField.CURRENCY_DETAILS, "detail")),
                     new Conversion(
                             new PaymentAccountFailure.InvalidIban(
                                     new IbanReason.InvalidCharacter()),

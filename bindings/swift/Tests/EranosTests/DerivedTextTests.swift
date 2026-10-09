@@ -29,17 +29,18 @@ func aPhoneNumberAndAnIBANKeepTheTextTheLibraryDerivedBothWays() {
 }
 
 /// A phone number or an IBAN whose derived text is not the library's would reach the group as the
-/// library's value, which the app showed another way.
+/// library's value, which the app showed another way; refused as an invalid number or IBAN, it
+/// would send the app to check text the library accepts.
 @Test
 func aPhoneNumberOrAnIBANWhoseDerivedTextIsNotTheLibrarysIsRefused() throws {
     let group = try Flat().group
     let phone = Eranos.PhoneNumber(EranosGenerated.PhoneNumber(e164: "+40712345678", international: "+40712345678"))
-    #expect(throws: Eranos.EranosError.contact(.invalidPhoneNumber, detail: "invalid phone number: expected `+` and a number valid in its country")) {
+    #expect(throws: Eranos.EranosError.mismatchedRecord(.phoneInternational, detail: "the phone number's international form is not the one the library writes for it")) {
         try group.add(Eranos.Member(firstName: "Carol", phone: phone))
     }
     let iban = Eranos.IBAN(EranosGenerated.Iban(iban: "RO49AAAA1B31007593840000", countryCode: "DE"))
     let account = Eranos.PaymentAccount(name: "Main account", details: .iban(iban))
-    #expect(throws: Eranos.EranosError.paymentAccount(.invalidIBAN(.unknownCountry), detail: "invalid IBAN: the country code is not in the IBAN registry")) {
+    #expect(throws: Eranos.EranosError.mismatchedRecord(.ibanCountryCode, detail: "the IBAN's country code is not the one the library derives from it")) {
         try group.add(Eranos.Member(firstName: "Carol", accounts: [account]))
     }
 }

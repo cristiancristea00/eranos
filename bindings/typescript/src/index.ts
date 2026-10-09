@@ -82,6 +82,8 @@ export {
     InvalidJsonError,
     LanguageError,
     MemberError,
+    MismatchedField,
+    MismatchedRecordError,
     MoneyError,
     SettlementError,
     TransferError,

@@ -17,6 +17,8 @@ import {
     ExpenseGroupError,
     IdError,
     InvalidJsonError,
+    MismatchedField,
+    MismatchedRecordError,
     LanguageError,
     MemberError,
     Money,
@@ -510,8 +512,9 @@ void describe('the conversions of every failure the generated code can report', 
     });
 
     /**
-     * A saved group that failed to load without its line and column would leave an app nothing to point the user at, and a
-     * call the program should not make, reported as a failure of the library, would be caught as one.
+     * A saved group that failed to load without its line and column would leave an app nothing to point the user at, a
+     * call the program should not make, reported as a failure of the library, would be caught as one, and a mismatched
+     * record that named another field would send the app to check the wrong one.
      */
     void it("converts the bindings' own failures to their standard errors", () => {
         const json = convertedError(new internal.EranosError.InvalidJson({ line: 1n, column: 2n, detail: 'detail' }));
@@ -523,6 +526,18 @@ void describe('the conversions of every failure the generated code can report', 
         const released = convertedError(new internal.EranosError.Released({ detail: 'detail' }));
         assert.ok(released instanceof TypeError);
         assert.equal(released.message, 'detail');
+        const fields = [
+            { generated: internal.MismatchedField.IbanCountryCode, field: MismatchedField.IBAN_COUNTRY_CODE },
+            { generated: internal.MismatchedField.PhoneInternational, field: MismatchedField.PHONE_INTERNATIONAL },
+            { generated: internal.MismatchedField.CurrencyDetails, field: MismatchedField.CURRENCY_DETAILS },
+        ];
+        for (const { generated, field } of fields) {
+            const mismatched = convertedError(new internal.EranosError.MismatchedRecord({ field: generated, detail: 'detail' }));
+            assert.ok(mismatched instanceof MismatchedRecordError);
+            assert.equal(mismatched.field, field);
+            assert.equal(mismatched.message, 'detail');
+            assert.equal(mismatched.name, 'MismatchedRecordError');
+        }
         const cancelled = convertedError(new internal.EranosError.Cancelled({ detail: 'detail' }));
         assert.ok(cancelled instanceof DOMException);
         assert.equal(cancelled.name, 'AbortError');

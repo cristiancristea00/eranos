@@ -9,8 +9,8 @@ use eranos::MemberId;
 
 use super::*;
 use crate::{
-    CategoryFailure, ContactFailure, IbanReason, IdFailure, MemberFailure, PaymentAccountFailure,
-    identifier_generate,
+    CategoryFailure, ContactFailure, IbanReason, IdFailure, MemberFailure, MismatchedField,
+    PaymentAccountFailure, identifier_generate,
 };
 
 /// A record the library refuses, beside a check of how it refuses it.
@@ -113,10 +113,8 @@ fn refused_accounts() -> [Refusal; 4] {
             is_expected: |error| {
                 matches!(
                     error,
-                    EranosError::PaymentAccount {
-                        failure: PaymentAccountFailure::InvalidIban {
-                            reason: IbanReason::UnknownCountry,
-                        },
+                    EranosError::MismatchedRecord {
+                        field: MismatchedField::IbanCountryCode,
                         ..
                     }
                 )
@@ -201,8 +199,8 @@ fn refused_contacts() -> [Refusal; 4] {
             is_expected: |error| {
                 matches!(
                     error,
-                    EranosError::Contact {
-                        failure: ContactFailure::InvalidPhoneNumber,
+                    EranosError::MismatchedRecord {
+                        field: MismatchedField::PhoneInternational,
                         ..
                     }
                 )

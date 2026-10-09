@@ -18,11 +18,9 @@
 //! in hundredths, quantities in ten-thousandths, a phone number in E.164
 //! form with its international form, and an IBAN with its country code. Every value is checked by the
 //! library's own rules on its way in, so a bad one is a typed
-//! [`EranosError`]: an amount whose currency details are not the library's
-//! for its code is refused with [`MoneyFailure::UnknownCurrency`], a phone
-//! number whose international form is not the library's with
-//! [`ContactFailure::InvalidPhoneNumber`], and an IBAN whose country code is
-//! not its own with [`PaymentAccountFailure::InvalidIban`]. The text the
+//! [`EranosError`], and a record whose derived text is not the library's,
+//! such as an amount whose currency details are not the library's for its
+//! code, is refused with [`EranosError::MismatchedRecord`]. The text the
 //! library derives comes from the library alone, so the helpers that write
 //! a value from its record cannot fail, and each value an entry holds as
 //! numbers has a helper that checks it beside the one that writes it. Every
@@ -60,8 +58,8 @@ pub use calendar::{CalendarDate, TimeOfDay};
 pub use cancellation::Cancellation;
 pub use error::{
     CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
-    ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, MoneyFailure,
-    PaymentAccountFailure, SettlementFailure, TransferFailure,
+    ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, MismatchedField,
+    MoneyFailure, PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
 pub use expense::{
     Discount, DiscountScope, DiscountValue, Expense, ExpenseItem, ExpenseSplit, MemberAmount,

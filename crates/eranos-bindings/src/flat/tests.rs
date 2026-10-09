@@ -30,11 +30,11 @@ struct Flattening {
     flat: FlatError,
 }
 
-/// Every failure of every module, every reason of a refused IBAN, and the
-/// binding's own cases.
+/// Every failure of every module, every reason of a refused IBAN, every
+/// field of a mismatched record, and the binding's other own cases.
 #[expect(
     clippy::too_many_lines,
-    reason = "one entry for each of the 70 errors, which read best as one table"
+    reason = "one entry for each of the 73 errors, which read best as one table"
 )]
 fn flattenings() -> Vec<Flattening> {
     vec![
@@ -1027,6 +1027,42 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
+            error: EranosError::MismatchedRecord {
+                field: MismatchedField::IbanCountryCode,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::MismatchedRecord,
+                failure: Some(FailureKind::MismatchedRecordIbanCountryCode),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
+            error: EranosError::MismatchedRecord {
+                field: MismatchedField::PhoneInternational,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::MismatchedRecord,
+                failure: Some(FailureKind::MismatchedRecordPhoneInternational),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
+            error: EranosError::MismatchedRecord {
+                field: MismatchedField::CurrencyDetails,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::MismatchedRecord,
+                failure: Some(FailureKind::MismatchedRecordCurrencyDetails),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
             error: EranosError::Cancelled {
                 detail: DETAIL.to_owned(),
             },
@@ -1070,12 +1106,13 @@ fn flattenings() -> Vec<Flattening> {
 
 /// A failure flattened to another kind or another failure, or without a
 /// field it holds, would show a C or C++ program another failure than the
-/// library's; every failure takes a flat failure of its own, and every
-/// reason of a refused IBAN a kind of its own.
+/// library's; every failure and every field of a mismatched record takes a
+/// flat failure of its own, and every reason of a refused IBAN a kind of
+/// its own.
 #[test]
 fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
     let flattenings = flattenings();
-    assert_eq!(flattenings.len(), 70);
+    assert_eq!(flattenings.len(), 73);
     for Flattening { error, flat } in &flattenings {
         assert_eq!(&FlatError::from(error), flat);
     }
@@ -1091,8 +1128,8 @@ fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
         .iter()
         .filter_map(|flattening| flattening.flat.payload.reason)
         .collect();
-    assert_eq!(kinds.len(), 15);
-    assert_eq!(failures.len(), 62);
+    assert_eq!(kinds.len(), 16);
+    assert_eq!(failures.len(), 65);
     assert_eq!(reasons.len(), 6);
 }
 

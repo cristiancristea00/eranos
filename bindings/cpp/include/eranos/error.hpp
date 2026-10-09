@@ -42,7 +42,7 @@ class Error final {
     /// @return The message
     [[nodiscard]] std::string const &message() const noexcept;
 
-    /// The failure within its module, absent for the core's own cases.
+    /// The failure within its module, or the field a mismatched record gave another way; absent for the core's other own cases.
     ///
     /// @return The failure
     [[nodiscard]] std::optional<Failure> failure() const noexcept;

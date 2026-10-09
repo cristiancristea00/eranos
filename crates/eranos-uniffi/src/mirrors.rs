@@ -9,9 +9,10 @@ use eranos_bindings::{
     EranosError, Expense, ExpenseFailure, ExpenseGroupFailure, ExpenseItem, ExpenseShares,
     ExpenseSplit, Iban, IbanReason, IdFailure, LanguageFailure, Member, MemberAmount,
     MemberCategoryTotals, MemberFailure, MemberParts, MemberPercentage, MemberShare, MemberSummary,
-    Money, MoneyFailure, NewExpenseGroup, Payment, PaymentAccount, PaymentAccountDetails,
-    PaymentAccountFailure, PhoneNumber, SettlementFailure, SettlementPlan, SettlementStrategy,
-    Split, Summary, TimeOfDay, TipDistribution, TipRule, TipValue, Transfer, TransferFailure,
+    MismatchedField, Money, MoneyFailure, NewExpenseGroup, Payment, PaymentAccount,
+    PaymentAccountDetails, PaymentAccountFailure, PhoneNumber, SettlementFailure, SettlementPlan,
+    SettlementStrategy, Split, Summary, TimeOfDay, TipDistribution, TipRule, TipValue, Transfer,
+    TransferFailure,
 };
 
 eranos_bindings::mirrors!(::eranos_glue_macros::uniffi_mirror);

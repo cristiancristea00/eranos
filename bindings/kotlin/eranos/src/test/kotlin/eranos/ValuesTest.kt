@@ -95,12 +95,12 @@ class ValuesTest {
             )
         for (forgery in forgeries) {
             val amount = Money(1_250, forgery)
-            val sum = assertThrows<EranosException.Money> { amount + flat.euros(1) }
-            assertEquals(MoneyFailure.UnknownCurrency, sum.failure)
+            val sum = assertThrows<EranosException.MismatchedRecord> { amount + flat.euros(1) }
+            assertEquals(MismatchedField.CURRENCY_DETAILS, sum.field)
             val taxi =
                 Expense("Taxi", Cost.Local(amount), Split.Equal(listOf(flat.ana)), ExpenseSplit.Whole(Split.Equal(listOf(flat.bob))), flat.day)
-            val added = assertThrows<EranosException.Money> { flat.group.addBlocking(taxi) }
-            assertEquals(MoneyFailure.UnknownCurrency, added.failure)
+            val added = assertThrows<EranosException.MismatchedRecord> { flat.group.addBlocking(taxi) }
+            assertEquals(MismatchedField.CURRENCY_DETAILS, added.field)
         }
         assertEquals("1.250 EUR", Money(1_250, forgeries.last()).toString())
     }
@@ -366,15 +366,15 @@ class ValuesTest {
     fun aPhoneNumberOrAnIbanWithDerivedTextOtherThanTheLibrarysIsRefused() {
         val flat = Flat()
         val phone = PhoneNumber("+40712345678", "+40712345678")
-        val added = assertThrows<EranosException.Contact> { flat.group.addBlocking(Member("Carol", phone = phone)) }
-        assertEquals(ContactFailure.InvalidPhoneNumber, added.failure)
+        val added = assertThrows<EranosException.MismatchedRecord> { flat.group.addBlocking(Member("Carol", phone = phone)) }
+        assertEquals(MismatchedField.PHONE_INTERNATIONAL, added.field)
         val ana = present(flat.group.memberBlocking(flat.ana))
-        val replaced = assertThrows<EranosException.Contact> { flat.group.replaceBlocking(ana.copy(phone = phone)) }
-        assertEquals(ContactFailure.InvalidPhoneNumber, replaced.failure)
+        val replaced = assertThrows<EranosException.MismatchedRecord> { flat.group.replaceBlocking(ana.copy(phone = phone)) }
+        assertEquals(MismatchedField.PHONE_INTERNATIONAL, replaced.field)
 
         val account = PaymentAccount("Main account", PaymentAccountDetails.Iban(Iban("RO49AAAA1B31007593840000", "GB")))
-        val refused = assertThrows<EranosException.PaymentAccount> { flat.group.addBlocking(Member("Dan", accounts = listOf(account))) }
-        assertEquals(PaymentAccountFailure.InvalidIban(IbanReason.UnknownCountry), refused.failure)
+        val refused = assertThrows<EranosException.MismatchedRecord> { flat.group.addBlocking(Member("Dan", accounts = listOf(account))) }
+        assertEquals(MismatchedField.IBAN_COUNTRY_CODE, refused.field)
         assertEquals(ana, flat.group.memberBlocking(flat.ana))
         assertEquals(listOf(flat.ana, flat.bob), flat.group.membersBlocking().map { it.id })
     }

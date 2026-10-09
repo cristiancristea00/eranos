@@ -40,6 +40,9 @@ enum class ErrorKind : std::uint8_t {
     EXPENSE_GROUP,
     /// A failure of the language module.
     LANGUAGE,
+    /// A record whose derived text is not what the library derives from its other fields, so it names no value the library writes; the failure
+    /// names the field.
+    MISMATCHED_RECORD,
     /// Text that is not a saved group; the error holds the line and the column where it stops being one.
     INVALID_JSON,
     /// Text that is not UTF-8, which the C and C++ APIs refuse before the library sees it.
@@ -180,6 +183,12 @@ enum class Failure : std::uint8_t {
     EXPENSE_GROUP_OVERFLOW,
     /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
     LANGUAGE_INVALID_LANGUAGE,
+    /// An IBAN record whose country code is not the one the library derives from the IBAN.
+    MISMATCHED_RECORD_IBAN_COUNTRY_CODE,
+    /// A phone number record whose international form is not the one the library writes from its E.164 form.
+    MISMATCHED_RECORD_PHONE_INTERNATIONAL,
+    /// Currency details other than the library's for their code, a code in lower case included.
+    MISMATCHED_RECORD_CURRENCY_DETAILS,
 };
 
 /// Why an IBAN was refused.

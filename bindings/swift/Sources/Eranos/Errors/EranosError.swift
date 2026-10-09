@@ -53,6 +53,10 @@ public enum EranosError: Error, Sendable, Hashable {
     /// The library's `LanguageError`, with the message it words.
     case language(LanguageFailure, detail: String)
 
+    /// A record whose derived text is not what the library derives from its other fields, so it
+    /// names no value the library writes: the field it gave another way, and what went wrong.
+    case mismatchedRecord(MismatchedField, detail: String)
+
     /// A saved group that is not JSON of the saved form, at `line` and `column`; the detail names
     /// the fault but never the text there, which can hold an account number.
     case invalidJSON(line: Int, column: Int, detail: String)
@@ -81,6 +85,7 @@ public enum EranosError: Error, Sendable, Hashable {
              .transfer(_, let detail),
              .expenseGroup(_, let detail),
              .language(_, let detail),
+             .mismatchedRecord(_, let detail),
              .invalidJSON(_, _, let detail),
              .cancelled(let detail),
              .released(let detail),
@@ -124,6 +129,8 @@ extension EranosError {
             self = .expenseGroup(ExpenseGroupFailure(failure), detail: detail)
         case let .Language(failure, detail):
             self = .language(LanguageFailure(failure), detail: detail)
+        case let .MismatchedRecord(field, detail):
+            self = .mismatchedRecord(MismatchedField(field), detail: detail)
         case let .InvalidJson(line, column, detail):
             self = .invalidJSON(line: Int(line), column: Int(column), detail: detail)
         case let .Cancelled(detail):

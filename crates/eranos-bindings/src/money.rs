@@ -5,7 +5,7 @@ use eranos::error::MoneyError;
 use eranos::money as library;
 use eranos_money::FromCost;
 
-use crate::EranosError;
+use crate::{EranosError, MismatchedField};
 
 /// An amount: a whole number of minor units of a currency.
 #[eranos_glue_macros::mirrored]
@@ -31,9 +31,9 @@ impl Money {
     /// # Errors
     ///
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
-    /// for a currency the library does not list: a code that is not an ISO
-    /// 4217 currency with minor units, or details other than the library's
-    /// for the code.
+    /// for a code that names no currency with minor units, and
+    /// [`EranosError::MismatchedRecord`] for details other than the
+    /// library's for the code.
     pub(crate) fn to_library(&self) -> Result<library::Money, EranosError> {
         Ok(library::Money::from_minor_units(
             self.minor_units,
@@ -151,9 +151,10 @@ impl CurrencyDetails {
     /// # Errors
     ///
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
-    /// for a code that names no currency with minor units, and for details
-    /// other than the library's for the code, a code in lower case included:
-    /// such details name no currency the library lists.
+    /// for a code that names no currency with minor units, and
+    /// [`EranosError::MismatchedRecord`] for details other than the
+    /// library's for the code, a code in lower case included: such details
+    /// name no currency the library lists.
     pub(crate) fn to_library(&self) -> Result<library::CurrencyCode, EranosError> {
         let Self {
             code,
@@ -169,7 +170,9 @@ impl CurrencyDetails {
         {
             Ok(currency)
         } else {
-            Err(MoneyError::UnknownCurrency.into())
+            Err(EranosError::mismatched_record(
+                MismatchedField::CurrencyDetails,
+            ))
         }
     }
 }

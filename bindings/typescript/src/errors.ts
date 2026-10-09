@@ -250,6 +250,43 @@ export class LanguageError extends EranosError {
 }
 
 /**
+ * The field of a record that the library derives from the record's other fields, and which a record gave another way: what
+ * {@link MismatchedRecordError} names.
+ */
+export enum MismatchedField {
+    /** The country code of an IBAN, which the library derives from the IBAN. */
+    IBAN_COUNTRY_CODE = 'IBAN_COUNTRY_CODE',
+    /** The international form of a phone number, which the library writes from its E.164 form. */
+    PHONE_INTERNATIONAL = 'PHONE_INTERNATIONAL',
+    /**
+     * The name, numeric code, or decimal places of a currency, which the library holds for its code; a code in lower case
+     * names no currency the library lists either.
+     */
+    CURRENCY_DETAILS = 'CURRENCY_DETAILS',
+}
+
+/**
+ * A record whose derived text is not what the library derives from its other fields, so it names no value the library
+ * writes: the field it gave another way, and what went wrong.
+ */
+export class MismatchedRecordError extends EranosError {
+    /**
+     * The error of a record that gave `field` another way, which the library words as `message`.
+     *
+     * @param field - The field whose text is not the library's
+     * @param message - The library's message
+     */
+    constructor(
+        /** The field whose text is not the library's. */
+        readonly field: MismatchedField,
+        message: string,
+    ) {
+        super(message);
+        this.name = 'MismatchedRecordError';
+    }
+}
+
+/**
  * A saved group that is not JSON of the saved form, at a line and a column; the message names the fault but never the text
  * there, which can hold an account number.
  */
@@ -712,6 +749,8 @@ export function convertedError(error: unknown): unknown {
             return new ExpenseGroupError(convertedGroupFailure(error.inner.failure), error.inner.detail);
         case internal.EranosError_Tags.Language:
             return new LanguageError(convertedLanguageFailure(error.inner.failure), error.inner.detail);
+        case internal.EranosError_Tags.MismatchedRecord:
+            return new MismatchedRecordError(convertedMismatchedField(error.inner.field), error.inner.detail);
         case internal.EranosError_Tags.InvalidJson:
             return new InvalidJsonError(Number(error.inner.line), Number(error.inner.column), error.inner.detail);
         case internal.EranosError_Tags.Cancelled:
@@ -927,6 +966,18 @@ function convertedLanguageFailure(failure: internal.LanguageFailure): LanguageFa
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- one kind of failure; a second leaves the switch without a return
         case internal.LanguageFailure.InvalidLanguage:
             return { kind: 'invalidLanguage' };
+    }
+}
+
+/** The field the generated code reports as `field`. */
+function convertedMismatchedField(field: internal.MismatchedField): MismatchedField {
+    switch (field) {
+        case internal.MismatchedField.IbanCountryCode:
+            return MismatchedField.IBAN_COUNTRY_CODE;
+        case internal.MismatchedField.PhoneInternational:
+            return MismatchedField.PHONE_INTERNATIONAL;
+        case internal.MismatchedField.CurrencyDetails:
+            return MismatchedField.CURRENCY_DETAILS;
     }
 }
 

@@ -24,7 +24,7 @@ typedef struct EranosError EranosError;
 /// @return The result
 [[nodiscard]] static inline EranosErrorKind eranosErrorKind(EranosError const *const error) { return EranosError_kind(error); }
 
-/// The failure within its module, absent for the core's own cases.
+/// The failure within its module, or the field a mismatched record gave another way; absent for the core's other own cases.
 ///
 /// @param error The error
 /// @param failure Receives the failure, when there is one

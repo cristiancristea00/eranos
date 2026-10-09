@@ -38,6 +38,9 @@ pub mod ffi {
         ExpenseGroup,
         /// A `LanguageError`, about a language tag.
         Language,
+        /// A record whose derived text is not what the library derives from its other fields, so it
+        /// names no value the library writes; the failure names the field.
+        MismatchedRecord,
         /// A saved group that is not JSON of the saved form, at `line` and `column`.
         InvalidJson,
         /// Text that is not UTF-8, which the C and C++ APIs refuse before the library sees it.
@@ -186,6 +189,13 @@ pub mod ffi {
         ExpenseGroupOverflow,
         /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
         LanguageInvalidLanguage,
+        /// An IBAN record whose country code is not the one the library derives from the IBAN.
+        MismatchedRecordIbanCountryCode,
+        /// A phone number record whose international form is not the one the library writes from
+        /// its E.164 form.
+        MismatchedRecordPhoneInternational,
+        /// Currency details other than the library's for their code, a code in lower case included.
+        MismatchedRecordCurrencyDetails,
     }
 
     /// Why an IBAN was refused.
@@ -221,7 +231,8 @@ pub mod ffi {
             self.0.kind.into()
         }
 
-        /// The failure within its module, absent for the core's own cases.
+        /// The failure within its module, or the field a mismatched record gave another way; absent
+        /// for the core's other own cases.
         #[must_use]
         pub fn failure(&self) -> Option<EranosFailure> {
             self.0.failure.map(Into::into)

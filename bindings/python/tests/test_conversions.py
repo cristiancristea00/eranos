@@ -14,7 +14,6 @@ from conftest import Flat
 from eranos import (
     NO_TIP,
     UNCATEGORISED,
-    ContactError,
     CurrencyCode,
     EranosError,
     ExpenseError,
@@ -23,10 +22,11 @@ from eranos import (
     IbanPaymentAccountDetails,
     InvalidJsonError,
     Member,
+    MismatchedField,
+    MismatchedRecordError,
     Money,
     MoneyError,
     PaymentAccount,
-    PaymentAccountError,
     PhoneNumber,
     _entries,
     _errors,
@@ -173,11 +173,13 @@ def test_every_table_converts_every_case_the_generator_wrote() -> None:
         CaseTable(kind=generated.IbanReason, table=_errors._IBAN_REASONS),
     ]:
         assert set(case_table.table) == set(cases(case_table.kind)), case_table.kind
+    assert set(_errors._MISMATCHED_FIELDS) == set(generated.MismatchedField)
     for conversion in FAILURES.values():
         expected = set(conversion.kind) if issubclass(conversion.kind, enum.Enum) else set(cases(conversion.kind))
         assert set(conversion.table) == expected, conversion.kind
     assert set(_errors._ERRORS) == {value for value in vars(generated.EranosError).values() if isinstance(value, type)}
     assert [member.name for member in _entries.DiscountScope] == [member.name for member in generated.DiscountScope]
+    assert [member.name for member in _errors.MismatchedField] == [member.name for member in generated.MismatchedField]
     assert [member.name for member in _entries.TipDistribution] == [member.name for member in generated.TipDistribution]
     assert [member.name for member in _totals.SettlementStrategy] == [member.name for member in generated.SettlementStrategy]
 
@@ -215,12 +217,21 @@ def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_na
 
 
 def test_the_librarys_own_errors_convert_to_the_standard_errors_they_stand_for() -> None:
-    """An error a program should not have made that converted to a library error would read as a refusal of valid data."""
+    """
+    An error a program should not have made that converted to a library error would read as a refusal of valid data.
+
+    A mismatched record that named another field would send the app to check the wrong one.
+    """
     invalid = converted(generated.EranosError.InvalidJson(2, 3, 'invalid'))
     assert isinstance(invalid, InvalidJsonError)
     assert invalid.line == 2
     assert invalid.column == 3
     assert str(invalid) == 'invalid'
+    for field in generated.MismatchedField:
+        mismatched = converted(generated.EranosError.MismatchedRecord(field, 'mismatched'))
+        assert isinstance(mismatched, MismatchedRecordError)
+        assert mismatched.field is MismatchedField[field.name]
+        assert str(mismatched) == 'mismatched'
     assert isinstance(converted(generated.EranosError.Cancelled('cancelled')), asyncio.CancelledError)
     assert isinstance(converted(generated.EranosError.Released('released')), RuntimeError)
 
@@ -275,11 +286,14 @@ def test_an_amount_whose_currency_details_are_not_the_librarys_is_refused() -> N
         generated.CurrencyDetails(code='EUR', name='Euros', numeric_code=978, decimal_places=2),
         generated.CurrencyDetails(code='EUR', name='Euro', numeric_code=840, decimal_places=2),
         generated.CurrencyDetails(code='EUR', name='Euro', numeric_code=978, decimal_places=3),
-        UNLISTED,
     ):
-        with pytest.raises(MoneyError) as refused:
+        with pytest.raises(MismatchedRecordError) as mismatched:
             Money(1, currency_of(details)).plus(Money(1, euro))
-        assert refused.value.failure == MoneyError.UnknownCurrency(), details
+        assert mismatched.value.field is MismatchedField.CURRENCY_DETAILS, details
+        assert str(mismatched.value) == "the currency's details are not the library's for its code"
+    with pytest.raises(MoneyError) as refused:
+        Money(1, currency_of(UNLISTED)).plus(Money(1, euro))
+    assert refused.value.failure == MoneyError.UnknownCurrency()
 
 
 def test_a_phone_number_and_an_iban_hold_the_text_the_library_gives_without_a_call(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -320,13 +334,15 @@ def test_a_phone_number_or_an_iban_whose_derived_text_is_not_the_librarys_is_ref
 
     An app makes a phone number and an IBAN only from their text, which the library parses, so only the package's private conversions make one.
     """
-    with pytest.raises(ContactError) as phone:
+    with pytest.raises(MismatchedRecordError) as phone:
         flat.group.add_member(Member.create(first_name='Carla', phone=phone_number_of(REGROUPED)))
-    assert phone.value.failure == ContactError.InvalidPhoneNumber()
+    assert phone.value.field is MismatchedField.PHONE_INTERNATIONAL
+    assert str(phone.value) == "the phone number's international form is not the one the library writes for it"
     german = PaymentAccount('Bank', IbanPaymentAccountDetails(iban_of(IBAN, 'DE')))
-    with pytest.raises(PaymentAccountError) as iban:
+    with pytest.raises(MismatchedRecordError) as iban:
         flat.group.add_member(Member.create(first_name='Carla', accounts=(german,)))
-    assert iban.value.failure == PaymentAccountError.InvalidIban(PaymentAccountError.InvalidIban.UnknownCountry())
+    assert iban.value.field is MismatchedField.IBAN_COUNTRY_CODE
+    assert str(iban.value) == "the IBAN's country code is not the one the library derives from it"
     assert len(flat.group.members()) == 2
 
 

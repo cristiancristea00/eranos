@@ -185,9 +185,12 @@ flowchart TD
   first rule the text breaks, in that order; the flat form names them
   `IdEmpty`, `IdTooLong`, `IdControlCharacter`, and
   `IdSurroundingWhitespace`. The core's own cases stand beside the
-  modules: `Cancelled`, `InvalidJson`, which names
+  modules: `MismatchedRecord`, which names the field a record gave another
+  way than the library derives it (`MismatchedField::IbanCountryCode`,
+  `PhoneInternational`, or `CurrencyDetails`); `InvalidJson`, which names
   the line and column of a refused saved group but not its text, since the
-  text can hold an account number, and `Released`. The conversion traits
+  text can hold an account number; `Cancelled`; and `Released`. In the flat
+  form, a mismatched record's field is its failure. The conversion traits
   of [ARCHITECTURE.md § 2](ARCHITECTURE.md#2-crate-map) keep the
   conversion exhaustive, so a new variant fails the core's build.
 - **One group object.** `ExpenseGroupHandle` holds a `SharedExpenseGroup`
@@ -335,10 +338,9 @@ account's `PaymentAccountDetails::Iban`, holds its country code. A layer
 reads the derived text from the record, so it calls no helper that could
 fail to print a value it holds. On the way in, the core parses the value
 as the library parses any phone number or IBAN and refuses a record whose
-derived text is not what the library derives from it: a phone number with
-`ContactFailure::InvalidPhoneNumber`, and an IBAN with
-`PaymentAccountFailure::InvalidIban` and the reason
-`IbanReason::UnknownCountry`, as the calls that take a member say.
+derived text is not what the library derives from it with
+`EranosError::MismatchedRecord`, naming the field, as it refuses an amount
+whose currency details are not the library's for their code.
 
 ## 6. Account details
 

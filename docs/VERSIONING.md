@@ -64,12 +64,12 @@ its API too.
 
 Before 1.0.0, the minor version plays the role of the major one:
 
-| Change                                                                                                                                                                      | Before 1.0 | From 1.0  |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------- |
-| breaking (`!` commit): removed or changed API, a new variant in a matchable position, a serialised shape older releases cannot read, different numbers for the same entries | 0.**y**.0  | **x**.0.0 |
-| `feat`: new API, a new error variant (every enum is `#[non_exhaustive]`), a new optional serialised field                                                                   | 0.y.**z**  | x.**y**.0 |
-| `fix` that restores documented behaviour                                                                                                                                    | 0.y.**z**  | x.y.**z** |
-| `docs`, `test`, `style`, `chore`, `refactor`, `ci`, `build`, `perf` without visible change                                                                                  | none       | none      |
+| Change                                                                                                                                                                                                                                                                 | Before 1.0 | From 1.0  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------- |
+| breaking (`!` commit): removed or changed API, a new variant in a matchable position, a new case of the bindings' error or its failures, which every layer matches exhaustively, a serialised shape older releases cannot read, different numbers for the same entries | 0.**y**.0  | **x**.0.0 |
+| `feat`: new API, a new variant of a Rust error (every enum is `#[non_exhaustive]`), a new optional serialised field                                                                                                                                                    | 0.y.**z**  | x.**y**.0 |
+| `fix` that restores documented behaviour                                                                                                                                                                                                                               | 0.y.**z**  | x.y.**z** |
+| `docs`, `test`, `style`, `chore`, `refactor`, `ci`, `build`, `perf` without visible change                                                                                                                                                                             | none       | none      |
 
 A `fix` that changes numbers users already saw is still breaking: record it
 as `fix!` with a `BREAKING CHANGE:` footer naming what changes.

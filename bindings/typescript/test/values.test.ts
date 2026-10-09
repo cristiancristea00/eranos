@@ -18,6 +18,8 @@ import {
     IdError,
     Language,
     LanguageError,
+    MismatchedField,
+    MismatchedRecordError,
     Money,
     MoneyError,
     Parts,
@@ -56,6 +58,18 @@ function assertRefused(call: () => unknown, type: new (...parameters: never[]) =
         if (undefined !== failure) {
             assert.deepEqual((error as unknown as { failure: unknown }).failure, failure);
         }
+        if (undefined !== message) {
+            assert.equal(error.message, message);
+        }
+        return true;
+    });
+}
+
+/** Asserts that `call` throws a `MismatchedRecordError` naming `field`, with `message` when given. */
+function assertMismatched(call: () => unknown, field: MismatchedField, message?: string): void {
+    assert.throws(call, (error: unknown) => {
+        assert.ok(error instanceof MismatchedRecordError);
+        assert.equal(error.field, field);
         if (undefined !== message) {
             assert.equal(error.message, message);
         }
@@ -175,23 +189,27 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
 
     /**
      * An amount whose currency holds other details than the library's for its code, which JavaScript can build through the
-     * private constructor, would put a currency the library does not list into a group if it crossed unchecked.
+     * private constructor, would put a currency the library does not list into a group if it crossed unchecked; refused as
+     * an unknown currency, it would send the app to check a code the library lists.
      */
     void it("refuses an amount whose currency details are not the library's, and still prints it", () => {
         const forged = forgedCurrency('EUR', 'Euro', 978, 3);
         const euro = CurrencyCode.of('EUR');
         assert.equal(new Money(1_234n, forged).toString(), '1.234 EUR');
-        assertRefused(() => new Money(1n, forged).plus(new Money(1n, euro)), MoneyError, { kind: 'unknownCurrency' }, 'unknown currency code');
+        assertMismatched(
+            () => new Money(1n, forged).plus(new Money(1n, euro)),
+            MismatchedField.CURRENCY_DETAILS,
+            "the currency's details are not the library's for its code",
+        );
         const flat = new Flat();
         const repayment = flat.group.transferSync(flat.repayment);
         assert.ok(undefined !== repayment);
-        assertRefused(
+        assertMismatched(
             () => flat.group.replaceTransferSync({ ...repayment, cost: { kind: 'local', amount: new Money(1_000n, forged) } }),
-            MoneyError,
-            { kind: 'unknownCurrency' },
+            MismatchedField.CURRENCY_DETAILS,
         );
         assert.deepEqual(flat.group.transferSync(flat.repayment), repayment);
-        assertRefused(() => new Money(1n, euro).minus(new Money(1n, forgedCurrency('eur', 'Euro', 978, 2))), MoneyError, { kind: 'unknownCurrency' });
+        assertMismatched(() => new Money(1n, euro).minus(new Money(1n, forgedCurrency('eur', 'Euro', 978, 2))), MismatchedField.CURRENCY_DETAILS);
     });
 
     /** A rate, a percentage, or a number of parts read or written another way than the library's would divide an expense another way. */
@@ -501,28 +519,23 @@ void describe('the currencies, amounts, ratios, quantities, dates, times, contac
 
         const flat = new Flat();
         const carol = createMember({ firstName: 'Carol', phone });
-        assertRefused(
+        assertMismatched(
             () => flat.group.addMemberSync(carol),
-            ContactError,
-            { kind: 'invalidPhoneNumber' },
-            'invalid phone number: expected `+` and a number valid in its country',
+            MismatchedField.PHONE_INTERNATIONAL,
+            "the phone number's international form is not the one the library writes for it",
         );
         const dan = createMember({ firstName: 'Dan', accounts: [{ name: 'Main account', details: { kind: 'iban', iban } }] });
-        assertRefused(
+        assertMismatched(
             () => flat.group.addMemberSync(dan),
-            PaymentAccountError,
-            { kind: 'invalidIban', reason: { kind: 'unknownCountry' } },
-            'invalid IBAN: the country code is not in the IBAN registry',
+            MismatchedField.IBAN_COUNTRY_CODE,
+            "the IBAN's country code is not the one the library derives from it",
         );
         assert.equal(flat.group.memberSync(carol.id), undefined);
         assert.equal(flat.group.memberSync(dan.id), undefined);
         const ana = flat.group.memberSync(flat.ana);
         assert.ok(undefined !== ana);
-        assertRefused(() => flat.group.replaceMemberSync({ ...ana, phone }), ContactError, { kind: 'invalidPhoneNumber' });
-        assertRefused(() => flat.group.replaceMemberSync({ ...ana, accounts: dan.accounts }), PaymentAccountError, {
-            kind: 'invalidIban',
-            reason: { kind: 'unknownCountry' },
-        });
+        assertMismatched(() => flat.group.replaceMemberSync({ ...ana, phone }), MismatchedField.PHONE_INTERNATIONAL);
+        assertMismatched(() => flat.group.replaceMemberSync({ ...ana, accounts: dan.accounts }), MismatchedField.IBAN_COUNTRY_CODE);
         assert.deepEqual(flat.group.memberSync(flat.ana), ana);
     });
 

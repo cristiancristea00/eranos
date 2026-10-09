@@ -39,6 +39,16 @@ fn is_unknown_currency<T>(result: &Result<T, EranosError>) -> bool {
     )
 }
 
+fn is_mismatched_details<T>(result: &Result<T, EranosError>) -> bool {
+    matches!(
+        result,
+        Err(EranosError::MismatchedRecord {
+            field: MismatchedField::CurrencyDetails,
+            ..
+        })
+    )
+}
+
 /// An amount would come back in another currency or with other minor
 /// units, or one in an unknown currency would reach the library.
 #[test]
@@ -69,7 +79,8 @@ fn the_details_of_every_currency_convert_both_ways() {
 /// An amount whose record gives its currency details other than the
 /// library's would reach the library as the library's currency of its code,
 /// so the apps would show it with other decimal places, another name, or
-/// another numeric code than the group holds.
+/// another numeric code than the group holds; refused as an unknown
+/// currency, it would send the app to check a code the library lists.
 #[test]
 fn details_that_differ_from_the_library_are_refused() {
     let altered = [
@@ -91,12 +102,15 @@ fn details_that_differ_from_the_library_are_refused() {
         },
     ];
     for currency in altered {
-        assert!(is_unknown_currency(&currency.to_library()), "{currency:?}");
+        assert!(
+            is_mismatched_details(&currency.to_library()),
+            "{currency:?}"
+        );
         let amount = Money {
             minor_units: 100,
             currency,
         };
-        assert!(is_unknown_currency(&amount.to_library()), "{amount:?}");
+        assert!(is_mismatched_details(&amount.to_library()), "{amount:?}");
     }
     assert!(is_unknown_currency(&unknown().currency.to_library()));
 }

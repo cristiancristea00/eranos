@@ -44,6 +44,7 @@ public abstract sealed class EranosException extends Exception
                 EranosException.Transfer,
                 EranosException.ExpenseGroup,
                 EranosException.Language,
+                EranosException.MismatchedRecord,
                 EranosException.InvalidJson {
     private EranosException(String message) {
         super(message);
@@ -362,6 +363,36 @@ public abstract sealed class EranosException extends Exception
     }
 
     /**
+     * A record whose derived text is not what the library derives from its other fields, so it
+     * names no value the library writes: the field it gave another way, and what went wrong.
+     */
+    public static final class MismatchedRecord extends EranosException {
+        /** The field whose text is not the library's. */
+        private final MismatchedField field;
+
+        /**
+         * The exception of a record that gave {@code field} another way, which the library words as
+         * {@code message}.
+         *
+         * @param field the field whose text is not the library's
+         * @param message the library's message
+         */
+        public MismatchedRecord(MismatchedField field, String message) {
+            super(message);
+            this.field = Objects.requireNonNull(field);
+        }
+
+        /**
+         * The field whose text is not the library's.
+         *
+         * @return the field
+         */
+        public MismatchedField field() {
+            return field;
+        }
+    }
+
+    /**
      * A saved group that is not JSON of the saved form, at a line and a column; the message names
      * the fault but never the text there, which can hold an account number.
      */
@@ -471,6 +502,12 @@ public abstract sealed class EranosException extends Exception
                 conversions,
                 eranos.internal.EranosException.Language.class,
                 exception -> new Language(converted(exception.failure()), exception.detail()));
+        register(
+                conversions,
+                eranos.internal.EranosException.MismatchedRecord.class,
+                exception ->
+                        new MismatchedRecord(
+                                MismatchedField.converted(exception.field()), exception.detail()));
         register(
                 conversions,
                 eranos.internal.EranosException.InvalidJson.class,

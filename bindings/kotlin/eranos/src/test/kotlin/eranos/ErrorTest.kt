@@ -18,7 +18,7 @@ class ErrorTest {
      */
     @Test
     fun everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
-        assertEquals(68, conversions.size)
+        assertEquals(71, conversions.size)
         for (conversion in conversions) {
             val converted = assertInstanceOf(EranosException::class.java, conversion.generated.converted())
             assertEquals(conversion.failure, converted.failure())
@@ -72,7 +72,7 @@ private fun assertStandard(
     assertEquals("detail", converted.message)
 }
 
-/** The failure [this] holds, or its position for a saved group that is not JSON of the saved form. */
+/** The failure or the field [this] holds, or its position for a saved group that is not JSON of the saved form. */
 private fun EranosException.failure(): Any =
     when (this) {
         is EranosException.Id -> failure
@@ -87,6 +87,7 @@ private fun EranosException.failure(): Any =
         is EranosException.Transfer -> failure
         is EranosException.ExpenseGroup -> failure
         is EranosException.Language -> failure
+        is EranosException.MismatchedRecord -> field
         is EranosException.InvalidJson -> Position(line, column)
     }
 
@@ -379,6 +380,18 @@ private val conversions: List<Conversion> =
         Conversion(
             failure = LanguageFailure.InvalidLanguage,
             generated = eranos.internal.EranosException.Language(eranos.internal.LanguageFailure.INVALID_LANGUAGE, "detail"),
+        ),
+        Conversion(
+            failure = MismatchedField.IBAN_COUNTRY_CODE,
+            generated = eranos.internal.EranosException.MismatchedRecord(eranos.internal.MismatchedField.IBAN_COUNTRY_CODE, "detail"),
+        ),
+        Conversion(
+            failure = MismatchedField.PHONE_INTERNATIONAL,
+            generated = eranos.internal.EranosException.MismatchedRecord(eranos.internal.MismatchedField.PHONE_INTERNATIONAL, "detail"),
+        ),
+        Conversion(
+            failure = MismatchedField.CURRENCY_DETAILS,
+            generated = eranos.internal.EranosException.MismatchedRecord(eranos.internal.MismatchedField.CURRENCY_DETAILS, "detail"),
         ),
         Conversion(
             failure = PaymentAccountFailure.InvalidIban(IbanReason.InvalidCharacter),

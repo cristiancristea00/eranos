@@ -14,6 +14,7 @@ import eranos.internal.IbanReason as GeneratedIbanReason
 import eranos.internal.IdFailure as GeneratedIdFailure
 import eranos.internal.LanguageFailure as GeneratedLanguageFailure
 import eranos.internal.MemberFailure as GeneratedMemberFailure
+import eranos.internal.MismatchedField as GeneratedMismatchedField
 import eranos.internal.MoneyFailure as GeneratedMoneyFailure
 import eranos.internal.PaymentAccountFailure as GeneratedPaymentAccountFailure
 import eranos.internal.SettlementFailure as GeneratedSettlementFailure
@@ -735,4 +736,30 @@ internal fun GeneratedIbanReason.converted(): IbanReason =
         is GeneratedIbanReason.WrongLength -> IbanReason.WrongLength(expected, found)
         GeneratedIbanReason.InvalidStructure -> IbanReason.InvalidStructure
         GeneratedIbanReason.InvalidChecksum -> IbanReason.InvalidChecksum
+    }
+
+/**
+ * The field of a record that the library derives from the record's other fields, and which a record gave another way: what
+ * [EranosException.MismatchedRecord] names.
+ */
+public enum class MismatchedField {
+    /** The country code of an IBAN, which the library derives from the IBAN. */
+    IBAN_COUNTRY_CODE,
+
+    /** The international form of a phone number, which the library writes from its E.164 form. */
+    PHONE_INTERNATIONAL,
+
+    /**
+     * The name, numeric code, or decimal places of a currency, which the library holds for its code; a code in lower case
+     * names no currency the library lists either.
+     */
+    CURRENCY_DETAILS,
+}
+
+/** The field the generated code reports as [this]. */
+internal fun GeneratedMismatchedField.converted(): MismatchedField =
+    when (this) {
+        GeneratedMismatchedField.IBAN_COUNTRY_CODE -> MismatchedField.IBAN_COUNTRY_CODE
+        GeneratedMismatchedField.PHONE_INTERNATIONAL -> MismatchedField.PHONE_INTERNATIONAL
+        GeneratedMismatchedField.CURRENCY_DETAILS -> MismatchedField.CURRENCY_DETAILS
     }

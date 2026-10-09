@@ -47,6 +47,7 @@ macro_rules! mirrors {
         $crate::mirror_member_percentage!($($callback)+);
         $crate::mirror_member_share!($($callback)+);
         $crate::mirror_member_summary!($($callback)+);
+        $crate::mirror_mismatched_field!($($callback)+);
         $crate::mirror_money!($($callback)+);
         $crate::mirror_money_failure!($($callback)+);
         $crate::mirror_new_expense_group!($($callback)+);

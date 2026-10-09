@@ -2,11 +2,10 @@
 //! categories, as the bindings carry them.
 
 use eranos::category as categories;
-use eranos::error::{ContactError, IbanError, PaymentAccountError};
 use eranos::member as library;
 use eranos_payment_account::FromPaymentAccountDetails;
 
-use crate::{EranosError, identifier};
+use crate::{EranosError, MismatchedField, identifier};
 
 /// A phone number, in the two forms the library writes it in.
 #[eranos_glue_macros::mirrored]
@@ -35,15 +34,18 @@ impl PhoneNumber {
     /// # Errors
     ///
     /// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber)
-    /// for text that is not a phone number, and for an international form
-    /// other than the one the library writes for the number: such a record
-    /// names no number as the library writes it.
+    /// for text that is not a phone number, and
+    /// [`EranosError::MismatchedRecord`] for an international form other
+    /// than the one the library writes for the number: such a record names
+    /// no number as the library writes it.
     pub(crate) fn to_library(&self) -> Result<library::PhoneNumber, EranosError> {
         let phone = library::PhoneNumber::parse(&self.e164)?;
         if phone.international() == self.international {
             Ok(phone)
         } else {
-            Err(ContactError::InvalidPhoneNumber.into())
+            Err(EranosError::mismatched_record(
+                MismatchedField::PhoneInternational,
+            ))
         }
     }
 }
@@ -93,10 +95,9 @@ impl PaymentAccountDetails {
     /// # Errors
     ///
     /// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban) for
-    /// an IBAN the library refuses, with the reason, and for a country code
-    /// other than the IBAN's, with the reason
-    /// [`IbanReason::UnknownCountry`](crate::IbanReason::UnknownCountry): such
-    /// details name no account of the IBAN registry; and
+    /// an IBAN the library refuses, with the reason;
+    /// [`EranosError::MismatchedRecord`] for a country code other than the
+    /// IBAN's: such details name no account of the IBAN registry; and
     /// [`PaymentAccountFailure::EmptyUsername`](crate::PaymentAccountFailure::EmptyUsername)
     /// for a blank username.
     pub(crate) fn to_library(&self) -> Result<library::PaymentAccountDetails, EranosError> {
@@ -104,7 +105,9 @@ impl PaymentAccountDetails {
             Self::Iban { iban, country_code } => {
                 let iban = library::Iban::parse(iban)?;
                 if iban.country_code() != country_code {
-                    return Err(PaymentAccountError::InvalidIban(IbanError::UnknownCountry).into());
+                    return Err(EranosError::mismatched_record(
+                        MismatchedField::IbanCountryCode,
+                    ));
                 }
                 iban.into()
             }

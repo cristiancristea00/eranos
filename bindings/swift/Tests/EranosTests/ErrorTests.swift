@@ -315,6 +315,18 @@ private let conversions: [Conversion] = [
         generated: .PaymentAccount(failure: .invalidIban(reason: .invalidChecksum), detail: "detail")
     ),
     Conversion(
+        expected: .mismatchedRecord(.ibanCountryCode, detail: "detail"),
+        generated: .MismatchedRecord(field: .ibanCountryCode, detail: "detail")
+    ),
+    Conversion(
+        expected: .mismatchedRecord(.phoneInternational, detail: "detail"),
+        generated: .MismatchedRecord(field: .phoneInternational, detail: "detail")
+    ),
+    Conversion(
+        expected: .mismatchedRecord(.currencyDetails, detail: "detail"),
+        generated: .MismatchedRecord(field: .currencyDetails, detail: "detail")
+    ),
+    Conversion(
         expected: .invalidJSON(line: 1, column: 2, detail: "detail"),
         generated: .InvalidJson(line: 1, column: 2, detail: "detail")
     ),
@@ -333,7 +345,7 @@ private let conversions: [Conversion] = [
 /// the library's.
 @Test
 func everyFailureOfTheGeneratedCodeConvertsToItsCase() {
-    #expect(71 == conversions.count)
+    #expect(74 == conversions.count)
     for conversion in conversions {
         let error = Eranos.EranosError(conversion.generated)
         #expect(error == conversion.expected)

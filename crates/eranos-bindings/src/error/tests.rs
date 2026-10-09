@@ -827,7 +827,9 @@ fn every_failure_of_the_library_converts_to_its_case() {
     }
 }
 
-/// The binding's own cases would show an empty or a changed message.
+/// The binding's own cases would show an empty or a changed message, or a
+/// mismatched record would name another field than the one it gave another
+/// way.
 #[test]
 fn the_bindings_own_cases_carry_their_messages() {
     assert_eq!(EranosError::cancelled().detail(), "the call was cancelled");
@@ -835,6 +837,28 @@ fn the_bindings_own_cases_carry_their_messages() {
         EranosError::released().detail(),
         "the read handle was released"
     );
+    let fields = [
+        (
+            MismatchedField::IbanCountryCode,
+            "the IBAN's country code is not the one the library derives from it",
+        ),
+        (
+            MismatchedField::PhoneInternational,
+            "the phone number's international form is not the one the library writes for it",
+        ),
+        (
+            MismatchedField::CurrencyDetails,
+            "the currency's details are not the library's for its code",
+        ),
+    ];
+    for (field, message) in fields {
+        let error = EranosError::mismatched_record(field);
+        assert_eq!(error.detail(), message);
+        assert!(matches!(
+            error,
+            EranosError::MismatchedRecord { field: named, .. } if named == field
+        ));
+    }
 }
 
 /// A reason the library refuses an IBAN for, beside the reason it must
