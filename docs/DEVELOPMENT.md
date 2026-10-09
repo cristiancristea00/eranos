@@ -487,8 +487,10 @@ rejected text. Pin the message in its enum's list in `tests/errors.rs`, and
 name the variant in the `# Errors` section of every function that can return
 it. Give the enum's conversion trait (`FromExpenseGroupError` and the like,
 beside the enum) a method for it, in variant order, taking what the variant
-holds and the message, and its arm in the provided `from_…`; add its row to
-the conversion test in the crate's `error/tests.rs`. The binding core then
+holds and the message, and its arm in the provided `from_…`; add the method
+and a case to the `conversion_test!` of the crate's `error/tests.rs`, the
+macro that `crates/eranos-core/src/error/conversions.rs` holds for every
+crate. The binding core then
 fails to build until the module's failure enum in
 `crates/eranos-bindings/src/error.rs` (`ExpenseGroupFailure` for
 `ExpenseGroupError`, and the like) has a case for the variant, in the same

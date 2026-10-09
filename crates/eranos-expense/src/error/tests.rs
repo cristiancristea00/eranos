@@ -5,268 +5,56 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, the method it converts
-/// through, and what the conversion finds it holding.
-#[derive(Debug)]
-struct Case {
-    error: ExpenseError,
-    method: &'static str,
-    held: String,
-}
+include!("../../../eranos-core/src/error/conversions.rs");
 
-/// An [`ExpenseError`] as a crate outside this one converts it: the method
-/// that built the value, what the variant held, and the message.
-#[derive(Debug, PartialEq, Eq)]
-struct ConvertedExpenseError {
-    method: &'static str,
-    held: String,
-    message: String,
-}
-
-impl FromExpenseError for ConvertedExpenseError {
-    fn empty_name(message: String) -> Self {
-        Self {
-            method: "empty_name",
-            held: String::new(),
-            message,
+conversion_test! {
+    /// A conversion that called another variant's method, or dropped what the
+    /// variant holds or its message, would show the apps another failure than the
+    /// library's.
+    fn every_failure_of_expense_error_converts_through_the_method_of_its_variant: ExpenseError => ConvertedExpenseError through FromExpenseError::from_expense_error(&) {
+        methods {
+            empty_name() => String::new();
+            non_positive_amount() => String::new();
+            currency_mismatch(expected: CurrencyCode, found: CurrencyCode) => format!("{expected} {found}");
+            empty_split() => String::new();
+            duplicate_member(member: MemberId) => format!("{member}");
+            non_positive_share(member: MemberId) => format!("{member}");
+            amounts_do_not_add_up(expected: Money, actual: Money) => format!("{expected} {actual}");
+            percentages_do_not_add_up(total_basis_points: u64) => format!("{total_basis_points}");
+            no_items() => String::new();
+            empty_item_name() => String::new();
+            items_do_not_add_up(expected: Money, actual: Money) => format!("{expected} {actual}");
+            negative_discount() => String::new();
+            discount_above_hundred_percent() => String::new();
+            discount_above_price() => String::new();
+            negative_tip() => String::new();
+            overflow() => String::new();
         }
-    }
-
-    fn non_positive_amount(message: String) -> Self {
-        Self {
-            method: "non_positive_amount",
-            held: String::new(),
-            message,
+        setup {
+            let expected_currency = CurrencyCode::USD;
+            let found = CurrencyCode::EUR;
+            let member = MemberId::new("ana").unwrap();
+            let expected_money = Money::from_minor_units(200, CurrencyCode::EUR);
+            let actual = Money::from_minor_units(100, CurrencyCode::EUR);
+            let total_basis_points = 9005;
         }
-    }
-
-    fn currency_mismatch(expected: CurrencyCode, found: CurrencyCode, message: String) -> Self {
-        Self {
-            method: "currency_mismatch",
-            held: format!("{expected} {found}"),
-            message,
+        cases {
+            ExpenseError::EmptyName => empty_name, String::new();
+            ExpenseError::NonPositiveAmount => non_positive_amount, String::new();
+            ExpenseError::CurrencyMismatch { expected: expected_currency, found, } => currency_mismatch, format!("{expected_currency} {found}");
+            ExpenseError::EmptySplit => empty_split, String::new();
+            ExpenseError::DuplicateMember { member } => duplicate_member, format!("{member}");
+            ExpenseError::NonPositiveShare { member } => non_positive_share, format!("{member}");
+            ExpenseError::AmountsDoNotAddUp { expected: expected_money, actual, } => amounts_do_not_add_up, format!("{expected_money} {actual}");
+            ExpenseError::PercentagesDoNotAddUp { total_basis_points } => percentages_do_not_add_up, format!("{total_basis_points}");
+            ExpenseError::NoItems => no_items, String::new();
+            ExpenseError::EmptyItemName => empty_item_name, String::new();
+            ExpenseError::ItemsDoNotAddUp { expected: expected_money, actual, } => items_do_not_add_up, format!("{expected_money} {actual}");
+            ExpenseError::NegativeDiscount => negative_discount, String::new();
+            ExpenseError::DiscountAboveHundredPercent => discount_above_hundred_percent, String::new();
+            ExpenseError::DiscountAbovePrice => discount_above_price, String::new();
+            ExpenseError::NegativeTip => negative_tip, String::new();
+            ExpenseError::Overflow => overflow, String::new();
         }
-    }
-
-    fn empty_split(message: String) -> Self {
-        Self {
-            method: "empty_split",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn duplicate_member(member: MemberId, message: String) -> Self {
-        Self {
-            method: "duplicate_member",
-            held: format!("{member}"),
-            message,
-        }
-    }
-
-    fn non_positive_share(member: MemberId, message: String) -> Self {
-        Self {
-            method: "non_positive_share",
-            held: format!("{member}"),
-            message,
-        }
-    }
-
-    fn amounts_do_not_add_up(expected: Money, actual: Money, message: String) -> Self {
-        Self {
-            method: "amounts_do_not_add_up",
-            held: format!("{expected} {actual}"),
-            message,
-        }
-    }
-
-    fn percentages_do_not_add_up(total_basis_points: u64, message: String) -> Self {
-        Self {
-            method: "percentages_do_not_add_up",
-            held: format!("{total_basis_points}"),
-            message,
-        }
-    }
-
-    fn no_items(message: String) -> Self {
-        Self {
-            method: "no_items",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn empty_item_name(message: String) -> Self {
-        Self {
-            method: "empty_item_name",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn items_do_not_add_up(expected: Money, actual: Money, message: String) -> Self {
-        Self {
-            method: "items_do_not_add_up",
-            held: format!("{expected} {actual}"),
-            message,
-        }
-    }
-
-    fn negative_discount(message: String) -> Self {
-        Self {
-            method: "negative_discount",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn discount_above_hundred_percent(message: String) -> Self {
-        Self {
-            method: "discount_above_hundred_percent",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn discount_above_price(message: String) -> Self {
-        Self {
-            method: "discount_above_price",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn negative_tip(message: String) -> Self {
-        Self {
-            method: "negative_tip",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn overflow(message: String) -> Self {
-        Self {
-            method: "overflow",
-            held: String::new(),
-            message,
-        }
-    }
-}
-
-/// A conversion that called another variant's method, or dropped what the
-/// variant holds or its message, would show the apps another failure than the
-/// library's.
-#[test]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one row for each of the sixteen variants, which read best as one table"
-)]
-fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
-    let expected_currency = CurrencyCode::USD;
-    let found = CurrencyCode::EUR;
-    let member = MemberId::new("ana").unwrap();
-    let expected_money = Money::from_minor_units(200, CurrencyCode::EUR);
-    let actual = Money::from_minor_units(100, CurrencyCode::EUR);
-    let total_basis_points = 9005;
-    let cases = [
-        Case {
-            error: ExpenseError::EmptyName,
-            method: "empty_name",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::NonPositiveAmount,
-            method: "non_positive_amount",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::CurrencyMismatch {
-                expected: expected_currency,
-                found,
-            },
-            method: "currency_mismatch",
-            held: format!("{expected_currency} {found}"),
-        },
-        Case {
-            error: ExpenseError::EmptySplit,
-            method: "empty_split",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::DuplicateMember { member },
-            method: "duplicate_member",
-            held: format!("{member}"),
-        },
-        Case {
-            error: ExpenseError::NonPositiveShare { member },
-            method: "non_positive_share",
-            held: format!("{member}"),
-        },
-        Case {
-            error: ExpenseError::AmountsDoNotAddUp {
-                expected: expected_money,
-                actual,
-            },
-            method: "amounts_do_not_add_up",
-            held: format!("{expected_money} {actual}"),
-        },
-        Case {
-            error: ExpenseError::PercentagesDoNotAddUp { total_basis_points },
-            method: "percentages_do_not_add_up",
-            held: format!("{total_basis_points}"),
-        },
-        Case {
-            error: ExpenseError::NoItems,
-            method: "no_items",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::EmptyItemName,
-            method: "empty_item_name",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::ItemsDoNotAddUp {
-                expected: expected_money,
-                actual,
-            },
-            method: "items_do_not_add_up",
-            held: format!("{expected_money} {actual}"),
-        },
-        Case {
-            error: ExpenseError::NegativeDiscount,
-            method: "negative_discount",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::DiscountAboveHundredPercent,
-            method: "discount_above_hundred_percent",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::DiscountAbovePrice,
-            method: "discount_above_price",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::NegativeTip,
-            method: "negative_tip",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseError::Overflow,
-            method: "overflow",
-            held: String::new(),
-        },
-    ];
-    for case in cases {
-        assert_eq!(
-            ConvertedExpenseError::from_expense_error(&case.error),
-            ConvertedExpenseError {
-                method: case.method,
-                held: case.held,
-                message: case.error.to_string(),
-            }
-        );
     }
 }

@@ -7,14 +7,7 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, the method it converts
-/// through, and what the conversion finds it holding.
-#[derive(Debug)]
-struct Case<Failure> {
-    error: Failure,
-    method: &'static str,
-    held: String,
-}
+include!("../../../eranos-core/src/error/conversions.rs");
 
 /// A count in an error message agrees with its noun: "1 expense", never
 /// "1 expenses", however many of each kind of entry there are.
@@ -31,342 +24,78 @@ fn usage_counts_agree_with_their_nouns() {
     assert_eq!(count(0, "item", "items"), "0 items");
 }
 
-/// A [`LanguageError`] as a crate outside this one converts it: the method
-/// that built the value, what the variant held, and the message.
-#[derive(Debug, PartialEq, Eq)]
-struct ConvertedLanguageError {
-    method: &'static str,
-    held: String,
-    message: String,
-}
-
-impl FromLanguageError for ConvertedLanguageError {
-    fn invalid_language(message: String) -> Self {
-        Self {
-            method: "invalid_language",
-            held: String::new(),
-            message,
+conversion_test! {
+    /// A conversion that called another variant's method, or dropped what the
+    /// variant holds or its message, would show the apps another failure than the
+    /// library's.
+    fn every_failure_of_language_error_converts_through_the_method_of_its_variant: LanguageError => ConvertedLanguageError through FromLanguageError::from_language_error() {
+        methods {
+            invalid_language() => String::new();
+        }
+        setup {}
+        cases {
+            LanguageError::InvalidLanguage => invalid_language, String::new();
         }
     }
 }
 
-/// A conversion that called another variant's method, or dropped what the
-/// variant holds or its message, would show the apps another failure than the
-/// library's.
-#[test]
-fn every_failure_of_language_error_converts_through_the_method_of_its_variant() {
-    let cases = [Case {
-        error: LanguageError::InvalidLanguage,
-        method: "invalid_language",
-        held: String::new(),
-    }];
-    for case in cases {
-        assert_eq!(
-            ConvertedLanguageError::from_language_error(case.error),
-            ConvertedLanguageError {
-                method: case.method,
-                held: case.held,
-                message: case.error.to_string(),
-            }
-        );
-    }
-}
-
-/// A [`ExpenseGroupError`] as a crate outside this one converts it: the method
-/// that built the value, what the variant held, and the message.
-#[derive(Debug, PartialEq, Eq)]
-struct ConvertedExpenseGroupError {
-    method: &'static str,
-    held: String,
-    message: String,
-}
-
-impl FromExpenseGroupError for ConvertedExpenseGroupError {
-    fn unsupported_format(format: u32, message: String) -> Self {
-        Self {
-            method: "unsupported_format",
-            held: format!("{format}"),
-            message,
+conversion_test! {
+    /// A conversion that called another variant's method, or dropped what the
+    /// variant holds or its message, would show the apps another failure than the
+    /// library's.
+    fn every_failure_of_group_error_converts_through_the_method_of_its_variant: ExpenseGroupError => ConvertedExpenseGroupError through FromExpenseGroupError::from_expense_group_error(&) {
+        methods {
+            unsupported_format(format: u32) => format!("{format}");
+            empty_name() => String::new();
+            missing_exchange_rate(currency: CurrencyCode) => format!("{currency}");
+            unexpected_exchange_rate() => String::new();
+            duplicate_exchange_rate(currency: CurrencyCode) => format!("{currency}");
+            duplicate_member(member: MemberId) => format!("{member}");
+            unknown_member(member: MemberId) => format!("{member}");
+            archived_member(member: MemberId) => format!("{member}");
+            member_in_use(member: MemberId, expenses: &[ExpenseId], transfers: &[TransferId]) => format!("{member} {expenses:?} {transfers:?}");
+            duplicate_category(category: CategoryId) => format!("{category}");
+            duplicate_category_name(existing: CategoryId) => format!("{existing}");
+            unknown_category(category: CategoryId) => format!("{category}");
+            built_in_category() => String::new();
+            duplicate_expense(expense: ExpenseId) => format!("{expense}");
+            unknown_expense(expense: ExpenseId) => format!("{expense}");
+            duplicate_transfer(transfer: TransferId) => format!("{transfer}");
+            unknown_transfer(transfer: TransferId) => format!("{transfer}");
+            busy() => String::new();
+            overflow() => String::new();
         }
-    }
-
-    fn empty_name(message: String) -> Self {
-        Self {
-            method: "empty_name",
-            held: String::new(),
-            message,
+        setup {
+            let format = 11;
+            let currency = CurrencyCode::EUR;
+            let member = MemberId::new("ana").unwrap();
+            let expenses = vec![ExpenseId::new("dinner").unwrap()];
+            let transfers = vec![TransferId::new("repayment").unwrap()];
+            let category = CategoryId::new("food").unwrap();
+            let existing = CategoryId::new("drinks").unwrap();
+            let expense = ExpenseId::new("lunch").unwrap();
+            let transfer = TransferId::new("refund").unwrap();
         }
-    }
-
-    fn missing_exchange_rate(currency: CurrencyCode, message: String) -> Self {
-        Self {
-            method: "missing_exchange_rate",
-            held: format!("{currency}"),
-            message,
+        cases {
+            ExpenseGroupError::UnsupportedFormat { format } => unsupported_format, format!("{format}");
+            ExpenseGroupError::EmptyName => empty_name, String::new();
+            ExpenseGroupError::MissingExchangeRate { currency } => missing_exchange_rate, format!("{currency}");
+            ExpenseGroupError::UnexpectedExchangeRate => unexpected_exchange_rate, String::new();
+            ExpenseGroupError::DuplicateExchangeRate { currency } => duplicate_exchange_rate, format!("{currency}");
+            ExpenseGroupError::DuplicateMember(member) => duplicate_member, format!("{member}");
+            ExpenseGroupError::UnknownMember(member) => unknown_member, format!("{member}");
+            ExpenseGroupError::ArchivedMember(member) => archived_member, format!("{member}");
+            ExpenseGroupError::MemberInUse { member, expenses: expenses.clone(), transfers: transfers.clone(), } => member_in_use, format!("{member} {expenses:?} {transfers:?}");
+            ExpenseGroupError::DuplicateCategory(category) => duplicate_category, format!("{category}");
+            ExpenseGroupError::DuplicateCategoryName { existing } => duplicate_category_name, format!("{existing}");
+            ExpenseGroupError::UnknownCategory(category) => unknown_category, format!("{category}");
+            ExpenseGroupError::BuiltInCategory => built_in_category, String::new();
+            ExpenseGroupError::DuplicateExpense(expense) => duplicate_expense, format!("{expense}");
+            ExpenseGroupError::UnknownExpense(expense) => unknown_expense, format!("{expense}");
+            ExpenseGroupError::DuplicateTransfer(transfer) => duplicate_transfer, format!("{transfer}");
+            ExpenseGroupError::UnknownTransfer(transfer) => unknown_transfer, format!("{transfer}");
+            ExpenseGroupError::Busy => busy, String::new();
+            ExpenseGroupError::Overflow => overflow, String::new();
         }
-    }
-
-    fn unexpected_exchange_rate(message: String) -> Self {
-        Self {
-            method: "unexpected_exchange_rate",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn duplicate_exchange_rate(currency: CurrencyCode, message: String) -> Self {
-        Self {
-            method: "duplicate_exchange_rate",
-            held: format!("{currency}"),
-            message,
-        }
-    }
-
-    fn duplicate_member(member: MemberId, message: String) -> Self {
-        Self {
-            method: "duplicate_member",
-            held: format!("{member}"),
-            message,
-        }
-    }
-
-    fn unknown_member(member: MemberId, message: String) -> Self {
-        Self {
-            method: "unknown_member",
-            held: format!("{member}"),
-            message,
-        }
-    }
-
-    fn archived_member(member: MemberId, message: String) -> Self {
-        Self {
-            method: "archived_member",
-            held: format!("{member}"),
-            message,
-        }
-    }
-
-    fn member_in_use(
-        member: MemberId,
-        expenses: &[ExpenseId],
-        transfers: &[TransferId],
-        message: String,
-    ) -> Self {
-        Self {
-            method: "member_in_use",
-            held: format!("{member} {expenses:?} {transfers:?}"),
-            message,
-        }
-    }
-
-    fn duplicate_category(category: CategoryId, message: String) -> Self {
-        Self {
-            method: "duplicate_category",
-            held: format!("{category}"),
-            message,
-        }
-    }
-
-    fn duplicate_category_name(existing: CategoryId, message: String) -> Self {
-        Self {
-            method: "duplicate_category_name",
-            held: format!("{existing}"),
-            message,
-        }
-    }
-
-    fn unknown_category(category: CategoryId, message: String) -> Self {
-        Self {
-            method: "unknown_category",
-            held: format!("{category}"),
-            message,
-        }
-    }
-
-    fn built_in_category(message: String) -> Self {
-        Self {
-            method: "built_in_category",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn duplicate_expense(expense: ExpenseId, message: String) -> Self {
-        Self {
-            method: "duplicate_expense",
-            held: format!("{expense}"),
-            message,
-        }
-    }
-
-    fn unknown_expense(expense: ExpenseId, message: String) -> Self {
-        Self {
-            method: "unknown_expense",
-            held: format!("{expense}"),
-            message,
-        }
-    }
-
-    fn duplicate_transfer(transfer: TransferId, message: String) -> Self {
-        Self {
-            method: "duplicate_transfer",
-            held: format!("{transfer}"),
-            message,
-        }
-    }
-
-    fn unknown_transfer(transfer: TransferId, message: String) -> Self {
-        Self {
-            method: "unknown_transfer",
-            held: format!("{transfer}"),
-            message,
-        }
-    }
-
-    fn busy(message: String) -> Self {
-        Self {
-            method: "busy",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn overflow(message: String) -> Self {
-        Self {
-            method: "overflow",
-            held: String::new(),
-            message,
-        }
-    }
-}
-
-/// A conversion that called another variant's method, or dropped what the
-/// variant holds or its message, would show the apps another failure than the
-/// library's.
-#[test]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one row for each of the nineteen variants, which read best as one table"
-)]
-fn every_failure_of_group_error_converts_through_the_method_of_its_variant() {
-    let format = 11;
-    let currency = CurrencyCode::EUR;
-    let member = MemberId::new("ana").unwrap();
-    let expenses = vec![ExpenseId::new("dinner").unwrap()];
-    let transfers = vec![TransferId::new("repayment").unwrap()];
-    let category = CategoryId::new("food").unwrap();
-    let existing = CategoryId::new("drinks").unwrap();
-    let expense = ExpenseId::new("lunch").unwrap();
-    let transfer = TransferId::new("refund").unwrap();
-    let cases = [
-        Case {
-            error: ExpenseGroupError::UnsupportedFormat { format },
-            method: "unsupported_format",
-            held: format!("{format}"),
-        },
-        Case {
-            error: ExpenseGroupError::EmptyName,
-            method: "empty_name",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseGroupError::MissingExchangeRate { currency },
-            method: "missing_exchange_rate",
-            held: format!("{currency}"),
-        },
-        Case {
-            error: ExpenseGroupError::UnexpectedExchangeRate,
-            method: "unexpected_exchange_rate",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseGroupError::DuplicateExchangeRate { currency },
-            method: "duplicate_exchange_rate",
-            held: format!("{currency}"),
-        },
-        Case {
-            error: ExpenseGroupError::DuplicateMember(member),
-            method: "duplicate_member",
-            held: format!("{member}"),
-        },
-        Case {
-            error: ExpenseGroupError::UnknownMember(member),
-            method: "unknown_member",
-            held: format!("{member}"),
-        },
-        Case {
-            error: ExpenseGroupError::ArchivedMember(member),
-            method: "archived_member",
-            held: format!("{member}"),
-        },
-        Case {
-            error: ExpenseGroupError::MemberInUse {
-                member,
-                expenses: expenses.clone(),
-                transfers: transfers.clone(),
-            },
-            method: "member_in_use",
-            held: format!("{member} {expenses:?} {transfers:?}"),
-        },
-        Case {
-            error: ExpenseGroupError::DuplicateCategory(category),
-            method: "duplicate_category",
-            held: format!("{category}"),
-        },
-        Case {
-            error: ExpenseGroupError::DuplicateCategoryName { existing },
-            method: "duplicate_category_name",
-            held: format!("{existing}"),
-        },
-        Case {
-            error: ExpenseGroupError::UnknownCategory(category),
-            method: "unknown_category",
-            held: format!("{category}"),
-        },
-        Case {
-            error: ExpenseGroupError::BuiltInCategory,
-            method: "built_in_category",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseGroupError::DuplicateExpense(expense),
-            method: "duplicate_expense",
-            held: format!("{expense}"),
-        },
-        Case {
-            error: ExpenseGroupError::UnknownExpense(expense),
-            method: "unknown_expense",
-            held: format!("{expense}"),
-        },
-        Case {
-            error: ExpenseGroupError::DuplicateTransfer(transfer),
-            method: "duplicate_transfer",
-            held: format!("{transfer}"),
-        },
-        Case {
-            error: ExpenseGroupError::UnknownTransfer(transfer),
-            method: "unknown_transfer",
-            held: format!("{transfer}"),
-        },
-        Case {
-            error: ExpenseGroupError::Busy,
-            method: "busy",
-            held: String::new(),
-        },
-        Case {
-            error: ExpenseGroupError::Overflow,
-            method: "overflow",
-            held: String::new(),
-        },
-    ];
-    for case in cases {
-        assert_eq!(
-            ConvertedExpenseGroupError::from_expense_group_error(&case.error),
-            ConvertedExpenseGroupError {
-                method: case.method,
-                held: case.held,
-                message: case.error.to_string(),
-            }
-        );
     }
 }

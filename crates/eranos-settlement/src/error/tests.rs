@@ -5,53 +5,21 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, the method it converts
-/// through, and what the conversion finds it holding.
-#[derive(Debug)]
-struct Case {
-    error: SettlementError,
-    method: &'static str,
-    held: String,
-}
+include!("../../../eranos-core/src/error/conversions.rs");
 
-/// A [`SettlementError`] as a crate outside this one converts it: the method
-/// that built the value, what the variant held, and the message.
-#[derive(Debug, PartialEq, Eq)]
-struct ConvertedSettlementError {
-    method: &'static str,
-    held: String,
-    message: String,
-}
-
-impl FromSettlementError for ConvertedSettlementError {
-    fn out_of_memory(balances: usize, message: String) -> Self {
-        Self {
-            method: "out_of_memory",
-            held: format!("{balances}"),
-            message,
+conversion_test! {
+    /// A conversion that called another variant's method, or dropped what the
+    /// variant holds or its message, would show the apps another failure than the
+    /// library's.
+    fn every_failure_of_settlement_error_converts_through_the_method_of_its_variant: SettlementError => ConvertedSettlementError through FromSettlementError::from_settlement_error(&) {
+        methods {
+            out_of_memory(balances: usize) => format!("{balances}");
         }
-    }
-}
-
-/// A conversion that called another variant's method, or dropped what the
-/// variant holds or its message, would show the apps another failure than the
-/// library's.
-#[test]
-fn every_failure_of_settlement_error_converts_through_the_method_of_its_variant() {
-    let balances = 20;
-    let cases = [Case {
-        error: SettlementError::OutOfMemory { balances },
-        method: "out_of_memory",
-        held: format!("{balances}"),
-    }];
-    for case in cases {
-        assert_eq!(
-            ConvertedSettlementError::from_settlement_error(&case.error),
-            ConvertedSettlementError {
-                method: case.method,
-                held: case.held,
-                message: case.error.to_string(),
-            }
-        );
+        setup {
+            let balances = 20;
+        }
+        cases {
+            SettlementError::OutOfMemory { balances } => out_of_memory, format!("{balances}");
+        }
     }
 }

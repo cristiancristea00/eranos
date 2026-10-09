@@ -5,94 +5,26 @@
 
 use super::*;
 
-/// One variant in a table of conversions: the error, the method it converts
-/// through, and what the conversion finds it holding.
-#[derive(Debug)]
-struct Case {
-    error: IdError,
-    method: &'static str,
-    held: String,
-}
+include!("conversions.rs");
 
-/// An [`IdError`] as a crate outside this one converts it: the method
-/// that built the value, what the variant held, and the message.
-#[derive(Debug, PartialEq, Eq)]
-struct ConvertedIdError {
-    method: &'static str,
-    held: String,
-    message: String,
-}
-
-impl FromIdError for ConvertedIdError {
-    fn empty(message: String) -> Self {
-        Self {
-            method: "empty",
-            held: String::new(),
-            message,
+conversion_test! {
+    /// A conversion that called another variant's method, or dropped what the
+    /// variant holds or its message, would show the apps another failure than the
+    /// library's.
+    fn every_failure_of_id_error_converts_through_the_method_of_its_variant: IdError => ConvertedIdError through FromIdError::from_id_error() {
+        methods {
+            empty() => String::new();
+            too_long() => String::new();
+            control_character() => String::new();
+            surrounding_whitespace() => String::new();
         }
-    }
-
-    fn too_long(message: String) -> Self {
-        Self {
-            method: "too_long",
-            held: String::new(),
-            message,
+        setup {}
+        cases {
+            IdError::Empty => empty, String::new();
+            IdError::TooLong => too_long, String::new();
+            IdError::ControlCharacter => control_character, String::new();
+            IdError::SurroundingWhitespace => surrounding_whitespace, String::new();
         }
-    }
-
-    fn control_character(message: String) -> Self {
-        Self {
-            method: "control_character",
-            held: String::new(),
-            message,
-        }
-    }
-
-    fn surrounding_whitespace(message: String) -> Self {
-        Self {
-            method: "surrounding_whitespace",
-            held: String::new(),
-            message,
-        }
-    }
-}
-
-/// A conversion that called another variant's method, or dropped what the
-/// variant holds or its message, would show the apps another failure than the
-/// library's.
-#[test]
-fn every_failure_of_id_error_converts_through_the_method_of_its_variant() {
-    let cases = [
-        Case {
-            error: IdError::Empty,
-            method: "empty",
-            held: String::new(),
-        },
-        Case {
-            error: IdError::TooLong,
-            method: "too_long",
-            held: String::new(),
-        },
-        Case {
-            error: IdError::ControlCharacter,
-            method: "control_character",
-            held: String::new(),
-        },
-        Case {
-            error: IdError::SurroundingWhitespace,
-            method: "surrounding_whitespace",
-            held: String::new(),
-        },
-    ];
-    for case in cases {
-        assert_eq!(
-            ConvertedIdError::from_id_error(case.error),
-            ConvertedIdError {
-                method: case.method,
-                held: case.held,
-                message: case.error.to_string(),
-            }
-        );
     }
 }
 
