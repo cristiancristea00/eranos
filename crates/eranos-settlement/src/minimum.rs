@@ -101,10 +101,12 @@ async fn zero_sum_groups(
     // keeps the maximum: the reversed removal order has zero prefix sums
     // exactly at the group boundaries. The recurrence guarantees such a
     // member exists in every non-empty subset, and the empty one has none.
-    let net_of = |position: usize| nets.get(position).copied().unwrap_or(0);
-    let groups_in = |counts: &[u8], subset: usize| counts.get(subset).copied().unwrap_or(0);
     let removable = |subset: usize| {
-        let closes_group = u8::from(0 == members_of(subset).map(net_of).sum::<i128>());
+        let closes_group = u8::from(
+            0 == members_of(subset)
+                .map(|position| net_of(&nets, position))
+                .sum::<i128>(),
+        );
         let target = groups_in(&table, subset);
         members_of(subset)
             .find(|&position| groups_in(&table, subset & !(1 << position)) + closes_group == target)
@@ -137,19 +139,30 @@ async fn zero_sum_groups(
 /// order: every S ∖ {i} is smaller than S, so its entry is already in the
 /// table when S is pushed.
 fn fill_subsets(table: &mut Vec<u8>, subsets: Range<usize>, nets: &[i128]) {
-    let net_of = |position: usize| nets.get(position).copied().unwrap_or(0);
-    let groups_in = |counts: &[u8], subset: usize| counts.get(subset).copied().unwrap_or(0);
     for subset in subsets {
         let mut best = 0;
         let mut total = 0_i128;
         for position in members_of(subset) {
-            total += net_of(position);
+            total += net_of(nets, position);
             best = best.max(groups_in(table, subset & !(1 << position)));
         }
         // At most count / 2 ≤ 32 groups on 64-bit targets, so no u8
         // overflows.
         table.push(best + u8::from(0 == total));
     }
+}
+
+/// The net balance at `position` of `nets`, or zero past their end, which
+/// no member of a subset of the balances reaches.
+fn net_of(nets: &[i128], position: usize) -> i128 {
+    nets.get(position).copied().unwrap_or(0)
+}
+
+/// The most zero-sum groups `subset` splits into, from `table`, or zero past
+/// its end, which no subset it is read for reaches: an entry is read only
+/// after it is pushed.
+fn groups_in(table: &[u8], subset: usize) -> u8 {
+    table.get(subset).copied().unwrap_or(0)
 }
 
 /// The positions of the set bits of `subset`, lowest first.
