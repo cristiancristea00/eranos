@@ -302,9 +302,7 @@ public final class ExpenseGroup implements AutoCloseable {
         return Converting.future(handle.setNoteAsync(note, null), _ -> null);
     }
 
-    /**
-     * Clears the group's note, which {@link #setNote} sets.
-     */
+    /** Clears the group's note, which {@link #setNote} sets. */
     public void clearNote() {
         handle.setNote(null);
     }
@@ -357,9 +355,7 @@ public final class ExpenseGroup implements AutoCloseable {
         return Converting.future(handle.setLanguageAsync(language.toString(), null), _ -> null);
     }
 
-    /**
-     * Clears the language the apps show the group in.
-     */
+    /** Clears the language the apps show the group in. */
     public void clearLanguage() {
         Converting.runUnfailing(() -> handle.setLanguage(null));
     }
