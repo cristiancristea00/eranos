@@ -1,10 +1,10 @@
 # eranos-uniffi: the UniFFI bindings of eranos for Swift, Kotlin, Java, Python,
 # and Kotlin Multiplatform.
 # It mirrors the binding core's records, enums, and error, wraps its group
-# handle, read handle, and cancellation in objects, and exports its value
-# helpers, each forwarding to the core. The web and KMP crates compile the
-# same sources against their own UniFFI releases, so the sources keep to
-# what UniFFI 0.29 accepts (docs/BINDINGS.md § 8).
+# handle, read handle, write handle, and cancellation in objects, and
+# exports its value helpers, each forwarding to the core. The web crate
+# compiles the same sources against UniFFI 0.31, so the sources keep to what
+# that release accepts (docs/BINDINGS.md § 8).
 [package]
 name = "eranos-uniffi"
 description = "The UniFFI bindings of eranos for Swift, Kotlin, Java, Python, and Kotlin Multiplatform"

@@ -25,6 +25,6 @@
         "noEmit": true
     },
     "include": ["src"],
-    // The generated entry point, which the layer replaces with its own `init`: its call of the player does not type-check.
+    // The generated entry point, which the layer replaces with its own `init`: its call of the runtime does not type-check.
     "exclude": ["src/internal/index.ts"]
 }

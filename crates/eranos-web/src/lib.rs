@@ -3,14 +3,14 @@
 //!
 //! The crate compiles the sources of `eranos-uniffi` against `uniffi`
 //! 0.31.2, which the TypeScript generator of uniffi-bindgen-react-native
-//! 0.31.0-5 reads, so the mirrors, objects, and value helpers are those of
+//! 0.31.0-6 reads, so the mirrors, objects, and value helpers are those of
 //! the other bindings. On wasm32 it links `uniffi-runtime-wasm`, which gives
-//! the generated code's player the allocator and the panic hook it calls.
+//! the generated code's runtime the allocator and the panic hook it calls.
 #![forbid(unsafe_code)]
 
 uniffi::setup_scaffolding!("eranos");
 
-// Linked for the exports it defines, which the player calls by name.
+// Linked for the exports it defines, which the runtime calls by name.
 #[cfg(target_family = "wasm")]
 extern crate uniffi_runtime_wasm as _;
 

@@ -731,8 +731,8 @@ amount of time, so it yields at the same points on every device.
 
 | Call                                          | Yields                                 | Between two yields                                                               |
 | --------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
-| `ExpenseGroup::settlement_async`              | while the exact solver fills its table | 2²¹ subsets times balances, about 0.7 ms; no yield for 16 open balances or fewer |
-| `ExpenseGroup::change_currency_async`         | after each re-resolved entry           | 1 024 entries, about 1.3 ms                                                      |
+| `ExpenseGroup::settlement_async`              | while the exact solver fills its table | 2²¹ subsets times balances; no yield for 16 open balances or fewer               |
+| `ExpenseGroup::change_currency_async`         | after each re-resolved entry           | 1 024 entries                                                                    |
 | `SavedExpenseGroup::into_expense_group_async` | after each replayed step               | 1 024 members, categories, expenses, transfers, or archivings                    |
 
 Each returns a `Cooperative`, which an executor awaits like any future and
@@ -740,9 +740,9 @@ Each returns a `Cooperative`, which an executor awaits like any future and
 `change_currency`, and `into_expense_group` are those completions, so the
 synchronous and asynchronous calls run the same code. The exact solver fills
 its table for `MinimumTransfers` and for `Adaptive` within its limit; the
-greedy and direct strategies, and `Adaptive` beyond its limit, never yield:
-their largest benchmarked cases take about 0.1 ms (`Greedy`, 1 000 members)
-and 0.33 ms (`Direct`, 100 members). A call writes nothing before its last
+greedy and direct strategies, and `Adaptive` beyond its limit, never yield;
+their times for the largest benchmarked groups are in
+[§ 13](#13-key-numbers). A call writes nothing before its last
 yield, so one dropped at a yield changes nothing: a currency change swaps in
 its new entries and ledger after its last yield, a load builds a group of
 its own, and a settlement enters the cache only once it is complete
@@ -851,3 +851,5 @@ Release build on an Apple M4 Pro (`cargo bench -p eranos --features serde --benc
 | read a member's totals                                         | any                                             | ≈ 6 ns                                   |
 | change the currency                                            | group of 10 000 expenses                        | 13 ms                                    |
 | load a saved group from JSON                                   | group of 10 000 expenses                        | 23 ms                                    |
+| the exact solver's work between two yields                    | 2²¹ subsets times balances                      | ≈ 0.7 ms                                 |
+| a currency change's work between two yields                    | 1 024 entries                                   | ≈ 1.3 ms                                 |

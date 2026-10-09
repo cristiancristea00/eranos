@@ -10,12 +10,12 @@ import bindings from './internal/eranos.js';
 import { PLAYER_DEFINITIONS, setNativeModule } from './internal/eranos-ffi.js';
 import * as glue from './internal/eranos_web_bg.js';
 
-/** The source of the module, as the player of the generated code takes it: a URL, a path, a `Response`, or its bytes. */
+/** The source of the module, as the generated code's runtime takes it: a URL, a path, a `Response`, or its bytes. */
 export type WasmSource = Parameters<typeof openWasm>[0];
 
 /**
  * The JavaScript modules the WebAssembly module imports, by the name it imports each under: wasm-bindgen's glue alone. The
- * player fills an import no module supplies with a function that throws when called, so an import missing here fails at
+ * runtime fills an import no module supplies with a function that throws when called, so an import missing here fails at
  * its first call, naming itself.
  */
 const imports: ReadonlyMap<string, Record<string, unknown>> = new Map([['./eranos_web_bg.js', glue]]);

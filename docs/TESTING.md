@@ -8,7 +8,7 @@ every command.
 
 - [Testing](#testing)
   - [Contents](#contents)
-  - [1. What the suite believes](#1-what-the-suite-believes)
+  - [1. What the tests claim](#1-what-the-tests-claim)
   - [2. Layout](#2-layout)
   - [3. The invariants](#3-the-invariants)
   - [4. Writing a test here](#4-writing-a-test-here)
@@ -23,7 +23,7 @@ every command.
   - [7. Benchmarks](#7-benchmarks)
   - [8. What to run for a given change](#8-what-to-run-for-a-given-change)
 
-## 1. What the suite believes
+## 1. What the tests claim
 
 - **Money must add up.** Every test that divides an amount checks the parts
   against the whole; the properties check it for random inputs.
@@ -70,8 +70,8 @@ Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
 Visibility is never widened to make something testable.
 
-The README is compiled as a doctest through a `#[cfg(doctest)]` item in
-`lib.rs`, so its example cannot drift from the API.
+The README is the facade's crate documentation, so its example is compiled
+as a doctest and cannot drift from the API.
 
 Every example of `crates/eranos/examples` has a port in each binding's
 `examples` package that follows it section by section, through the
@@ -192,7 +192,7 @@ would poll thousands of times.
 
 - No `#[ignore]`: a test that does not run protects nothing.
 - No `#[should_panic]`: the library returns errors; assert the error.
-- No snapshot tests: accepting a wrong change becomes one command away.
+- No snapshot tests: a wrong change would pass by rewriting the snapshot.
 - No floating point anywhere near money, in tests either: a float appears
   only as the input of a `from_f64` constructor, whose tests pin the
   conversion.
@@ -217,7 +217,7 @@ either; the calls' functions are, since the macro writes them with the
 spans of the trait's bodies, and so are the locks they call, and the
 core's tests call every form. It does not count doctests on the stable toolchain, so an
 item covered only by its example shows as missed. Coverage is a diagnostic,
-never a gate; a gap is a reading list: either a missing test or dead code.
+never a gate; a gap is either a missing test or dead code.
 CI measures the Rust tests the same way on every push and publishes the
 result as a page: [DEVELOPMENT.md § 6](DEVELOPMENT.md#6-continuous-integration).
 

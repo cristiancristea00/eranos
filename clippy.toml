@@ -13,7 +13,7 @@ allow-indexing-slicing-in-tests = true
 
 # `result_large_err` reports a function whose error is this many bytes or
 # more. The binding core's `EranosError` is the enum that UniFFI and
-# Diplomat copy field for field, and UniFFI 0.29, which the KMP glue
+# Diplomat copy field for field, and UniFFI 0.31, which the web glue
 # builds on, lowers no `Box`, so no case can box what it holds. An amount
 # carries its currency's details, two texts among them, and the failures
 # that hold two amounts make the error 160 bytes on a 64-bit target, which

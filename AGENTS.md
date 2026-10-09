@@ -317,8 +317,8 @@ test in `crates/xtask` checks every root.
   docs. The identifier's setter, `id`, is the first setter, and `build`
   generates nothing. Every setter replaces what was set before: the last
   call wins.
-- **A value with meaning is a named struct.** Two or more values that
-  travel together, such as a member and an amount, the members of a debt,
+- **A value with meaning is a named struct.** Two or more values that are
+  passed or stored together, such as a member and an amount, the members of a debt,
   or a row of a report's table, get a struct with named fields, in every
   language, its tests and examples, and the tools: never a tuple, a tuple
   variant, a positional array, a Kotlin `Pair`, or a Python tuple used as
@@ -447,44 +447,17 @@ test in `crates/xtask` checks every root.
 
 ## Architecture in one paragraph
 
-The library is thirteen crates in `crates/`: `eranos`, the facade callers
-depend on, which holds only re-exports and the integration tests, examples,
-and benchmarks, and twelve internal crates below it, one per part of the
-domain, from `eranos-core` (identifiers) up to `eranos-expense-group`
-([map](docs/ARCHITECTURE.md#2-crate-map)). Above the facade,
-`eranos-bindings` holds what every binding exposes, in plain Rust: records,
-one error, and a group handle with a synchronous and an asynchronous form of
-every call, both written, with the read handle's reads, by the proc macros
-of `eranos-glue-macros` and `eranos-glue` from one trait that lists the
-calls. `eranos-uniffi` mirrors it for Swift, Kotlin, Java, and Python
-through UniFFI, whose generators are the binaries of
-`eranos-uniffi-bindgen`; `eranos-web` compiles the same sources on the
-UniFFI release that uniffi-bindgen-react-native reads, for WebAssembly, and
-the Kotlin Multiplatform package's plugin reads `eranos-uniffi` itself;
-`eranos-capi` exports it
-through Diplomat, which generates a C API and C++ classes from its bridge,
-most of which `cargo xtask generate` writes from the core's records and
-calls. Each language's package in `bindings/` puts a hand-written layer over
-the generated code: `bindings/swift` for Apple platforms, `bindings/kotlin`
-for Android and the JVM, `bindings/java` for Java, `bindings/typescript` for
-browsers and Node, `bindings/kmp`, which compiles the Kotlin layer for
-Kotlin Multiplatform, `bindings/c` and `bindings/cpp`, header-only layers
-for C23 and C++23, and `bindings/python` for Python 3.14
-([docs/BINDINGS.md](docs/BINDINGS.md)). An `ExpenseGroup` owns its members,
-categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
-into group-currency shares when it is added or replaced
-(`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the
-pairwise debts behind the direct settlement;
-`eranos_transfer::resolve_transfer` for a transfer) and applied to the
-`Ledger` as a range-checked `Delta`; the `Summary` is part of the ledger and
-is updated by every change. Only `change_currency` resolves every entry
-again and rebuilds the ledger. Settlements are computed from the ledger on
-request, by the strategy the caller names, and cached per strategy in
-`OnceLock`s that every balance-changing mutation clears. The slow calls also
-come as cooperative futures (`settlement_async`, `change_currency_async`,
-`into_expense_group_async`), and `SharedExpenseGroup` shares a group between
-tasks and threads behind a read-write lock. Diagrams, rules, and numbers:
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The library is thirteen crates in `crates/`: the facade `eranos`, which
+callers depend on, over twelve internal crates, one per part of the domain;
+above it, `eranos-bindings` holds what every binding exposes, `eranos-uniffi`,
+`eranos-web`, and `eranos-capi` carry it to each language through UniFFI and
+Diplomat, and each package in `bindings/` puts a hand-written layer over the
+generated code. A group resolves each entry into group-currency shares when
+it is added and applies them to its ledger as one range-checked `Delta`, and
+computes settlements on request, kept until a balance changes: the crates,
+the data model, and the rules are in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and the bindings in
+[docs/BINDINGS.md](docs/BINDINGS.md).
 
 ## Verification habits
 

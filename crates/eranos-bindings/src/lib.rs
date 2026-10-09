@@ -27,7 +27,7 @@
 //! entry and every new group carries the identifier the app gives it: its
 //! own, or one [`identifier_generate`] returns.
 //!
-//! The types stay within what `uniffi` 0.29 can mirror: records, enums with
+//! The types stay within what `uniffi` 0.31 can mirror: records, enums with
 //! data, one error enum, and objects; no methods on records, and no
 //! optional list, which is an empty one instead.
 #![forbid(unsafe_code)]

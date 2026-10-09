@@ -10,9 +10,9 @@
 //! and `uniffi-bindgen-java` for Java; the Kotlin Multiplatform package's
 //! plugin reads the library itself.
 //!
-//! The web and KMP crates compile `mirrors.rs`, `objects.rs`, and
-//! `values.rs` from here against their own `uniffi` releases, so these keep
-//! to what `uniffi` 0.29 accepts: records, enums with data, one error,
+//! The web crate compiles `mirrors.rs`, `objects.rs`, and `values.rs` from
+//! here against `uniffi` 0.31, so these keep to what that release accepts:
+//! records, enums with data, one error,
 //! objects with synchronous and asynchronous methods, and no methods on
 //! records. The copies of the core's items and the objects' calls are
 //! written from the core's mirrors and table by `eranos-glue-macros`, whose

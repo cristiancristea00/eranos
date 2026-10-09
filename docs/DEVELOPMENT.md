@@ -300,19 +300,17 @@ PYTHONPATH=src uv run python -m examples.settling_up            # one port, whos
 ```
 
 Every internal crate's tests link the facade, which its doc examples use,
-so testing one crate builds the whole workspace, and each crate's doctests
-are a binary of their own. The split also makes a change
-low in the graph rebuild every crate above it. Rebuilds in the dev
-profile on an Apple M4 Pro, after touching one file, with the library as
-one crate and as thirteen:
+so testing one crate builds the whole workspace, and a change low in the
+graph rebuilds every crate above it. Rebuilds in the dev profile on an
+Apple M4 Pro after touching one file of the money crate, with the library
+as one crate and as thirteen (a file of the group, at the top, rebuilds
+alike):
 
-| Rebuild after touching                    | One crate | Thirteen crates |
-| ----------------------------------------- | --------- | --------------- |
-| `cargo build -p eranos`, the group        | 0.65 s    | 0.67 s          |
-| `cargo build -p eranos`, money            | 0.64 s    | 1.70 s          |
-| the touched crate's unit tests, the group | 1.1 s     | 1.2 s           |
-| the touched crate's unit tests, money     | 1.1 s     | 2.1 s           |
-| every test target (`--no-run`), money     | 1.9 s     | 6.4 s           |
+| Rebuild after touching money          | One crate | Thirteen crates |
+| ------------------------------------- | --------- | --------------- |
+| `cargo build -p eranos`               | 0.64 s    | 1.70 s          |
+| the crate's unit tests                | 1.1 s     | 2.1 s           |
+| every test target (`--no-run`)        | 1.9 s     | 6.4 s           |
 
 The split buys layers the compiler enforces, crates whose APIs stand on
 their own, and smaller units, at those seconds.
@@ -535,7 +533,7 @@ remove, goes into `allowed-duplicate-crates` in `clippy.toml`, with the
 dependency, the cause, and the upstream issue; it comes out when that
 release lands. `large-error-threshold` in `clippy.toml` sits one byte above
 the size of the binding core's `EranosError`, whose cases cannot box what
-they hold, since UniFFI 0.29 lowers no `Box`, with the reason beside it: a
+they hold, since UniFFI 0.31 lowers no `Box`, with the reason beside it: a
 change that grows the error moves it, with the new size, in the same
 commit.
 

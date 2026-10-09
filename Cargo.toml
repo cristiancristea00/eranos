@@ -138,7 +138,7 @@ uniffi = { version = "=0.32.2", default-features = false }
 # The Java generator, whose `uniffi_bindgen ^0.32.1` resolves to the release
 # above.
 uniffi-bindgen-java = "=0.5.1"
-# The allocator and panic hook that the web bindings' player calls, of the
+# The allocator and panic hook that the web bindings' runtime calls, of the
 # release of uniffi-bindgen-react-native that generates them.
 uniffi-runtime-wasm = "=0.31.0-6"
 # Pinned exactly: uniffi-bindgen-react-native 0.31.0-6 runs `wasm-bindgen`

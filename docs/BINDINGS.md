@@ -264,7 +264,7 @@ flowchart TD
   given. The C layer reaches the lookups through the binding core's
   `Summary`, since C builds no record of its own, and the TypeScript
   layer, whose summary is an interface, writes them as functions.
-- **Shapes every generator takes.** The types keep to what UniFFI 0.29,
+- **Shapes every generator takes.** The types keep to what UniFFI 0.31,
   the oldest version the glue crates use, can mirror: records, enums with
   data, one error enum, and objects; no methods on records, and no
   optional list, for which an empty one stands.
@@ -397,129 +397,132 @@ and print their examples' reports byte for byte
 
 ## 8. The glue crates
 
-`eranos-uniffi` copies the core's records, enums, and error for UniFFI with
-`#[uniffi::remote]`, which repeats each definition field for field. A crate
-carries the derives of one UniFFI release, so the core's items cannot carry
-them; instead each carries `#[mirrored]`, which adds a macro that imports
-the item and hands over its fields, and the core's `mirrors!` hands every
-mirror to the glue's `uniffi_mirror!`, which writes the copies, so a copy
-always repeats its item. It wraps the
-group handle, the read handle, the write handle, and the cancellation in
-the objects `ExpenseGroup`, `ExpenseGroupReader`, `ExpenseGroupWriter`,
-and `Cancellation`, whose methods forward to the core: every group call's
-two forms, every read's on the read handle, and every call's on the write
-handle are written from the core's `expense_group_calls!` table, the trait
-that lists the calls, with the core's documentation, its links as code
-spans; the
-constructors, `read`, and `release` are written by hand. It exports the
-value helpers as functions and the asynchronous load as
-`load_expense_group_async`. Its three source files are compiled by
-`eranos-web` as well, against UniFFI 0.31.2: they keep to what 0.31
-accepts, and both releases compile them and the code the macros write in
-them. `uniffi.toml` names the generated Swift
-module `EranosGenerated` and the generated Kotlin and Java package
-`eranos.internal`, and the generated Python module keeps the namespace's
-name, `eranos`, which the Python package holds as `eranos._internal.eranos`:
-the generated code sits beneath each package's hand-written layer.
-
-`eranos-web` builds the same glue for browsers and Node. A crate carries
-the derives of one UniFFI release, so it includes the three source files of
-`eranos-uniffi` by path and compiles them against 0.31.2, the release whose
-metadata uniffi-bindgen-react-native 0.31.0-6 reads, with what the
-generator's `wasm2` flavour links: `uniffi-runtime-wasm`, the runtime its
-code calls, and `wasm-bindgen` at 0.2.114, the release of the command-line
-tool the generator runs to write the glue beside the module. On
-`wasm32-unknown-unknown`, UniFFI's core compiles only with its
-`wasm-unstable-single-threaded` feature, which drops the `Send` and `Sync`
-bounds a target without threads has no use for.
-
-The Kotlin Multiplatform package builds `eranos-uniffi` itself, through
-its UniFFI plugin, as a shared library for the JVM and Android, whose
-metadata the plugin's generator reads, and as a static library that each
-Apple target links ([§ 9](#kotlin-multiplatform)).
-
-`eranos-capi` is the glue for C and C++, a bridge that Diplomat's macro
-turns into C functions and that `diplomat-tool` reads to write a C header
-and C++ classes, which live in `eranos::detail`. `diplomat-tool` reads the
-crate's source files, not what a macro expands them to, so most of the
-bridge is code the repository holds: `cargo xtask generate` writes
-`src/generated/records.rs`, an object for every record, list, and enum the
-calls reach and for the records the library parses, and
-`src/generated/expense_group.rs`, the group with both forms of
-every call, the read handle with every read's, the write handle with
-every call's, the cancellation, and an outcome per kind of answer, from the core's `#[mirrored]` items and its
-trait of calls, through eranos-glue's generator, and lays them out with
-rustfmt. An outcome holds the call's failure or its answer, and hands the
-answer over, a flag's included, only when the call succeeded; it holds an
-`Option` only where the answer may be absent: optional text, and the
-record or the flag of a lookup, which has an outcome of its own,
-`EranosFoundMemberOutcome` beside the `EranosMemberOutcome` of the calls
-that always return a member, and `EranosFoundFlagOutcome` for whether a
-member is archived, absent for an unknown one; the call's synchronous form
-gives a `DiplomatOption<bool>`, since Diplomat refuses an `Option`
-of a value inside a `Result`. The synchronous form of a call that the core
-marks as one that cannot fail returns its answer itself, as the core's does
-outside wasm, and a `Result` only for the text it checks. A call that takes
-optional text
-has a twin of each form that passes none, since C passes no absent text,
-named `clear_` for its `set_`: `clear_note` returns nothing, and
-`clear_language` a `Result`, as `set_language` does, since of the two
-only the note's call cannot fail. The generator's templates hold
-what the core cannot say: the group's constructors and its read and write
-handles, the cancellation, and the methods of a record that are not a
-field's, such as an
-expense's total and an item's line totals and its discount's amount. A
-test of xtask fails while a committed file holds other code than the
-generator writes; it compares tokens, so rustfmt's commas, a `match` arm's
-braces, and the wrapping of a doc comment cannot fail it, and the files'
-line endings cannot either. The
-worker thread, the checks of text, the error, the dates and times,
-amounts, lists of text, and the value helpers stay hand-written beside
-them. Diplomat carries opaque objects, plain structs, and C-like enums, so
-a record, a list, and an enum with data is an opaque object: a record has
-a constructor of its required fields, which starts every other field
-absent, empty, or at its default (an item's quantity at one unit, 10 000
-ten-thousandths; an expense's tip at the no-tip rule and its category at
-the built-in one), a getter of every field, and, for an entry, a setter of
-each; a list has `len` and `get`, and `create` and `push` when a caller
-builds one; an enum with data has `kind`, a constructor per variant, and a
-getter per field. A record the library parses,
-`EranosPhoneNumber` or `EranosIban`, is read-only and made only by its
-`parse`, so C never pairs a value with text the library did not derive
-from it: `EranosMember`'s `set_phone` takes the number's text, which the
-library parses, filling its international form, and
-`EranosPaymentAccountDetails`'s `create_iban` takes the IBAN's text and
-fills its country code, each refusing what the library refuses. The
-formatters of a date, a time, a percentage, parts, and a quantity
-(`EranosQuantity`, beside `parse`, `from_whole`, and `from_double`) write
-any numbers and return nothing, and a `check` beside each refuses what the
-library refuses. The no-tip rule is `EranosTipRule`'s `none`, and the
-built-in category's identifier `EranosIdentifier`'s `uncategorised`. A
-date and a time of day are plain structs. Text crosses as bytes, which the
-bridge checks are UTF-8, reporting `InvalidText` otherwise, and text a call
-returns is written into a `DiplomatWrite`. An
-error crosses as the binding core's `FlatError`: a kind, a failure, the
-message, and a field per value a failure holds, since Diplomat's enums
-hold no data; the bridge's C-like enums convert from the core's through
-Diplomat's `enum_convert`, so the flattening, and every failure's arm,
-stays where the Rust tests reach it. Every group call has a synchronous
-form, which blocks while another call holds the lock, and an asynchronous
-one, which runs on the group's worker thread, started by the first such
-call, in the order of the calls, and reports its outcome to a callback
-there, a load on a thread of its own. Diplomat refuses a callback that
-must be `Send`, so the bridge moves each one in a wrapper that asserts it:
-the C and C++ APIs document that a callback runs on another thread. Only
-one Diplomat library links into a program, since the runtime exports fixed
-symbol names.
-
-The generators, `uniffi-bindgen` for Swift, Kotlin, and Python and
-`uniffi-bindgen-java` for Java, are the binaries of `eranos-uniffi-bindgen`,
-built on the UniFFI release that builds the library, so the code they write
-reads the library's metadata as written. They sit in a package of their
-own, of binaries only, so that no build or lint of the libraries, for the
-host or for the mobile and wasm targets, compiles a generator.
+- **`eranos-uniffi`**, for Swift, Kotlin, Java, and Python, copies the
+  core's records, enums, and error for UniFFI with `#[uniffi::remote]`. A
+  crate carries the derives of one UniFFI release, so the core's items
+  cannot carry them: each carries `#[mirrored]`, which adds a macro that
+  imports the item and hands over its fields, and the core's `mirrors!`
+  hands every mirror to the glue's `uniffi_mirror!`, which writes the copy.
+  - It wraps the group handle, the read handle, the write handle, and the
+    cancellation in the objects `ExpenseGroup`, `ExpenseGroupReader`,
+    `ExpenseGroupWriter`, and `Cancellation`. Every group call's two forms,
+    every read's on the read handle, and every call's on the write handle
+    are written from the core's `expense_group_calls!` table, with the
+    core's documentation, its links as code spans; the constructors,
+    `read`, `write`, and `release` are written by hand.
+  - It exports the value helpers as functions and the asynchronous load as
+    `load_expense_group_async`.
+  - `uniffi.toml` names the generated Swift module `EranosGenerated`, the
+    generated Kotlin and Java package `eranos.internal`, and the generated
+    Python module `eranos`, which the Python package holds as
+    `eranos._internal.eranos`.
+- **`eranos-web`**, for browsers and Node, includes the three source files
+  of `eranos-uniffi` by path and compiles them against UniFFI 0.31.2, the
+  release whose metadata uniffi-bindgen-react-native 0.31.0-6 reads, so
+  those files keep to what 0.31 accepts. It links what the generator's
+  `wasm2` flavour needs: `uniffi-runtime-wasm`, the runtime its code calls,
+  and `wasm-bindgen` at 0.2.114, the release of the tool the generator runs.
+  On `wasm32-unknown-unknown`, UniFFI's core compiles only with its
+  `wasm-unstable-single-threaded` feature, which drops the `Send` and
+  `Sync` bounds a target without threads has no use for.
+- **The Kotlin Multiplatform package** builds `eranos-uniffi` itself,
+  through its UniFFI plugin: a shared library for the JVM and Android,
+  whose metadata the plugin's generator reads, and a static library that
+  each Apple target links ([§ 9](#kotlin-multiplatform)).
+- **`eranos-capi`**, for C and C++, is a bridge that Diplomat's macro turns
+  into C functions and that `diplomat-tool` reads to write a C header and
+  C++ classes, in `eranos::detail`.
+  - `diplomat-tool` reads source files, not what a macro expands them to, so
+    `cargo xtask generate` writes most of the bridge as files, from the
+    core's `#[mirrored]` items and its trait of calls:
+    `src/generated/records.rs`, an object for every record, list, and enum
+    the calls reach and for the records the library parses, and
+    `src/generated/expense_group.rs`, the group with both forms of every
+    call, the read and write handles with theirs, the cancellation, and an
+    outcome per kind of answer. A test of xtask fails while a committed
+    file holds other tokens than the generator writes.
+  - The generator's templates hold what the core cannot say: the group's
+    constructors and its read and write handles, the cancellation, and the
+    methods of a record that are not a field's, such as an expense's total.
+    The worker thread, the checks of text, the error, dates and times,
+    amounts, lists of text, and the value helpers are written by hand.
+  - Diplomat carries opaque objects, plain structs, and C-like enums. A
+    record, a list, and an enum with data are opaque objects: a record has
+    a constructor of its required fields, which starts every other field
+    absent, empty, or at its default (an item's quantity at one unit, an
+    expense's tip at the no-tip rule and its category at the built-in
+    one), a getter of every field, and, for an entry, a setter of each; a
+    list has `len` and `get`, and `create` and `push` when a caller builds
+    one; an enum with data has `kind`, a constructor per variant, and a
+    getter per field. A date and a time of day are plain structs.
+  - A record the library parses, `EranosPhoneNumber` or `EranosIban`, is
+    read-only and made by its `parse`, so C never pairs a value with text
+    the library did not derive from it.
+  - The formatters of a date, a time, a percentage, parts, and a quantity
+    write any numbers, and a `check` beside each refuses what the library
+    refuses. The no-tip rule is `EranosTipRule`'s `none`, and the built-in
+    category's identifier `EranosIdentifier`'s `uncategorised`.
+  - Text crosses as bytes, which the bridge checks are UTF-8, reporting
+    `InvalidText` otherwise; text a call returns is written into a
+    `DiplomatWrite`. An error crosses as the binding core's `FlatError`,
+    since Diplomat's enums hold no data.
+  - Every group call has a synchronous form, which blocks while another
+    call holds the lock and returns the answer itself for a call that
+    cannot fail, and an asynchronous one, which runs on the group's worker
+    thread, in the order of the calls, and reports its outcome to a
+    callback there; a load runs on a thread of its own. An outcome holds
+    the call's failure or its answer, with an `Option` only where the
+    answer may be absent, and a lookup has an outcome of its own,
+    `EranosFoundMemberOutcome` beside `EranosMemberOutcome`. A call that
+    takes optional text has a twin of each form that passes none, named
+    `clear_` for its `set_`, since C passes no absent text.
+  - Diplomat refuses a callback that must be `Send`, so the bridge moves
+    each one in a wrapper that asserts it, and the C and C++ APIs document
+    that a callback runs on another thread. Only one Diplomat library links
+    into a program, since the runtime exports fixed symbol names.
+- **`eranos-uniffi-bindgen`** holds the generators, `uniffi-bindgen` for
+  Swift, Kotlin, and Python and `uniffi-bindgen-java` for Java, built on the
+  UniFFI release that builds the library, so they read its metadata as
+  written. It is a package of binaries alone, so no build or lint of the
+  libraries compiles a generator.
 
 ## 9. The packages
+
+Every package puts a layer written by hand, in its language's idiom, over
+the code generated from the library, and keeps the generated types out of
+what an app sees. The layers share these rules, which the sections below
+name in each language without repeating them:
+
+- **Identity.** Every entry has an identifier type of its own, which checks
+  its text by the library's rules and generates one, and every entry and
+  the group are made in two ways, with the identifier first or generating
+  it ([§ 2](#2-what-every-binding-shares)).
+- **Values that are valid once made.** A value the library checks is a type
+  that only its checking factories make, and it prints the library's text.
+  A currency the library answers with is built from the details it crosses
+  with, never looked up by its code, so an amount prints with the decimal
+  places the library sent; a phone number and an IBAN keep the text the
+  library derives from them, and cross back with it.
+- **Numbers.** A double becomes a value only through the core's `from_f64`
+  conversions, and an item's line totals and its discount's amount come
+  from the core's `expense_item_*` functions
+  ([§ 2](#2-what-every-binding-shares)).
+- **Defaults.** An expense's tip and category are never absent: they start
+  at the no-tip rule and the built-in category, which the layer reads from
+  the core's helpers. An item starts at one unit and without a discount,
+  and a discount at the line.
+- **Errors.** A failure the library reports is the language's error type,
+  with a case or a subclass per module holding the module's failure and
+  the library's message. A call the program should not make, such as one
+  through a released handle, fails with the language's own error for it.
+- **Calls.** Every group call has the language's asynchronous form, which
+  waits for the lock and, when it is cancelled, stops and leaves the group
+  as it was, and a synchronous twin; a read handle and a write handle hold
+  the lock across several calls until they are released.
+- **Ports.** `examples` holds a port per example of eranos, over the layer
+  alone, that prints the example's report byte for byte
+  ([TESTING.md § 2](TESTING.md#2-layout)), and the package's linters check
+  it with the layer.
 
 ### Swift
 
@@ -550,23 +553,16 @@ Swift API Design Guidelines:
 - A value the library checks is a type that is valid once made: `CurrencyCode`,
   from the library's list, and `Money`, `ExchangeRate`, `Percentage`,
   `Parts`, `Quantity`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`,
-  `IBAN`, `Username`, and `Language`, each printing the library's text. A
-  `CurrencyCode` holds the `CurrencyDetails` the core gives with an amount,
-  as the group currency, and in a failure, and an amount crosses back with
-  them, so the layer looks no currency up. A `PhoneNumber` holds its
-  `e164` and `international` forms, the second also its `description`,
-  and an `IBAN` its text and `countryCode`, as the core gives them, and
-  each crosses back with them, so the layer derives neither form again.
+  `IBAN`, `Username`, and `Language`. A `CurrencyCode` holds the
+  `CurrencyDetails` the core gives; a `PhoneNumber` holds its `e164` and
+  `international` forms, the second also its `description`, and an `IBAN`
+  its text and `countryCode`.
   `Percentage`, `Parts`, `Quantity`, `CalendarDate`, and `TimeOfDay` check
   their numbers through the core's checks when they are made and print
   through its formatters, which cannot fail; `Quantity(whole:)` makes a
   quantity of whole units through `quantity_from_whole`.
   `Money(amount:currency:)`, `Percentage(_:)`, `Parts(_:)`, `Quantity(_:)`,
-  and `ExchangeRate(_:)` take a `Double` and convert it through the core's
-  `money_from_f64`, `percentage_from_f64`, `parts_from_f64`,
-  `quantity_from_f64`, and `exchange_rate_from_f64`
-  ([§ 2](#2-what-every-binding-shares)), so a double is the same value in
-  Swift as in every other language. Whole numbers are `Int`: an initialiser
+  and `ExchangeRate(_:)` take a `Double`. Whole numbers are `Int`: an initialiser
   refuses one beyond the 32 bits the library holds with the library's own
   error for the value, as `CalendarDate(year: 0, month: 1, day: 1)` is
   refused, before the number crosses, and amounts and quantities keep
@@ -595,11 +591,7 @@ Swift API Design Guidelines:
   and a `DiscountScope`, `.line` or `.unit`, which
   `Discount(value:scope:)` starts at `.line`.
   `ExpenseItem.lineTotalBeforeDiscount()`, `discountAmount()`, and
-  `lineTotal()` read the line total before the discount, what the
-  discount takes off, and the line total from the core's
-  `expense_item_line_total_before_discount`,
-  `expense_item_discount_amount`, and `expense_item_line_total`, so the
-  layer never multiplies a unit price or takes a discount itself.
+  `lineTotal()` read the line's totals.
 - Every call that can fail throws `EranosError` as a typed throw, with the
   core's case per module and a failure enum per module whose payloads are
   typed (`ExpenseGroupFailure.memberInUse(member:expenses:transfers:)`); a
@@ -618,10 +610,8 @@ Swift API Design Guidelines:
   closure throws any error, which a closure Swift does not infer a thrown
   type for takes.
 
-`bindings/swift/examples` is a package of its own over this one, with a
-program per example of eranos that prints the example's report
-([TESTING.md § 2](TESTING.md#2-layout)); SwiftLint lints and analyses it
-with the package.
+`bindings/swift/examples` is a package of its own over this one, whose
+ports SwiftLint lints and analyses with the package.
 
 ### Kotlin
 
@@ -658,29 +648,16 @@ its code. The layer follows the Kotlin library guidelines:
   date, a time, a percentage, parts, and a quantity through the core's
   formatters, which cannot fail. `Money.fromDouble(value, currency)` and
   the `fromDouble` of `Percentage`, `Parts`, `Quantity`, and
-  `ExchangeRate`, in their companions, convert a `Double` through the
-  core's `money_from_f64` and its siblings
-  ([§ 2](#2-what-every-binding-shares)), so a double is the same value in
-  Kotlin as in every other language. An `ExpenseItem`'s `quantity` is a
+  `ExchangeRate`, in their companions, convert a `Double`. An `ExpenseItem`'s `quantity` is a
   `Quantity`, ten-thousandths in a `Long`, and defaults to `Quantity.ONE`,
   one unit, and its `discount` defaults to `null`, none: a `Discount` of a
   `DiscountValue`, the sealed interface of `Percentage` and `Fixed`, and a
   `DiscountScope`, `LINE` or `UNIT`, which its constructor defaults to
-  `LINE`. The item's `lineTotalBeforeDiscount()`, `discountAmount()`, and
-  `lineTotal()` are the core's `expense_item_line_total_before_discount`,
-  `expense_item_discount_amount`, and `expense_item_line_total`, so no
-  receipt multiplies a price or takes a discount in Kotlin. A
-  `PhoneNumber` and an `Iban` keep the international form and the country
-  code of the record they cross with, and read them with no call into the
-  library.
-- A currency the library answers with, in an amount, as the group
-  currency, and in a failure, is a `CurrencyCode` built from the
-  `CurrencyDetails` it crosses with, never looked up by its code, so an
-  amount prints with the decimal places the library sent, and an amount
-  crosses back with the details its currency holds. uniffi-bindgen and the
-  Kotlin Multiplatform package's generator both write the `u8` of decimal
-  places as a `UByte`, and Kotlin's unsigned types are invisible from Java,
-  so `decimalPlaces` is an `Int`.
+  `LINE`, and the item reads its totals with `lineTotalBeforeDiscount()`,
+  `discountAmount()`, and `lineTotal()`.
+- uniffi-bindgen and the Kotlin Multiplatform package's generator both
+  write a currency's `u8` of decimal places as a `UByte`, and Kotlin's
+  unsigned types are invisible from Java, so `decimalPlaces` is an `Int`.
 - A failure the library reports throws `EranosException`, a subclass per
   module holding the module's failure (`ExpenseGroupFailure.MemberInUse`)
   and the library's message. A call the program should not make throws the
@@ -695,10 +672,8 @@ its code. The layer follows the Kotlin library guidelines:
 - The binary-compatibility validator checks the layer's API against the
   committed dump, `eranos/api/eranos.api`.
 
-The module `examples` holds a package per example of eranos, over the layer,
-that prints the example's report ([TESTING.md § 2](TESTING.md#2-layout));
-ktlint and detekt check it with the layer, detekt with the two exceptions
-its `detekt.yml` gives the reasons for.
+The module `examples` holds the ports, a package each; detekt checks them
+with the two exceptions its `detekt.yml` gives the reasons for.
 
 ### Java
 
@@ -728,11 +703,7 @@ The layer follows Effective Java and Google Java Style:
   helpers give; `Expense`'s builder starts the category and the tip at
   them, its `category` and `tip` refuse a `null` the same way, and
   `Expense.category()` and `tip()` return the values, not an `Optional`.
-- A currency the library answers with, in an amount, as the group
-  currency, and in a failure, is a `CurrencyCode` built from the
-  `CurrencyDetails` it crosses with, never looked up by its code, so an
-  amount prints with the decimal places the library sent. Java has no
-  unsigned byte: uniffi-bindgen-java writes the `u8` of decimal places as
+- Java has no unsigned byte: uniffi-bindgen-java writes the `u8` of decimal places as
   a `byte`, which `CurrencyCode` reads with `Byte.toUnsignedInt`, and
   `decimalPlaces()` returns an `int`.
 - `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`,
@@ -740,9 +711,8 @@ The layer follows Effective Java and Google Java Style:
   through the core's check of it, and `toString` writes it through the
   core's formatter, which cannot fail, so it has no fallback text.
   `Money.fromDouble(value, currency)` and the `fromDouble` of
-  `Percentage`, `Parts`, `Quantity`, and `ExchangeRate` convert a double
-  through the core's helpers ([§ 2](#2-what-every-binding-shares)), and
-  refuse NaN and the infinities with `MoneyFailure.NotFinite`;
+  `Percentage`, `Parts`, `Quantity`, and `ExchangeRate` convert a double,
+  and refuse NaN and the infinities with `MoneyFailure.NotFinite`;
   `Quantity.ofWhole` makes a quantity of whole units. A `PhoneNumber`
   holds its E.164 and international forms, and an `Iban` its text and
   country code, as the records the library sends carry them:
@@ -758,11 +728,7 @@ The layer follows Effective Java and Google Java Style:
   without one starts at `LINE`; both constructors refuse a `null`.
   `build()` checks nothing, as `Expense`'s does not: the item's totals and
   the group check the line. `lineTotalBeforeDiscount()`,
-  `discountAmount()`, and `lineTotal()` read the line total before the
-  discount, what the discount takes off, and the line total from the
-  core's `expense_item_line_total_before_discount`,
-  `expense_item_discount_amount`, and `expense_item_line_total`, so the
-  layer never multiplies a unit price or takes a discount itself.
+  `discountAmount()`, and `lineTotal()` read the line's totals.
 - An absent value is an empty `Optional`, a variant a record of a sealed
   interface, and a failure the library reports a checked
   `EranosException`, a subclass per module holding the module's failure.
@@ -776,11 +742,8 @@ The layer follows Effective Java and Google Java Style:
   table by class, which the error test checks against every class the
   generator writes.
 
-The source set `examples` holds a package per example of eranos, over the
-layer, that prints the example's report
-([TESTING.md § 2](TESTING.md#2-layout)); it compiles as the tests do, with
-every lint as an error and Error Prone, and google-java-format checks it
-with the layer.
+The source set `examples` holds the ports, a package each, compiled as the
+tests are, with every lint as an error and Error Prone.
 
 ### TypeScript
 
@@ -790,7 +753,7 @@ wasm-bindgen's glue sit in `src/internal`, which the package's `exports`
 leave out: its entry point is the bundle `dist/eranos.js`, whose
 declarations drop every item marked `@internal`, beside `eranos_web.wasm`,
 which the app hands to `init` before any other call, since a bundler that
-copies the file renames it. The player, `@ubjs/wasm` and `@ubjs/core`,
+copies the file renames it. The generated code's runtime, `@ubjs/wasm` and `@ubjs/core`,
 stays a dependency, so the app's resolver picks its browser or its Node
 build. The layer follows the Google TypeScript Style Guide:
 
@@ -808,11 +771,7 @@ build. The layer follows the Google TypeScript Style Guide:
   library's text; entries and totals are read-only interfaces, and a
   variant is a union discriminated by `kind`
   (`{ kind: 'equal', members }`).
-- A currency the library answers with, in an amount, as the group
-  currency, and in a failure, is a `CurrencyCode` built from the
-  `CurrencyDetails` it crosses with, never looked up by its code, so an
-  amount prints with the decimal places the library sent. The layer keeps
-  one `CurrencyCode` per code, built on the code's first use, which
+- The layer keeps one `CurrencyCode` per code, built on the code's first use, which
   `CurrencyCode.of`, `CurrencyCode.all`, amounts, failures, and the group
   all return, so currencies compare with `===`.
 - `CalendarDate.of`, `TimeOfDay.of`, `Percentage.ofBasisPoints`,
@@ -826,21 +785,13 @@ build. The layer follows the Google TypeScript Style Guide:
   holds its ten-thousandths as a `bigint`, as an amount holds its minor
   units, and `Quantity.ofWhole` takes a `bigint` of whole units, which the
   core's `quantity_from_whole` turns into ten-thousandths.
-  `Money.fromNumber(value, currency)` and the
-  `fromNumber` of `Percentage`, `Parts`, `Quantity`, and `ExchangeRate`
-  hand a number, which JavaScript holds as a double, to the core's
-  `money_from_f64` and its siblings, so the same number is the same value
-  as in every other language. `expenseItemLineTotalBeforeDiscount(item)`,
+  `Money.fromNumber(value, currency)` and the `fromNumber` of
+  `Percentage`, `Parts`, `Quantity`, and `ExchangeRate` take a number,
+  which JavaScript holds as a double;
+  `expenseItemLineTotalBeforeDiscount(item)`,
   `expenseItemDiscountAmount(item)`, and `expenseItemLineTotal(item)`
-  answer a line's total before its discount, what its discount takes off,
-  and its total from the core's `expense_item_line_total_before_discount`,
-  `expense_item_discount_amount`, and `expense_item_line_total`, so an app
-  shows the totals the library adds up rather than multiplying a price or
-  taking a discount itself. A `PhoneNumber`
-  holds its `e164` and `international` forms, and an `Iban` its text and
-  its `countryCode`, as the core's records carry them, so printing one
-  calls nothing; the core refuses a record whose derived text is not the
-  library's ([§ 5](#5-the-text-a-binding-shows)).
+  answer a line's totals. A `PhoneNumber` holds its `e164` and
+  `international` forms, and an `Iban` its text and its `countryCode`.
 - A record with a field the library gives a default has two types. The
   one every read returns keeps the record's name, `Member`, `Expense`,
   `ExpenseItem`, `Discount`, and `TipRule`, and requires every field the
@@ -879,9 +830,7 @@ build. The layer follows the Google TypeScript Style Guide:
   `ExpenseGroupWriter` are `Disposable`, so `using` frees them at the end
   of a block.
 
-`examples` holds a module per example of eranos, over the layer, that prints
-the example's report on Node ([TESTING.md § 2](TESTING.md#2-layout));
-Prettier, ESLint, and `tsc` check it with the layer.
+`examples` holds the ports, a module each, which run on Node.
 
 ### Kotlin Multiplatform
 
@@ -970,9 +919,7 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   unit, `ERANOS_QUANTITY_ONE`, a C23 `constexpr` 10 000;
   `eranosQuantityParse(text, &tenThousandths)` and
   `eranosQuantityFromWhole(units, &tenThousandths)` make others, and
-  `eranosExpenseItemLineTotal(item, &lineTotal)` gives the line total the
-  library computes, rounded half away from zero, so no port multiplies a
-  unit price itself.
+  `eranosExpenseItemLineTotal(item, &lineTotal)` gives the line total.
 - An item starts without a discount, and `eranosExpenseItemDiscount`
   gives nullptr until `eranosExpenseItemSetDiscount` gives it one, which
   `eranosExpenseItemClearDiscount` removes. An `EranosDiscount` holds an
@@ -986,8 +933,7 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   `eranosTipRuleSetDistribution` changes it.
   `eranosExpenseItemLineTotalBeforeDiscount` and
   `eranosExpenseItemDiscountAmount` give the line total before the discount
-  and what the discount takes off, as the library computes them, so no port
-  takes a discount itself. An item is a record that checks nothing when it
+  and what the discount takes off. An item is a record that checks nothing when it
   is set, so a discount its line cannot take is refused by each of the
   item's totals and by the group call that carries it.
 - Text goes in as UTF-8 ended by a NUL, nullptr reading as empty text, and
@@ -1003,8 +949,7 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   the group's, and a failure's, comes back as details the caller destroys,
   and `eranosMoneyFormat` and `eranosBalanceFormat` write their text from
   the amount alone and cannot fail.
-- A double becomes a value through the library's conversion
-  ([§ 2](#2-what-every-binding-shares)):
+- A double becomes a value through
   `eranosMoneyFromDouble(value, currency, &money)`, which takes the
   currency's details as `eranosMoneyCreate` and `eranosMoneyParse` do,
   `eranosPercentageFromDouble(value, &basisPoints)`,
@@ -1046,13 +991,11 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   changes what later calls see takes its object as not `const`, though
   Diplomat's function takes it `const`.
 
-`examples` holds a program per example of eranos, over the layer, that
-prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and
-`report.h` and `report.c`, the tables and headings the programs share;
-each builds as the tests do, under the sanitizers, and leaks nothing,
-which `LeakSanitizer` checks. clang-format and clang-tidy check them with
-the layer, clang-tidy without its magic numbers, which in a port are the
-amounts and dates of its report.
+`examples` holds the ports, a program each, and `report.h` and `report.c`,
+the tables and headings they share; each builds as the tests do, under the
+sanitizers, and leaks nothing, which `LeakSanitizer` checks. clang-tidy
+checks them without its magic numbers, which in a port are the amounts and
+dates of its report.
 
 ### C++
 
@@ -1082,14 +1025,12 @@ Core Guidelines with the naming rule above:
   refuses, prints as "-12.5%".
   `Money::fromDouble(value, currency)`, `Percentage::fromDouble(value)`,
   `Parts::fromDouble(value)`, `Quantity::fromDouble(value)`, and
-  `ExchangeRate::fromDouble(value)` make a value from a double through the
-  library's conversion ([§ 2](#2-what-every-binding-shares)), and refuse
+  `ExchangeRate::fromDouble(value)` make a value from a double, and refuse
   NaN and the infinities with `Failure::MONEY_NOT_FINITE`. A `Quantity`
   holds `std::int64_t` ten-thousandths, which start at one unit, 10 000,
   so an `ExpenseItem`'s `quantity` starts there; `Quantity::parse(text)`
   and `Quantity::whole(units)` make others, and the free
-  `lineTotal(item)` returns the line total the library computes, so no
-  port multiplies a unit price itself. An `ExpenseItem`'s `discount` is a
+  `lineTotal(item)` returns the line total. An `ExpenseItem`'s `discount` is a
   `std::optional<Discount>`, none for a line at full price; a `Discount`
   holds its `value`, a `DiscountValue`, the `std::variant` of
   `PercentageDiscountValue` and `FixedDiscountValue`, and its `scope`, a
@@ -1100,11 +1041,10 @@ Core Guidelines with the naming rule above:
   expense's members, and `participants(split)` the members who share an
   expense split's cost, as Rust names them. The free `lineTotalBeforeDiscount(item)` and
   `discountAmount(item)` return the line total before the discount and
-  what the discount takes off, as the library computes them, and each of
+  what the discount takes off, and each of
   the three totals refuses a discount the line cannot take.
   `CurrencyCode` also keeps, in a `std::shared_ptr`, the library's details
-  it was read from, which an amount in it crosses with, so neither an
-  amount nor its text looks the currency up; its `decimalPlaces()` is a
+  it was read from; its `decimalPlaces()` is a
   `std::uint8_t`, as the library holds it, which a stream's `<<` writes as
   a character and `std::format` and `std::to_string` write as a number,
   and a failure's currencies are `CurrencyCode`s.
@@ -1161,10 +1101,9 @@ libc++ 17 provide, or MSVC 19.36 with `/std:c++latest` (from 19.43, also
 (libstdc++ 14, libc++ 18) and `std::ranges::contains` (libstdc++ 13,
 libc++ 19).
 
-`examples` holds a program per example of eranos, over the layer, that
-prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and
-`report.hpp` and `report.cpp`, the tables and headings the programs share;
-each builds and is checked as the C ports are, clang-tidy without its magic
+`examples` holds the ports, a program each, and `report.hpp` and
+`report.cpp`, the tables and headings they share; each builds and is
+checked as the C ports are, clang-tidy without its magic
 numbers and without its check of an optional read unchecked, since a port
 reads one it expects with `value()`, which ends the port when it is
 absent, as `must()` ends it, printing the library's message, when the
@@ -1193,25 +1132,17 @@ reads its annotations without checking its code, and Ruff leaves it out:
   library checks is a class whose constructor checks it, as
   `datetime.date`'s does (`CurrencyCode('EUR')`, `CalendarDate(2026, 9, 23)`,
   `Email('ana@example.com')`), and prints the library's text. The
-  constructor of `CurrencyCode` looks its code up, for an app's input; a
-  currency the core gives with an amount, as the group currency, and in a
-  failure is made from the `CurrencyDetails` it carries, with no lookup,
-  and an amount crosses back with them. A `PhoneNumber` holds its
-  international form, which `str` writes, and its E.164 form, `e164`, and
-  an `Iban` its country code, as the core derives them when it parses the
-  text, reads them through properties
-  (`phone.international`, `iban.country_code`), and equals only a value
-  with the same derived text; one the core gives with a member is made
-  from the text it carries, with no call, and crosses back with it
-  ([§ 5](#5-the-text-a-binding-shows)). `CalendarDate`, `TimeOfDay`,
+  constructor of `CurrencyCode` looks its code up, for an app's input. A
+  `PhoneNumber` holds its international form, which `str` writes, and its
+  E.164 form, `e164`, and an `Iban` its country code, read through
+  properties (`phone.international`, `iban.country_code`); each equals only
+  a value with the same derived text. `CalendarDate`, `TimeOfDay`,
   `Percentage`, `Parts`, and `Quantity` check their numbers through the
   core's checks and print through its formatters, which cannot fail. The
   classmethods `Money.from_float(value, currency)`,
   `Percentage.from_float(value)`, `Parts.from_float(value)`,
-  `Quantity.from_float(value)`, and `ExchangeRate.from_float(value)` hand
-  a `float` to the core's `money_from_f64` and its siblings, which convert
-  it as the library does ([§ 2](#2-what-every-binding-shares)), and
-  `Quantity.whole(units)` hands a whole number to `quantity_from_whole`.
+  `Quantity.from_float(value)`, and `ExchangeRate.from_float(value)` take
+  a `float`, and `Quantity.whole(units)` a whole number.
   Amounts, entries, and totals are frozen dataclasses: an entry takes its
   fields by keyword and is edited with `copy.replace`, which keeps its
   identifier, and a variant is a union of frozen dataclasses
@@ -1232,10 +1163,7 @@ reads its annotations without checking its code, and Ruff leaves it out:
   `PercentageDiscount` and `FixedDiscount`, and a `DiscountScope`, `LINE`
   or `UNIT`, which defaults to `LINE`.
   `ExpenseItem.line_total_before_discount()`, `discount_amount()`, and
-  `line_total()` answer with the core's
-  `expense_item_line_total_before_discount`,
-  `expense_item_discount_amount`, and `expense_item_line_total`, so the
-  layer multiplies no unit price and takes no discount itself.
+  `line_total()` answer the line's totals.
 - A failure the library reports raises an `EranosError`, a subclass per
   module holding the module's failure, a dataclass nested in it
   (`ExpenseGroupError.MemberInUse`), with the library's message; a saved
@@ -1259,61 +1187,21 @@ reads its annotations without checking its code, and Ruff leaves it out:
 Sphinx's autodoc writes the documentation from the docstrings, in Google's
 style, which napoleon reads, with every warning an error.
 
-`examples` holds a module per example of eranos, over the layer, that
-prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and
-`report.py`, the tables and headings the modules share; the tour is a
-package, whose `__main__.py` tells its story, run as
-`python -m examples.grand_tour`. Ruff and ty check them with the layer,
-Ruff without its magic values, which in a port are the amounts and dates
-of its report.
+`examples` holds the ports, a module each, and `report.py`, the tables and
+headings they share; the tour is a package, run as
+`python -m examples.grand_tour`. Ruff checks them without its magic values,
+which in a port are the amounts and dates of its report.
 
 ## 10. How the gates build the packages
 
-`cargo xtask gates` writes every language's sources into
-`target/uniffi/<language>`; they are never committed. On macOS it also
-builds the Swift package's XCFramework in the dev profile, 1.3 GB of debug
-libraries, copies the generated Swift into the package, builds the package
-and its examples, tests the package, lints and analyses both, and documents
-the package. On every machine it builds the library of the four Android ABIs
-with `cargo ndk`, copies the generated Kotlin into the Kotlin package, and
-tests, lints, and documents that package and builds its two Android
-libraries, whose native libraries the Android build strips. It copies the
-generated Java into the Java package, and checks its format, tests it,
-documents it, and builds its JAR. Last, it builds the library for
-`wasm32-unknown-unknown`, generates the TypeScript and the module into the
-TypeScript package with uniffi-bindgen-react-native, and checks the
-package's format, lints it, type-checks it, tests it, documents it, and
-builds its bundle, on Node 24, the oldest the package supports. Then it runs
-the Kotlin package's tests on the Kotlin Multiplatform package's JVM target,
-against its bindings, builds that package's Android libraries, and, on
-macOS, compiles its layer for every Apple target. Then it builds
-`eranos-capi`'s static library, generates the C and the C++ headers from its
-bridge with `diplomat-tool`, and, for each package, builds its tests with
-the LLVM that `LLVM_HOME` names, runs them under the sanitizers, holds every
-line and function of its layer covered, and checks its format, lint, and
-documentation. Then it copies the generated Python into the Python
-package, beside a link to the host library, installs the package's tools
-as `uv.lock` pins them, and checks the package's format, lints it,
-type-checks it, tests it and holds every line and branch of its layer
-covered, and documents it, on Python 3.14, the oldest the package
-supports. Last, it builds eranos-uniffi's host library with
-`sequential-ids` into `target/sequential`, and eranos-web's and
-eranos-capi's beside it, generates the UniFFI sources, and runs every
-port: on macOS the Swift ports, on a copy of the Swift package over the
-first library, the Kotlin ports on the JVM, over the Kotlin package's
-bindings and over the Kotlin Multiplatform package's, the Java ports, the
-TypeScript ports, on Node, in a copy of the TypeScript package over
-eranos-web built the same way, the C and C++ ports, built under the
-sanitizers on eranos-capi's library, and the Python ports, in a copy of the
-Python package over the first library, each report compared with its
-example's.
-
-`cargo xtask test`, `lint`, and `examples` run one language's part of this,
-`format` its formatters, and `package` builds its release packages, which
-an app consumes, into `target/packages`
-([DEVELOPMENT.md § 2](DEVELOPMENT.md#2-building-and-testing)).
-
-`cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
-coverage's instrumentation and runs the Swift, Kotlin, Java, Python, C, and
-C++ tests on them, which measures the glue through the foreign tests
+`cargo xtask gates` builds, checks, tests, and documents every package, in
+the order and with the tools that gates 10 to 19 of
+[AGENTS.md](../AGENTS.md#gates-before-committing) list, and runs every port
+against its example's report. The generated sources go to
+`target/uniffi/<language>` and are never committed, and on macOS the Swift
+package's XCFramework holds 1.3 GB of debug libraries. `cargo xtask test`,
+`lint`, and `examples` run one language's part, `format` its formatters,
+and `package` its release packages, into `target/packages`
+([DEVELOPMENT.md § 2](DEVELOPMENT.md#2-building-and-testing)); `cargo xtask
+coverage` measures the glue through the foreign tests
 ([TESTING.md § 5](TESTING.md#5-coverage)).

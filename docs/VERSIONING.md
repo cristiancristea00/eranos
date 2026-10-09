@@ -82,8 +82,8 @@ or changes what one means, such as a withdrawn currency or a changed minor
 unit. `rlibphonenumber` is pinned the same way, and every move of its pin is
 breaking: its libphonenumber metadata can withdraw a range, and then groups
 holding such a number stop loading, while an older device refuses numbers
-in a new range, and the grouping `PhoneNumber::international` returns
-follows the metadata too
+in a new range, and the grouping of `PhoneNumber::international`, the
+text every binding shows for a number, follows the metadata too
 ([DEVELOPMENT § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)).
 An IBAN registry release that changes a length or a structure is breaking
 for the same reason.

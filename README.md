@@ -97,15 +97,9 @@ flowchart LR
 </details>
 
 - **Money is exact.** Amounts are whole minor units, never stored or
-  computed as floats: a double an app holds is converted once, on the way
-  in, from its shortest decimal form, so 1.005 is 1.01 EUR in every
-  language. An item's line total, its unit price times a quantity of up to
-  four decimal places, rounds half away from zero, and so does a
-  percentage discount, taken off the line or off each unit. Every division
-  hands out its leftover cents by the largest-remainder method, so the
-  parts always add up. Ties rotate with the expense's identifier, so the
-  extra cent of an even split does not always land on the same person, and
-  a synced expense divides identically on every device.
+  computed as floats, and every division hands out its leftover cents so
+  that the parts always add up, the same way on every device
+  ([docs/ARCHITECTURE.md § 4](https://github.com/cristiancristea00/eranos/blob/main/docs/ARCHITECTURE.md#4-money-and-rounding)).
 - **Every currency, one ledger.** An expense in another currency than the
   group's has a converted cost, with an exchange rate fixed when it is
   entered; it is converted once, exactly, into the group currency. A plain
@@ -126,7 +120,7 @@ flowchart LR
   currency change, and loading, also come as futures that yield while they
   work, for any executor or none, and a `SharedExpenseGroup` shares a group
   between tasks and threads behind a read-write lock
-  ([docs/ARCHITECTURE.md § 12](docs/ARCHITECTURE.md#12-async-and-concurrency)).
+  ([docs/ARCHITECTURE.md § 12](https://github.com/cristiancristea00/eranos/blob/main/docs/ARCHITECTURE.md#12-async-and-concurrency)).
 - **Four settlement strategies**, chosen by the caller:
 
   | Strategy           | Payments                                                        | Cost                                                    |
@@ -136,7 +130,7 @@ flowchart LR
   | `Greedy`           | at most n − 1, within 3/2 of the minimum                        | O(n log n)                                              |
   | `Direct`           | one per pair of members with a netted debt                      | O(pairs)                                                |
 
-The design, with its trade-offs, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The design, with its trade-offs, is in [docs/ARCHITECTURE.md](https://github.com/cristiancristea00/eranos/blob/main/docs/ARCHITECTURE.md).
 
 ## Examples
 
@@ -161,14 +155,9 @@ cargo run -p eranos --features serde --example persistence
 cargo run -p eranos --all-features --example grand_tour   # the same identifiers every run
 ```
 
-Every example also has a Swift, a Kotlin, a Java, a TypeScript, a C, a
-C++, and a Python port, in `bindings/swift/examples`,
-`bindings/kotlin/examples`, `bindings/java/src/examples`,
-`bindings/typescript/examples`, `bindings/c/examples`,
-`bindings/cpp/examples`, and `bindings/python/examples`, each printing the
-same report byte for byte, which the gates check, the Kotlin ones on the
-Kotlin Multiplatform package too
-([docs/TESTING.md § 2](docs/TESTING.md#2-layout)).
+Every example has a port in each binding's package that prints the same
+report byte for byte, which the gates check
+([docs/TESTING.md § 2](https://github.com/cristiancristea00/eranos/blob/main/docs/TESTING.md#2-layout)).
 
 ## Features
 
@@ -195,7 +184,7 @@ code generated from the library, and every one prints the library's own
 text for every value; `cargo xtask gates` builds and tests them all, and
 `cargo xtask package <language>` builds a language's release packages,
 which an app consumes, into `target/packages`. How they are built, and
-each layer's shape: [docs/BINDINGS.md](docs/BINDINGS.md).
+each layer's shape: [docs/BINDINGS.md](https://github.com/cristiancristea00/eranos/blob/main/docs/BINDINGS.md).
 
 ## Development
 
@@ -207,16 +196,16 @@ cargo test --workspace --all-features               # unit, integration, propert
 cargo bench -p eranos --features serde --bench '*'  # every benchmark
 ```
 
-The gates and conventions are in [AGENTS.md](AGENTS.md), every command and
-change recipe in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md), and the test
-suites in [docs/TESTING.md](docs/TESTING.md).
+The gates and conventions are in [AGENTS.md](https://github.com/cristiancristea00/eranos/blob/main/AGENTS.md), every command and
+change recipe in [docs/DEVELOPMENT.md](https://github.com/cristiancristea00/eranos/blob/main/docs/DEVELOPMENT.md), and the test
+suites in [docs/TESTING.md](https://github.com/cristiancristea00/eranos/blob/main/docs/TESTING.md).
 
 ## Versioning
 
 eranos follows [Semantic Versioning](https://semver.org/); before 1.0 a
 breaking change bumps the minor version. The public Rust API, the serialised
 format, and the rounding results are all part of the contract:
-[docs/VERSIONING.md](docs/VERSIONING.md).
+[docs/VERSIONING.md](https://github.com/cristiancristea00/eranos/blob/main/docs/VERSIONING.md).
 
 ## Repository layout
 
@@ -265,5 +254,5 @@ eranos/
 ```
 
 Every crate keeps each module's unit tests in `<module>/tests.rs`;
-[docs/ARCHITECTURE.md § 2](docs/ARCHITECTURE.md#2-crate-map) maps the crates
+[docs/ARCHITECTURE.md § 2](https://github.com/cristiancristea00/eranos/blob/main/docs/ARCHITECTURE.md#2-crate-map) maps the crates
 and what depends on what.
