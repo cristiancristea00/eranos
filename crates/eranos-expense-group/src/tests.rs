@@ -355,7 +355,10 @@ fn members_are_added_replaced_and_listed_in_creation_order() {
 }
 
 /// Archiving keeps a member's history and balance but keeps them out of new
-/// expenses, while transfers and replacements that keep them still work.
+/// expenses, while transfers and replacements that keep them in their role
+/// still work; a replacement that made an archived participant a payer, or
+/// an archived payer a participant, would give them a new part in an
+/// expense they can no longer be asked about.
 #[test]
 fn an_archived_member_keeps_history_but_joins_no_new_expense() {
     let Trip {
@@ -369,6 +372,9 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
         .unwrap();
     let lunch = group
         .add_expense(shared("10.00", ana, &[ana, bob]))
+        .unwrap();
+    let coffee = group
+        .add_expense(shared("6.00", carol, &[ana, bob]))
         .unwrap();
     group.archive_member(carol).unwrap();
     group.archive_member(carol).unwrap();
@@ -390,13 +396,27 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
         &ExpenseGroupError::ArchivedMember(carol),
         |group| group.add_expense(shared("5.00", ana, &[ana, carol])),
     );
-    // Replacing an expense she was in may keep her, in any role.
+    // Replacing an expense she was in may keep her in her role: a
+    // participant of the dinner, the payer of the coffee.
     let dearer = edited_expense(&group, dinner, |builder| builder.cost(eur("36.00")));
     group.replace_expense(dearer).unwrap();
+    let pricier = edited_expense(&group, coffee, |builder| builder.cost(eur("7.00")));
+    group.replace_expense(pricier).unwrap();
+    // It cannot move her to the other role.
     let paid_by_her = edited_expense(&group, dinner, |builder| builder.paid_by(carol));
-    group.replace_expense(paid_by_her).unwrap();
-    let paid_back = edited_expense(&group, dinner, |builder| builder.paid_by(ana));
-    group.replace_expense(paid_back).unwrap();
+    assert_unchanged(
+        &mut group,
+        &ExpenseGroupError::ArchivedMember(carol),
+        |group| group.replace_expense(paid_by_her),
+    );
+    let shared_with_her = edited_expense(&group, coffee, |builder| {
+        builder.split(Split::equal([ana, bob, carol]))
+    });
+    assert_unchanged(
+        &mut group,
+        &ExpenseGroupError::ArchivedMember(carol),
+        |group| group.replace_expense(shared_with_her),
+    );
     // Replacing one she was not in cannot add her.
     let with_her = edited_expense(&group, lunch, |builder| {
         builder.split(Split::equal([ana, bob, carol]))
@@ -408,7 +428,7 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
     );
     group.remove_expense(lunch).unwrap();
     // She can still settle up.
-    group.add_transfer(transfer(carol, ana, "12.00")).unwrap();
+    group.add_transfer(transfer(carol, ana, "5.00")).unwrap();
     assert_eq!(
         group.summary().member(carol).balance(),
         eranos_ledger::Balance::Settled

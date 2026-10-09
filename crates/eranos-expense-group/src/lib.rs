@@ -16,8 +16,8 @@ mod language;
 mod saved;
 mod shared;
 
-use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
 
 pub use builder::ExpenseGroupBuilder;
@@ -741,8 +741,10 @@ impl ExpenseGroup {
     /// Replaces the expense with the identifier of `expense`, returning the
     /// previous version.
     ///
-    /// The replacement may keep members who were archived after the
-    /// original was added, but may not add archived members.
+    /// The replacement may keep a member who was archived after the
+    /// original was added, in the role the original gave them, as a payer
+    /// or as a participant, but may not add an archived member or move one
+    /// to the other role.
     ///
     /// # Errors
     ///
@@ -1034,30 +1036,46 @@ impl ExpenseGroup {
     }
 
     /// Checks the references and the cost of `expense`; `previous` is the
-    /// version it replaces, whose archived members it may keep.
+    /// version it replaces, whose archived members it may keep in the role,
+    /// payer or participant, the version gave them.
     fn check_expense(
         &self,
         expense: &Expense,
         previous: Option<&Expense>,
     ) -> Result<(), ExpenseGroupError> {
-        for member in expense.members() {
-            let record = self
-                .members
-                .get(&member)
-                .ok_or(ExpenseGroupError::UnknownMember(member))?;
-            // Only an archived member needs the members of the version
-            // replaced, so they are listed only then.
-            if record.archived
-                && !previous.is_some_and(|previous| previous.members().contains(&member))
-            {
-                return Err(ExpenseGroupError::ArchivedMember(member));
-            }
+        for member in expense.payers().members() {
+            self.check_role(member, || {
+                previous.map(|previous| previous.payers().members().collect())
+            })?;
+        }
+        for member in expense.split().participants() {
+            self.check_role(member, || {
+                previous.map(|previous| previous.split().participants())
+            })?;
         }
         let category = expense.category();
         if !self.categories.contains_key(&CategoryKey::new(category)) {
             return Err(ExpenseGroupError::UnknownCategory(category));
         }
         self.check_cost(expense.cost())
+    }
+
+    /// Checks that `member` is in the group and, if archived, among `kept`,
+    /// the members the version replaced had in the same role; only an
+    /// archived member needs them, so they are listed only then.
+    fn check_role(
+        &self,
+        member: MemberId,
+        kept: impl FnOnce() -> Option<BTreeSet<MemberId>>,
+    ) -> Result<(), ExpenseGroupError> {
+        let record = self
+            .members
+            .get(&member)
+            .ok_or(ExpenseGroupError::UnknownMember(member))?;
+        if record.archived && !kept().is_some_and(|kept| kept.contains(&member)) {
+            return Err(ExpenseGroupError::ArchivedMember(member));
+        }
+        Ok(())
     }
 
     /// Checks the members and the cost of `transfer`.

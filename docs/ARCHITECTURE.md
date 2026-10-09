@@ -300,8 +300,9 @@ another, with a cost like an expense's.
 
 **Archived members** keep their history and balance and may send and
 receive transfers, but cannot join a new expense; a replacement may keep an
-archived member the original already had. A member referenced by any entry
-cannot be removed.
+archived member in the role the original gave them, payer or participant,
+and not move them to the other. A member referenced by any entry cannot be
+removed.
 
 ## 4. Money and rounding
 
