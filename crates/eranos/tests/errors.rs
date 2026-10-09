@@ -476,37 +476,25 @@ fn assert_not_echoed(input: &str, error: &impl Display) {
     }
 }
 
-/// A reworded identifier message would change what users read when a link
-/// or a file holds a broken ID.
+/// A reworded message would change what users read when an input, an entry,
+/// an edit, or a repayment plan is refused, or the hint they get for a typo.
 #[test]
-fn id_error_messages_are_pinned() {
-    // Every variant.
+fn every_message_is_pinned() {
+    // One table per error type.
     assert_messages(id_errors());
-}
-
-/// A reworded calendar message would change what users read when a date or
-/// time is refused.
-#[test]
-fn calendar_error_messages_are_pinned() {
-    // Every variant.
     assert_messages(calendar_errors());
-}
-
-/// A reworded money message would change what users read when an amount, a
-/// rate, a percentage, or a number of parts is refused.
-#[test]
-fn money_error_messages_are_pinned() {
-    // Every variant.
     assert_messages(money_errors());
-}
-
-/// A reworded account message would change what users read when payment
-/// details are refused.
-#[test]
-fn account_error_messages_are_pinned() {
-    // Every variant.
     assert_messages(account_errors());
-    // The IBAN reason is appended to the prefix.
+    assert_messages(iban_errors());
+    assert_messages(contact_errors());
+    assert_messages(member_errors());
+    assert_messages(category_errors());
+    assert_messages(language_errors());
+    assert_messages(expense_errors());
+    assert_messages(transfer_errors());
+    assert_messages(group_errors());
+    assert_messages(settlement_errors());
+    // The IBAN reason is appended to the account failure's prefix.
     assert_eq!(
         PaymentAccountError::InvalidIban(IbanError::WrongLength {
             expected: 24,
@@ -515,75 +503,6 @@ fn account_error_messages_are_pinned() {
         .to_string(),
         "invalid IBAN: expected 24 characters for this country, found 20"
     );
-}
-
-/// A reworded IBAN message would change the hint users get for a typo.
-#[test]
-fn iban_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(iban_errors());
-}
-
-/// A reworded contact message would change what users read when an email
-/// address or a phone number is refused.
-#[test]
-fn contact_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(contact_errors());
-}
-
-/// A reworded member message would tell the user to fill in the wrong input.
-#[test]
-fn member_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(member_errors());
-}
-
-/// A reworded category message would tell the user to fill in the wrong
-/// input.
-#[test]
-fn category_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(category_errors());
-}
-
-/// A reworded language message would change the hint users get for a tag.
-#[test]
-fn language_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(language_errors());
-}
-
-/// A reworded expense message would change what users read when an expense
-/// is rejected.
-#[test]
-fn expense_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(expense_errors());
-}
-
-/// A reworded transfer message would change what users read when a
-/// repayment is rejected.
-#[test]
-fn transfer_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(transfer_errors());
-}
-
-/// A reworded group message would change what users read when an edit is
-/// refused.
-#[test]
-fn group_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(group_errors());
-}
-
-/// A reworded settlement message would change what users read when a
-/// repayment plan cannot be computed.
-#[test]
-fn settlement_error_messages_are_pinned() {
-    // Every variant.
-    assert_messages(settlement_errors());
 }
 
 /// A capitalised or punctuated message would read wrongly when the apps
