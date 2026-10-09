@@ -9,16 +9,15 @@ use std::future::Future;
 use std::pin::pin;
 use std::task::{Context, Waker};
 
-use eranos_core::MemberId;
 use eranos_core::cooperative::Cooperative;
 use proptest::prelude::*;
 
 use super::*;
 use crate::Flow;
 
-/// The member `number`; members sort by number.
-fn member(number: u8) -> MemberId {
-    MemberId::new(&format!("member-{number:03}")).unwrap()
+/// The member `number`, by position; members sort by number.
+fn member(number: u8) -> usize {
+    usize::from(number)
 }
 
 /// Balances for members 1, 2, 3, … in order.

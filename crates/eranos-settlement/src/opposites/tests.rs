@@ -3,20 +3,19 @@
 //! doubled table and break greedy's bound, and a payment between members who
 //! are not exact opposites would leave one of them with a balance.
 
-use eranos_core::MemberId;
 use proptest::prelude::*;
 
 use super::*;
 
-/// The member `number`; members sort by number.
-fn member(number: u8) -> MemberId {
-    MemberId::new(&format!("member-{number:03}")).unwrap()
+/// The member `number`, by position; members sort by number.
+fn member(number: u8) -> usize {
+    usize::from(number)
 }
 
 /// A payment of `amount` from member `from` to member `to`.
 fn flow(from: u8, to: u8, amount: i64) -> Flow {
     Flow {
-        members: MemberPair {
+        members: Positions {
             from: member(from),
             to: member(to),
         },
@@ -84,7 +83,7 @@ proptest! {
             .map(|(amount, positive)| if positive { amount } else { -amount })
             .collect();
         let open = balances(&nets);
-        let net_of = |member: MemberId| open.iter().find(|balance| balance.member == member).map_or(0, |balance| balance.net);
+        let net_of = |member: usize| open.iter().find(|balance| balance.member == member).map_or(0, |balance| balance.net);
         let Pairing { flows, rest } = pair_opposites(&open);
         for flow in &flows {
             prop_assert!(0 < flow.amount);

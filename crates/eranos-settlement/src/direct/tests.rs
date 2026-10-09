@@ -27,22 +27,39 @@ fn the_sign_of_a_pair_decides_who_pays() {
         (pair(bob, carol), 0),
     ]);
     assert_eq!(
-        settle(&pairs),
+        settle(&pairs, CurrencyCode::EUR),
         vec![
-            Flow {
+            Payment {
                 members: pair(ana, bob),
-                amount: 700
+                amount: Money::from_minor_units(700, CurrencyCode::EUR),
             },
-            Flow {
+            Payment {
                 members: pair(carol, ana),
-                amount: 300
+                amount: Money::from_minor_units(300, CurrencyCode::EUR),
             }
         ]
     );
 }
 
+/// The payments are ordered by payer and then by recipient, as a plan
+/// promises, though a reversed pair comes after its key in the ledger's
+/// order.
+#[test]
+fn the_payments_are_ordered_by_payer_and_recipient() {
+    let (ana, bob, carol) = (member(1), member(2), member(3));
+    let pairs = BTreeMap::from([(pair(ana, carol), -300), (pair(bob, carol), 200)]);
+    let payers: Vec<MemberId> = settle(&pairs, CurrencyCode::EUR)
+        .iter()
+        .map(Payment::sender)
+        .collect();
+    assert_eq!(payers, [bob, carol]);
+}
+
 /// No netted debt means no payment.
 #[test]
 fn no_pairs_need_no_payment() {
-    assert_eq!(settle(&BTreeMap::new()), Vec::<Flow>::new());
+    assert_eq!(
+        settle(&BTreeMap::new(), CurrencyCode::EUR),
+        Vec::<Payment>::new()
+    );
 }

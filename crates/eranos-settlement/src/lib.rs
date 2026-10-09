@@ -27,7 +27,7 @@ use std::sync::OnceLock;
 
 use eranos_core::MemberId;
 use eranos_core::cooperative::Cooperative;
-use eranos_ledger::{Ledger, MemberPair};
+use eranos_ledger::{Ledger, MemberPair, MemberSummary};
 use eranos_money::{CurrencyCode, Money};
 
 pub use error::{FromSettlementError, SettlementError};
@@ -219,21 +219,35 @@ impl Payment {
     }
 }
 
-/// A payment in minor units, before it becomes a [`Payment`] in the group
-/// currency.
+/// Two members by their positions among the open balances, which follow
+/// the members' identifiers: the member who pays, then the member paid.
+/// Positions compare as the identifiers do, at the cost of two integers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct Positions {
+    from: usize,
+    to: usize,
+}
+
+/// A payment in minor units between two members named by their positions,
+/// before it becomes a [`Payment`] in the group currency.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Flow {
-    members: MemberPair,
+    members: Positions,
     amount: i64,
 }
 
 impl Flow {
-    /// The payment this flow makes, in `currency`.
-    const fn into_payment(self, currency: CurrencyCode) -> Payment {
-        Payment {
-            members: self.members,
-            amount: Money::from_minor_units(self.amount, currency),
-        }
+    /// The payment this flow makes, in `currency`, between the members of
+    /// `members` at its positions; none for a position past their end, which
+    /// no strategy writes, since each names only the balances it was given.
+    fn into_payment(self, members: &[MemberId], currency: CurrencyCode) -> Option<Payment> {
+        members
+            .get(self.members.from)
+            .zip(members.get(self.members.to))
+            .map(|(&from, &to)| Payment {
+                members: MemberPair { from, to },
+                amount: Money::from_minor_units(self.amount, currency),
+            })
     }
 }
 
@@ -246,10 +260,11 @@ struct Plan {
 }
 
 /// A member's net balance in minor units while it is open: positive when the
-/// member is owed, negative when they owe.
+/// member is owed, negative when they owe. The member is named by their
+/// position among the open balances.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OpenBalance {
-    member: MemberId,
+    member: usize,
     net: i64,
 }
 
@@ -361,6 +376,7 @@ async fn settle_paced(
     strategy: SettlementStrategy,
     ledger: &Ledger,
 ) -> Result<SettlementPlan, SettlementError> {
+    let currency = ledger.currency();
     let Plan {
         mut flows,
         strategy: computed_by,
@@ -374,20 +390,22 @@ async fn settle_paced(
             flows: greedy::settle(&balances(ledger)),
             strategy,
         },
-        SettlementStrategy::Direct => Plan {
-            flows: direct::settle(ledger.pairs()),
-            strategy,
-        },
+        SettlementStrategy::Direct => {
+            return Ok(SettlementPlan {
+                payments: direct::settle(ledger.pairs(), currency),
+                strategy,
+            });
+        }
     };
-    // By payer, then recipient, as `SettlementPlan::payments` promises. Every
-    // strategy pays each pair of members at most once (the direct one pays
-    // each ledger pair once, and the others clear a debtor or a creditor
-    // with every payment), so the pair alone orders the flows.
+    // By payer, then recipient, as `SettlementPlan::payments` promises, since
+    // positions follow the identifiers. Every strategy clears a debtor or a
+    // creditor with every payment, so it pays each pair of members at most
+    // once, and the pair alone orders the flows.
     flows.sort_unstable_by_key(|flow| flow.members);
-    let currency = ledger.currency();
+    let members: Vec<MemberId> = open(ledger).map(|member| member.member()).collect();
     let payments = flows
         .into_iter()
-        .map(|flow| flow.into_payment(currency))
+        .filter_map(|flow| flow.into_payment(&members, currency))
         .collect();
     Ok(SettlementPlan {
         payments,
@@ -395,16 +413,24 @@ async fn settle_paced(
     })
 }
 
-/// Every non-zero net balance of `ledger`, ordered by member.
-fn balances(ledger: &Ledger) -> Vec<OpenBalance> {
+/// The members of `ledger` with a non-zero net balance, in identifier
+/// order, whose positions name them in the open balances.
+fn open(ledger: &Ledger) -> impl Iterator<Item = MemberSummary> + '_ {
     ledger
         .summary()
         .members()
-        .map(|member| OpenBalance {
-            member: member.member(),
+        .filter(|member| 0 != member.net().minor_units())
+}
+
+/// The open balances of `ledger`, each naming its member by their position
+/// among them.
+fn balances(ledger: &Ledger) -> Vec<OpenBalance> {
+    open(ledger)
+        .enumerate()
+        .map(|(position, member)| OpenBalance {
+            member: position,
             net: member.net().minor_units(),
         })
-        .filter(|balance| 0 != balance.net)
         .collect()
 }
 

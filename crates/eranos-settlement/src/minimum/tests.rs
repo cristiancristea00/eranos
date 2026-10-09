@@ -8,16 +8,15 @@ use std::future::Future;
 use std::pin::pin;
 use std::task::{Context, Waker};
 
-use eranos_core::MemberId;
 use eranos_core::cooperative::Cooperative;
 use proptest::prelude::*;
 
 use super::*;
 use crate::greedy;
 
-/// The member `number`; members sort by number.
-fn member(number: u8) -> MemberId {
-    MemberId::new(&format!("member-{number:03}")).unwrap()
+/// The member `number`, by position; members sort by number.
+fn member(number: u8) -> usize {
+    usize::from(number)
 }
 
 /// Runs one of the solver's computations to its end.
@@ -39,7 +38,7 @@ fn pending_polls<F: Future>(future: F) -> usize {
 /// A payment of `amount` from member `from` to member `to`.
 fn flow(from: u8, to: u8, amount: i64) -> Flow {
     Flow {
-        members: MemberPair {
+        members: Positions {
             from: member(from),
             to: member(to),
         },
@@ -219,7 +218,7 @@ fn the_groups_partition_the_balances() {
             .iter()
             .all(|group| 0 == group.iter().map(|balance| balance.net).sum::<i64>())
     );
-    let mut members: Vec<MemberId> = groups
+    let mut members: Vec<usize> = groups
         .iter()
         .flatten()
         .map(|balance| balance.member)
@@ -251,8 +250,8 @@ proptest! {
         let flows = completed(settle(&open)).unwrap();
         prop_assert!(after(&open, &flows).iter().all(|&net| 0 == net));
         prop_assert!(flows.len() <= greedy::settle(&open).len());
-        for &Flow { members: MemberPair { from, to }, amount } in &flows {
-            let net = |member: MemberId| open.iter().find(|balance| balance.member == member).map_or(0, |balance| balance.net);
+        for &Flow { members: Positions { from, to }, amount } in &flows {
+            let net = |member: usize| open.iter().find(|balance| balance.member == member).map_or(0, |balance| balance.net);
             prop_assert!(0 < amount);
             prop_assert!(0 > net(from) && 0 < net(to));
             prop_assert!(amount <= -net(from) && amount <= net(to));

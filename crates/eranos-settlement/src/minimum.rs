@@ -9,9 +9,8 @@
 use std::ops::Range;
 
 use eranos_core::cooperative::Pacer;
-use eranos_ledger::MemberPair;
 
-use super::{Flow, OpenBalance};
+use super::{Flow, OpenBalance, Positions};
 use crate::error::SettlementError;
 use crate::opposites::{Pairing, pair_opposites};
 
@@ -138,6 +137,9 @@ async fn zero_sum_groups(
 /// Pushes the table's entries for `subsets`, the next ones in increasing
 /// order: every S ∖ {i} is smaller than S, so its entry is already in the
 /// table when S is pushed.
+// Not inlined: inlined into the future of `zero_sum_groups`, the loop
+// compiles to slower code, as the exact solver's benchmarks show.
+#[inline(never)]
 fn fill_subsets(table: &mut Vec<u8>, subsets: Range<usize>, nets: &[i128]) {
     for subset in subsets {
         let mut best = 0;
@@ -206,7 +208,7 @@ fn settle_group(group: &[OpenBalance]) -> Vec<Flow> {
         // A debtor's net is negative and above i64::MIN, so negating fits.
         let amount = (-owing.net).min(owed.net);
         flows.push(Flow {
-            members: MemberPair {
+            members: Positions {
                 from: owing.member,
                 to: owed.member,
             },

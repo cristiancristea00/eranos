@@ -4,19 +4,17 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use eranos_core::MemberId;
-use eranos_ledger::MemberPair;
-
-use super::{Flow, OpenBalance};
+use super::{Flow, OpenBalance, Positions};
 use crate::opposites::{Pairing, pair_opposites};
 
 /// What a debtor still owes or a creditor is still owed.
 ///
 /// Ordered by amount, then by member in reverse, so that a max-heap yields
-/// the largest amount first and, among equal amounts, the lower member ID.
+/// the largest amount first and, among equal amounts, the member of the
+/// lower position, whose identifier is the lower.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Outstanding {
-    member: MemberId,
+    member: usize,
     amount: u64,
 }
 
@@ -85,7 +83,7 @@ fn largest_first(balances: &[OpenBalance]) -> Vec<Flow> {
     while let (Some(creditor), Some(debtor)) = (creditors.pop(), debtors.pop()) {
         let amount = creditor.amount.min(debtor.amount);
         flows.push(Flow {
-            members: MemberPair {
+            members: Positions {
                 from: debtor.member,
                 to: creditor.member,
             },

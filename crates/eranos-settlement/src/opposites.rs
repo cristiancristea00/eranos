@@ -2,9 +2,7 @@
 
 use std::borrow::Cow;
 
-use eranos_ledger::MemberPair;
-
-use super::{Flow, OpenBalance};
+use super::{Flow, OpenBalance, Positions};
 
 /// The payments between exact opposites and the balances they leave.
 #[derive(Debug)]
@@ -55,7 +53,7 @@ pub(super) fn pair_opposites(balances: &[OpenBalance]) -> Pairing<'_> {
         {
             *candidate += 1;
             flows.push(Flow {
-                members: MemberPair {
+                members: Positions {
                     from: debtor.member,
                     to: creditor.member,
                 },
