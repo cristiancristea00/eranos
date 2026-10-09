@@ -74,6 +74,10 @@ class Cancellation final {
 
 /// A group: its details, members, categories, expenses, transfers, totals, and settlements. It owns the group; a moved-from group may only be
 /// destroyed or assigned.
+///
+/// Every call blocks the calling thread while another call holds the group's lock, and its asynchronous form, named with `Async`, runs on the
+/// group's worker thread, in the order of the calls, without blocking the calling thread, and returns a future; Cancellation says what cancelling
+/// one does.
 class ExpenseGroup final {
   public:
     /// A new group under the identifier @p id, such as the key an app's own store gives it. The overload without @p id generates the identifier
@@ -112,43 +116,36 @@ class ExpenseGroup final {
     [[nodiscard]] static std::future<std::expected<ExpenseGroup, Error>> loadAsync(std::string_view const json,
                                                                                    Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The group's identifier. Blocks the calling thread while another call holds the group's lock.
+    /// The group's identifier.
     ///
     /// @return The result
     [[nodiscard]] ExpenseGroupId id() const noexcept;
 
-    /// The asynchronous form of id(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of id().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<ExpenseGroupId, Error>> idAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers. Blocks the
-    /// calling thread while another call holds the group's lock.
+    /// Every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Category> categories() const noexcept;
 
-    /// The asynchronous form of categories(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of categories().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::vector<Category>, Error>>
     categoriesAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// The category with the identifier id. Blocks the calling thread while another call holds the group's lock.
+    /// The category with the identifier id.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<std::optional<Category>, Error> category(CategoryId const &id) const noexcept;
 
-    /// The asynchronous form of category(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of category().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -156,15 +153,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Category>, Error>>
     categoryAsync(CategoryId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Adds category under its identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
+    /// Adds category under its identifier, and returns the identifier.
     ///
     /// @param category The category
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<CategoryId, Error> addCategory(Category const &category) noexcept;
 
-    /// The asynchronous form of addCategory(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of addCategory().
     ///
     /// @param category The category
     /// @param cancellation A cancellation for the call, or none
@@ -172,16 +167,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<CategoryId, Error>> addCategoryAsync(Category const &category,
                                                                                  Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Renames the category that category names by its identifier, and returns it as it was. Blocks the calling thread while another call holds the
-    /// group's lock.
+    /// Renames the category that category names by its identifier, and returns it as it was.
     ///
     /// @param category The category
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Category, Error> replaceCategory(Category const &category) noexcept;
 
-    /// The asynchronous form of replaceCategory(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of replaceCategory().
     ///
     /// @param category The category
     /// @param cancellation A cancellation for the call, or none
@@ -189,16 +181,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Category, Error>> replaceCategoryAsync(Category const &category,
                                                                                    Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Removes the category with the identifier id and returns it; its expenses move to the built-in one. Blocks the calling thread while another
-    /// call holds the group's lock.
+    /// Removes the category with the identifier id and returns it; its expenses move to the built-in one.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Category, Error> removeCategory(CategoryId const &id) noexcept;
 
-    /// The asynchronous form of removeCategory(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of removeCategory().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -206,30 +195,25 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Category, Error>> removeCategoryAsync(CategoryId const &id,
                                                                                   Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The group currency, with what the library knows of it. Blocks the calling thread while another call holds the group's lock.
+    /// The group currency, with what the library knows of it.
     ///
     /// @return The result
     [[nodiscard]] CurrencyCode currency() const noexcept;
 
-    /// The asynchronous form of currency(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of currency().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<CurrencyCode, Error>> currencyAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Moves the group to currency, with a rate into it for every other currency its entries use. Blocks the calling thread while another call holds
-    /// the group's lock.
+    /// Moves the group to currency, with a rate into it for every other currency its entries use.
     ///
     /// @param currency The currency
     /// @param rates The rates
     /// @return Nothing, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<void, Error> changeCurrency(CurrencyCode const &currency, std::span<CurrencyRate const> const rates) noexcept;
 
-    /// The asynchronous form of changeCurrency(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of changeCurrency().
     ///
     /// @param currency The currency
     /// @param rates The rates
@@ -238,30 +222,25 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<void, Error>> changeCurrencyAsync(CurrencyCode const &currency, std::span<CurrencyRate const> const rates,
                                                                               Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Every expense, in identifier order, which is creation order for generated identifiers. Blocks the calling thread while another call holds the
-    /// group's lock.
+    /// Every expense, in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Expense> expenses() const noexcept;
 
-    /// The asynchronous form of expenses(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of expenses().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::vector<Expense>, Error>>
     expensesAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// The expense with the identifier id. Blocks the calling thread while another call holds the group's lock.
+    /// The expense with the identifier id.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<std::optional<Expense>, Error> expense(ExpenseId const &id) const noexcept;
 
-    /// The asynchronous form of expense(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of expense().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -269,15 +248,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Expense>, Error>>
     expenseAsync(ExpenseId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// How the expense with the identifier id divides, in the group currency. Blocks the calling thread while another call holds the group's lock.
+    /// How the expense with the identifier id divides, in the group currency.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<std::optional<ExpenseShares>, Error> expenseShares(ExpenseId const &id) const noexcept;
 
-    /// The asynchronous form of expenseShares(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of expenseShares().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -285,15 +262,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<ExpenseShares>, Error>>
     expenseSharesAsync(ExpenseId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Adds expense under its identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
+    /// Adds expense under its identifier, and returns the identifier.
     ///
     /// @param expense The expense
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<ExpenseId, Error> addExpense(Expense const &expense) noexcept;
 
-    /// The asynchronous form of addExpense(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of addExpense().
     ///
     /// @param expense The expense
     /// @param cancellation A cancellation for the call, or none
@@ -301,16 +276,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<ExpenseId, Error>> addExpenseAsync(Expense const &expense,
                                                                                Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Replaces the expense that expense names by its identifier, and returns it as it was. Blocks the calling thread while another call holds the
-    /// group's lock.
+    /// Replaces the expense that expense names by its identifier, and returns it as it was.
     ///
     /// @param expense The expense
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Expense, Error> replaceExpense(Expense const &expense) noexcept;
 
-    /// The asynchronous form of replaceExpense(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of replaceExpense().
     ///
     /// @param expense The expense
     /// @param cancellation A cancellation for the call, or none
@@ -318,15 +290,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Expense, Error>> replaceExpenseAsync(Expense const &expense,
                                                                                  Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Removes the expense with the identifier id and returns it. Blocks the calling thread while another call holds the group's lock.
+    /// Removes the expense with the identifier id and returns it.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Expense, Error> removeExpense(ExpenseId const &id) noexcept;
 
-    /// The asynchronous form of removeExpense(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of removeExpense().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -334,43 +304,36 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Expense, Error>> removeExpenseAsync(ExpenseId const &id,
                                                                                 Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The group's totals. Blocks the calling thread while another call holds the group's lock.
+    /// The group's totals.
     ///
     /// @return The result
     [[nodiscard]] Summary summary() const noexcept;
 
-    /// The asynchronous form of summary(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of summary().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<Summary, Error>> summaryAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Every member, archived ones included, in identifier order, which is creation order for generated identifiers. Blocks the calling thread while
-    /// another call holds the group's lock.
+    /// Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Member> members() const noexcept;
 
-    /// The asynchronous form of members(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of members().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::vector<Member>, Error>>
     membersAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// The member with the identifier id. Blocks the calling thread while another call holds the group's lock.
+    /// The member with the identifier id.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<std::optional<Member>, Error> member(MemberId const &id) const noexcept;
 
-    /// The asynchronous form of member(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of member().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -378,16 +341,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Member>, Error>>
     memberAsync(MemberId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Whether the member with the identifier id is archived, or none when no member has the identifier. Blocks the calling thread while another
-    /// call holds the group's lock.
+    /// Whether the member with the identifier id is archived, or none when no member has the identifier.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<std::optional<bool>, Error> isArchived(MemberId const &id) const noexcept;
 
-    /// The asynchronous form of isArchived(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of isArchived().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -395,15 +355,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<bool>, Error>>
     isArchivedAsync(MemberId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Adds member under their identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
+    /// Adds member under their identifier, and returns the identifier.
     ///
     /// @param member The member
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<MemberId, Error> addMember(Member const &member) noexcept;
 
-    /// The asynchronous form of addMember(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of addMember().
     ///
     /// @param member The member
     /// @param cancellation A cancellation for the call, or none
@@ -411,16 +369,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<MemberId, Error>> addMemberAsync(Member const &member,
                                                                              Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Replaces the member that member names by their identifier, and returns them as they were. Blocks the calling thread while another call holds
-    /// the group's lock.
+    /// Replaces the member that member names by their identifier, and returns them as they were.
     ///
     /// @param member The member
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Member, Error> replaceMember(Member const &member) noexcept;
 
-    /// The asynchronous form of replaceMember(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of replaceMember().
     ///
     /// @param member The member
     /// @param cancellation A cancellation for the call, or none
@@ -428,15 +383,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Member, Error>> replaceMemberAsync(Member const &member,
                                                                                Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Archives the member with the identifier id. Blocks the calling thread while another call holds the group's lock.
+    /// Archives the member with the identifier id.
     ///
     /// @param id The id
     /// @return Nothing, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<void, Error> archiveMember(MemberId const &id) noexcept;
 
-    /// The asynchronous form of archiveMember(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of archiveMember().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -444,15 +397,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<void, Error>> archiveMemberAsync(MemberId const &id,
                                                                              Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Unarchives the member with the identifier id. Blocks the calling thread while another call holds the group's lock.
+    /// Unarchives the member with the identifier id.
     ///
     /// @param id The id
     /// @return Nothing, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<void, Error> unarchiveMember(MemberId const &id) noexcept;
 
-    /// The asynchronous form of unarchiveMember(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of unarchiveMember().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -460,16 +411,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<void, Error>> unarchiveMemberAsync(MemberId const &id,
                                                                                Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Removes the member with the identifier id, whom no entry references, and returns them. Blocks the calling thread while another call holds the
-    /// group's lock.
+    /// Removes the member with the identifier id, whom no entry references, and returns them.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Member, Error> removeMember(MemberId const &id) noexcept;
 
-    /// The asynchronous form of removeMember(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of removeMember().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -477,28 +425,24 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Member, Error>> removeMemberAsync(MemberId const &id,
                                                                               Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The group's name. Blocks the calling thread while another call holds the group's lock.
+    /// The group's name.
     ///
     /// @return The result
     [[nodiscard]] std::string name() const noexcept;
 
-    /// The asynchronous form of name(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of name().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::string, Error>> nameAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Renames the group. Blocks the calling thread while another call holds the group's lock.
+    /// Renames the group.
     ///
     /// @param name The name
     /// @return Nothing, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<void, Error> setName(std::string_view const name) noexcept;
 
-    /// The asynchronous form of setName(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of setName().
     ///
     /// @param name The name
     /// @param cancellation A cancellation for the call, or none
@@ -506,15 +450,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<void, Error>> setNameAsync(std::string_view const name,
                                                                        Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The payments that settle every balance by strategy. Blocks the calling thread while another call holds the group's lock.
+    /// The payments that settle every balance by strategy.
     ///
     /// @param strategy The strategy
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<SettlementPlan, Error> settlement(SettlementStrategy const strategy) const noexcept;
 
-    /// The asynchronous form of settlement(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of settlement().
     ///
     /// @param strategy The strategy
     /// @param cancellation A cancellation for the call, or none
@@ -522,30 +464,25 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<SettlementPlan, Error>> settlementAsync(SettlementStrategy const strategy,
                                                                                     Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Every transfer, in identifier order, which is creation order for generated identifiers. Blocks the calling thread while another call holds the
-    /// group's lock.
+    /// Every transfer, in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Transfer> transfers() const noexcept;
 
-    /// The asynchronous form of transfers(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of transfers().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::vector<Transfer>, Error>>
     transfersAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// The transfer with the identifier id. Blocks the calling thread while another call holds the group's lock.
+    /// The transfer with the identifier id.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<std::optional<Transfer>, Error> transfer(TransferId const &id) const noexcept;
 
-    /// The asynchronous form of transfer(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of transfer().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -553,15 +490,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Transfer>, Error>>
     transferAsync(TransferId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// The amount in the group currency of the transfer with the identifier id. Blocks the calling thread while another call holds the group's lock.
+    /// The amount in the group currency of the transfer with the identifier id.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<std::optional<Money>, Error> transferAmount(TransferId const &id) const noexcept;
 
-    /// The asynchronous form of transferAmount(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of transferAmount().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -569,15 +504,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Money>, Error>>
     transferAmountAsync(TransferId const &id, Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Adds transfer under its identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
+    /// Adds transfer under its identifier, and returns the identifier.
     ///
     /// @param transfer The transfer
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<TransferId, Error> addTransfer(Transfer const &transfer) noexcept;
 
-    /// The asynchronous form of addTransfer(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of addTransfer().
     ///
     /// @param transfer The transfer
     /// @param cancellation A cancellation for the call, or none
@@ -585,16 +518,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<TransferId, Error>> addTransferAsync(Transfer const &transfer,
                                                                                  Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Replaces the transfer that transfer names by its identifier, and returns it as it was. Blocks the calling thread while another call holds the
-    /// group's lock.
+    /// Replaces the transfer that transfer names by its identifier, and returns it as it was.
     ///
     /// @param transfer The transfer
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Transfer, Error> replaceTransfer(Transfer const &transfer) noexcept;
 
-    /// The asynchronous form of replaceTransfer(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of replaceTransfer().
     ///
     /// @param transfer The transfer
     /// @param cancellation A cancellation for the call, or none
@@ -602,15 +532,13 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Transfer, Error>> replaceTransferAsync(Transfer const &transfer,
                                                                                    Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Removes the transfer with the identifier id and returns it. Blocks the calling thread while another call holds the group's lock.
+    /// Removes the transfer with the identifier id and returns it.
     ///
     /// @param id The id
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
     [[nodiscard]] std::expected<Transfer, Error> removeTransfer(TransferId const &id) noexcept;
 
-    /// The asynchronous form of removeTransfer(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of removeTransfer().
     ///
     /// @param id The id
     /// @param cancellation A cancellation for the call, or none
@@ -618,29 +546,25 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<Transfer, Error>> removeTransferAsync(TransferId const &id,
                                                                                   Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The group's note. Blocks the calling thread while another call holds the group's lock.
+    /// The group's note.
     ///
     /// @return The result
     [[nodiscard]] std::optional<std::string> note() const noexcept;
 
-    /// The asynchronous form of note(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of note().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::optional<std::string>, Error>>
     noteAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// Sets the note, trimmed, or clears it when the text is blank. Blocks the calling thread while another call holds the group's lock.
+    /// Sets the note, trimmed, or clears it when the text is blank.
     ///
     /// @param note The note
     /// @return Nothing, or an error of the kind ErrorKind::INVALID_TEXT for text that is not UTF-8
     [[nodiscard]] std::expected<void, Error> setNote(std::string_view const note) noexcept;
 
-    /// The asynchronous form of setNote(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
-    /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued
-    /// behind earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of setNote().
     ///
     /// @param note The note
     /// @param cancellation A cancellation for the call, or none
@@ -648,28 +572,24 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<void, Error>> setNoteAsync(std::string_view const note,
                                                                        Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// The language the apps show the group in, as a BCP 47 tag. Blocks the calling thread while another call holds the group's lock.
+    /// The language the apps show the group in, as a BCP 47 tag.
     ///
     /// @return The result
     [[nodiscard]] std::optional<Language> language() const noexcept;
 
-    /// The asynchronous form of language(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of language().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<std::optional<Language>, Error>>
     languageAsync(Cancellation const *const cancellation = nullptr) const noexcept;
 
-    /// The group in its saved form, as JSON. Blocks the calling thread while another call holds the group's lock.
+    /// The group in its saved form, as JSON.
     ///
     /// @return The result
     [[nodiscard]] std::string save() const noexcept;
 
-    /// The asynchronous form of save(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of save().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
@@ -682,9 +602,7 @@ class ExpenseGroup final {
     /// @return The result
     [[nodiscard]] ExpenseGroupReader read() const noexcept;
 
-    /// The asynchronous form of read(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of read().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
@@ -697,15 +615,13 @@ class ExpenseGroup final {
     /// @return The result
     [[nodiscard]] ExpenseGroupWriter write() noexcept;
 
-    /// The asynchronous form of write(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
-    /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, or, while the call is queued behind
-    /// earlier calls, when its turn comes, and its future then holds an error of the kind ErrorKind::CANCELLED, the group left as it was.
+    /// The asynchronous form of write().
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<ExpenseGroupWriter, Error>> writeAsync(Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Clears the group's note. Blocks the calling thread while another call holds the group's lock.
+    /// Clears the group's note.
     void clearNote() noexcept;
 
     /// The asynchronous form of clearNote().
@@ -714,7 +630,7 @@ class ExpenseGroup final {
     /// @return A future of the end of the call, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<void, Error>> clearNoteAsync(Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Sets the language the apps show the group in. Blocks the calling thread while another call holds the group's lock.
+    /// Sets the language the apps show the group in.
     ///
     /// @param language The language
     void setLanguage(Language const &language) noexcept;
@@ -727,7 +643,7 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<void, Error>> setLanguageAsync(Language const &language,
                                                                            Cancellation const *const cancellation = nullptr) noexcept;
 
-    /// Clears the language the apps show the group in. Blocks the calling thread while another call holds the group's lock.
+    /// Clears the language the apps show the group in.
     void clearLanguage() noexcept;
 
     /// The asynchronous form of clearLanguage().

@@ -257,8 +257,6 @@ class ExpenseGroup:
         """
         Read the group's identifier.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The identifier.
 
@@ -268,8 +266,6 @@ class ExpenseGroup:
     async def id_async(self) -> ExpenseGroupId:
         """
         Read the group's identifier.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The identifier.
@@ -282,8 +278,6 @@ class ExpenseGroup:
         """
         List every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The categories.
 
@@ -293,8 +287,6 @@ class ExpenseGroup:
     async def categories_async(self) -> tuple[Category, ...]:
         """
         List every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The categories.
@@ -323,7 +315,6 @@ class ExpenseGroup:
         """
         Find the category with the identifier category_id, if the group holds it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what category refuses.
 
         Args:
@@ -358,7 +349,6 @@ class ExpenseGroup:
         """
         Add category under its identifier and return the identifier.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_category refuses.
 
         Args:
@@ -393,7 +383,6 @@ class ExpenseGroup:
         """
         Rename the category that category names by its identifier, and return it as it was.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what replace_category refuses.
 
         Args:
@@ -427,7 +416,6 @@ class ExpenseGroup:
         """
         Remove the category with the identifier category_id and return it; its expenses move to the built-in one.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what remove_category refuses.
 
         Args:
@@ -444,8 +432,6 @@ class ExpenseGroup:
         """
         Read the group currency, which every total is in.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The currency.
 
@@ -455,8 +441,6 @@ class ExpenseGroup:
     async def currency_async(self) -> CurrencyCode:
         """
         Read the group currency, which every total is in.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The currency.
@@ -485,7 +469,6 @@ class ExpenseGroup:
         """
         Move the group to currency, converting every entry with the rate rates give its currency.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what change_currency refuses.
 
         Args:
@@ -500,8 +483,6 @@ class ExpenseGroup:
         """
         List every expense, in identifier order, which is creation order for generated identifiers.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The expenses.
 
@@ -511,8 +492,6 @@ class ExpenseGroup:
     async def expenses_async(self) -> tuple[Expense, ...]:
         """
         List every expense, in identifier order, which is creation order for generated identifiers.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The expenses.
@@ -541,7 +520,6 @@ class ExpenseGroup:
         """
         Find the expense with the identifier expense_id, if the group holds it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what expense refuses.
 
         Args:
@@ -574,7 +552,6 @@ class ExpenseGroup:
         """
         Work out how the expense with the identifier expense_id divides, in the group currency, if the group holds it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what expense_shares refuses.
 
         Args:
@@ -610,7 +587,6 @@ class ExpenseGroup:
         """
         Add expense under its identifier and return the identifier.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_expense refuses.
 
         Args:
@@ -644,7 +620,6 @@ class ExpenseGroup:
         """
         Replace the expense that expense names by its identifier, and return it as it was.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what replace_expense refuses.
 
         Args:
@@ -678,7 +653,6 @@ class ExpenseGroup:
         """
         Remove the expense with the identifier expense_id and return it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what remove_expense refuses.
 
         Args:
@@ -695,8 +669,6 @@ class ExpenseGroup:
         """
         Add up the group's totals.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The totals.
 
@@ -706,8 +678,6 @@ class ExpenseGroup:
     async def summary_async(self) -> Summary:
         """
         Add up the group's totals.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The totals.
@@ -720,8 +690,6 @@ class ExpenseGroup:
         """
         List every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The members.
 
@@ -731,8 +699,6 @@ class ExpenseGroup:
     async def members_async(self) -> tuple[Member, ...]:
         """
         List every member, archived ones included, in identifier order, which is creation order for generated identifiers.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The members.
@@ -761,7 +727,6 @@ class ExpenseGroup:
         """
         Find the member with the identifier member_id, if the group holds them.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what member refuses.
 
         Args:
@@ -794,7 +759,6 @@ class ExpenseGroup:
         """
         Tell whether the member with the identifier member_id is archived, if the group holds them.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what is_archived refuses.
 
         Args:
@@ -829,7 +793,6 @@ class ExpenseGroup:
         """
         Add member under their identifier and return the identifier.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_member refuses.
 
         Args:
@@ -863,7 +826,6 @@ class ExpenseGroup:
         """
         Replace the details of the member that member names by their identifier, and return them as they were.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what replace_member refuses.
 
         Args:
@@ -894,7 +856,6 @@ class ExpenseGroup:
         """
         Archive the member with the identifier member_id: they keep their history and balance, and join no new expense.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what archive_member refuses.
 
         Args:
@@ -922,7 +883,6 @@ class ExpenseGroup:
         """
         Make the archived member with the identifier member_id active again.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what unarchive_member refuses.
 
         Args:
@@ -954,7 +914,6 @@ class ExpenseGroup:
         """
         Remove the member with the identifier member_id, who appears in no entry, and return them.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what remove_member refuses.
 
         Args:
@@ -971,8 +930,6 @@ class ExpenseGroup:
         """
         Read the group's name.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The name.
 
@@ -982,8 +939,6 @@ class ExpenseGroup:
     async def name_async(self) -> str:
         """
         Read the group's name.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The name.
@@ -1009,7 +964,6 @@ class ExpenseGroup:
         """
         Rename the group.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what set_name refuses.
 
         Args:
@@ -1040,7 +994,6 @@ class ExpenseGroup:
         """
         Plan the payments that settle every balance by strategy.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what settlement refuses.
 
         Args:
@@ -1057,8 +1010,6 @@ class ExpenseGroup:
         """
         List every transfer, in identifier order, which is creation order for generated identifiers.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The transfers.
 
@@ -1068,8 +1019,6 @@ class ExpenseGroup:
     async def transfers_async(self) -> tuple[Transfer, ...]:
         """
         List every transfer, in identifier order, which is creation order for generated identifiers.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The transfers.
@@ -1098,7 +1047,6 @@ class ExpenseGroup:
         """
         Find the transfer with the identifier transfer_id, if the group holds it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what transfer refuses.
 
         Args:
@@ -1131,7 +1079,6 @@ class ExpenseGroup:
         """
         Work out the amount in the group currency of the transfer with the identifier transfer_id, if the group holds it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what transfer_amount refuses.
 
         Args:
@@ -1166,7 +1113,6 @@ class ExpenseGroup:
         """
         Add transfer under its identifier and return the identifier.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_transfer refuses.
 
         Args:
@@ -1200,7 +1146,6 @@ class ExpenseGroup:
         """
         Replace the transfer that transfer names by its identifier, and return it as it was.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what replace_transfer refuses.
 
         Args:
@@ -1234,7 +1179,6 @@ class ExpenseGroup:
         """
         Remove the transfer with the identifier transfer_id and return it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what remove_transfer refuses.
 
         Args:
@@ -1251,8 +1195,6 @@ class ExpenseGroup:
         """
         Read the group's note, if it has one.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The note, or none.
 
@@ -1262,8 +1204,6 @@ class ExpenseGroup:
     async def note_async(self) -> str | None:
         """
         Read the group's note, if it has one.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The note, or none.
@@ -1276,8 +1216,6 @@ class ExpenseGroup:
         """
         Set the group's note, trimmed; none or blank text clears it.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Args:
             note: The note, or none.
 
@@ -1287,8 +1225,6 @@ class ExpenseGroup:
     async def set_note_async(self, note: str | None) -> None:
         """
         Set the group's note, trimmed; none or blank text clears it.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Args:
             note: The note, or none.
@@ -1301,8 +1237,6 @@ class ExpenseGroup:
         """
         Read the language the apps show the group in, if it has one.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The language, or none.
 
@@ -1312,8 +1246,6 @@ class ExpenseGroup:
     async def language_async(self) -> Language | None:
         """
         Read the language the apps show the group in, if it has one.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The language, or none.
@@ -1326,8 +1258,6 @@ class ExpenseGroup:
         """
         Set the language the apps show the group in; none clears it.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Args:
             language: The language, or none.
 
@@ -1339,7 +1269,6 @@ class ExpenseGroup:
         """
         Set the language the apps show the group in; none clears it.
 
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what set_language refuses.
 
         Args:
@@ -1353,8 +1282,6 @@ class ExpenseGroup:
         """
         Save the group as JSON, which ExpenseGroup.load reads back.
 
-        It blocks the calling thread while another call holds the group's lock.
-
         Returns:
             The saved group.
 
@@ -1364,8 +1291,6 @@ class ExpenseGroup:
     async def save_async(self) -> str:
         """
         Save the group as JSON, which ExpenseGroup.load reads back.
-
-        It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
 
         Returns:
             The saved group.

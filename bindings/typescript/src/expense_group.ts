@@ -217,9 +217,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group's identifier.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.idSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the identifier
      */
@@ -230,9 +227,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group's identifier.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.id} waits for it.
-     *
      * @returns The identifier
      */
     idSync(): ExpenseGroupId {
@@ -241,9 +235,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The group's name.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.nameSync} does not wait.
      *
      * @param options - The call's signal
      * @returns A promise of the text
@@ -255,9 +246,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group's name.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.name} waits for it.
-     *
      * @returns The text
      */
     nameSync(): string {
@@ -266,9 +254,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Renames the group.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.setNameSync} does not wait.
      *
      * Rejects with {@link ExpenseGroupError} with the failure `emptyName` for a blank name.
      *
@@ -283,9 +268,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Renames the group.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.setName} waits for it.
-     *
      * @param name - The new name
      * @throws {@link ExpenseGroupError} with the failure `emptyName` for a blank name
      */
@@ -298,9 +280,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group currency, which every total is in.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.currencySync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the currency
      */
@@ -311,9 +290,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group currency, which every total is in.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.currency} waits for it.
-     *
      * @returns The currency
      */
     currencySync(): CurrencyCode {
@@ -322,9 +298,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Moves the group to `currency`, converting every entry with the rate `rates` gives its currency.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.changeCurrencySync} does not wait.
      *
      * Rejects with {@link ExpenseGroupError} with the failure `missingExchangeRate` for a currency in use without a rate,
      * `unexpectedExchangeRate` for a rate of the new group currency, and `duplicateExchangeRate` for a currency given two
@@ -342,9 +315,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Moves the group to `currency`, converting every entry with the rate `rates` gives its currency.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.changeCurrency} waits for it.
-     *
      * @param currency - The new group currency
      * @param rates - The rate into the new group currency of every other currency the entries use
      * @throws {@link ExpenseGroupError} with the failure `missingExchangeRate` for a currency in use without a rate,
@@ -360,9 +330,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group's note, if it has one.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.noteSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the note, if the group has one
      */
@@ -373,9 +340,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group's note, if it has one.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.note} waits for it.
-     *
      * @returns The note, if the group has one
      */
     noteSync(): string | undefined {
@@ -384,9 +348,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Sets the group's note, trimmed; blank text clears it, as {@link ExpenseGroup.clearNote} does.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.setNoteSync} does not wait.
      *
      * @param note - The new note
      * @param options - The call's signal
@@ -399,9 +360,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Sets the group's note, trimmed; blank text clears it, as {@link ExpenseGroup.clearNoteSync} does.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.setNote} waits for it.
-     *
      * @param note - The new note
      */
     setNoteSync(note: string): void {
@@ -413,9 +371,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Clears the group's note, which {@link ExpenseGroup.setNote} sets.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.clearNoteSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the call's end
      */
@@ -425,9 +380,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Clears the group's note, which {@link ExpenseGroup.setNoteSync} sets.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.clearNote} waits for it.
      */
     clearNoteSync(): void {
         calling(() => {
@@ -438,9 +390,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The language the apps show the group in, if it has one.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.languageSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the language, if the group has one
      */
@@ -450,9 +399,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The language the apps show the group in, if it has one.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.language} waits for it.
      *
      * @returns The language, if the group has one
      */
@@ -466,9 +412,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Sets the language the apps show the group in.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.setLanguageSync} does not wait.
-     *
      * @param language - The new language
      * @param options - The call's signal
      * @returns A promise of the call's end
@@ -479,9 +422,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Sets the language the apps show the group in.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.setLanguage} waits for it.
      *
      * @param language - The new language
      */
@@ -494,9 +434,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Clears the language the apps show the group in.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.clearLanguageSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the call's end
      */
@@ -506,9 +443,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Clears the language the apps show the group in.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.clearLanguage} waits for it.
      */
     clearLanguageSync(): void {
         calling(() => {
@@ -519,9 +453,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group in its saved form, as JSON, which {@link ExpenseGroup.load} reads back.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.saveSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the text
      */
@@ -531,9 +462,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The group in its saved form, as JSON, which {@link ExpenseGroup.load} reads back.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.save} waits for it.
      *
      * @returns The text
      */
@@ -546,9 +474,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.membersSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the members
      */
@@ -559,9 +484,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.members} waits for it.
-     *
      * @returns The members
      */
     membersSync(): readonly Member[] {
@@ -570,9 +492,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The member with the identifier `id`, if the group holds them.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.memberSync} does not wait.
      *
      * Rejects with {@link IdError} for an identifier that is not one.
      *
@@ -586,9 +505,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The member with the identifier `id`, if the group holds them.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.member} waits for it.
      *
      * @param id - The identifier
      * @returns The member, if the group holds them
@@ -604,9 +520,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Whether the member with the identifier `id` is archived; `undefined` for a member the group does not hold.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.isArchivedSync} does not wait.
-     *
      * Rejects with {@link IdError} for an identifier that is not one.
      *
      * @param id - The identifier
@@ -620,9 +533,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Whether the member with the identifier `id` is archived; `undefined` for a member the group does not hold.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.isArchived} waits for it.
-     *
      * @param id - The identifier
      * @returns Whether the member is archived, if the group holds them
      * @throws {@link IdError} for an identifier that is not one
@@ -633,9 +543,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Adds `member` under their identifier, with no accounts unless `member` gives some, and returns the identifier.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.addMemberSync} does not wait.
      *
      * Rejects with {@link MemberError} with the failure `emptyFirstName` for a blank first name; {@link PaymentAccountError}
      * with the failure `emptyName` for an account with a blank name; {@link ExpenseGroupError} with the failure
@@ -652,9 +559,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Adds `member` under their identifier, with no accounts unless `member` gives some, and returns the identifier.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addMember} waits for it.
-     *
      * @param member - The member
      * @returns The member's identifier
      * @throws {@link MemberError} with the failure `emptyFirstName` for a blank first name
@@ -669,9 +573,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Replaces the details of the member that `member` names by their identifier, and returns them as they were; an
      * archived member stays archived. Accounts that `member` leaves out are none, not those the group holds.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.replaceMemberSync} does not wait.
      *
      * Rejects with {@link MemberError} as adding one does; {@link PaymentAccountError} as adding one does; {@link
      * ExpenseGroupError} with the failure `unknownMember`; {@link IdError} for an identifier that is not one.
@@ -690,9 +591,6 @@ export class ExpenseGroup implements Disposable {
      * Replaces the details of the member that `member` names by their identifier, and returns them as they were; an
      * archived member stays archived. Accounts that `member` leaves out are none, not those the group holds.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.replaceMember} waits for it.
-     *
      * @param member - The member
      * @returns The member as they were
      * @throws {@link MemberError} as adding one does
@@ -707,9 +605,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Archives the member with the identifier `id`: they keep their history and balance, and join no new expense.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.archiveMemberSync} does not wait.
-     *
      * Rejects with {@link ExpenseGroupError} with the failure `unknownMember`; {@link IdError} for an identifier that is not one.
      *
      * @param id - The identifier
@@ -722,9 +617,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Archives the member with the identifier `id`: they keep their history and balance, and join no new expense.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.archiveMember} waits for it.
      *
      * @param id - The identifier
      * @throws {@link ExpenseGroupError} with the failure `unknownMember`
@@ -739,9 +631,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Makes the archived member with the identifier `id` active again.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.unarchiveMemberSync} does not wait.
-     *
      * Rejects with {@link ExpenseGroupError} with the failure `unknownMember`; {@link IdError} for an identifier that is not one.
      *
      * @param id - The identifier
@@ -754,9 +643,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Makes the archived member with the identifier `id` active again.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.unarchiveMember} waits for it.
      *
      * @param id - The identifier
      * @throws {@link ExpenseGroupError} with the failure `unknownMember`
@@ -771,9 +657,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Removes the member with the identifier `id`, who appears in no entry, and returns them.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.removeMemberSync} does not wait.
-     *
      * Rejects with {@link ExpenseGroupError} with the failure `unknownMember`, and `memberInUse` with the entries that still name
      * them; archive such a member instead; {@link IdError} for an identifier that is not one.
      *
@@ -787,9 +670,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Removes the member with the identifier `id`, who appears in no entry, and returns them.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.removeMember} waits for it.
      *
      * @param id - The identifier
      * @returns The member as they were
@@ -807,9 +687,6 @@ export class ExpenseGroup implements Disposable {
      * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
      * identifiers.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.categoriesSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the categories
      */
@@ -821,9 +698,6 @@ export class ExpenseGroup implements Disposable {
      * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
      * identifiers.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.categories} waits for it.
-     *
      * @returns The categories
      */
     categoriesSync(): readonly Category[] {
@@ -832,9 +706,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The category with the identifier `id`, if the group holds it.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.categorySync} does not wait.
      *
      * Rejects with {@link IdError} for an identifier that is not one.
      *
@@ -849,9 +720,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The category with the identifier `id`, if the group holds it.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.category} waits for it.
-     *
      * @param id - The identifier
      * @returns The category, if the group holds it
      * @throws {@link IdError} for an identifier that is not one
@@ -865,9 +733,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Adds `category` under its identifier and returns the identifier.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.addCategorySync} does not wait.
      *
      * Rejects with {@link CategoryError} with the failure `emptyName` for a blank name; {@link ExpenseGroupError} with the
      * failure `duplicateCategory` for an identifier another category has, and `duplicateCategoryName` for a name another
@@ -884,9 +749,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Adds `category` under its identifier and returns the identifier.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addCategory} waits for it.
-     *
      * @param category - The category
      * @returns The category's identifier
      * @throws {@link CategoryError} with the failure `emptyName` for a blank name
@@ -900,9 +762,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Renames the category that `category` names by its identifier, and returns it as it was.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.replaceCategorySync} does not wait.
      *
      * Rejects with {@link CategoryError} with the failure `emptyName` for a blank name; {@link ExpenseGroupError} with the
      * failure `unknownCategory`, `builtInCategory`, or `duplicateCategoryName`; {@link IdError} for an identifier that is not
@@ -921,9 +780,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Renames the category that `category` names by its identifier, and returns it as it was.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.replaceCategory} waits for it.
-     *
      * @param category - The category
      * @returns The category as it was
      * @throws {@link CategoryError} with the failure `emptyName` for a blank name
@@ -936,9 +792,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Removes the category with the identifier `id` and returns it; its expenses move to the built-in one.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.removeCategorySync} does not wait.
      *
      * Rejects with {@link ExpenseGroupError} with the failure `unknownCategory` or `builtInCategory`; {@link IdError} for an
      * identifier that is not one.
@@ -954,9 +807,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Removes the category with the identifier `id` and returns it; its expenses move to the built-in one.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.removeCategory} waits for it.
-     *
      * @param id - The identifier
      * @returns The category as it was
      * @throws {@link ExpenseGroupError} with the failure `unknownCategory` or `builtInCategory`
@@ -971,9 +821,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Every expense, in identifier order, which is creation order for generated identifiers.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.expensesSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the expenses
      */
@@ -984,9 +831,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Every expense, in identifier order, which is creation order for generated identifiers.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.expenses} waits for it.
-     *
      * @returns The expenses
      */
     expensesSync(): readonly Expense[] {
@@ -995,9 +839,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The expense with the identifier `id`, if the group holds it.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.expenseSync} does not wait.
      *
      * Rejects with {@link IdError} for an identifier that is not one.
      *
@@ -1011,9 +852,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The expense with the identifier `id`, if the group holds it.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.expense} waits for it.
      *
      * @param id - The identifier
      * @returns The expense, if the group holds it
@@ -1029,9 +867,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * How the expense with the identifier `id` divides, in the group currency, if the group holds it.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.expenseSharesSync} does not wait.
-     *
      * Rejects with {@link IdError} for an identifier that is not one.
      *
      * @param id - The identifier
@@ -1044,9 +879,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * How the expense with the identifier `id` divides, in the group currency, if the group holds it.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.expenseShares} waits for it.
      *
      * @param id - The identifier
      * @returns The shares, if the group holds the expense
@@ -1061,9 +893,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Adds `expense` under its identifier, every field it leaves out at its default, and returns the identifier.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.addExpenseSync} does not wait.
      *
      * Rejects with {@link ExpenseError} for an expense that does not build, such as one whose amounts do not add up;
      * {@link ExpenseGroupError} for one that does not fit the group, such as the failures `duplicateExpense` for an
@@ -1083,9 +912,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Adds `expense` under its identifier, every field it leaves out at its default, and returns the identifier.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addExpense} waits for it.
-     *
      * @param expense - The expense
      * @returns The expense's identifier
      * @throws {@link ExpenseError} for an expense that does not build, such as one whose amounts do not add up
@@ -1100,9 +926,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Replaces the expense that `expense` names by its identifier, and returns it as it was. A field `expense` leaves out
      * takes its default, as in a new expense, not the value the group holds.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.replaceExpenseSync} does not wait.
      *
      * Rejects with {@link ExpenseError} as adding one does; {@link ExpenseGroupError} with the failure `unknownExpense`, and
      * as adding one does; {@link IdError} for an identifier that is not one.
@@ -1121,9 +944,6 @@ export class ExpenseGroup implements Disposable {
      * Replaces the expense that `expense` names by its identifier, and returns it as it was. A field `expense` leaves out
      * takes its default, as in a new expense, not the value the group holds.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.replaceExpense} waits for it.
-     *
      * @param expense - The expense
      * @returns The expense as it was
      * @throws {@link ExpenseError} as adding one does
@@ -1137,9 +957,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Removes the expense with the identifier `id` and returns it.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.removeExpenseSync} does not wait.
-     *
      * Rejects with {@link ExpenseGroupError} with the failure `unknownExpense`; {@link IdError} for an identifier that is not one.
      *
      * @param id - The identifier
@@ -1152,9 +969,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Removes the expense with the identifier `id` and returns it.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.removeExpense} waits for it.
      *
      * @param id - The identifier
      * @returns The expense as it was
@@ -1170,9 +984,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.transfersSync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the transfers
      */
@@ -1183,9 +994,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.transfers} waits for it.
-     *
      * @returns The transfers
      */
     transfersSync(): readonly Transfer[] {
@@ -1194,9 +1002,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The transfer with the identifier `id`, if the group holds it.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.transferSync} does not wait.
      *
      * Rejects with {@link IdError} for an identifier that is not one.
      *
@@ -1211,9 +1016,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The transfer with the identifier `id`, if the group holds it.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.transfer} waits for it.
-     *
      * @param id - The identifier
      * @returns The transfer, if the group holds it
      * @throws {@link IdError} for an identifier that is not one
@@ -1227,9 +1029,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The amount in the group currency of the transfer with the identifier `id`, if the group holds it.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.transferAmountSync} does not wait.
      *
      * Rejects with {@link IdError} for an identifier that is not one.
      *
@@ -1246,9 +1045,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The amount in the group currency of the transfer with the identifier `id`, if the group holds it.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.transferAmount} waits for it.
-     *
      * @param id - The identifier
      * @returns The amount, if the group holds the transfer
      * @throws {@link IdError} for an identifier that is not one
@@ -1262,9 +1058,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Adds `transfer` under its identifier and returns the identifier.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.addTransferSync} does not wait.
      *
      * Rejects with {@link TransferError} for a transfer that does not build, such as the failure `sameMember`;
      * {@link ExpenseGroupError} with the failure `duplicateTransfer` for an identifier another transfer has, and
@@ -1281,9 +1074,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Adds `transfer` under its identifier and returns the identifier.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addTransfer} waits for it.
-     *
      * @param transfer - The transfer
      * @returns The transfer's identifier
      * @throws {@link TransferError} for a transfer that does not build, such as the failure `sameMember`
@@ -1297,9 +1087,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.replaceTransferSync} does not wait.
      *
      * Rejects with {@link TransferError} as adding one does; {@link ExpenseGroupError} with the failure `unknownTransfer`, and
      * as adding one does; {@link IdError} for an identifier that is not one.
@@ -1317,9 +1104,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.replaceTransfer} waits for it.
-     *
      * @param transfer - The transfer
      * @returns The transfer as it was
      * @throws {@link TransferError} as adding one does
@@ -1332,9 +1116,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * Removes the transfer with the identifier `id` and returns it.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.removeTransferSync} does not wait.
      *
      * Rejects with {@link ExpenseGroupError} with the failure `unknownTransfer`; {@link IdError} for an identifier that is not
      * one.
@@ -1350,9 +1131,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * Removes the transfer with the identifier `id` and returns it.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.removeTransfer} waits for it.
-     *
      * @param id - The identifier
      * @returns The transfer as it was
      * @throws {@link ExpenseGroupError} with the failure `unknownTransfer`
@@ -1367,9 +1145,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group's totals.
      *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.summarySync} does not wait.
-     *
      * @param options - The call's signal
      * @returns A promise of the totals
      */
@@ -1380,9 +1155,6 @@ export class ExpenseGroup implements Disposable {
     /**
      * The group's totals.
      *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.summary} waits for it.
-     *
      * @returns The totals
      */
     summarySync(): Summary {
@@ -1391,9 +1163,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The payments that settle every balance by `strategy`.
-     *
-     * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
-     * was, and rejects with the signal's reason. {@link ExpenseGroup.settlementSync} does not wait.
      *
      * Rejects with {@link SettlementError} with the failure `outOfMemory` for an exact plan of more open balances than its
      * table fits.
@@ -1410,9 +1179,6 @@ export class ExpenseGroup implements Disposable {
 
     /**
      * The payments that settle every balance by `strategy`.
-     *
-     * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
-     * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.settlement} waits for it.
      *
      * @param strategy - The strategy
      * @returns The payments
