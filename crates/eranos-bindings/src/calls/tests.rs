@@ -6,11 +6,11 @@
 use eranos::{CategoryId, CurrencyCode, ExpenseGroup, ExpenseId, MemberId, TransferId};
 
 use crate::calendar::CalendarDate;
+use crate::calls;
 use crate::expense::{Expense, ExpenseSplit, Split};
 use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
 use crate::money::{Cost, CurrencyDetails, CurrencyRate, Money};
-use crate::operations;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{
@@ -105,15 +105,15 @@ fn flat() -> Flat {
     let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR)
         .build()
         .unwrap();
-    let ana = operations::add_member(&mut group, &new_member("Ana")).unwrap();
-    let bob = operations::add_member(&mut group, &new_member("Bob")).unwrap();
-    let food = operations::add_category(&mut group, &new_category("Food")).unwrap();
+    let ana = calls::add_member(&mut group, &new_member("Ana")).unwrap();
+    let bob = calls::add_member(&mut group, &new_member("Bob")).unwrap();
+    let food = calls::add_category(&mut group, &new_category("Food")).unwrap();
     let dinner = Expense {
         category: food.clone(),
         ..new_expense("Dinner", &ana, &[&ana, &bob])
     };
-    let dinner = operations::add_expense(&mut group, &dinner).unwrap();
-    let repayment = operations::add_transfer(&mut group, &new_transfer(&bob, &ana, 1_000)).unwrap();
+    let dinner = calls::add_expense(&mut group, &dinner).unwrap();
+    let repayment = calls::add_transfer(&mut group, &new_transfer(&bob, &ana, 1_000)).unwrap();
     Flat {
         ana,
         bob,
@@ -131,8 +131,8 @@ fn flat() -> Flat {
 fn every_read_converts_what_the_group_holds() {
     let flat = flat();
     let group = &flat.group;
-    assert_eq!(operations::id(group), group.id().to_string());
-    let categories = operations::categories(group);
+    assert_eq!(calls::id(group), group.id().to_string());
+    let categories = calls::categories(group);
     assert_eq!(
         categories[1],
         Category {
@@ -141,29 +141,29 @@ fn every_read_converts_what_the_group_holds() {
         }
     );
     assert_eq!(
-        operations::category(group, &flat.food),
+        calls::category(group, &flat.food),
         Ok(Some(categories[1].clone()))
     );
-    assert_eq!(operations::currency(group), euros(0).currency);
-    let expenses = operations::expenses(group);
+    assert_eq!(calls::currency(group), euros(0).currency);
+    let expenses = calls::expenses(group);
     assert_eq!(expenses.len(), 1);
     assert_eq!(expenses[0].id, flat.dinner);
     assert_eq!(
-        operations::expense(group, &flat.dinner),
+        calls::expense(group, &flat.dinner),
         Ok(Some(expenses[0].clone()))
     );
     let dinner: ExpenseId = flat.dinner.parse().unwrap();
     assert_eq!(
-        operations::expense_shares(group, &flat.dinner),
+        calls::expense_shares(group, &flat.dinner),
         Ok(group
             .expense_shares(dinner)
             .map(ExpenseShares::from_library))
     );
     assert_eq!(
-        operations::summary(group),
+        calls::summary(group),
         Summary::from_library(group.summary())
     );
-    let members = operations::members(group);
+    let members = calls::members(group);
     assert_eq!(
         members
             .iter()
@@ -172,11 +172,11 @@ fn every_read_converts_what_the_group_holds() {
         [flat.ana.clone(), flat.bob.clone()]
     );
     assert_eq!(
-        operations::member(group, &flat.ana),
+        calls::member(group, &flat.ana),
         Ok(Some(members[0].clone()))
     );
-    assert_eq!(operations::is_archived(group, &flat.ana), Ok(Some(false)));
-    assert_eq!(operations::name(group), "Flat");
+    assert_eq!(calls::is_archived(group, &flat.ana), Ok(Some(false)));
+    assert_eq!(calls::name(group), "Flat");
     for strategy in [
         SettlementStrategy::Adaptive,
         SettlementStrategy::Direct,
@@ -185,23 +185,23 @@ fn every_read_converts_what_the_group_holds() {
     ] {
         let settled = group.settlement(strategy.to_library()).unwrap();
         assert_eq!(
-            operations::settlement(group, strategy),
+            calls::settlement(group, strategy),
             Ok(SettlementPlan::from_library(settled))
         );
     }
-    let transfers = operations::transfers(group);
+    let transfers = calls::transfers(group);
     assert_eq!(transfers.len(), 1);
     assert_eq!(
-        operations::transfer(group, &flat.repayment),
+        calls::transfer(group, &flat.repayment),
         Ok(Some(transfers[0].clone()))
     );
     assert_eq!(
-        operations::transfer_amount(group, &flat.repayment),
+        calls::transfer_amount(group, &flat.repayment),
         Ok(Some(euros(1_000)))
     );
-    assert_eq!(operations::note(group), None);
-    assert_eq!(operations::language(group), None);
-    let saved: ExpenseGroup = serde_json::from_str(&operations::save(group)).unwrap();
+    assert_eq!(calls::note(group), None);
+    assert_eq!(calls::language(group), None);
+    let saved: ExpenseGroup = serde_json::from_str(&calls::save(group)).unwrap();
     assert_eq!(&saved, group);
 
     let (category, expense) = (
@@ -212,20 +212,14 @@ fn every_read_converts_what_the_group_holds() {
         MemberId::new("member-9").unwrap(),
         TransferId::new("transfer-9").unwrap(),
     );
-    assert_eq!(operations::category(group, &category.to_string()), Ok(None));
-    assert_eq!(operations::expense(group, &expense.to_string()), Ok(None));
+    assert_eq!(calls::category(group, &category.to_string()), Ok(None));
+    assert_eq!(calls::expense(group, &expense.to_string()), Ok(None));
+    assert_eq!(calls::expense_shares(group, &expense.to_string()), Ok(None));
+    assert_eq!(calls::member(group, &member.to_string()), Ok(None));
+    assert_eq!(calls::is_archived(group, &member.to_string()), Ok(None));
+    assert_eq!(calls::transfer(group, &transfer.to_string()), Ok(None));
     assert_eq!(
-        operations::expense_shares(group, &expense.to_string()),
-        Ok(None)
-    );
-    assert_eq!(operations::member(group, &member.to_string()), Ok(None));
-    assert_eq!(
-        operations::is_archived(group, &member.to_string()),
-        Ok(None)
-    );
-    assert_eq!(operations::transfer(group, &transfer.to_string()), Ok(None));
-    assert_eq!(
-        operations::transfer_amount(group, &transfer.to_string()),
+        calls::transfer_amount(group, &transfer.to_string()),
         Ok(None)
     );
 }
@@ -283,19 +277,19 @@ fn assert_every_call_refuses_text_that_is_not_an_identifier(calls: &[CallWithTex
 #[test]
 fn every_call_by_identifier_refuses_text_that_is_not_one() {
     assert_every_call_refuses_text_that_is_not_an_identifier(&[
-        |group, id| operations::category(group, id).err(),
-        |group, id| operations::remove_category(group, id).err(),
-        |group, id| operations::expense(group, id).err(),
-        |group, id| operations::expense_shares(group, id).err(),
-        |group, id| operations::remove_expense(group, id).err(),
-        |group, id| operations::member(group, id).err(),
-        |group, id| operations::is_archived(group, id).err(),
-        |group, id| operations::archive_member(group, id).err(),
-        |group, id| operations::unarchive_member(group, id).err(),
-        |group, id| operations::remove_member(group, id).err(),
-        |group, id| operations::transfer(group, id).err(),
-        |group, id| operations::transfer_amount(group, id).err(),
-        |group, id| operations::remove_transfer(group, id).err(),
+        |group, id| calls::category(group, id).err(),
+        |group, id| calls::remove_category(group, id).err(),
+        |group, id| calls::expense(group, id).err(),
+        |group, id| calls::expense_shares(group, id).err(),
+        |group, id| calls::remove_expense(group, id).err(),
+        |group, id| calls::member(group, id).err(),
+        |group, id| calls::is_archived(group, id).err(),
+        |group, id| calls::archive_member(group, id).err(),
+        |group, id| calls::unarchive_member(group, id).err(),
+        |group, id| calls::remove_member(group, id).err(),
+        |group, id| calls::transfer(group, id).err(),
+        |group, id| calls::transfer_amount(group, id).err(),
+        |group, id| calls::remove_transfer(group, id).err(),
     ]);
 }
 
@@ -340,14 +334,14 @@ fn transfer_with_id(id: &str) -> Transfer {
 #[test]
 fn a_record_whose_identifier_is_not_one_is_refused() {
     assert_every_call_refuses_text_that_is_not_an_identifier(&[
-        |group, id| operations::add_category(group, &category_with_id(id)).err(),
-        |group, id| operations::replace_category(group, &category_with_id(id)).err(),
-        |group, id| operations::add_expense(group, &expense_with_id(id)).err(),
-        |group, id| operations::replace_expense(group, &expense_with_id(id)).err(),
-        |group, id| operations::add_member(group, &member_with_id(id)).err(),
-        |group, id| operations::replace_member(group, &member_with_id(id)).err(),
-        |group, id| operations::add_transfer(group, &transfer_with_id(id)).err(),
-        |group, id| operations::replace_transfer(group, &transfer_with_id(id)).err(),
+        |group, id| calls::add_category(group, &category_with_id(id)).err(),
+        |group, id| calls::replace_category(group, &category_with_id(id)).err(),
+        |group, id| calls::add_expense(group, &expense_with_id(id)).err(),
+        |group, id| calls::replace_expense(group, &expense_with_id(id)).err(),
+        |group, id| calls::add_member(group, &member_with_id(id)).err(),
+        |group, id| calls::replace_member(group, &member_with_id(id)).err(),
+        |group, id| calls::add_transfer(group, &transfer_with_id(id)).err(),
+        |group, id| calls::replace_transfer(group, &transfer_with_id(id)).err(),
     ]);
 }
 
@@ -357,27 +351,24 @@ fn a_record_whose_identifier_is_not_one_is_refused() {
 fn categories_change_through_the_records() {
     let mut flat = flat();
     let group = &mut flat.group;
-    let travel = operations::add_category(group, &new_category("Travel")).unwrap();
+    let travel = calls::add_category(group, &new_category("Travel")).unwrap();
     let renamed = Category {
         id: travel.clone(),
         name: "Trips".to_owned(),
     };
     assert_eq!(
-        operations::replace_category(group, &renamed),
+        calls::replace_category(group, &renamed),
         Ok(Category {
             id: travel.clone(),
             name: "Travel".to_owned(),
         })
     );
-    assert_eq!(
-        operations::category(group, &travel),
-        Ok(Some(renamed.clone()))
-    );
+    assert_eq!(calls::category(group, &travel), Ok(Some(renamed.clone())));
 
     let refusals = [
-        operations::add_category(group, &renamed).unwrap_err(),
-        operations::add_category(group, &new_category("FOOD")).unwrap_err(),
-        operations::replace_category(
+        calls::add_category(group, &renamed).unwrap_err(),
+        calls::add_category(group, &new_category("FOOD")).unwrap_err(),
+        calls::replace_category(
             group,
             &Category {
                 id: CategoryId::new("category-9").unwrap().to_string(),
@@ -385,7 +376,7 @@ fn categories_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::replace_category(
+        calls::replace_category(
             group,
             &Category {
                 id: travel.clone(),
@@ -393,7 +384,7 @@ fn categories_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::replace_category(
+        calls::replace_category(
             group,
             &Category {
                 id: travel.clone(),
@@ -401,7 +392,7 @@ fn categories_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::replace_category(
+        calls::replace_category(
             group,
             &Category {
                 id: CategoryId::UNCATEGORISED.to_string(),
@@ -443,9 +434,9 @@ fn categories_change_through_the_records() {
         "{refusals:?}"
     );
 
-    assert_eq!(operations::remove_category(group, &travel), Ok(renamed));
+    assert_eq!(calls::remove_category(group, &travel), Ok(renamed));
     assert!(matches!(
-        operations::remove_category(group, &travel),
+        calls::remove_category(group, &travel),
         Err(EranosError::ExpenseGroup {
             failure: ExpenseGroupFailure::UnknownCategory { .. },
             ..
@@ -460,12 +451,12 @@ fn expenses_change_through_the_records() {
     let mut flat = flat();
     let (ana, bob) = (flat.ana.as_str(), flat.bob.as_str());
     let group = &mut flat.group;
-    let lunch = operations::add_expense(group, &new_expense("Lunch", bob, &[ana, bob])).unwrap();
+    let lunch = calls::add_expense(group, &new_expense("Lunch", bob, &[ana, bob])).unwrap();
     let replacement = Expense {
         id: lunch.clone(),
         ..new_expense("Late lunch", ana, &[ana, bob])
     };
-    let replaced = operations::replace_expense(group, &replacement).unwrap();
+    let replaced = calls::replace_expense(group, &replacement).unwrap();
     assert_eq!(
         replaced,
         Expense {
@@ -473,16 +464,13 @@ fn expenses_change_through_the_records() {
             ..new_expense("Lunch", bob, &[ana, bob])
         }
     );
-    assert_eq!(
-        operations::expense(group, &lunch),
-        Ok(Some(replacement.clone()))
-    );
+    assert_eq!(calls::expense(group, &lunch), Ok(Some(replacement.clone())));
 
     let nobody = MemberId::new("member-9").unwrap().to_string();
     let refusals = [
-        operations::add_expense(group, &replacement).unwrap_err(),
-        operations::add_expense(group, &new_expense("Lunch", &nobody, &[ana])).unwrap_err(),
-        operations::replace_expense(
+        calls::add_expense(group, &replacement).unwrap_err(),
+        calls::add_expense(group, &new_expense("Lunch", &nobody, &[ana])).unwrap_err(),
+        calls::replace_expense(
             group,
             &Expense {
                 id: ExpenseId::new("expense-9").unwrap().to_string(),
@@ -490,7 +478,7 @@ fn expenses_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::replace_expense(
+        calls::replace_expense(
             group,
             &Expense {
                 name: " ".to_owned(),
@@ -498,7 +486,7 @@ fn expenses_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::replace_expense(
+        calls::replace_expense(
             group,
             &Expense {
                 id: lunch.clone(),
@@ -536,9 +524,9 @@ fn expenses_change_through_the_records() {
         "{refusals:?}"
     );
 
-    assert_eq!(operations::remove_expense(group, &lunch), Ok(replacement));
+    assert_eq!(calls::remove_expense(group, &lunch), Ok(replacement));
     assert!(matches!(
-        operations::remove_expense(group, &lunch),
+        calls::remove_expense(group, &lunch),
         Err(EranosError::ExpenseGroup {
             failure: ExpenseGroupFailure::UnknownExpense { .. },
             ..
@@ -552,24 +540,24 @@ fn expenses_change_through_the_records() {
 fn members_change_through_the_records() {
     let mut flat = flat();
     let group = &mut flat.group;
-    let carol = operations::add_member(group, &new_member("Carol")).unwrap();
+    let carol = calls::add_member(group, &new_member("Carol")).unwrap();
     let renamed = Member {
         id: carol.clone(),
         last_name: Some("Ionescu".to_owned()),
         ..new_member("Carol")
     };
     assert_eq!(
-        operations::replace_member(group, &renamed),
+        calls::replace_member(group, &renamed),
         Ok(Member {
             id: carol.clone(),
             ..new_member("Carol")
         })
     );
-    assert_eq!(operations::member(group, &carol), Ok(Some(renamed.clone())));
-    operations::archive_member(group, &carol).unwrap();
-    assert_eq!(operations::is_archived(group, &carol), Ok(Some(true)));
-    operations::unarchive_member(group, &carol).unwrap();
-    assert_eq!(operations::is_archived(group, &carol), Ok(Some(false)));
+    assert_eq!(calls::member(group, &carol), Ok(Some(renamed.clone())));
+    calls::archive_member(group, &carol).unwrap();
+    assert_eq!(calls::is_archived(group, &carol), Ok(Some(true)));
+    calls::unarchive_member(group, &carol).unwrap();
+    assert_eq!(calls::is_archived(group, &carol), Ok(Some(false)));
 
     let nobody = MemberId::new("member-9").unwrap().to_string();
     let unknown = Member {
@@ -577,10 +565,10 @@ fn members_change_through_the_records() {
         ..new_member("Dan")
     };
     let refusals = [
-        operations::add_member(group, &renamed).unwrap_err(),
-        operations::add_member(group, &new_member(" ")).unwrap_err(),
-        operations::replace_member(group, &unknown).unwrap_err(),
-        operations::replace_member(
+        calls::add_member(group, &renamed).unwrap_err(),
+        calls::add_member(group, &new_member(" ")).unwrap_err(),
+        calls::replace_member(group, &unknown).unwrap_err(),
+        calls::replace_member(
             group,
             &Member {
                 first_name: " ".to_owned(),
@@ -588,10 +576,10 @@ fn members_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::archive_member(group, &nobody).unwrap_err(),
-        operations::unarchive_member(group, &nobody).unwrap_err(),
-        operations::remove_member(group, &nobody).unwrap_err(),
-        operations::remove_member(group, &flat.ana).unwrap_err(),
+        calls::archive_member(group, &nobody).unwrap_err(),
+        calls::unarchive_member(group, &nobody).unwrap_err(),
+        calls::remove_member(group, &nobody).unwrap_err(),
+        calls::remove_member(group, &flat.ana).unwrap_err(),
     ];
     assert!(
         matches!(
@@ -634,7 +622,7 @@ fn members_change_through_the_records() {
         "{refusals:?}"
     );
 
-    assert_eq!(operations::remove_member(group, &carol), Ok(renamed));
+    assert_eq!(calls::remove_member(group, &carol), Ok(renamed));
 }
 
 /// A transfer change would add a second transfer under an identifier the
@@ -644,28 +632,28 @@ fn transfers_change_through_the_records() {
     let mut flat = flat();
     let (ana, bob) = (flat.ana.as_str(), flat.bob.as_str());
     let group = &mut flat.group;
-    let payment = operations::add_transfer(group, &new_transfer(ana, bob, 500)).unwrap();
+    let payment = calls::add_transfer(group, &new_transfer(ana, bob, 500)).unwrap();
     let replacement = Transfer {
         id: payment.clone(),
         ..new_transfer(ana, bob, 700)
     };
     assert_eq!(
-        operations::replace_transfer(group, &replacement),
+        calls::replace_transfer(group, &replacement),
         Ok(Transfer {
             id: payment.clone(),
             ..new_transfer(ana, bob, 500)
         })
     );
     assert_eq!(
-        operations::transfer(group, &payment),
+        calls::transfer(group, &payment),
         Ok(Some(replacement.clone()))
     );
 
     let nobody = MemberId::new("member-9").unwrap().to_string();
     let refusals = [
-        operations::add_transfer(group, &replacement).unwrap_err(),
-        operations::add_transfer(group, &new_transfer(ana, &nobody, 500)).unwrap_err(),
-        operations::replace_transfer(
+        calls::add_transfer(group, &replacement).unwrap_err(),
+        calls::add_transfer(group, &new_transfer(ana, &nobody, 500)).unwrap_err(),
+        calls::replace_transfer(
             group,
             &Transfer {
                 id: TransferId::new("transfer-9").unwrap().to_string(),
@@ -673,7 +661,7 @@ fn transfers_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::replace_transfer(
+        calls::replace_transfer(
             group,
             &Transfer {
                 receiver: ana.to_owned(),
@@ -681,7 +669,7 @@ fn transfers_change_through_the_records() {
             },
         )
         .unwrap_err(),
-        operations::replace_transfer(
+        calls::replace_transfer(
             group,
             &Transfer {
                 receiver: nobody.clone(),
@@ -719,12 +707,9 @@ fn transfers_change_through_the_records() {
         "{refusals:?}"
     );
 
-    assert_eq!(
-        operations::remove_transfer(group, &payment),
-        Ok(replacement)
-    );
+    assert_eq!(calls::remove_transfer(group, &payment), Ok(replacement));
     assert!(matches!(
-        operations::remove_transfer(group, &payment),
+        calls::remove_transfer(group, &payment),
         Err(EranosError::ExpenseGroup {
             failure: ExpenseGroupFailure::UnknownTransfer { .. },
             ..
@@ -739,40 +724,40 @@ fn transfers_change_through_the_records() {
 fn the_name_description_and_language_change_through_text() {
     let mut flat = flat();
     let group = &mut flat.group;
-    operations::set_name(group, "Home").unwrap();
-    assert_eq!(operations::name(group), "Home");
+    calls::set_name(group, "Home").unwrap();
+    assert_eq!(calls::name(group), "Home");
     assert!(matches!(
-        operations::set_name(group, " "),
+        calls::set_name(group, " "),
         Err(EranosError::ExpenseGroup {
             failure: ExpenseGroupFailure::EmptyName,
             ..
         })
     ));
-    assert_eq!(operations::name(group), "Home");
+    assert_eq!(calls::name(group), "Home");
 
-    operations::set_note(group, Some(" Rent and food\n"));
-    assert_eq!(operations::note(group).as_deref(), Some("Rent and food"));
-    operations::set_note(group, Some(" "));
-    assert_eq!(operations::note(group), None);
-    operations::set_note(group, Some("Rent"));
-    operations::set_note(group, None);
-    assert_eq!(operations::note(group), None);
+    calls::set_note(group, Some(" Rent and food\n"));
+    assert_eq!(calls::note(group).as_deref(), Some("Rent and food"));
+    calls::set_note(group, Some(" "));
+    assert_eq!(calls::note(group), None);
+    calls::set_note(group, Some("Rent"));
+    calls::set_note(group, None);
+    assert_eq!(calls::note(group), None);
 
-    operations::set_language(group, Some("pt-pt")).unwrap();
-    assert_eq!(operations::language(group).as_deref(), Some("pt-PT"));
+    calls::set_language(group, Some("pt-pt")).unwrap();
+    assert_eq!(calls::language(group).as_deref(), Some("pt-PT"));
     assert!(matches!(
-        operations::set_language(group, Some("not a tag")),
+        calls::set_language(group, Some("not a tag")),
         Err(EranosError::Language {
             failure: LanguageFailure::InvalidLanguage,
             ..
         })
     ));
-    assert_eq!(operations::language(group).as_deref(), Some("pt-PT"));
-    operations::set_language(group, None).unwrap();
-    assert_eq!(operations::language(group), None);
-    operations::set_language(group, Some("pt-pt")).unwrap();
-    operations::set_language(group, Some("  ")).unwrap();
-    assert_eq!(operations::language(group), None);
+    assert_eq!(calls::language(group).as_deref(), Some("pt-PT"));
+    calls::set_language(group, None).unwrap();
+    assert_eq!(calls::language(group), None);
+    calls::set_language(group, Some("pt-pt")).unwrap();
+    calls::set_language(group, Some("  ")).unwrap();
+    assert_eq!(calls::language(group), None);
 }
 
 /// A currency change would reach the library with a currency or a rate it
@@ -795,7 +780,7 @@ fn the_currency_changes_at_the_given_rates() {
         },
         ..new_expense("Taxi", ana, &[ana, bob])
     };
-    operations::add_expense(group, &taxi).unwrap();
+    calls::add_expense(group, &taxi).unwrap();
     let rate = |currency: &str, rate: &str| CurrencyRate {
         currency: currency.to_owned(),
         rate: rate.to_owned(),
@@ -803,10 +788,10 @@ fn the_currency_changes_at_the_given_rates() {
 
     let before = group.clone();
     let refusals = [
-        operations::change_currency(group, "XYZ", &[rate("EUR", "5")]).unwrap_err(),
-        operations::change_currency(group, "RON", &[rate("EUR", "zero")]).unwrap_err(),
-        operations::change_currency(group, "RON", &[rate("XYZ", "5")]).unwrap_err(),
-        operations::change_currency(group, "USD", &[rate("EUR", "1.1")]).unwrap_err(),
+        calls::change_currency(group, "XYZ", &[rate("EUR", "5")]).unwrap_err(),
+        calls::change_currency(group, "RON", &[rate("EUR", "zero")]).unwrap_err(),
+        calls::change_currency(group, "RON", &[rate("XYZ", "5")]).unwrap_err(),
+        calls::change_currency(group, "USD", &[rate("EUR", "1.1")]).unwrap_err(),
     ];
     assert!(
         matches!(
@@ -834,13 +819,13 @@ fn the_currency_changes_at_the_given_rates() {
     );
     assert_eq!(*group, before);
 
-    operations::change_currency(group, "RON", &[rate("EUR", "5")]).unwrap();
+    calls::change_currency(group, "RON", &[rate("EUR", "5")]).unwrap();
     assert_eq!(
-        operations::currency(group),
+        calls::currency(group),
         CurrencyDetails::from_library(CurrencyCode::RON)
     );
     assert_eq!(
-        operations::summary(group).total_spent,
+        calls::summary(group).total_spent,
         Money {
             minor_units: 20_000,
             currency: CurrencyDetails::from_library(CurrencyCode::RON),

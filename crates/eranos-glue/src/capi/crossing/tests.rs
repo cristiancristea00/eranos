@@ -438,14 +438,11 @@ fn a_field_the_bridge_cannot_carry_is_refused_wherever_it_is_reached() {
         }
     ";
     for calls in [
-        "#[calls] trait ExpenseGroupCalls { /// Takes it. #[write] fn take(&self, inner: &Inner) -> Result<(), E>; }",
-        "#[calls] trait ExpenseGroupCalls { /// Gives it. #[read] fn give(&self) -> Result<Inner, E>; }",
-        "#[calls] trait ExpenseGroupCalls { /// Gives it. #[read] fn give(&self) -> Result<Outer, E>; }",
+        "#[calls] trait ExpenseGroupCalls { #[doc = \"Takes it.\"] fn take(group: &mut ExpenseGroup, inner: &Inner) {} }",
+        "#[calls] trait ExpenseGroupCalls { #[doc = \"Gives it.\"] fn give(group: &ExpenseGroup) -> Inner {} }",
+        "#[calls] trait ExpenseGroupCalls { #[doc = \"Gives it.\"] fn give(group: &ExpenseGroup) -> Outer {} }",
     ] {
-        let calls = calls
-            .replace("/// ", "#[doc = \"")
-            .replace(". #[", ".\"] #[");
-        let core = Core::parse(&[records.to_owned(), calls.clone()]).unwrap();
+        let core = Core::parse(&[records.to_owned(), calls.to_owned()]).unwrap();
         assert!(Plan::of(&core).is_err(), "{calls}");
     }
 }

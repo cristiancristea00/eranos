@@ -1,11 +1,12 @@
-//! The trait of group calls is the one list the core's forms, the read
-//! handle's, and every glue crate's methods are written from. A call read
-//! with the wrong lock, a parameter owned or lent the wrong way, or a trait
-//! the rules refuse let through would reach every binding at once.
+//! The trait of group calls is the one list the core's functions and forms,
+//! the read and write handles', and every glue crate's methods are written
+//! from. A call read with the wrong lock, an answer taken for a failure, a
+//! parameter owned or lent the wrong way, or a trait the rules refuse let
+//! through would reach every binding at once.
 
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
-use syn::{FnArg, ItemTrait, TraitItem};
+use syn::{FnArg, ItemTrait, TraitItem, parse_quote};
 
 use super::*;
 
@@ -26,21 +27,24 @@ fn text(tokens: impl ToTokens) -> String {
 
 /// A call's parameters would reach its forms owned, lent, or typed the
 /// wrong way, so an asynchronous call would borrow what its future outlives
-/// or a foreign call would take a type `uniffi` cannot lower.
+/// or a foreign call would take a type `uniffi` cannot lower; its function
+/// would run another body than the trait's.
 #[test]
 fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
     let calls = calls(quote! {
         trait ExpenseGroupCalls {
             /// Takes one parameter of each kind.
-            #[write]
             fn change(
-                &self,
+                group: &mut ExpenseGroup,
                 id: &str,
                 language: Option<&str>,
                 category: &Category,
                 rates: &[CurrencyRate],
                 strategy: SettlementStrategy,
-            ) -> Result<SettlementPlan, EranosError>;
+                note: Option<String>,
+            ) -> Result<SettlementPlan, EranosError> {
+                group.settle(strategy)
+            }
         }
     })
     .unwrap();
@@ -51,10 +55,26 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
     assert_eq!(Access::Write, call.access);
     assert_eq!(text(&call.name), "change");
     assert_eq!(text(&call.answer), text(quote!(SettlementPlan)));
-    assert_eq!(text(&call.error), text(quote!(EranosError)));
     assert!(!call.infallible);
     assert!(call.asynchronous.is_none());
     assert!(!call.answers_nothing());
+    assert_eq!(
+        text(&call.function),
+        text(quote! {
+            #[doc = r" Takes one parameter of each kind."]
+            fn change(
+                group: &mut ExpenseGroup,
+                id: &str,
+                language: Option<&str>,
+                category: &Category,
+                rates: &[CurrencyRate],
+                strategy: SettlementStrategy,
+                note: Option<String>,
+            ) -> Result<SettlementPlan, EranosError> {
+                group.settle(strategy)
+            }
+        })
+    );
     let forms = |form: fn(&Parameter) -> TokenStream| -> Vec<String> {
         call.parameters
             .iter()
@@ -69,6 +89,7 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
             text(quote!(Category)),
             text(quote!(::std::vec::Vec<CurrencyRate>)),
             text(quote!(SettlementStrategy)),
+            text(quote!(Option<String>)),
         ]
     );
     assert_eq!(
@@ -79,6 +100,7 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
             text(quote!(&category)),
             text(quote!(&rates)),
             text(quote!(strategy)),
+            text(quote!(note)),
         ]
     );
     assert_eq!(
@@ -89,6 +111,7 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
             text(quote!(&Category)),
             text(quote!(&[CurrencyRate])),
             text(quote!(SettlementStrategy)),
+            text(quote!(Option<String>)),
         ]
     );
     assert_eq!(
@@ -99,154 +122,185 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
             text(quote!(category)),
             text(quote!(rates)),
             text(quote!(strategy)),
+            text(quote!(note)),
         ]
     );
 }
 
-/// A read taken for a change would run under the shared lock, an
-/// infallible operation's answer would not be wrapped, and a call whose
-/// asynchronous form is written by hand would get a derived one.
+/// A read taken for a change would run under the shared lock, an answer
+/// taken for a failure, or a failure for an answer, would be wrapped or
+/// left unwrapped the wrong way, and a call whose asynchronous form is
+/// written by hand would get a derived one.
 #[test]
-fn a_call_s_attributes_set_its_lock_its_fallibility_and_its_asynchronous_body() {
+fn a_call_s_group_answer_and_attribute_set_its_lock_its_fallibility_and_its_asynchronous_body() {
     let calls = calls(quote! {
         trait ExpenseGroupCalls {
             /// The name.
-            #[read]
-            #[infallible]
-            fn name(&self) -> Result<String, EranosError>;
+            fn name(group: &ExpenseGroup) -> String {}
+            /// The note.
+            fn note(group: &eranos::ExpenseGroup) -> Option<String> {}
             /// The settlement.
-            #[read]
             #[async_body = bodies::settlement]
-            fn settlement(&self) -> Result<SettlementPlan, EranosError>;
+            fn settlement(group: &ExpenseGroup) -> std::result::Result<SettlementPlan, crate::EranosError> {}
             /// Renames the group.
-            #[write]
-            #[infallible]
-            fn rename(&self) -> Result<(), EranosError>;
+            fn rename(group: &mut ExpenseGroup) {}
+            /// Whether the group is open, or the failure.
+            fn open(group: &ExpenseGroup) -> Option<Result<bool, EranosError>> {}
+            /// The group's label.
+            fn label(group: &ExpenseGroup) -> &'static str {}
         }
     })
     .unwrap();
-    let [name, settlement, rename] = calls.calls.as_slice() else {
-        panic!("three calls");
+    let [name, note, settlement, rename, open, label] = calls.calls.as_slice() else {
+        panic!("six calls");
     };
     assert_eq!(Access::Read, name.access);
     assert!(name.infallible);
+    assert_eq!(text(&name.answer), text(quote!(String)));
     assert!(name.asynchronous.is_none());
+    assert!(name.parameters.is_empty());
+    assert_eq!(Access::Read, note.access);
+    assert!(note.infallible);
+    assert_eq!(text(&note.answer), text(quote!(Option<String>)));
     assert!(!settlement.infallible);
+    assert_eq!(text(&settlement.answer), text(quote!(SettlementPlan)));
     assert_eq!(
         settlement.asynchronous.as_ref().map(text),
         Some(text(quote!(bodies::settlement)))
     );
+    assert_eq!(Access::Write, rename.access);
+    assert!(rename.infallible);
     assert!(rename.answers_nothing());
-    assert!(name.parameters.is_empty());
+    assert!(open.infallible);
+    let found: Type = parse_quote!(Option<Result<bool, EranosError>>);
+    assert_eq!(text(&open.answer), text(found));
+    assert!(label.infallible);
+    assert_eq!(text(&label.answer), text(quote!(&'static str)));
 }
 
-/// A call without its lock, or with an attribute the rules do not know,
-/// would be written under a guessed lock or with an attribute silently
-/// dropped.
+/// A call with an attribute the rules do not know, such as the lock or the
+/// fallibility a call states by its group and its answer, would be written
+/// with the attribute silently dropped.
 #[test]
-fn a_call_s_attributes_are_its_lock_and_the_known_ones() {
+fn a_call_takes_its_asynchronous_body_alone_besides_its_documentation() {
     let call = |attributes: TokenStream| {
         refusal(quote! {
             trait ExpenseGroupCalls {
                 /// A call.
                 #attributes
-                fn call(&self) -> Result<(), EranosError>;
+                fn call(group: &ExpenseGroup) {}
             }
         })
     };
-    assert_eq!(
-        call(quote!()),
-        "a group call says whether it reads or writes the group, with `#[read]` or `#[write]`"
-    );
-    assert_eq!(
-        call(quote!(#[read] #[write])),
-        "a group call either reads or writes the group"
-    );
-    assert_eq!(
-        call(quote!(#[read] #[cfg(test)])),
-        "a group call takes `#[read]` or `#[write]`, `#[infallible]`, and `#[async_body = path]`"
-    );
-    for attributes in [
-        quote!(#[read(shared)]),
-        quote!(#[write] #[infallible(always)]),
-        quote!(#[write] #[async_body]),
-    ] {
-        assert!(!call(attributes.clone()).is_empty(), "{attributes}");
+    for attributes in [quote!(#[read]), quote!(#[infallible]), quote!(#[cfg(test)])] {
+        assert_eq!(
+            call(attributes.clone()),
+            "a group call takes `#[async_body = path]` alone besides its documentation",
+            "{attributes}"
+        );
     }
+    assert_ne!(call(quote!(#[async_body])), "");
     assert_eq!(
-        call(quote!(#[write] #[async_body = "bodies::change"])),
+        call(quote!(#[async_body = "bodies::change"])),
         "`#[async_body = path]` names the function the asynchronous form runs"
     );
 }
 
-/// A call that is not a plain `&self` method could not be forwarded by a
-/// form that takes `&self` and returns what the operation returns.
+/// A call that is not a plain function with a body, or that does not take
+/// the group first by reference, could not be run under a lock by a form
+/// that hands it the group.
 #[test]
-fn a_call_is_a_plain_method_of_self_by_reference() {
+fn a_call_is_a_plain_function_with_a_body_that_takes_the_group_first() {
     let signature = |signature: TokenStream| {
         refusal(quote! {
             trait ExpenseGroupCalls {
                 /// A call.
-                #[read]
-                #signature;
+                #signature
             }
         })
     };
     for plain in [
-        quote!(const fn call(&self) -> Result<(), EranosError>),
-        quote!(async fn call(&self) -> Result<(), EranosError>),
-        quote!(unsafe fn call(&self) -> Result<(), EranosError>),
-        quote!(extern "C" fn call(&self) -> Result<(), EranosError>),
-        quote!(fn call<Answer>(&self) -> Result<Answer, EranosError>),
-        quote!(fn call(&self) -> Result<(), EranosError> where Self: Sized),
+        quote!(
+            const fn call(group: &ExpenseGroup) {}
+        ),
+        quote!(
+            async fn call(group: &ExpenseGroup) {}
+        ),
+        quote!(
+            unsafe fn call(group: &ExpenseGroup) {}
+        ),
+        quote!(
+            extern "C" fn call(group: &ExpenseGroup) {}
+        ),
+        quote!(
+            fn call<Answer>(group: &ExpenseGroup) -> Answer {}
+        ),
+        quote!(
+            fn call(group: &ExpenseGroup)
+            where
+                Self: Sized,
+            {
+            }
+        ),
     ] {
         assert_eq!(
             signature(plain.clone()),
-            "a group call is a plain method, declared without a body",
+            "a group call is a plain function",
             "{plain}"
         );
     }
     assert_eq!(
-        refusal(quote! {
-            trait ExpenseGroupCalls {
-                /// A call.
-                #[read]
-                fn call(&self) -> Result<(), EranosError> {}
-            }
-        }),
-        "a group call is a plain method, declared without a body"
+        signature(quote!(
+            fn call(group: &ExpenseGroup);
+        )),
+        "a group call has a body, which its forms run under the lock"
     );
-    for receiver in [
-        quote!(fn call(self) -> Result<(), EranosError>),
-        quote!(fn call(&mut self) -> Result<(), EranosError>),
-        quote!(fn call(&'group self) -> Result<(), EranosError>),
-        quote!(fn call() -> Result<(), EranosError>),
-        quote!(fn call(id: &str) -> Result<(), EranosError>),
+    for first in [
+        quote!(
+            fn call(&self) {}
+        ),
+        quote!(
+            fn call(self) {}
+        ),
+        quote!(
+            fn call() {}
+        ),
+        quote!(
+            fn call(id: &str) {}
+        ),
+        quote!(
+            fn call(group: ExpenseGroup) {}
+        ),
+        quote!(
+            fn call(group: &Member) {}
+        ),
+        quote!(
+            fn call(groups: &[ExpenseGroup]) {}
+        ),
     ] {
         assert_eq!(
-            signature(receiver.clone()),
-            "a group call takes `&self`",
-            "{receiver}"
+            signature(first.clone()),
+            "a group call takes the group first, as `&ExpenseGroup` to read it or `&mut ExpenseGroup` to change it",
+            "{first}"
         );
     }
 }
 
-/// A receiver after the first parameter, which syn builds but never parses,
-/// would reach the forms as a parameter they cannot write.
+/// A receiver after the group, which syn builds but never parses, would
+/// reach the forms as a parameter they cannot write.
 #[test]
-fn a_second_receiver_is_refused() {
+fn a_receiver_after_the_group_is_refused() {
     let mut item: ItemTrait = syn::parse2(quote! {
         trait ExpenseGroupCalls {
             /// A call.
-            #[read]
-            fn call(&self, id: &str) -> Result<(), EranosError>;
+            fn call(group: &ExpenseGroup, id: &str) {}
         }
     })
     .unwrap();
     let Some(TraitItem::Fn(function)) = item.items.first_mut() else {
         panic!("one call");
     };
-    let receiver = function.sig.inputs.first().unwrap().clone();
+    let receiver: FnArg = parse_quote!(&self);
     function.sig.inputs.push(receiver);
     assert!(matches!(
         function.sig.inputs.last(),
@@ -254,7 +308,7 @@ fn a_second_receiver_is_refused() {
     ));
     assert_eq!(
         Calls::parse(&item).err().unwrap().to_string(),
-        "a group call takes `&self` first and once"
+        "a group call takes no `self`"
     );
 }
 
@@ -266,8 +320,7 @@ fn a_parameter_is_a_plain_name_of_a_type_a_rule_covers() {
         refusal(quote! {
             trait ExpenseGroupCalls {
                 /// A call.
-                #[read]
-                fn call(&self, #parameter) -> Result<(), EranosError>;
+                fn call(group: &ExpenseGroup, #parameter) {}
             }
         })
     };
@@ -299,29 +352,27 @@ fn a_parameter_is_a_plain_name_of_a_type_a_rule_covers() {
     }
 }
 
-/// A call that answered with anything but a `Result` of an answer and an
-/// error would leave its forms, which report a lock's failure, no error to
-/// fail with.
+/// A call that can fail with another error than the bindings' one, or whose
+/// `Result` does not name its answer and its error, would leave its forms an
+/// error they cannot report or an answer they cannot name.
 #[test]
-fn a_call_answers_with_a_result_of_its_answer_and_its_error() {
+fn a_call_that_can_fail_answers_with_a_result_of_its_answer_and_eranos_error() {
     for output in [
-        quote!(),
-        quote!(-> String),
-        quote!(-> (String, EranosError)),
+        quote!(-> Result),
         quote!(-> Result<String>),
         quote!(-> Result<String, EranosError, EranosError>),
-        quote!(-> Option<String, EranosError>),
         quote!(-> Result<'static, String>),
+        quote!(-> Result<String, MoneyError>),
+        quote!(-> Result<String, &EranosError>),
     ] {
         assert_eq!(
             refusal(quote! {
                 trait ExpenseGroupCalls {
                     /// A call.
-                    #[read]
-                    fn call(&self) #output;
+                    fn call(group: &ExpenseGroup) #output {}
                 }
             }),
-            "a group call answers with a `Result` of its answer and its error",
+            "a group call that can fail answers with a `Result` of its answer and `EranosError`",
             "{output}"
         );
     }
@@ -333,39 +384,10 @@ fn a_call_is_documented() {
     assert_eq!(
         refusal(quote! {
             trait ExpenseGroupCalls {
-                #[read]
-                fn call(&self) -> Result<(), EranosError>;
+                fn call(group: &ExpenseGroup) {}
             }
         }),
         "a group call is documented, its summary ending with a full stop"
-    );
-}
-
-/// An answer's type of no path segment, which syn builds but never parses,
-/// would reach the forms as a `Result` they cannot name.
-#[test]
-fn an_answer_of_no_path_is_refused() {
-    let mut item: ItemTrait = syn::parse2(quote! {
-        trait ExpenseGroupCalls {
-            /// A call.
-            #[read]
-            fn call(&self) -> Result<(), EranosError>;
-        }
-    })
-    .unwrap();
-    let Some(TraitItem::Fn(function)) = item.items.first_mut() else {
-        panic!("one call");
-    };
-    let ReturnType::Type(_, output) = &mut function.sig.output else {
-        panic!("an answer");
-    };
-    let Type::Path(path) = &mut **output else {
-        panic!("a path");
-    };
-    path.path.segments.clear();
-    assert_eq!(
-        Calls::parse(&item).err().unwrap().to_string(),
-        "a group call answers with a `Result` of its answer and its error"
     );
 }
 
@@ -381,7 +403,7 @@ fn the_trait_is_a_plain_trait_of_calls() {
     ] {
         assert_eq!(
             refusal(quote!(#heading {})),
-            "the group calls' trait is a plain trait of methods",
+            "the group calls' trait is a plain trait of functions",
             "{heading}"
         );
     }
@@ -391,7 +413,7 @@ fn the_trait_is_a_plain_trait_of_calls() {
                 const LIMIT: usize;
             }
         }),
-        "the group calls' trait holds methods alone"
+        "the group calls' trait holds functions alone"
     );
     assert!(
         calls(quote!(

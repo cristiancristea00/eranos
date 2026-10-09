@@ -250,79 +250,54 @@ pub(crate) const CALLS: &str = "
 #[eranos_glue_macros::calls]
 trait ExpenseGroupCalls {
     /// The expense with the identifier `id`.
-    #[read]
-    fn expense(&self, id: &str) -> Result<Option<Expense>, EranosError>;
+    fn expense(group: &ExpenseGroup, id: &str) -> Result<Option<Expense>, EranosError> {}
 
     /// Every expense.
-    #[read]
-    #[infallible]
-    fn expenses(&self) -> Result<Vec<Expense>, EranosError>;
+    fn expenses(group: &ExpenseGroup) -> Vec<Expense> {}
 
     /// The group's name.
     ///
     /// It is never blank.
-    #[read]
-    #[infallible]
-    fn name(&self) -> Result<String, EranosError>;
+    fn name(group: &ExpenseGroup) -> String {}
 
     /// The note.
-    #[read]
-    #[infallible]
-    fn note(&self) -> Result<Option<String>, EranosError>;
+    fn note(group: &ExpenseGroup) -> Option<String> {}
 
     /// Whether the member with the identifier `id` is archived.
-    #[read]
-    fn is_archived(&self, id: &str) -> Result<Option<bool>, EranosError>;
+    fn is_archived(group: &ExpenseGroup, id: &str) -> Result<Option<bool>, EranosError> {}
 
     /// Whether the group takes expenses.
-    #[read]
-    #[infallible]
-    fn is_open(&self) -> Result<bool, EranosError>;
+    fn is_open(group: &ExpenseGroup) -> bool {}
 
     /// Whether an expense is named `name`.
-    #[read]
-    #[infallible]
-    fn has_expense_named(&self, name: &str) -> Result<bool, EranosError>;
+    fn has_expense_named(group: &ExpenseGroup, name: &str) -> bool {}
 
     /// The latest expense, if there is one.
-    #[read]
-    #[infallible]
-    fn latest_expense(&self) -> Result<Option<Expense>, EranosError>;
+    fn latest_expense(group: &ExpenseGroup) -> Option<Expense> {}
 
     /// Whether the latest expense is itemised, if there is one.
-    #[read]
-    #[infallible]
-    fn is_latest_itemised(&self) -> Result<Option<bool>, EranosError>;
+    fn is_latest_itemised(group: &ExpenseGroup) -> Option<bool> {}
 
     /// The totals.
-    #[read]
-    #[infallible]
-    fn summary(&self) -> Result<Summary, EranosError>;
+    fn summary(group: &ExpenseGroup) -> Summary {}
 
     /// Adds `expense` and returns its identifier.
-    #[write]
-    fn add_expense(&self, expense: &Expense) -> Result<String, EranosError>;
+    fn add_expense(group: &mut ExpenseGroup, expense: &Expense) -> Result<String, EranosError> {}
 
     /// Removes the expense with the identifier `id` and returns it.
-    #[write]
-    fn remove_expense(&self, id: &str) -> Result<Expense, EranosError>;
+    fn remove_expense(group: &mut ExpenseGroup, id: &str) -> Result<Expense, EranosError> {}
 
     /// Sets the members.
-    #[write]
-    fn set_members(&self, members: &[String], items: &[ExpenseItem]) -> Result<(), EranosError>;
+    fn set_members(group: &mut ExpenseGroup, members: &[String], items: &[ExpenseItem]) -> Result<(), EranosError> {}
 
     /// Sets the note; blank text clears it.
-    #[write]
-    #[infallible]
-    fn set_note(&self, note: &str) -> Result<(), EranosError>;
+    fn set_note(group: &mut ExpenseGroup, note: &str) {}
 
     /// Sets the language, or clears it when there is none.
-    #[write]
-    fn set_language(&self, language: Option<&str>, count: i32) -> Result<(), EranosError>;
+    fn set_language(group: &mut ExpenseGroup, language: Option<&str>, count: i32) -> Result<(), EranosError> {}
 
     /// Moves the day and the sharing.
-    #[write]
-    fn move_to(&self, date: CalendarDate, distribution: TipDistribution) -> Result<(), EranosError>;
+    fn move_to(group: &mut ExpenseGroup, date: CalendarDate, distribution: TipDistribution) -> Result<(), EranosError> {}
 }
 ";
 
@@ -409,7 +384,8 @@ fn the_bridge_is_two_modules_that_import_what_they_name() {
 /// and a module that names nothing of another imports nothing of it.
 #[test]
 fn a_single_import_has_no_braces() {
-    let file = module(
+    let generated = module(
+        "generated/word.rs",
         vec![Named {
             name: "EranosWord".to_owned(),
             tokens: quote! {
@@ -417,11 +393,8 @@ fn a_single_import_has_no_braces() {
             },
         }],
         &BTreeSet::new(),
-    );
-    let generated = Generated {
-        path: "generated/word.rs",
-        file,
-    };
+    )
+    .unwrap();
     assert_eq!(
         imports(&generated),
         [quote!(
@@ -490,10 +463,8 @@ fn every_identifier_of_a_stream_counts() {
 fn sources_the_rules_refuse_give_no_bridge() {
     assert!(bridge(&["fn (".to_owned()]).is_err());
     assert!(bridge(&[RECORDS.to_owned()]).is_err());
-    let refused = CALLS.replace(
-        "-> Result<bool, EranosError>",
-        "-> Result<i32, EranosError>",
-    );
+    let refused = CALLS.replace("-> bool {}", "-> i32 {}");
+    assert_ne!(refused, CALLS);
     assert!(bridge(&[RECORDS.to_owned(), refused]).is_err());
     let unsupported = RECORDS.replace("pub code: String,", "pub code: f64,");
     assert!(bridge(&[unsupported, CALLS.to_owned()]).is_err());
@@ -511,15 +482,20 @@ fn sources_the_rules_refuse_give_no_bridge() {
     assert!(bridge(&[RECORDS.to_owned(), twice]).is_err());
 }
 
-/// Tokens that are not Rust stay in their file as they are, where rustfmt
-/// and the compiler refuse them, rather than be dropped.
+/// An item whose code is not Rust, which a broken template would write,
+/// would reach the bridge's file and fail only when rustfmt or the compiler
+/// reads it, far from the template that wrote it.
 #[test]
-fn tokens_that_are_not_rust_stay_verbatim() {
-    let tokens = quote!(fn broken;);
-    assert_eq!(
-        file(tokens.clone()).to_token_stream().to_string(),
-        tokens.to_string()
+fn an_item_that_is_not_rust_is_refused() {
+    let broken = module(
+        "generated/broken.rs",
+        vec![Named {
+            name: "EranosBroken".to_owned(),
+            tokens: quote!(fn broken;),
+        }],
+        &BTreeSet::new(),
     );
+    assert!(broken.is_err());
 }
 
 /// The crate's entry point writes the same bridge, and refuses sources

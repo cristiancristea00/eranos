@@ -191,7 +191,7 @@ impl ExpenseGroupWriter {
 
 // Every group call's synchronous and asynchronous forms on `ExpenseGroup`, every
 // read's form on `ExpenseGroupReader`, and every call's form on `ExpenseGroupWriter`,
-// stamped from the core's list of calls.
+// written from the core's list of calls.
 eranos_bindings::expense_group_calls!(::eranos_glue_macros::uniffi_objects);
 
 /// Cancels the asynchronous calls it is given to: a call stops at its next

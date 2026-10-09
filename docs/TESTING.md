@@ -213,9 +213,9 @@ out of the runs and of the report, which skips its files: the runs build it
 instrumented all the same, and a warm build would read its macros as unrun.
 rustc maps no coverage for the code a proc macro writes, so the forms of
 the group handle and of the read and write handles are not in the report
-either; the
-operations and the locks they call are, and the core's tests call every
-form. It does not count doctests on the stable toolchain, so an
+either; the calls' functions are, since the macro writes them with the
+spans of the trait's bodies, and so are the locks they call, and the
+core's tests call every form. It does not count doctests on the stable toolchain, so an
 item covered only by its example shows as missed. Coverage is a diagnostic,
 never a gate; a gap is a reading list: either a missing test or dead code.
 CI measures the Rust tests the same way on every push and publishes the
@@ -231,7 +231,7 @@ every line and function of eranos-capi's bridge, whose generated modules
 are files like any other: eranos-glue's tests measure the generator that
 writes them, and a test of xtask holds the committed files to what it
 writes. The objects' methods and the copies of the core's items that the
-glue's macros stamp are not in the report, as the core's forms are not. Two
+glue's macros write are not in the report, as the core's forms are not. Two
 kinds of the bridge's regions stay unrun: the check that a text parameter
 is UTF-8, which only a call given other bytes takes and which would need a
 test for each function, and the end of the process after a job of the

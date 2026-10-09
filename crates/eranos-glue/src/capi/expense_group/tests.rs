@@ -852,13 +852,7 @@ fn calls_the_bridge_cannot_carry_are_refused() {
         refusal(&CALLS.replace("fn set_language", "fn language")),
         "a group call that takes optional text sets it, and its name starts with `set_`"
     );
-    assert_ne!(
-        refusal(&CALLS.replace(
-            "-> Result<bool, EranosError>",
-            "-> Result<i32, EranosError>"
-        )),
-        ""
-    );
+    assert_ne!(refusal(&CALLS.replace("-> bool {}", "-> i32 {}")), "");
     assert_ne!(
         refusal(&CALLS.replace("items: &[ExpenseItem]", "items: &[f64]")),
         ""

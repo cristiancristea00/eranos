@@ -187,6 +187,34 @@ pub(crate) fn currency(code: &str) -> Result<library::CurrencyCode, EranosError>
     Ok(library::CurrencyCode::from_code(code)?)
 }
 
+/// A currency change, in the library's values.
+pub(crate) struct CurrencyChange {
+    /// The new group currency.
+    pub(crate) currency: library::CurrencyCode,
+    /// The rate into it of every other currency in use.
+    pub(crate) rates: Vec<library::CurrencyRate>,
+}
+
+impl CurrencyChange {
+    /// The change to the currency `code` at `rates`.
+    ///
+    /// # Errors
+    ///
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// and
+    /// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate).
+    pub(crate) fn new(code: &str, rates: &[CurrencyRate]) -> Result<Self, EranosError> {
+        let rates = rates
+            .iter()
+            .map(CurrencyRate::to_library)
+            .collect::<Result<Vec<_>, EranosError>>()?;
+        Ok(Self {
+            currency: currency(code)?,
+            rates,
+        })
+    }
+}
+
 /// The exchange rate written `text`.
 ///
 /// # Errors

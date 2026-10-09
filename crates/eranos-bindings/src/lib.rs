@@ -44,7 +44,6 @@ mod ledger;
 mod member;
 mod mirrors;
 mod money;
-mod operations;
 mod reader;
 mod settlement;
 mod transfer;

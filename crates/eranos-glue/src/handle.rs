@@ -1,14 +1,15 @@
-//! The code the binding core's calls write: the group handle's synchronous
-//! and asynchronous form of every call, the read handle's form of every
-//! read, the write handle's form of every call, and the table that hands the
-//! calls to the glue crates.
+//! The code the binding core's calls write: each call's function, the
+//! group handle's synchronous and asynchronous form of every call, the read
+//! handle's form of every read, the write handle's form of every call, and
+//! the table that hands the calls to the glue crates.
 //!
-//! The code names `ExpenseGroupHandle`, `ExpenseGroupReader`,
-//! `ExpenseGroupWriter`, `Cancellation`, and `operations` as the module that
-//! lists the calls imports them, and calls the handles' `reading`,
-//! `writing`, `reading_unfailing`, `writing_unfailing`, `reading_async`, and
-//! `writing_async` and the group handle's `shared`, which that module can
-//! reach.
+//! Each call's function is private to the module that lists the calls, and
+//! every form runs it under its lock. The code names `ExpenseGroupHandle`,
+//! `ExpenseGroupReader`, `ExpenseGroupWriter`, `Cancellation`, and
+//! `EranosError` as that module imports them, and calls the handles'
+//! `reading`, `writing`, `reading_unfailing`, `writing_unfailing`,
+//! `reading_async`, and `writing_async` and the group handle's `shared`,
+//! which that module can reach.
 //!
 //! The synchronous form of a call that cannot fail is written twice: outside
 //! wasm it waits for the lock and returns the call's answer itself, and on
@@ -21,9 +22,10 @@ use syn::ItemTrait;
 
 use crate::calls::{Access, Call, Calls, Parameter};
 
-/// The forms of every call of `calls`, and the table that hands `item`, the
-/// trait that lists them, to a glue crate's macro.
+/// The function and the forms of every call of `calls`, and the table that
+/// hands `item`, the trait that lists them, to a glue crate's macro.
 pub(crate) fn expand(calls: &Calls, item: &ItemTrait) -> TokenStream {
+    let functions = calls.calls.iter().map(|call| &call.function);
     let forms = calls.calls.iter().map(|call| {
         let synchronous = synchronous(call);
         let asynchronous = asynchronous(call);
@@ -37,6 +39,8 @@ pub(crate) fn expand(calls: &Calls, item: &ItemTrait) -> TokenStream {
     let writes = calls.calls.iter().map(writer);
     let table = table(calls, item);
     quote! {
+        #(#functions)*
+
         impl ExpenseGroupHandle {
             #(#forms)*
         }
@@ -53,11 +57,11 @@ pub(crate) fn expand(calls: &Calls, item: &ItemTrait) -> TokenStream {
     }
 }
 
-/// The run of `call`'s operation, which shares its name, on `group` with
-/// `arguments`, its answer wrapped in `Ok` when the operation cannot fail.
+/// The run of `call`'s function on `group` with `arguments`, its answer
+/// wrapped in `Ok` when the call cannot fail.
 fn operation(call: &Call, arguments: &[TokenStream]) -> TokenStream {
     let name = &call.name;
-    let run = quote_spanned! { call.span => operations::#name(group #(, #arguments)*) };
+    let run = quote_spanned! { call.span => #name(group #(, #arguments)*) };
     if !call.infallible {
         run
     } else if call.answers_nothing() {
@@ -101,9 +105,9 @@ fn synchronous(call: &Call) -> TokenStream {
     let name = &call.name;
     let must_use = (!call.answers_nothing()).then(|| quote!(#[must_use]));
     let unfailing_operation = if call.parameters.is_empty() {
-        quote_spanned! { call.span => operations::#name }
+        quote_spanned! { call.span => #name }
     } else {
-        quote_spanned! { call.span => |group| operations::#name(group #(, #arguments)*) }
+        quote_spanned! { call.span => |group| #name(group #(, #arguments)*) }
     };
     quote_spanned! { call.span =>
         #[doc = #unfailing_doc]
@@ -121,8 +125,8 @@ fn synchronous(call: &Call) -> TokenStream {
 }
 
 /// The group handle's asynchronous form of `call`: a future of its owned
-/// parameters that waits for the lock, runs the operation, and stops when
-/// its cancellation is cancelled first, or the function that
+/// parameters that waits for the lock, runs the call's function, and stops
+/// when its cancellation is cancelled first, or the function that
 /// `#[async_body]` names, which takes the handle's shared group.
 fn asynchronous(call: &Call) -> TokenStream {
     let doc = call.docs.asynchronous(call.infallible);
@@ -153,14 +157,14 @@ fn asynchronous(call: &Call) -> TokenStream {
             quote_spanned! { call.span => #path(self.shared.clone(), #(#names,)* cancellation) }
         },
     );
-    let (answer, error) = (&call.answer, &call.error);
+    let answer = &call.answer;
     quote_spanned! { call.span =>
         #[doc = #doc]
         pub fn #method(
             &self,
             #(#parameters,)*
             cancellation: ::std::option::Option<::std::sync::Arc<Cancellation>>,
-        ) -> impl ::std::future::Future<Output = ::std::result::Result<#answer, #error>>
+        ) -> impl ::std::future::Future<Output = ::std::result::Result<#answer, EranosError>>
                + ::std::marker::Send
                + 'static {
             #body
@@ -207,7 +211,7 @@ fn writer(call: &Call) -> TokenStream {
 }
 
 /// `call`'s signature outside wasm for a call that cannot fail, public:
-/// the trait's, answering the value itself, or nothing.
+/// the trait's parameters, answering the value itself, or nothing.
 fn unfailing_signature(call: &Call) -> TokenStream {
     let method = &call.name;
     let parameters = call.parameters.iter().map(|parameter| {
@@ -223,7 +227,8 @@ fn unfailing_signature(call: &Call) -> TokenStream {
     }
 }
 
-/// `call`'s signature as the trait declares it, public.
+/// `call`'s signature as a form that can fail declares it, public: the
+/// trait's parameters, answering a `Result` of the call's answer.
 fn signature(call: &Call) -> TokenStream {
     let method = &call.name;
     let parameters = call.parameters.iter().map(|parameter| {
@@ -231,9 +236,9 @@ fn signature(call: &Call) -> TokenStream {
         let written = &parameter.written;
         quote!(#name: #written)
     });
-    let (answer, error) = (&call.answer, &call.error);
+    let answer = &call.answer;
     quote_spanned! { call.span =>
-        pub fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error>
+        pub fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, EranosError>
     }
 }
 

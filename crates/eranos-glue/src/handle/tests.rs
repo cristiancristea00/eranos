@@ -1,6 +1,7 @@
-//! The forms written for the core: every call's synchronous and
-//! asynchronous form on the group handle, every read's form on the read
-//! handle, every call's form on the write handle, and the table. A form under the wrong lock, an answer left
+//! The code written for the core: every call's function, its synchronous
+//! and asynchronous form on the group handle, every read's form on the read
+//! handle, every call's form on the write handle, and the table. A function
+//! that ran another body, a form under the wrong lock, an answer left
 //! unwrapped, a future that borrows what it outlives, or a table that lost
 //! part of the trait would break every binding at once.
 
@@ -11,7 +12,7 @@ use syn::ItemTrait;
 use super::*;
 use crate::docs::Docs;
 
-/// The trait of four calls the tests write forms of: an infallible read
+/// The trait of four calls the tests write code of: an infallible read
 /// without parameters, a fallible change of optional text, an infallible
 /// change answering nothing, and a read whose asynchronous form is written
 /// by hand.
@@ -19,20 +20,22 @@ fn trait_item() -> ItemTrait {
     syn::parse2(quote! {
         trait ExpenseGroupCalls {
             /// The group's name.
-            #[read]
-            #[infallible]
-            fn name(&self) -> Result<String, EranosError>;
+            fn name(group: &ExpenseGroup) -> String {
+                group.name().to_owned()
+            }
             /// Sets the language.
-            #[write]
-            fn set_language(&self, language: Option<&str>) -> Result<(), EranosError>;
+            fn set_language(group: &mut ExpenseGroup, language: Option<&str>) -> Result<(), EranosError> {
+                group.set_language(language)
+            }
             /// Sets the note.
-            #[write]
-            #[infallible]
-            fn set_note(&self, note: &str) -> Result<(), EranosError>;
+            fn set_note(group: &mut ExpenseGroup, note: &str) {
+                group.set_note(note);
+            }
             /// The payments that settle every balance.
-            #[read]
             #[async_body = bodies::settlement]
-            fn settlement(&self, strategy: SettlementStrategy) -> Result<SettlementPlan, EranosError>;
+            fn settlement(group: &ExpenseGroup, strategy: SettlementStrategy) -> Result<SettlementPlan, EranosError> {
+                group.settlement(strategy)
+            }
         }
     })
     .unwrap()
@@ -44,8 +47,7 @@ fn docs(summary: &str) -> Docs {
     let item: ItemTrait = syn::parse2(quote! {
         trait ExpenseGroupCalls {
             #[doc = #summary]
-            #[read]
-            fn call(&self) -> Result<(), EranosError>;
+            fn call(group: &ExpenseGroup) {}
         }
     })
     .unwrap();
@@ -55,8 +57,9 @@ fn docs(summary: &str) -> Docs {
     Docs::parse(&function.attrs, &function.sig.ident).unwrap()
 }
 
-/// The items `expand` writes for [`trait_item`]: the group handle's forms,
-/// the read handle's, and the table.
+/// The items `expand` writes for [`trait_item`]: the four calls' functions,
+/// the group handle's forms, the read handle's, the write handle's, and the
+/// table.
 fn written() -> Vec<syn::Item> {
     let item = trait_item();
     let file: syn::File = syn::parse2(expand(&Calls::parse(&item).unwrap(), &item)).unwrap();
@@ -68,17 +71,45 @@ fn text(tokens: impl ToTokens) -> String {
     tokens.to_token_stream().to_string()
 }
 
-/// Every call's forms on the group handle read under the lock the call
-/// names, wrap an infallible operation's answer, move what the future
-/// outlives into it, and call the hand-written body where the trait names
-/// one; a form under another lock, an unwrapped answer, or a future that
-/// borrows would break every binding at once.
+/// Every call's function is the trait's, documented and private; every
+/// call's forms on the group handle run it under the lock its group asks
+/// for, wrap an infallible call's answer, move what the future outlives into
+/// it, and call the hand-written body where the trait names one; a function
+/// that ran another body, a form under another lock, an unwrapped answer,
+/// or a future that borrows would break every binding at once.
 #[test]
-fn every_call_writes_both_forms_on_the_group_handle() {
+fn every_call_writes_its_function_and_both_forms_on_the_group_handle() {
     let items = written();
-    assert_eq!(4, items.len());
+    assert_eq!(8, items.len());
+    let functions: TokenStream = quote! {
+        #[doc = r" The group's name."]
+        fn name(group: &ExpenseGroup) -> String {
+            group.name().to_owned()
+        }
+        #[doc = r" Sets the language."]
+        fn set_language(group: &mut ExpenseGroup, language: Option<&str>) -> Result<(), EranosError> {
+            group.set_language(language)
+        }
+        #[doc = r" Sets the note."]
+        fn set_note(group: &mut ExpenseGroup, note: &str) {
+            group.set_note(note);
+        }
+        #[doc = r" The payments that settle every balance."]
+        fn settlement(group: &ExpenseGroup, strategy: SettlementStrategy) -> Result<SettlementPlan, EranosError> {
+            group.settlement(strategy)
+        }
+    };
     assert_eq!(
-        text(&items[0]),
+        items[..4].iter().map(text).collect::<Vec<_>>(),
+        syn::parse2::<syn::File>(functions)
+            .unwrap()
+            .items
+            .iter()
+            .map(text)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        text(&items[4]),
         text(syn::parse2::<syn::Item>(expected_group_handle()).unwrap())
     );
 }
@@ -100,7 +131,7 @@ fn expected_group_handle() -> TokenStream {
         language.synchronous(Access::Write, false),
         language.asynchronous(false),
     );
-    let (description_doc, description_future) = (
+    let (note_doc, note_future) = (
         note.synchronous(Access::Write, true),
         note.asynchronous(true),
     );
@@ -108,19 +139,19 @@ fn expected_group_handle() -> TokenStream {
         settlement.synchronous(Access::Read, false),
         settlement.asynchronous(false),
     );
-    let (name_unfailing_doc, description_unfailing_doc) = (name.unfailing(), note.unfailing());
+    let (name_unfailing_doc, note_unfailing_doc) = (name.unfailing(), note.unfailing());
     quote! {
         impl ExpenseGroupHandle {
             #[doc = #name_unfailing_doc]
             #[must_use]
             #[cfg(not(target_family = "wasm"))]
             pub fn name(&self) -> String {
-                self.reading_unfailing(operations::name)
+                self.reading_unfailing(name)
             }
             #[doc = #name_doc]
             #[cfg(target_family = "wasm")]
             pub fn name(&self) -> ::std::result::Result<String, EranosError> {
-                self.reading(|group| ::std::result::Result::Ok(operations::name(group)))
+                self.reading(|group| ::std::result::Result::Ok(name(group)))
             }
             #[doc = #name_future]
             pub fn name_async(
@@ -129,11 +160,11 @@ fn expected_group_handle() -> TokenStream {
             ) -> impl ::std::future::Future<Output = ::std::result::Result<String, EranosError>>
                    + ::std::marker::Send
                    + 'static {
-                self.reading_async(cancellation, |group| ::std::result::Result::Ok(operations::name(group)))
+                self.reading_async(cancellation, |group| ::std::result::Result::Ok(name(group)))
             }
             #[doc = #language_doc]
             pub fn set_language(&self, language: Option<&str>) -> ::std::result::Result<(), EranosError> {
-                self.writing(|group| operations::set_language(group, language))
+                self.writing(|group| set_language(group, language))
             }
             #[doc = #language_future]
             pub fn set_language_async(
@@ -143,19 +174,19 @@ fn expected_group_handle() -> TokenStream {
             ) -> impl ::std::future::Future<Output = ::std::result::Result<(), EranosError>>
                    + ::std::marker::Send
                    + 'static {
-                self.writing_async(cancellation, move |group| operations::set_language(group, language.as_deref()))
+                self.writing_async(cancellation, move |group| set_language(group, language.as_deref()))
             }
-            #[doc = #description_unfailing_doc]
+            #[doc = #note_unfailing_doc]
             #[cfg(not(target_family = "wasm"))]
             pub fn set_note(&self, note: &str) {
-                self.writing_unfailing(|group| operations::set_note(group, note))
+                self.writing_unfailing(|group| set_note(group, note))
             }
-            #[doc = #description_doc]
+            #[doc = #note_doc]
             #[cfg(target_family = "wasm")]
             pub fn set_note(&self, note: &str) -> ::std::result::Result<(), EranosError> {
-                self.writing(|group| { operations::set_note(group, note); ::std::result::Result::Ok(()) })
+                self.writing(|group| { set_note(group, note); ::std::result::Result::Ok(()) })
             }
-            #[doc = #description_future]
+            #[doc = #note_future]
             pub fn set_note_async(
                 &self,
                 note: ::std::string::String,
@@ -164,13 +195,13 @@ fn expected_group_handle() -> TokenStream {
                    + ::std::marker::Send
                    + 'static {
                 self.writing_async(cancellation, move |group| {
-                    operations::set_note(group, &note);
+                    set_note(group, &note);
                     ::std::result::Result::Ok(())
                 })
             }
             #[doc = #settlement_doc]
             pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<SettlementPlan, EranosError> {
-                self.reading(|group| operations::settlement(group, strategy))
+                self.reading(|group| settlement(group, strategy))
             }
             #[doc = #settlement_future]
             pub fn settlement_async(
@@ -207,19 +238,19 @@ fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait()
         impl ExpenseGroupWriter {
             #[doc = #name_written]
             pub fn name(&self) -> ::std::result::Result<String, EranosError> {
-                self.writing(|group| ::std::result::Result::Ok(operations::name(group)))
+                self.writing(|group| ::std::result::Result::Ok(name(group)))
             }
             #[doc = #language_written]
             pub fn set_language(&self, language: Option<&str>) -> ::std::result::Result<(), EranosError> {
-                self.writing(|group| operations::set_language(group, language))
+                self.writing(|group| set_language(group, language))
             }
             #[doc = #note_written]
             pub fn set_note(&self, note: &str) -> ::std::result::Result<(), EranosError> {
-                self.writing(|group| { operations::set_note(group, note); ::std::result::Result::Ok(()) })
+                self.writing(|group| { set_note(group, note); ::std::result::Result::Ok(()) })
             }
             #[doc = #settlement_written]
             pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<SettlementPlan, EranosError> {
-                self.writing(|group| operations::settlement(group, strategy))
+                self.writing(|group| settlement(group, strategy))
             }
         }
     };
@@ -227,11 +258,11 @@ fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait()
         impl ExpenseGroupReader {
             #[doc = #name]
             pub fn name(&self) -> ::std::result::Result<String, EranosError> {
-                self.reading(|group| ::std::result::Result::Ok(operations::name(group)))
+                self.reading(|group| ::std::result::Result::Ok(name(group)))
             }
             #[doc = #settlement]
             pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<SettlementPlan, EranosError> {
-                self.reading(|group| operations::settlement(group, strategy))
+                self.reading(|group| settlement(group, strategy))
             }
         }
     };
@@ -251,15 +282,15 @@ fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait()
     };
     let items = written();
     assert_eq!(
-        text(&items[1]),
+        text(&items[5]),
         text(syn::parse2::<syn::Item>(reader).unwrap())
     );
     assert_eq!(
-        text(&items[2]),
+        text(&items[6]),
         text(syn::parse2::<syn::Item>(writer).unwrap())
     );
     assert_eq!(
-        text(&items[3]),
+        text(&items[7]),
         text(syn::parse2::<syn::Item>(table).unwrap())
     );
 }

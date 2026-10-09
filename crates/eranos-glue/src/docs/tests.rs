@@ -28,8 +28,7 @@ fn two_paragraphs() -> Docs {
             /// identifier, and returns it as it was.
             ///
             /// Its expenses keep it.
-            #[write]
-            fn rename(&self) -> Result<(), EranosError>;
+            fn rename(group: &mut ExpenseGroup) -> Result<(), EranosError> {}
         }
     })
     .unwrap()
@@ -53,8 +52,7 @@ fn a_doc_comment_reads_as_its_paragraphs() {
             #[doc = ""]
             #[doc = "  The second.  "]
             #[doc = "The third.\n\nThe fourth."]
-            #[read]
-            fn call(&self) -> Result<(), EranosError>;
+            fn call(group: &ExpenseGroup) -> Result<(), EranosError> {}
         }
     })
     .unwrap();
@@ -115,8 +113,7 @@ fn a_call_is_documented_and_its_summary_ends_with_a_full_stop() {
         docs(quote! {
             trait ExpenseGroupCalls {
                 #attributes
-                #[read]
-                fn call(&self) -> Result<(), EranosError>;
+                fn call(group: &ExpenseGroup) -> Result<(), EranosError> {}
             }
         })
         .unwrap_err()

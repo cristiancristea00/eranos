@@ -453,6 +453,21 @@ pub fn language_parse(text: &str) -> Result<String, EranosError> {
     Ok(Language::parse(text)?.as_str().to_owned())
 }
 
+/// The language written `text`, or none when there is no text or it is
+/// blank, as a note without text is none.
+///
+/// # Errors
+///
+/// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage)
+/// for text that is not a BCP 47 tag.
+pub(crate) fn parsed_language(text: Option<&str>) -> Result<Option<Language>, EranosError> {
+    text.map(str::trim)
+        .filter(|tag| !tag.is_empty())
+        .map(Language::parse)
+        .transpose()
+        .map_err(EranosError::from)
+}
+
 // --- Balances ----------------------------------------------------------------
 
 /// The balance as the library writes it: "owes 12.00 EUR", "settled", or

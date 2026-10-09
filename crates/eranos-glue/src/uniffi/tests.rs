@@ -15,8 +15,7 @@ fn docs(summary: &str) -> crate::docs::Docs {
     let item: ItemTrait = syn::parse2(quote! {
         trait ExpenseGroupCalls {
             #[doc = #summary]
-            #[read]
-            fn call(&self) -> Result<(), EranosError>;
+            fn call(group: &ExpenseGroup) -> Result<(), EranosError> {}
         }
     })
     .unwrap();
@@ -38,15 +37,11 @@ fn the_objects_forward_every_form_to_the_core() {
         &syn::parse2(quote! {
             trait ExpenseGroupCalls {
                 /// The category with the identifier `id`.
-                #[read]
-                fn category(&self, id: &str) -> Result<Option<Category>, EranosError>;
+                fn category(group: &ExpenseGroup, id: &str) -> Result<Option<Category>, EranosError> {}
                 /// Sets the language.
-                #[write]
-                fn set_language(&self, language: Option<&str>) -> Result<(), EranosError>;
+                fn set_language(group: &mut ExpenseGroup, language: Option<&str>) -> Result<(), EranosError> {}
                 /// The group's name.
-                #[read]
-                #[infallible]
-                fn name(&self) -> Result<String, EranosError>;
+                fn name(group: &ExpenseGroup) -> String {}
             }
         })
         .unwrap(),

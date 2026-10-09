@@ -23,8 +23,9 @@ fn mirror(attribute: TokenStream, item: TokenStream) -> syn::Result<TokenStream>
 }
 
 /// A record, an enum, and an error keep their definitions whole, and each
-/// mirror macro, named after its item, hands the item's kind, name,
-/// visibility, and fields without a single attribute or doc comment.
+/// mirror macro, named after its item, imports the item and hands its kind,
+/// name, visibility, and fields without a single attribute or doc comment;
+/// a copy without the import would name no type where it is written.
 #[test]
 fn an_item_keeps_its_definition_and_its_mirror_its_fields() {
     let record = quote! {
@@ -38,9 +39,9 @@ fn an_item_keeps_its_definition_and_its_mirror_its_fields() {
             pub minor_units: i64,
         }
     };
-    let record_doc = "Hands the mirror of [`Money`] to the macro whose path it is given: its kind, name, and \
-                      fields, without its attributes and documentation, from which a glue crate stamps its own \
-                      copy.";
+    let record_doc = "Imports [`Money`] where it is invoked, and hands its mirror to the macro whose path it is \
+                      given: its kind, name, and fields, without its attributes and documentation, from which a \
+                      glue crate writes its own copy, which names the item.";
     assert_eq!(
         mirror(quote!(), record.clone()).unwrap().to_string(),
         quote! {
@@ -50,6 +51,7 @@ fn an_item_keeps_its_definition_and_its_mirror_its_fields() {
             #[macro_export]
             macro_rules! mirror_money {
                 ($($callback:tt)+) => {
+                    use $crate::Money;
                     $($callback)+ ! { Record pub struct Money { pub currency: String, pub minor_units: i64, } }
                 };
             }
@@ -73,6 +75,7 @@ fn an_item_keeps_its_definition_and_its_mirror_its_fields() {
         &quote!(Enum pub enum Balance { GetsBack { amount: Money }, Settled, }).to_string()
     ));
     assert!(written.contains(&quote!(macro_rules! mirror_balance).to_string()));
+    assert!(written.contains(&quote!(use $crate::Balance;).to_string()));
     let error = quote! {
         #[derive(Debug)]
         pub enum EranosError {

@@ -15,9 +15,7 @@ fn every_entry_point_refuses_what_it_does_not_take() {
     let item = quote! {
         trait ExpenseGroupCalls {
             /// The group's name.
-            #[read]
-            #[infallible]
-            fn name(&self) -> Result<String, EranosError>;
+            fn name(group: &ExpenseGroup) -> String {}
         }
     };
     assert!(calls(quote!(), item.clone()).is_ok());

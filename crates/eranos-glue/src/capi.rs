@@ -97,16 +97,12 @@ pub(crate) fn bridge(sources: &[String]) -> syn::Result<Vec<Generated>> {
     let records = records::items(&core, &plan)?;
     let written = records.iter().map(|named| named.name.clone()).collect();
     let group = expense_group::items(&core)?;
-    Ok(vec![
-        Generated {
-            path: "generated/expense_group.rs",
-            file: module(group, &written),
-        },
-        Generated {
-            path: "generated/records.rs",
-            file: module(records, &BTreeSet::new()),
-        },
-    ])
+    [
+        module("generated/expense_group.rs", group, &written),
+        module("generated/records.rs", records, &BTreeSet::new()),
+    ]
+    .into_iter()
+    .collect()
 }
 
 /// An item of a bridge module, and the items it comes with, such as its
@@ -127,11 +123,20 @@ struct Import {
     path: TokenStream,
 }
 
-/// The file of a bridge module holding `items`, in the order of their names,
-/// with an import of every type it names from the C glue's other modules:
-/// `records`, the names of the generated module `records`, and the
-/// hand-written ones.
-fn module(mut items: Vec<Named>, records: &BTreeSet<String>) -> syn::File {
+/// The file at `path` of a bridge module holding `items`, in the order of
+/// their names, with an import of every type it names from the C glue's
+/// other modules: `records`, the names of the generated module `records`,
+/// and the hand-written ones.
+///
+/// # Errors
+///
+/// For items whose code is not Rust, which a template that writes broken
+/// code would hand over.
+fn module(
+    path: &'static str,
+    mut items: Vec<Named>,
+    records: &BTreeSet<String>,
+) -> syn::Result<Generated> {
     items.sort_by(|left, right| left.name.cmp(&right.name));
     let defined = items
         .iter()
@@ -179,13 +184,18 @@ fn module(mut items: Vec<Named>, records: &BTreeSet<String>) -> syn::File {
         },
     ]
     .into_iter()
-    .filter_map(|Import { names, path }| match names.as_slice() {
-        [] => None,
-        [name] => Some(quote!(use #path::#name;)),
-        _ => Some(quote!(use #path::{#(#names),*};)),
-    });
+    .filter_map(
+        |Import {
+             names,
+             path: origin,
+         }| match names.as_slice() {
+            [] => None,
+            [name] => Some(quote!(use #origin::#name;)),
+            _ => Some(quote!(use #origin::{#(#names),*};)),
+        },
+    );
     let items = items.iter().map(|named| &named.tokens);
-    file(quote! {
+    syn::parse2(quote! {
         #[doc = "The types and functions of the C and C++ APIs; C names each type as it is here, and C++ puts it in the namespace `eranos::detail`."]
         #[expect(
             clippy::unnecessary_box_returns,
@@ -198,18 +208,7 @@ fn module(mut items: Vec<Named>, records: &BTreeSet<String>) -> syn::File {
             #(#items)*
         }
     })
-}
-
-/// The file of `tokens`. The generator writes Rust, so they always parse;
-/// tokens that did not would stay in the file as they are, verbatim, which
-/// rustfmt and the compiler refuse when `cargo xtask generate` writes it.
-fn file(tokens: TokenStream) -> syn::File {
-    syn::parse2(tokens.clone()).unwrap_or_else(|_| syn::File {
-        shebang: None,
-        frontmatter: None,
-        attrs: Vec::new(),
-        items: vec![syn::Item::Verbatim(tokens)],
-    })
+    .map(|file| Generated { path, file })
 }
 
 /// Adds to `into` every identifier of `tokens`, those inside groups too.

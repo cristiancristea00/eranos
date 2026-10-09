@@ -9,10 +9,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use proc_macro2::{Ident, TokenStream};
-use quote::{ToTokens, format_ident, quote};
-use syn::{GenericArgument, PathArguments, Type};
+use quote::{format_ident, quote};
+use syn::Type;
 
-use crate::calls::Kind;
+use crate::calls::{Kind, argument, named};
 use crate::capi::items::Core;
 
 /// The integers the core's records hold, which cross as themselves: the
@@ -453,25 +453,9 @@ fn mark(known: &mut BTreeMap<String, bool>, name: &Ident, taken: bool) -> bool {
     }
 }
 
-/// The type argument of `written` when it is the generic `name` of one
-/// argument, such as `Option<T>` or `Vec<T>`.
-fn argument<'written>(written: &'written Type, name: &str) -> Option<&'written Type> {
-    if let Type::Path(path) = written
-        && let Some(segment) = path.path.segments.last()
-        && segment.ident == name
-        && let PathArguments::AngleBracketed(arguments) = &segment.arguments
-        && 1 == arguments.args.len()
-        && let Some(GenericArgument::Type(argument)) = arguments.args.first()
-    {
-        Some(argument)
-    } else {
-        None
-    }
-}
-
 /// Whether `written` is `bool`.
 fn flag(written: &Type) -> bool {
-    "bool" == written.to_token_stream().to_string()
+    named(written, "bool")
 }
 
 /// The failure of a type the bridge cannot carry.

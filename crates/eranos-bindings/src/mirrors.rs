@@ -1,14 +1,14 @@
 //! The list of every mirrored record, enum, and error, from which the glue
-//! crates stamp their own copies.
+//! crates write their own copies.
 
 /// Hands the mirror of every record, enum, and error the bindings expose to
 /// the macro whose path it is given, one call each.
 ///
-/// A glue crate writes `eranos_bindings::mirrors!(path::to::callback);`
-/// where the types are in scope, and its callback stamps a copy of each.
-/// Each mirror comes from `#[mirrored]` on its item's definition; a type the
-/// list leaves out has no copy, so a glue crate's signature that names it
-/// fails to build.
+/// A glue crate writes `eranos_bindings::mirrors!(path::to::callback);` in
+/// the module that holds its copies: each mirror imports its item there,
+/// and the callback writes a copy of it. Each mirror comes from
+/// `#[mirrored]` on its item's definition; a type the list leaves out has no
+/// copy, so a glue crate's signature that names it fails to build.
 #[macro_export]
 macro_rules! mirrors {
     ($($callback:tt)+) => {

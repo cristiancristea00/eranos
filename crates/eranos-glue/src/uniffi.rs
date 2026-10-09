@@ -4,8 +4,8 @@
 //! copies of the core's records, enums, and error.
 //!
 //! The code names `ExpenseGroup`, `ExpenseGroupReader`, `ExpenseGroupWriter`,
-//! `Cancellation`, `shared`, and every type a call takes or answers as the
-//! module that invokes the table imports them, and `::uniffi` as the
+//! `Cancellation`, `EranosError`, `shared`, and every type a call takes or
+//! answers as the module that invokes the table imports them, and `::uniffi` as the
 //! invoking crate's own release, so the three glue crates, each on its
 //! release, share one source.
 
@@ -28,7 +28,7 @@ use crate::docs::foreign;
 /// as the core's form does, and on wasm a `Result`.
 pub(crate) fn objects(calls: &Calls) -> TokenStream {
     let group = calls.calls.iter().map(|call| {
-        let (method, answer, error) = (&call.name, &call.answer, &call.error);
+        let (method, answer) = (&call.name, &call.answer);
         let asynchronous = format_ident!("{}_async", call.name);
         let doc = foreign(&call.docs.synchronous(call.access, call.infallible));
         let asynchronous_doc = foreign(&call.docs.asynchronous(call.infallible));
@@ -43,7 +43,7 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
         let synchronous = (!call.infallible).then(|| {
             quote! {
                 #[doc = #doc]
-                pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
+                pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, EranosError> {
                     self.handle.#method(#(#lent),*)
                 }
             }
@@ -56,7 +56,7 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
                 &self,
                 #(#owned,)*
                 cancellation: ::std::option::Option<::std::sync::Arc<Cancellation>>,
-            ) -> ::std::result::Result<#answer, #error> {
+            ) -> ::std::result::Result<#answer, EranosError> {
                 self.handle.#asynchronous(#(#names,)* shared(cancellation)).await
             }
         }
@@ -67,25 +67,25 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
         .iter()
         .filter(|call| Access::Read == call.access)
         .map(|call| {
-            let (method, answer, error) = (&call.name, &call.answer, &call.error);
+            let (method, answer) = (&call.name, &call.answer);
             let doc = foreign(&call.docs.reader(call.infallible));
             let parameters = foreign_parameters(call);
             let lent = call.parameters.iter().map(Parameter::lent);
             quote! {
                 #[doc = #doc]
-                pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
+                pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, EranosError> {
                     self.reader.#method(#(#lent),*)
                 }
             }
         });
     let writes = calls.calls.iter().map(|call| {
-        let (method, answer, error) = (&call.name, &call.answer, &call.error);
+        let (method, answer) = (&call.name, &call.answer);
         let doc = foreign(&call.docs.writer(call.infallible));
         let parameters = foreign_parameters(call);
         let lent = call.parameters.iter().map(Parameter::lent);
         quote! {
             #[doc = #doc]
-            pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
+            pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, EranosError> {
                 self.writer.#method(#(#lent),*)
             }
         }
@@ -131,13 +131,13 @@ fn unfailing_blocks(calls: &Calls) -> Option<TokenStream> {
         }
     });
     let on_wasm = unfailing.iter().map(|call| {
-        let (method, answer, error) = (&call.name, &call.answer, &call.error);
+        let (method, answer) = (&call.name, &call.answer);
         let doc = foreign(&call.docs.synchronous(call.access, call.infallible));
         let parameters = foreign_parameters(call);
         let lent = call.parameters.iter().map(Parameter::lent);
         quote! {
             #[doc = #doc]
-            pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
+            pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, EranosError> {
                 self.handle.#method(#(#lent),*)
             }
         }

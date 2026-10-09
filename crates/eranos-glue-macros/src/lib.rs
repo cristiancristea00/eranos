@@ -6,12 +6,13 @@
 
 use proc_macro::TokenStream;
 
-/// Writes the forms of the group calls that the binding core's trait lists.
+/// Writes the functions and forms of the group calls that the binding
+/// core's trait lists.
 ///
-/// The code is the group handle's synchronous and asynchronous form of every
-/// call, the read handle's form of every read, and the exported table macro
-/// that hands the trait to the glue crates, as `eranos_glue::calls`
-/// describes.
+/// The code is every call's function, the group handle's synchronous and
+/// asynchronous form of every call, the read handle's form of every read,
+/// the write handle's form of every call, and the exported table macro that
+/// hands the trait to the glue crates, as `eranos_glue::calls` describes.
 #[proc_macro_attribute]
 pub fn calls(attribute: TokenStream, item: TokenStream) -> TokenStream {
     eranos_glue::calls(attribute.into(), item.into())
@@ -21,9 +22,9 @@ pub fn calls(attribute: TokenStream, item: TokenStream) -> TokenStream {
 
 /// Adds the mirror of a record, an enum, or an error of the binding core.
 ///
-/// The item stays as it is, and the exported macro beside it hands its
-/// mirror to a glue crate, as `eranos_glue::mirrored` describes; an error
-/// takes `#[mirrored(error)]`.
+/// The item stays as it is, and the exported macro beside it imports the
+/// item where it is invoked and hands its mirror to a glue crate, as
+/// `eranos_glue::mirrored` describes; an error takes `#[mirrored(error)]`.
 #[proc_macro_attribute]
 pub fn mirrored(attribute: TokenStream, item: TokenStream) -> TokenStream {
     eranos_glue::mirrored(attribute.into(), item.into())
@@ -34,8 +35,8 @@ pub fn mirrored(attribute: TokenStream, item: TokenStream) -> TokenStream {
 /// Writes a `uniffi` glue crate's object methods from the core's table.
 ///
 /// The macro is the table's callback, and writes the exported methods of
-/// the crate's `ExpenseGroup` and `ExpenseGroupReader`, as `eranos_glue::uniffi_objects`
-/// describes.
+/// the crate's `ExpenseGroup`, `ExpenseGroupReader`, and
+/// `ExpenseGroupWriter`, as `eranos_glue::uniffi_objects` describes.
 #[proc_macro]
 pub fn uniffi_objects(input: TokenStream) -> TokenStream {
     eranos_glue::uniffi_objects(input.into())

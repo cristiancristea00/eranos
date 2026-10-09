@@ -453,7 +453,7 @@ breaking.
    read in the record's `from_library` and written in its conversion to the
    library, where an absent optional field clears the stored one; the
    record's round trip in its module's `tests.rs` then covers it; the
-   UniFFI glue's copy of the record is stamped from its `#[mirrored]`
+   UniFFI glue's copy of the record is written from its `#[mirrored]`
    definition, so it takes the field too, and `cargo xtask generate`
    writes the C glue's getter and setter of it, a `clear_` method for an
    optional one, and its place in the constructor for a required one.
@@ -495,7 +495,7 @@ fails to build until the module's failure enum in
 `crates/eranos-bindings/src/error.rs` (`ExpenseGroupFailure` for
 `ExpenseGroupError`, and the like) has a case for the variant, in the same
 place, with what it holds, and its row in that crate's `error/tests.rs`; the
-UniFFI glue's copy of the failure is stamped from its `#[mirrored]`
+UniFFI glue's copy of the failure is written from its `#[mirrored]`
 definition, so it takes the case too. A new error type is a new case of
 `EranosError`, with a failure enum of its own, marked `#[mirrored]` and
 named in the core's `mirrors!` list in
@@ -614,20 +614,20 @@ When code in one crate needs something another crate holds:
    `Pacer`, returned in a `Cooperative`, with the synchronous method as its
    `.complete()`. A change writes nothing to the group before its last
    yield, so a dropped call changes nothing.
-3. Forward it in the binding core: a function over the group in
-   `crates/eranos-bindings/src/operations.rs`, named as the call, which
-   converts the records and the answer; then the call in the trait
-   `ExpenseGroupCalls` of `calls.rs`, in its section, with the synchronous
-   form's signature, a summary that ends with a full stop, `#[read]` or
-   `#[write]`, and `#[infallible]` when the operation cannot fail. Both
-   forms on `ExpenseGroupHandle`, the form on `ExpenseGroupWriter`, and,
-   for a read, the form on `ExpenseGroupReader` are written from it, with
-   their `# Errors`. A call
-   whose asynchronous form works before it takes the lock or while it holds
-   it, as a currency change checks its rates first and a settlement yields,
-   names a hand-written body in `group.rs` with
+3. Forward it in the binding core: a function in the trait
+   `ExpenseGroupCalls` of `crates/eranos-bindings/src/calls.rs`, in its
+   section, named as the call, with a summary that ends with a full stop
+   and a body that converts the records and the answer. It takes the group
+   first, as `&ExpenseGroup` for a read or `&mut ExpenseGroup` for a
+   change, which decides the lock, and answers with a
+   `Result<_, EranosError>` when it can fail and with its value alone when
+   it cannot. The function, both forms on `ExpenseGroupHandle`, the form on
+   `ExpenseGroupWriter`, and, for a read, the form on `ExpenseGroupReader`
+   are written from it, with their `# Errors`. A call whose asynchronous
+   form yields while it holds the lock, as a settlement does, names a
+   hand-written body in `expense_group.rs` with
    `#[async_body = expense_group::<name>]`. Test the conversion in
-   `operations/tests.rs` and the two forms in `group/tests.rs`
+   `calls/tests.rs` and the two forms in `expense_group/tests.rs`
    (`every_read_answers_alike_in_both_forms` or the change's
    `*_change_alike_in_both_forms`).
 4. The UniFFI glue's `ExpenseGroup`, `ExpenseGroupReader`, and

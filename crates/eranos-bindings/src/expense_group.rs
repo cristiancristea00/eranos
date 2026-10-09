@@ -8,10 +8,10 @@ use eranos::expense_group::{ExpenseGroupReadGuard, ExpenseGroupWriteGuard, Saved
 use eranos::{ExpenseGroup, ExpenseGroupId, SharedExpenseGroup};
 
 use crate::cancellation::{Cancellation, cancellable};
-use crate::money::{CurrencyRate, currency};
-use crate::operations::CurrencyChange;
+use crate::money::{CurrencyChange, CurrencyRate, currency};
 use crate::reader::ExpenseGroupReader;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
+use crate::values::parsed_language;
 use crate::writer::ExpenseGroupWriter;
 use crate::{EranosError, identifier};
 
@@ -62,7 +62,7 @@ impl ExpenseGroupHandle {
     /// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage).
     pub fn new(group: &NewExpenseGroup) -> Result<Self, EranosError> {
         let id: ExpenseGroupId = identifier(&group.id)?;
-        let language = crate::operations::parsed_language(group.language.as_deref())?;
+        let language = parsed_language(group.language.as_deref())?;
         let builder =
             ExpenseGroup::builder_with_id(id, group.name.clone(), currency(&group.currency)?)
                 .language(language);

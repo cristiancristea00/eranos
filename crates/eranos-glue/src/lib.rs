@@ -2,13 +2,15 @@
 //! the glue writes from it, so every call and every record is written once,
 //! in the core.
 //!
-//! The core lists its group calls in one trait, which [`calls`] turns into
-//! the group handle's synchronous and asynchronous forms, the read handle's
-//! reads, and a table macro that hands the trait to the glue crates; each
-//! record, enum, and error the bindings expose is marked with [`mirrored`],
-//! which adds a macro of its fields. The `uniffi` glue crates stamp their
-//! objects' methods from the table with [`uniffi_objects`], and their
-//! `#[uniffi::remote]` copies from the mirrors with [`uniffi_mirror`]. The
+//! The core lists its group calls, each with its body, in one trait, which
+//! [`calls`] turns into the calls' functions, the group handle's
+//! synchronous and asynchronous forms, the read and write handles' forms,
+//! and a table macro that hands the trait to the glue crates; each record,
+//! enum, and error the bindings expose is marked with [`mirrored`], which
+//! adds a macro that imports it and hands over its fields. The `uniffi`
+//! glue crates write their objects' methods from the table with
+//! [`uniffi_objects`], and their `#[uniffi::remote]` copies from the mirrors
+//! with [`uniffi_mirror`]. The
 //! proc macros of eranos-glue-macros call these functions inside the
 //! compiler, where no coverage run reaches; this crate's tests measure them.
 //!
@@ -33,16 +35,18 @@ pub use crate::capi::Generated;
 
 /// The code of the trait `item`, which lists the group calls.
 ///
-/// With `attribute` empty, the code is the group handle's synchronous and
-/// asynchronous form of every call, the read handle's form of every read,
-/// and the exported macro that hands the trait to a glue crate's macro; the
-/// trait itself is not kept.
+/// With `attribute` empty, the code is every call's function, private to
+/// the module, the group handle's synchronous and asynchronous form of every
+/// call, the read handle's form of every read, the write handle's form of
+/// every call, and the exported macro that hands the trait to a glue
+/// crate's macro; the trait itself is not kept.
 ///
 /// # Errors
 ///
 /// For an attribute with arguments, an item that is not a plain trait of
-/// methods, and a method that is not a documented `&self` call answering
-/// with a `Result`, marked `#[read]` or `#[write]`.
+/// functions, and a function that is not a documented call with a body
+/// that takes the group first, or whose `Result` is not of an answer and
+/// `EranosError`.
 pub fn calls(attribute: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     if !attribute.is_empty() {
         return Err(syn::Error::new_spanned(
@@ -67,9 +71,9 @@ pub fn mirrored(attribute: TokenStream, item: TokenStream) -> syn::Result<TokenS
     mirror::mirrored(attribute, item)
 }
 
-/// The exported methods of the `uniffi` glue's `ExpenseGroup` and `ExpenseGroupReader`
-/// objects, from `input`, the trait of group calls that the core's table
-/// hands over.
+/// The exported methods of the `uniffi` glue's `ExpenseGroup`,
+/// `ExpenseGroupReader`, and `ExpenseGroupWriter` objects, from `input`, the
+/// trait of group calls that the core's table hands over.
 ///
 /// # Errors
 ///

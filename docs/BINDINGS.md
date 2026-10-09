@@ -199,8 +199,9 @@ flowchart TD
   the lock where a thread can sleep and, on wasm, whose one thread must not,
   fails with `ExpenseGroupFailure::Busy` while another call holds it; and an
   asynchronous one, a `Send + 'static` future that waits for the lock. A
-  call the trait marks `#[infallible]` has nothing to fail with outside
-  wasm, so its synchronous form answers its value itself there, and a
+  call whose body in the trait answers with anything but a `Result` has
+  nothing to fail with outside wasm, so its synchronous form answers its
+  value itself there, and a
   `Result` on wasm; the glue writes the two forms under `cfg`, and so does
   the UniFFI glue, whose layers for the other targets take the value
   without a throw. Only the functions that take a synchronous call's lock
@@ -399,21 +400,22 @@ and print their examples' reports byte for byte
 `eranos-uniffi` copies the core's records, enums, and error for UniFFI with
 `#[uniffi::remote]`, which repeats each definition field for field. A crate
 carries the derives of one UniFFI release, so the core's items cannot carry
-them; instead each carries `#[mirrored]`, which adds a macro of its fields,
-and the core's `mirrors!` hands every mirror to the glue's `uniffi_mirror!`,
-which stamps the copies, so a copy always repeats its item. It wraps the
+them; instead each carries `#[mirrored]`, which adds a macro that imports
+the item and hands over its fields, and the core's `mirrors!` hands every
+mirror to the glue's `uniffi_mirror!`, which writes the copies, so a copy
+always repeats its item. It wraps the
 group handle, the read handle, the write handle, and the cancellation in
 the objects `ExpenseGroup`, `ExpenseGroupReader`, `ExpenseGroupWriter`,
 and `Cancellation`, whose methods forward to the core: every group call's
 two forms, every read's on the read handle, and every call's on the write
-handle are stamped from the core's `expense_group_calls!` table, the trait
+handle are written from the core's `expense_group_calls!` table, the trait
 that lists the calls, with the core's documentation, its links as code
 spans; the
 constructors, `read`, and `release` are written by hand. It exports the
 value helpers as functions and the asynchronous load as
 `load_expense_group_async`. Its three source files are compiled by
 `eranos-web` as well, against UniFFI 0.31.2: they keep to what 0.31
-accepts, and both releases compile them and the code the macros stamp in
+accepts, and both releases compile them and the code the macros write in
 them. `uniffi.toml` names the generated Swift
 module `EranosGenerated` and the generated Kotlin and Java package
 `eranos.internal`, and the generated Python module keeps the namespace's
@@ -461,8 +463,8 @@ outside wasm, and a `Result` only for the text it checks. A call that takes
 optional text
 has a twin of each form that passes none, since C passes no absent text,
 named `clear_` for its `set_`: `clear_note` returns nothing, and
-`clear_language` a `Result`, as `set_language` does, since the core marks
-only the note's call `#[infallible]`. The generator's templates hold
+`clear_language` a `Result`, as `set_language` does, since of the two
+only the note's call cannot fail. The generator's templates hold
 what the core cannot say: the group's constructors and its read and write
 handles, the cancellation, and the methods of a record that are not a
 field's, such as an
