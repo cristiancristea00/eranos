@@ -327,7 +327,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
                 .quantity(three)
                 .build()?,
             // A dessert for Bob and Carol, Carol eating two thirds.
-            ExpenseItem::builder_with_split(
+            ExpenseItem::builder(
                 "Dessert",
                 eur("10.50"),
                 Split::parts([
@@ -340,7 +340,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     };
     // 30 + 15 + 4.50 + 10.50 = 60.00: Ana 31.50, Bob 20.00, Carol 8.50.
     let bill = |distribution| -> Result<Expense, eranos::error::ExpenseError> {
-        Expense::itemised_builder("Bill", eur("60.00"), carol, items()?, day(23))
+        Expense::builder("Bill", eur("60.00"), carol, items()?, day(23))
             .tip(TipRule::fixed(eur("6.00")).distributed(distribution))
             .build()
     };
@@ -365,7 +365,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     assert_eq!(consumed_evenly(carol), Some(eur("10.50")));
 
     // Items that do not add up to the amount are refused.
-    let short = Expense::itemised_builder("Bill", eur("61.00"), carol, items()?, day(23)).build();
+    let short = Expense::builder("Bill", eur("61.00"), carol, items()?, day(23)).build();
     assert!(short.is_err());
     Ok(())
 }

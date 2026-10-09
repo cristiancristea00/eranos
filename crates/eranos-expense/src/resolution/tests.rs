@@ -222,7 +222,7 @@ fn items_divide_by_their_own_splits() {
         .quantity(Quantity::from_whole(2).unwrap())
         .build()
         .unwrap();
-    let bill = Expense::itemised_builder("Bill", eur(2100), bob, [pizza, beer], day())
+    let bill = Expense::builder("Bill", eur(2100), bob, [pizza, beer], day())
         .tip(TipRule::fixed(eur(210)))
         .build()
         .unwrap();
@@ -251,7 +251,7 @@ fn a_fractional_item_divides_its_rounded_line_total() {
     let bread = ExpenseItem::builder("Bread", eur(166), [ana])
         .build()
         .unwrap();
-    let bill = Expense::itemised_builder("Market", eur(200), bob, [olives, bread], day())
+    let bill = Expense::builder("Market", eur(200), bob, [olives, bread], day())
         .build()
         .unwrap();
     let resolved = resolve_expense(&identified(&bill, entry(1)), CurrencyCode::EUR).unwrap();
@@ -274,7 +274,7 @@ fn a_free_line_divides_to_zeros() {
     let bread = ExpenseItem::builder("Bread", eur(200), [ana])
         .build()
         .unwrap();
-    let bill = Expense::itemised_builder("Market", eur(200), bob, [mint, bread], day())
+    let bill = Expense::builder("Market", eur(200), bob, [mint, bread], day())
         .tip(TipRule::fixed(eur(10)))
         .build()
         .unwrap();
@@ -299,7 +299,7 @@ fn an_equal_tip_skips_a_member_who_shares_only_a_free_line() {
     let bread = ExpenseItem::builder("Bread", eur(200), [ana])
         .build()
         .unwrap();
-    let bill = Expense::itemised_builder("Market", eur(200), bob, [mint, bread], day())
+    let bill = Expense::builder("Market", eur(200), bob, [mint, bread], day())
         .tip(TipRule::fixed(eur(10)).distributed(TipDistribution::Equal))
         .build()
         .unwrap();
@@ -324,7 +324,7 @@ fn a_line_on_the_house_divides_to_zeros() {
     let soup = ExpenseItem::builder("Ciorbă", eur(800), [ana])
         .build()
         .unwrap();
-    let bill = Expense::itemised_builder("Dinner", eur(800), bob, [dessert, soup], day())
+    let bill = Expense::builder("Dinner", eur(800), bob, [dessert, soup], day())
         .tip(TipRule::fixed(eur(100)).distributed(TipDistribution::Equal))
         .build()
         .unwrap();
@@ -341,7 +341,7 @@ fn a_line_on_the_house_divides_to_zeros() {
 #[test]
 fn several_payers_are_each_owed_their_proportion() {
     let (ana, bob, carol, dan) = (member(1), member(2), member(3), member(4));
-    let hotel = Expense::builder_with_payers(
+    let hotel = Expense::builder(
         "Hotel",
         eur(10_000),
         Split::amounts([
@@ -505,7 +505,7 @@ fn a_conversion_out_of_range_is_an_overflow() {
 fn a_payer_converted_to_nothing_is_owed_nothing() {
     let (ana, bob) = (member(1), member(2));
     // 2 JPY paid 1 + 1 at 0.0061 EUR per JPY is 1 cent in total.
-    let sweets = Expense::builder_with_payers(
+    let sweets = Expense::builder(
         "Sweets",
         Money::from_minor_units(2, CurrencyCode::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
         Split::equal([ana, bob]),
@@ -575,7 +575,7 @@ fn random_expense(
         Some((mantissa, scale)) => Money::from_minor_units(amount, CurrencyCode::JPY)
             .at(ExchangeRate::from_decimal(mantissa, scale).unwrap()),
     };
-    let mut builder = Expense::builder_with_payers(
+    let mut builder = Expense::builder(
         "Random",
         cost,
         parts(payer_parts),
@@ -689,16 +689,10 @@ fn the_rotation_of_every_pass_is_pinned() {
             .build()
             .unwrap()
     });
-    let itemised = Expense::itemised_builder_with_payers(
-        "Pinned",
-        eur(301),
-        Split::equal([ana, bob]),
-        items,
-        day(),
-    )
-    .tip(TipRule::fixed(eur(2)).distributed(TipDistribution::Equal))
-    .build()
-    .unwrap();
+    let itemised = Expense::builder("Pinned", eur(301), Split::equal([ana, bob]), items, day())
+        .tip(TipRule::fixed(eur(2)).distributed(TipDistribution::Equal))
+        .build()
+        .unwrap();
     let resolved = resolve_expense(&identified(&itemised, entry(1)), CurrencyCode::EUR).unwrap();
     // The items' leftover cents go to Ana, to Carol, and to Bob and Carol,
     // and the tip's to Ana and Bob, so each consumes 1.01; Bob pays the odd
@@ -738,7 +732,7 @@ fn the_rotation_of_every_pass_is_pinned() {
     // Pair debts: three payers over four equal shares, so both the first and
     // the second payer's division have ties.
     let dan = member(4);
-    let hotel = Expense::builder_with_payers(
+    let hotel = Expense::builder(
         "Pinned",
         eur(400),
         Split::amounts([
@@ -776,7 +770,7 @@ fn a_zero_portion_is_no_debt() {
     let (ana, bob, carol, dan) = (member(1), member(2), member(3), member(4));
     // Ana's 99 cents cover all of Dan's single cent, so Bob's cent is
     // Carol's alone.
-    let snack = Expense::builder_with_payers(
+    let snack = Expense::builder(
         "Snack",
         eur(100),
         Split::amounts([

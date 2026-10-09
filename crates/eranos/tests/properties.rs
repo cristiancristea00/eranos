@@ -309,7 +309,7 @@ impl ExpenseRecipe {
                 .iter()
                 .map(|item| item.line_total().minor_units())
                 .sum();
-            Expense::itemised_builder_with_id(
+            Expense::builder_with_id(
                 id,
                 "Itemised",
                 cost(money(amount)),

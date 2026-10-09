@@ -251,8 +251,10 @@ Uncategorised first whatever the text of the others:
 Entities are immutable values built by builders (`Member::builder`,
 `Expense::builder`, …) and edited through `to_builder`; the group validates
 every value it receives. A builder's constructor takes every required value:
-an expense has four, for one payer or several and for a whole split or
-items, and an item two, for an equal split or any other. The group and
+an expense's takes its payers, one member or a split of the total among
+several, and its split, of the whole amount or item by item, and an item's
+takes its split, one member, several who share equally, or any other. The
+group and
 every member, category, expense, and transfer carry an identifier from
 the moment their constructor is called: a constructor with the plain name
 generates one (`Member::builder`, `Category::new`), and its twin takes the

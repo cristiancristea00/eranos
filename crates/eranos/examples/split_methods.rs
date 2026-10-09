@@ -274,7 +274,7 @@ fn several_payers(group: &mut ExpenseGroup, family: &Family) -> Result<ExpenseId
          divided with the same methods as the participants."
     );
     let dinner = group.add_expense(
-        Expense::builder_with_payers(
+        Expense::builder(
             "Dinner",
             eur("90.00")?,
             Split::amounts([

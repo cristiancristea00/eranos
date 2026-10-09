@@ -72,7 +72,7 @@ fn trip() -> Trip {
         .unwrap();
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
 
-    let bill = Expense::itemised_builder(
+    let bill = Expense::builder(
         "Bill",
         eur("19.50"),
         bob,
@@ -81,7 +81,7 @@ fn trip() -> Trip {
                 .build()
                 .unwrap(),
             // 1.5 l of wine at 6.00 a litre, 1.00 off each litre.
-            ExpenseItem::builder_with_split(
+            ExpenseItem::builder(
                 "Wine",
                 eur("6.00"),
                 Split::parts([
@@ -105,7 +105,7 @@ fn trip() -> Trip {
     .build()
     .unwrap();
     group.add_expense(bill).unwrap();
-    let tram = Expense::builder_with_payers(
+    let tram = Expense::builder(
         "Tram",
         Money::parse("30.00", CurrencyCode::RON)
             .unwrap()

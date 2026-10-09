@@ -438,5 +438,26 @@ pub trait FromSplit: Sized {
     }
 }
 
+impl From<MemberId> for Split {
+    /// The whole amount to `member`: an equal split of one.
+    fn from(member: MemberId) -> Self {
+        Self::equal([member])
+    }
+}
+
+impl<const N: usize> From<[MemberId; N]> for Split {
+    /// An equal split among `members`.
+    fn from(members: [MemberId; N]) -> Self {
+        Self::equal(members)
+    }
+}
+
+impl From<Vec<MemberId>> for Split {
+    /// An equal split among `members`.
+    fn from(members: Vec<MemberId>) -> Self {
+        Self::equal(members)
+    }
+}
+
 #[cfg(test)]
 mod tests;

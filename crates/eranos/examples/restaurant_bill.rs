@@ -101,7 +101,7 @@ fn receipt(
         ExpenseItem::builder("Sarmale", eur("14.00")?, [bob, carol])
             .quantity(Quantity::from_whole(2)?)
             .build()?,
-        ExpenseItem::builder_with_split(
+        ExpenseItem::builder(
             "Papanași",
             eur("9.00")?,
             Split::parts([
@@ -242,14 +242,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     section("2. Who ordered what, and the tip");
     let bill = |distribution| -> Result<Expense, Box<dyn Error>> {
         Ok(
-            Expense::itemised_builder("Dinner", eur("54.00")?, ana, receipt(ana, bob, carol)?, day)
+            Expense::builder("Dinner", eur("54.00")?, ana, receipt(ana, bob, carol)?, day)
                 .tip(TipRule::percentage(Percentage::parse("10")?).distributed(distribution))
                 .build()?,
         )
     };
     let untipped =
-        Expense::itemised_builder("Dinner", eur("54.00")?, ana, receipt(ana, bob, carol)?, day)
-            .build()?;
+        Expense::builder("Dinner", eur("54.00")?, ana, receipt(ana, bob, carol)?, day).build()?;
     let ordered = preview(&group, untipped)?;
     let proportional = group.add_expense(bill(TipDistribution::Proportional)?)?;
     let by_consumption = group
@@ -283,8 +282,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     section("3. A total that does not match is refused");
     let mismatched =
-        Expense::itemised_builder("Dinner", eur("55.00")?, ana, receipt(ana, bob, carol)?, day)
-            .build();
+        Expense::builder("Dinner", eur("55.00")?, ana, receipt(ana, bob, carol)?, day).build();
     println!(
         "An amount of 55.00 EUR with these lines is refused when the expense is built:\n  \
          error: {}",

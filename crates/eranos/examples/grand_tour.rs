@@ -749,7 +749,7 @@ fn fado_items(people: &People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
             .quantity(Quantity::from_whole(2)?)
             .build()?,
         ExpenseItem::builder("Bacalhau", eur("18.00")?, [carol]).build()?,
-        ExpenseItem::builder_with_split(
+        ExpenseItem::builder(
             "Custard tarts",
             eur("1.50")?,
             Split::parts([
@@ -769,7 +769,7 @@ fn fado_items(people: &People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
 /// The fado night, item by item, paid by Carol and Dan, with a 10 % tip,
 /// under the identifier its constructor generates; the caller builds it.
 fn fado_night(people: &People, categories: Categories) -> Result<ExpenseBuilder, Box<dyn Error>> {
-    Ok(Expense::itemised_builder_with_payers(
+    Ok(Expense::builder(
         "Fado night",
         eur("54.00")?,
         Split::amounts([
@@ -848,7 +848,7 @@ fn add_expenses(
         october(3)?,
     )
     .category(categories.transport);
-    let museum = Expense::builder_with_payers(
+    let museum = Expense::builder(
         "Museum",
         eur("60.00")?,
         Split::equal([ana, bob]),

@@ -228,7 +228,7 @@ impl ExpenseItem {
     /// [`ExpenseFailure::DiscountAbovePrice`](crate::ExpenseFailure::DiscountAbovePrice)),
     /// and a split that does not divide the line total.
     pub(crate) fn to_library(&self) -> Result<library::ExpenseItem, EranosError> {
-        let builder = library::ExpenseItem::builder_with_split(
+        let builder = library::ExpenseItem::builder(
             self.name.clone(),
             self.unit_price.to_library()?,
             self.split.to_library()?,
@@ -536,26 +536,12 @@ impl Expense {
             self.payers.to_library()?,
             self.date.to_library()?,
         );
-        let builder = match &self.split {
-            ExpenseSplit::Whole { split } => library::Expense::builder_with_payers_and_id(
-                id,
-                self.name.clone(),
-                cost,
-                payers,
-                split.to_library()?,
-                date,
-            ),
-            ExpenseSplit::Itemised { items } => {
-                library::Expense::itemised_builder_with_payers_and_id(
-                    id,
-                    self.name.clone(),
-                    cost,
-                    payers,
-                    items_of(items)?,
-                    date,
-                )
-            }
+        let split = match &self.split {
+            ExpenseSplit::Whole { split } => library::ExpenseSplit::Whole(split.to_library()?),
+            ExpenseSplit::Itemised { items } => library::ExpenseSplit::Itemised(items_of(items)?),
         };
+        let builder =
+            library::Expense::builder_with_id(id, self.name.clone(), cost, payers, split, date);
         Ok(self.with_other_fields(builder)?.build()?)
     }
 

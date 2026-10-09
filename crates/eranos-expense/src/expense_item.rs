@@ -46,7 +46,7 @@ use crate::error::ExpenseError;
 ///     MemberParts::new(ana, Parts::from_whole(2)?),
 ///     MemberParts::new(bob, Parts::from_whole(1)?),
 /// ]);
-/// let pizza = ExpenseItem::builder_with_split("Pizza", Money::parse("12.00", CurrencyCode::EUR)?, split)
+/// let pizza = ExpenseItem::builder("Pizza", Money::parse("12.00", CurrencyCode::EUR)?, split)
 ///     .build()?;
 /// assert_eq!(pizza.quantity(), Quantity::ONE);
 /// assert_eq!(pizza.discount(), None);
@@ -73,27 +73,18 @@ pub struct ExpenseItem {
 }
 
 impl ExpenseItem {
-    /// Starts an item whose line total `members` share equally; the
-    /// quantity defaults to [`Quantity::ONE`], and the item has no discount.
+    /// Starts an item whose line total `split` divides: one member, members
+    /// who share it equally, or any [`Split`]; the quantity defaults to
+    /// [`Quantity::ONE`], and the item has no discount.
     pub fn builder(
         name: impl Into<String>,
         unit_price: Money,
-        members: impl IntoIterator<Item = MemberId>,
-    ) -> ExpenseItemBuilder {
-        Self::builder_with_split(name, unit_price, Split::equal(members))
-    }
-
-    /// Starts an item whose line total is divided by `split`; the quantity
-    /// defaults to [`Quantity::ONE`], and the item has no discount.
-    pub fn builder_with_split(
-        name: impl Into<String>,
-        unit_price: Money,
-        split: Split,
+        split: impl Into<Split>,
     ) -> ExpenseItemBuilder {
         ExpenseItemBuilder {
             name: name.into(),
             unit_price,
-            split,
+            split: split.into(),
             quantity: Quantity::ONE,
             discount: None,
         }
@@ -171,7 +162,7 @@ impl ExpenseItem {
 }
 
 /// Builds an [`ExpenseItem`]; created by [`ExpenseItem::builder`],
-/// [`ExpenseItem::builder_with_split`], or [`ExpenseItem::to_builder`].
+/// [`ExpenseItem::builder`], or [`ExpenseItem::to_builder`].
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ExpenseItemBuilder {
@@ -292,7 +283,7 @@ struct ExpenseItemRecord {
 /// Builds the item `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
 fn from_record(record: ExpenseItemRecord) -> Result<ExpenseItem, ExpenseError> {
-    ExpenseItem::builder_with_split(record.name, record.unit_price, record.split)
+    ExpenseItem::builder(record.name, record.unit_price, record.split)
         .quantity(record.quantity)
         .discount(record.discount)
         .build()

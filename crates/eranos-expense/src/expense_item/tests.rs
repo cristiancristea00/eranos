@@ -51,7 +51,7 @@ fn beers() -> ExpenseItem {
 #[test]
 fn the_quantity_defaults_to_one() {
     // One unit, priced at the unit price.
-    let pizza = ExpenseItem::builder_with_split("Pizza", euros(1_200), Split::equal([ana()]))
+    let pizza = ExpenseItem::builder("Pizza", euros(1_200), Split::equal([ana()]))
         .build()
         .unwrap();
     assert_eq!(pizza.quantity(), Quantity::ONE);
@@ -98,11 +98,10 @@ fn a_fractional_line_total_rounds_half_away_from_zero() {
 #[test]
 fn shared_by_is_an_equal_split() {
     // Same item either way.
-    let explicit =
-        ExpenseItem::builder_with_split("Beer", euros(450), Split::equal([ana(), bob()]))
-            .quantity(units(3))
-            .build()
-            .unwrap();
+    let explicit = ExpenseItem::builder("Beer", euros(450), Split::equal([ana(), bob()]))
+        .quantity(units(3))
+        .build()
+        .unwrap();
     assert_eq!(beers(), explicit);
     assert_eq!(beers().split(), &Split::equal([ana(), bob()]));
 }
@@ -128,12 +127,11 @@ fn the_last_split_setter_wins() {
         .build()
         .unwrap();
     assert_eq!(split_last.split(), &Split::equal([ana()]));
-    // `shared_by` replaces the split of `builder_with_split`.
-    let shared_by_twice =
-        ExpenseItem::builder_with_split("Beer", euros(450), Split::equal([ana()]))
-            .shared_by([bob()])
-            .build()
-            .unwrap();
+    // `shared_by` replaces the split of `builder`.
+    let shared_by_twice = ExpenseItem::builder("Beer", euros(450), Split::equal([ana()]))
+        .shared_by([bob()])
+        .build()
+        .unwrap();
     assert_eq!(shared_by_twice.split(), &Split::equal([bob()]));
 }
 
@@ -199,7 +197,7 @@ fn a_line_that_rounds_to_zero_is_free() {
     // zero amount is refused as a share of any line.
     let one_cent = Split::amounts([MemberAmount::new(ana(), euros(1))]);
     assert_eq!(
-        ExpenseItem::builder_with_split("Mint", euros(1), one_cent)
+        ExpenseItem::builder("Mint", euros(1), one_cent)
             .quantity(quantity("0.0001"))
             .build(),
         Err(ExpenseError::AmountsDoNotAddUp {
@@ -209,7 +207,7 @@ fn a_line_that_rounds_to_zero_is_free() {
     );
     let nothing = Split::amounts([MemberAmount::new(ana(), euros(0))]);
     assert_eq!(
-        ExpenseItem::builder_with_split("Mint", euros(1), nothing)
+        ExpenseItem::builder("Mint", euros(1), nothing)
             .quantity(quantity("0.0001"))
             .build(),
         Err(ExpenseError::NonPositiveShare { member: ana() })
@@ -365,7 +363,7 @@ fn a_discount_of_the_whole_price_makes_a_free_line() {
     // Positive amounts never add up to a free line's total of zero.
     let shares = Split::amounts([MemberAmount::new(ana(), euros(900))]);
     assert_eq!(
-        ExpenseItem::builder_with_split("Papanași", euros(900), shares)
+        ExpenseItem::builder("Papanași", euros(900), shares)
             .discount(on_the_house)
             .build(),
         Err(ExpenseError::AmountsDoNotAddUp {

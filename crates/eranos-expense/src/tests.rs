@@ -200,7 +200,7 @@ fn every_constructor_sets_its_payers_and_its_split() {
     assert_eq!(whole.payers(), &Split::equal([bob()]));
     assert_eq!(whole.split(), &ExpenseSplit::Whole(everyone.clone()));
     // Several payers and a whole split.
-    let shared = Expense::builder_with_payers(
+    let shared = Expense::builder(
         "Dinner",
         euros(9_000),
         payers.clone(),
@@ -212,14 +212,13 @@ fn every_constructor_sets_its_payers_and_its_split() {
     assert_eq!(shared.payers(), &payers);
     assert_eq!(shared.split(), &ExpenseSplit::Whole(everyone));
     // One payer and items.
-    let itemised =
-        Expense::itemised_builder("Dinner", euros(9_000), bob(), [pizza()], september_23())
-            .build()
-            .unwrap();
+    let itemised = Expense::builder("Dinner", euros(9_000), bob(), [pizza()], september_23())
+        .build()
+        .unwrap();
     assert_eq!(itemised.payers(), &Split::equal([bob()]));
     assert_eq!(itemised.split(), &ExpenseSplit::Itemised(vec![pizza()]));
     // Several payers and items.
-    let shared_receipt = Expense::itemised_builder_with_payers(
+    let shared_receipt = Expense::builder(
         "Dinner",
         euros(9_000),
         payers.clone(),
@@ -365,12 +364,12 @@ fn a_free_line_adds_nothing_and_an_expense_of_free_lines_is_refused() {
     assert!(matches!(expense.split(), ExpenseSplit::Itemised(items) if 2 == items.len()));
     // On its own, it adds up to an amount of zero, which no expense has.
     assert_eq!(
-        Expense::itemised_builder("Mint", euros(0), ana(), [free.clone()], september_23()).build(),
+        Expense::builder("Mint", euros(0), ana(), [free.clone()], september_23()).build(),
         Err(ExpenseError::NonPositiveAmount)
     );
     // Any positive amount is more than its line adds up to.
     assert_eq!(
-        Expense::itemised_builder("Mint", euros(1), ana(), [free], september_23()).build(),
+        Expense::builder("Mint", euros(1), ana(), [free], september_23()).build(),
         Err(ExpenseError::ItemsDoNotAddUp {
             expected: euros(1),
             actual: euros(0)
@@ -681,32 +680,18 @@ fn an_expense_takes_the_identifier_it_is_given() {
     // Each constructor that takes an identifier keeps it.
     for builder in [
         Expense::builder_with_id(id, "Dinner", amount, ana(), split.clone(), date),
-        Expense::builder_with_payers_and_id(
-            id,
-            "Dinner",
-            amount,
-            payers.clone(),
-            split.clone(),
-            date,
-        ),
-        Expense::itemised_builder_with_id(id, "Dinner", amount, ana(), items.clone(), date),
-        Expense::itemised_builder_with_payers_and_id(
-            id,
-            "Dinner",
-            amount,
-            payers.clone(),
-            items.clone(),
-            date,
-        ),
+        Expense::builder_with_id(id, "Dinner", amount, payers.clone(), split.clone(), date),
+        Expense::builder_with_id(id, "Dinner", amount, ana(), items.clone(), date),
+        Expense::builder_with_id(id, "Dinner", amount, payers.clone(), items.clone(), date),
     ] {
         assert_eq!(builder.build().unwrap().id(), id);
     }
     // Each of their twins generates one of its own.
     let generated: BTreeSet<ExpenseId> = [
         Expense::builder("Dinner", amount, ana(), split.clone(), date),
-        Expense::builder_with_payers("Dinner", amount, payers.clone(), split, date),
-        Expense::itemised_builder("Dinner", amount, ana(), items.clone(), date),
-        Expense::itemised_builder_with_payers("Dinner", amount, payers, items, date),
+        Expense::builder("Dinner", amount, payers.clone(), split, date),
+        Expense::builder("Dinner", amount, ana(), items.clone(), date),
+        Expense::builder("Dinner", amount, payers, items, date),
     ]
     .into_iter()
     .map(|builder| builder.build().unwrap().id())

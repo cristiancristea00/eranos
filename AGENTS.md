@@ -303,17 +303,16 @@ test in `crates/xtask` checks every root.
   is plain text. The recipe is
   [docs/DEVELOPMENT.md § 3.9](docs/DEVELOPMENT.md#39-a-crossing-between-crates).
 - **A builder starts complete.** A type with a builder names its
-  constructors `builder` or a variant of it (`itemised_builder`,
-  `builder_with_payers`, `builder_with_split`, `builder_from_payment`), and
+  constructors `builder` or a variant of it (`builder_from_payment`), and
   `to_builder` starts an edit; a type without one, such as `Category` or
   `PaymentAccount`, has `new`. Every required value is a constructor
   argument, so `build` never reports a missing one. An entity with an
   identifier has it from the moment its constructor is called, and each
   constructor comes in two forms: the plain name generates the identifier
   (`Member::builder(first_name)`, `Category::new(name)`), and its twin,
-  named with `with_id`, or `and_id` after another `with_`, takes it first
+  named with `with_id`, takes it first
   (`Member::builder_with_id(id, first_name)`, `Category::with_id(id, name)`,
-  `Expense::builder_with_payers_and_id`). The plain form is a one-line call
+  `Transfer::builder_from_payment_with_id`). The plain form is a one-line call
   of its twin with `generate()`, and the two cite each other in their
   docs. The identifier's setter, `id`, is the first setter, and `build`
   generates nothing. Every setter replaces what was set before: the last
