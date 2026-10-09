@@ -242,15 +242,17 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     steps.push(kotlin::ports(metadata));
     steps.extend(
         ["quickstart", "persistence"]
-            .map(|example| kotlin::port(example, "/JAVA_HOME", &sequential)),
+            .map(|example| jvm::port(&kotlin::JVM, example, "/JAVA_HOME", &sequential)),
     );
     steps.push(kmp::ports("/JAVA_HOME"));
     steps.extend(
-        ["quickstart", "persistence"].map(|example| kmp::port(example, "/JAVA_HOME", &sequential)),
+        ["quickstart", "persistence"]
+            .map(|example| jvm::port(&kmp::JVM, example, "/JAVA_HOME", &sequential)),
     );
     steps.push(java::ports(metadata));
     steps.extend(
-        ["quickstart", "persistence"].map(|example| java::port(example, "/JAVA_HOME", &sequential)),
+        ["quickstart", "persistence"]
+            .map(|example| jvm::port(&java::JVM, example, "/JAVA_HOME", &sequential)),
     );
     steps.extend(web::copy(&sequential));
     steps.push(web::copied_generator(&sequential));
@@ -351,7 +353,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         .to_vec();
     native_created.extend(
         [capi::C_PACKAGE, capi::CPP_PACKAGE]
-            .map(|package| capi::ports_directory(package, &sequential)),
+            .map(|package| capi::package_directory(package, &sequential)),
     );
     let cleared = gates::generated(&metadata);
     let mut elsewhere = Recorder::new();

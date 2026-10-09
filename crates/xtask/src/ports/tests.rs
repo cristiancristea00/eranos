@@ -85,6 +85,7 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         reference("quickstart", "report"),
         reference("persistence", "report"),
     ];
+    let jvm_port = |jvm, example| jvm::port(jvm, example, "/JAVA_HOME", &sequential());
     for apple in [true, false] {
         let mut recorder = Recorder::new();
         recorder.apple = apple;
@@ -104,14 +105,14 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
             expected.push(port("Swift", "persistence", "/programs"));
         }
         expected.push(kotlin::ports(&metadata));
-        expected.push(kotlin::port("quickstart", "/JAVA_HOME", &sequential()));
-        expected.push(kotlin::port("persistence", "/JAVA_HOME", &sequential()));
+        expected.push(jvm_port(&kotlin::JVM, "quickstart"));
+        expected.push(jvm_port(&kotlin::JVM, "persistence"));
         expected.push(kmp::ports("/JAVA_HOME"));
-        expected.push(kmp::port("quickstart", "/JAVA_HOME", &sequential()));
-        expected.push(kmp::port("persistence", "/JAVA_HOME", &sequential()));
+        expected.push(jvm_port(&kmp::JVM, "quickstart"));
+        expected.push(jvm_port(&kmp::JVM, "persistence"));
         expected.push(java::ports(&metadata));
-        expected.push(java::port("quickstart", "/JAVA_HOME", &sequential()));
-        expected.push(java::port("persistence", "/JAVA_HOME", &sequential()));
+        expected.push(jvm_port(&java::JVM, "quickstart"));
+        expected.push(jvm_port(&java::JVM, "persistence"));
         expected.extend(web::copy(&sequential()));
         expected.push(web::copied_generator(&sequential()));
         expected.push(web::port("quickstart", &sequential()));
@@ -141,7 +142,7 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         assert_eq!(
             recorder.created,
             [capi::C_PACKAGE, capi::CPP_PACKAGE]
-                .map(|package| capi::ports_directory(package, &sequential()))
+                .map(|package| capi::package_directory(package, &sequential()))
         );
     }
     assert_eq!(
@@ -158,19 +159,19 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-uniffi --features sequential-ids"
     );
     assert_eq!(
-        java::port("restaurant_bill", "/JAVA_HOME", &sequential()).command_line(),
+        jvm::port(&java::JVM, "restaurant_bill", "/JAVA_HOME", &sequential()).command_line(),
         "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED --illegal-native-access=deny \
          -Dstdout.encoding=UTF-8 -Djava.library.path=/eranos/target/sequential/debug \
          -cp bindings/java/build/ports/* eranos.examples.restaurantbill.Main"
     );
     assert_eq!(
-        kmp::port("grand_tour", "/JAVA_HOME", &sequential()).command_line(),
+        jvm::port(&kmp::JVM, "grand_tour", "/JAVA_HOME", &sequential()).command_line(),
         "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED --illegal-native-access=deny \
          -Dstdout.encoding=UTF-8 -Djna.library.path=/eranos/target/sequential/debug \
          -cp bindings/kmp/examples/build/ports/* eranos.examples.grandtour.MainKt"
     );
     assert_eq!(
-        kotlin::port("split_methods", "/JAVA_HOME", &sequential()).command_line(),
+        jvm::port(&kotlin::JVM, "split_methods", "/JAVA_HOME", &sequential()).command_line(),
         "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED --illegal-native-access=deny \
          -Dstdout.encoding=UTF-8 -Djna.library.path=/eranos/target/sequential/debug \
          -cp bindings/kotlin/examples/build/ports/* eranos.examples.splitmethods.MainKt"
@@ -196,7 +197,7 @@ fn a_report_that_differs_stops_the_ports_at_its_port() {
         FirstPort {
             apple: false,
             language: "Kotlin",
-            last: kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
+            last: jvm::port(&kotlin::JVM, "quickstart", "/JAVA_HOME", &sequential()),
         },
     ] {
         let mut recorder = Recorder::new();
@@ -279,11 +280,11 @@ fn a_failure_stops_the_ports_where_it_happens() {
         swift::examples_directory(&sequential()),
         port("Swift", "quickstart", "/programs"),
         kotlin::ports(&metadata),
-        kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
+        jvm::port(&kotlin::JVM, "quickstart", "/JAVA_HOME", &sequential()),
         kmp::ports("/JAVA_HOME"),
-        kmp::port("quickstart", "/JAVA_HOME", &sequential()),
+        jvm::port(&kmp::JVM, "quickstart", "/JAVA_HOME", &sequential()),
         java::ports(&metadata),
-        java::port("quickstart", "/JAVA_HOME", &sequential()),
+        jvm::port(&java::JVM, "quickstart", "/JAVA_HOME", &sequential()),
         web::sequential_library(&sequential()),
         web::copy(&sequential())[1].clone(),
         web::copied_generator(&sequential()),

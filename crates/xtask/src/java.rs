@@ -13,6 +13,10 @@ use crate::process::{self, Profile, Runner, Step, WORKSPACE};
 /// The Java project, from the workspace root.
 const PROJECT: &str = "bindings/java";
 
+/// The files ktlint checks and formats: the build scripts, the package's
+/// only Kotlin.
+const BUILD_SCRIPTS: [&str; 1] = ["*.kts"];
+
 /// The environment variable the Java gates need: the JDK that Gradle runs
 /// on.
 pub(crate) const VARIABLES: [&str; 1] = ["JAVA_HOME"];
@@ -33,12 +37,7 @@ pub(crate) const JVM: Jvm = Jvm {
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn actions(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
-    if let Some(name) = VARIABLES
-        .into_iter()
-        .find(|name| runner.variable(name).is_none())
-    {
-        return Err(Failure::Variable(name));
-    }
+    runner.require_all(&VARIABLES)?;
     let mut actions = vec![Action::clear(Phase::Prepare, generated_sources())];
     actions.extend(Action::runs(Phase::Prepare, sources(metadata)));
     actions.extend(checks(metadata));
@@ -91,12 +90,7 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Action> {
         Action::run(Phase::Lint, gradle(&["formatCheck"], "google-java-format")),
         Action::run(
             Phase::Lint,
-            Step::new(
-                &["--relative", "*.kts"],
-                "ktlint on the build scripts",
-                "ktlint",
-            )
-            .in_directory(PROJECT),
+            jvm::ktlint(PROJECT, &BUILD_SCRIPTS, "ktlint on the build scripts"),
         ),
         Action::run(
             Phase::Test,
@@ -126,14 +120,6 @@ pub(crate) fn ports(metadata: &Metadata) -> Step {
     gradle(metadata, &["ports"], "the Java ports")
 }
 
-/// The step that runs the Java port of `example` on the `java` of the JDK at
-/// `jdk`, the JDK loading the host library from `sequential`'s target
-/// directory.
-#[must_use]
-pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    jvm::port(&JVM, example, jdk, sequential)
-}
-
 /// The Java package's formatters, applied: google-java-format over the
 /// layer, its tests, and the examples, and ktlint over the build scripts.
 #[must_use]
@@ -145,12 +131,11 @@ pub(crate) fn formats() -> Vec<Action> {
         ),
         Action::run(
             Phase::Format,
-            Step::new(
-                &["--format", "--relative", "*.kts"],
+            jvm::ktlint_format(
+                PROJECT,
+                &BUILD_SCRIPTS,
                 "the format of the build scripts, applied",
-                "ktlint",
-            )
-            .in_directory(PROJECT),
+            ),
         ),
     ]
 }
@@ -164,12 +149,7 @@ pub(crate) fn formats() -> Vec<Action> {
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
-    if let Some(name) = VARIABLES
-        .into_iter()
-        .find(|name| runner.variable(name).is_none())
-    {
-        return Err(Failure::Variable(name));
-    }
+    runner.require_all(&VARIABLES)?;
     let packaged = crate::gates::packaged(metadata, "java");
     let package = packaged.to_string_lossy().into_owned();
     let mut actions = vec![

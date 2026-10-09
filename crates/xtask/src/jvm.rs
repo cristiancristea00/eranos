@@ -14,6 +14,24 @@ pub(crate) fn gradle(project: &str, tasks: &[&str], name: &str) -> Step {
     Step::new(&arguments, name, "sh").in_directory(project)
 }
 
+/// The step that checks the format of the files of `project` that `files`
+/// match with ktlint, reported as `name`.
+#[must_use]
+pub(crate) fn ktlint(project: &str, files: &[&str], name: &str) -> Step {
+    let mut arguments = vec!["--relative"];
+    arguments.extend(files);
+    Step::new(&arguments, name, "ktlint").in_directory(project)
+}
+
+/// The step that applies ktlint's format to the files of `project` that
+/// `files` match, reported as `name`.
+#[must_use]
+pub(crate) fn ktlint_format(project: &str, files: &[&str], name: &str) -> Step {
+    let mut arguments = vec!["--format", "--relative"];
+    arguments.extend(files);
+    Step::new(&arguments, name, "ktlint").in_directory(project)
+}
+
 /// The step that runs Gradle's `tasks` as [`gradle`] does, with the tests
 /// loading the host library from `metadata`'s target directory.
 #[must_use]

@@ -45,15 +45,8 @@ pub(crate) const DIRECTORY: &str = "llvm-cov-target";
 /// generated source, and of creating the directories the C and C++ tests
 /// build in.
 pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
-    if let Some(name) = kotlin::VARIABLES
-        .into_iter()
-        .find(|name| runner.variable(name).is_none())
-    {
-        return Err(Failure::Variable(name));
-    }
-    let llvm = runner
-        .variable(capi::VARIABLE)
-        .ok_or(Failure::Variable(capi::VARIABLE))?;
+    runner.require_all(&kotlin::VARIABLES)?;
+    let llvm = runner.required(capi::VARIABLE)?;
     let metadata = Metadata::parse(&runner.output(&gates::metadata())?)?;
     let measured = metadata.inner(DIRECTORY);
     let environment = environment(&runner.output(&show_environment(&measured))?);
@@ -96,7 +89,7 @@ pub(crate) fn cleared(measured: &Metadata, apple: bool) -> Vec<PathBuf> {
 #[must_use]
 pub(crate) fn created(measured: &Metadata) -> Vec<PathBuf> {
     [capi::C_PACKAGE, capi::CPP_PACKAGE]
-        .map(|package| capi::measured_directory(package, measured))
+        .map(|package| capi::package_directory(package, measured))
         .to_vec()
 }
 
@@ -144,24 +137,18 @@ pub(crate) fn steps(
 /// leaves out, the serde code and one of the two identifier generators.
 #[must_use]
 pub(crate) fn rust() -> Vec<Step> {
-    let tests = |features: &str, name: &str| {
-        let mut arguments = vec!["llvm-cov", "--no-report", "--workspace", features];
+    let mut steps = vec![Step::cargo(
+        &["llvm-cov", "clean", "--workspace"],
+        "the earlier runs' coverage",
+    )];
+    steps.extend(gates::FEATURE_SETS.map(|set| {
+        let mut arguments = vec!["llvm-cov", "--no-report", "--workspace", set.flag];
         for package in GLUE {
             arguments.extend(["--exclude", package]);
         }
-        Step::cargo(&arguments, name)
-    };
-    vec![
-        Step::cargo(
-            &["llvm-cov", "clean", "--workspace"],
-            "the earlier runs' coverage",
-        ),
-        tests("--all-features", "the Rust tests with every feature"),
-        tests(
-            "--no-default-features",
-            "the Rust tests without the default features",
-        ),
-    ]
+        Step::cargo(&arguments, &format!("the Rust tests {}", set.words))
+    }));
+    steps
 }
 
 /// The step that prints, as exports a shell reads, the environment in which

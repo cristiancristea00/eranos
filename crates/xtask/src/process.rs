@@ -254,6 +254,28 @@ pub(crate) trait Runner {
     /// The value of the environment variable `name`; `None` when it is not
     /// set or is empty.
     fn variable(&self, name: &str) -> Option<String>;
+
+    /// The value of the environment variable `name`, which a step needs.
+    ///
+    /// # Errors
+    ///
+    /// [`Failure::Variable`] when it is not set or is empty.
+    fn required(&self, name: &'static str) -> Result<String, Failure> {
+        self.variable(name).ok_or(Failure::Variable(name))
+    }
+
+    /// Checks that every environment variable of `names` is set, before
+    /// any step that needs them runs.
+    ///
+    /// # Errors
+    ///
+    /// [`Failure::Variable`] for the first that is not set or is empty.
+    fn require_all(&self, names: &[&'static str]) -> Result<(), Failure> {
+        for &name in names {
+            self.required(name)?;
+        }
+        Ok(())
+    }
 }
 
 /// Runs steps as processes.

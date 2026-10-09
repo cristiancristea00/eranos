@@ -171,42 +171,46 @@ pub(crate) fn formats() -> Vec<Action> {
 /// every target with every feature and without the default ones.
 #[must_use]
 pub(crate) fn host_lints() -> Vec<Step> {
-    vec![
-        Step::cargo(&["fmt", "--all", "--check"], "formatting"),
+    let mut steps = vec![Step::cargo(&["fmt", "--all", "--check"], "formatting")];
+    steps.extend(FEATURE_SETS.map(|set| {
         Step::cargo(
             &[
                 "clippy",
                 "--workspace",
                 "--all-targets",
-                "--all-features",
+                set.flag,
                 "--",
                 "-D",
                 "warnings",
             ],
-            "clippy with every feature",
-        ),
-        Step::cargo(
-            &[
-                "clippy",
-                "--workspace",
-                "--all-targets",
-                "--no-default-features",
-                "--",
-                "-D",
-                "warnings",
-            ],
-            "clippy without the default features",
-        ),
-    ]
+            &format!("clippy {}", set.words),
+        )
+    }));
+    steps
 }
 
-/// A set of features that clippy lints a target's libraries with.
-struct FeatureSet {
+/// A set of features that the workspace is linted, tested, and measured
+/// with.
+pub(crate) struct FeatureSet {
     /// The flag that selects it.
-    flag: &'static str,
+    pub(crate) flag: &'static str,
     /// The words that name it in a step's name.
-    words: &'static str,
+    pub(crate) words: &'static str,
 }
+
+/// The two sets of features every lint and test of the workspace runs with:
+/// every feature, and none of the default ones, since each compiles code the
+/// other leaves out, such as the serde code and an identifier generator.
+pub(crate) const FEATURE_SETS: [FeatureSet; 2] = [
+    FeatureSet {
+        flag: "--all-features",
+        words: "with every feature",
+    },
+    FeatureSet {
+        flag: "--no-default-features",
+        words: "without the default features",
+    },
+];
 
 /// The gate that lints the libraries for the mobile and wasm targets, with
 /// every feature and without the default ones, as CI's job of that name
@@ -220,17 +224,7 @@ struct FeatureSet {
 #[must_use]
 pub(crate) fn target_lints() -> Vec<Step> {
     let clippy = |scope: &[&str], targets: &[&str], name: &str| {
-        [
-            FeatureSet {
-                flag: "--all-features",
-                words: "with every feature",
-            },
-            FeatureSet {
-                flag: "--no-default-features",
-                words: "without the default features",
-            },
-        ]
-        .map(|set| {
+        FEATURE_SETS.map(|set| {
             let mut arguments = vec!["clippy"];
             arguments.extend(scope);
             arguments.extend(["--lib", set.flag]);
@@ -276,16 +270,14 @@ pub(crate) fn tests_and_documentation() -> Vec<Step> {
 /// without the default ones.
 #[must_use]
 pub(crate) fn tests() -> Vec<Step> {
-    vec![
-        Step::cargo(
-            &["test", "--workspace", "--all-features"],
-            "tests with every feature",
-        ),
-        Step::cargo(
-            &["test", "--workspace", "--no-default-features"],
-            "tests without the default features",
-        ),
-    ]
+    FEATURE_SETS
+        .map(|set| {
+            Step::cargo(
+                &["test", "--workspace", set.flag],
+                &format!("tests {}", set.words),
+            )
+        })
+        .to_vec()
 }
 
 /// The gate that builds the workspace's documentation with warnings as
@@ -450,10 +442,7 @@ pub(crate) fn generated(metadata: &Metadata) -> PathBuf {
 /// on every host.
 #[must_use]
 pub(crate) fn generators(metadata: &Metadata) -> Vec<Step> {
-    let library = format!(
-        "{}/debug/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}",
-        metadata.target_directory
-    );
+    let library = host_library_file(metadata, Profile::Debug);
     let directory = |language: &str| format!("{}/uniffi/{language}", metadata.target_directory);
     let generator = |bin: &str, arguments: &[&str], name: &str| {
         let mut command = vec![

@@ -5,17 +5,19 @@
 //! package's gates lint, document, and measure the layer's sources and the
 //! ports', which this package compiles unchanged.
 
-use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
-
 use crate::Failure;
 use crate::gates::Metadata;
 use crate::jvm::{self, Jvm};
 use crate::kotlin::JDK;
 use crate::plan::{Action, Phase};
-use crate::process::{Runner, Step};
+use crate::process::{Profile, Runner, Step};
 
 /// The Kotlin Multiplatform project, from the workspace root.
 const PROJECT: &str = "bindings/kmp";
+
+/// The files ktlint checks and formats: the build scripts, the package's
+/// only sources of its own, without Gradle's output.
+const BUILD_SCRIPTS: [&str; 2] = ["**/*.kts", "!**/build/**"];
 
 /// The Kotlin package's ports, compiled here over the package's bindings:
 /// gathered by the examples' `ports` task, each a `MainKt` whose library JNA
@@ -44,10 +46,12 @@ pub(crate) const APPLE_TARGETS: [&str; 4] =
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn actions(runner: &impl Runner) -> Result<Vec<Action>, Failure> {
-    let [sdk, jdk] = VARIABLES.map(|name| runner.variable(name).ok_or(Failure::Variable(name)));
     // Gradle finds the Android SDK through the environment the gates run in.
-    sdk?;
-    Ok(checks(&jdk?, runner.builds_apple_platforms()))
+    runner.require_all(&VARIABLES)?;
+    Ok(checks(
+        &runner.required(JDK)?,
+        runner.builds_apple_platforms(),
+    ))
 }
 
 /// The actions that run the layer's tests on the JVM, build the Android
@@ -86,12 +90,11 @@ pub(crate) fn checks(jdk: &str, apple: bool) -> Vec<Action> {
         ),
         Action::run(
             Phase::Lint,
-            Step::new(
-                &["--relative", "**/*.kts", "!**/build/**"],
+            jvm::ktlint(
+                PROJECT,
+                &BUILD_SCRIPTS,
                 "ktlint on the Kotlin Multiplatform build scripts",
-                "ktlint",
-            )
-            .in_directory(PROJECT),
+            ),
         ),
     ]
 }
@@ -110,27 +113,17 @@ pub(crate) fn ports(jdk: &str) -> Step {
     gradle(jdk, &[":examples:ports"], "the Kotlin Multiplatform ports")
 }
 
-/// The step that runs the Kotlin Multiplatform port of `example` on the
-/// `java` of the JDK at `jdk`, JNA loading eranos-uniffi's library from
-/// `sequential`'s target directory, since the ports' directory holds no
-/// library of its own.
-#[must_use]
-pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    jvm::port(&JVM, example, jdk, sequential)
-}
-
 /// The Kotlin Multiplatform package's formatter, applied: ktlint over the
 /// build scripts, the package's only sources of its own.
 #[must_use]
 pub(crate) fn formats() -> Vec<Action> {
     vec![Action::run(
         Phase::Format,
-        Step::new(
-            &["--format", "--relative", "**/*.kts", "!**/build/**"],
+        jvm::ktlint_format(
+            PROJECT,
+            &BUILD_SCRIPTS,
             "the format of the Kotlin Multiplatform build scripts, applied",
-            "ktlint",
-        )
-        .in_directory(PROJECT),
+        ),
     )]
 }
 
@@ -148,10 +141,9 @@ pub(crate) fn formats() -> Vec<Action> {
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
-    let [sdk, jdk] = VARIABLES.map(|name| runner.variable(name).ok_or(Failure::Variable(name)));
     // Gradle finds the Android SDK through the environment the packages build in.
-    sdk?;
-    let jdk = jdk?;
+    runner.require_all(&VARIABLES)?;
+    let jdk = runner.required(JDK)?;
     let packaged = crate::gates::packaged(metadata, "kmp");
     let package = packaged.to_string_lossy().into_owned();
     Ok(vec![
@@ -199,10 +191,7 @@ pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<A
                     &format!("{PROJECT}/eranos/build/outputs/aar/eranos.aar"),
                     &format!("{PROJECT}/generated/build/libs/generated-jvm.jar"),
                     &format!("{PROJECT}/eranos/build/libs/eranos-jvm.jar"),
-                    &format!(
-                        "{}/release/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}",
-                        metadata.target_directory
-                    ),
+                    &crate::gates::host_library_file(metadata, Profile::Release),
                     &package,
                 ],
                 "the Kotlin Multiplatform packages",

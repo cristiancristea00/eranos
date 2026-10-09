@@ -13,6 +13,7 @@ use std::path::PathBuf;
 
 use crate::Failure;
 use crate::gates::{self, Metadata};
+use crate::jvm::{self, Jvm};
 use crate::language::Language;
 use crate::plan::{self, Action, Phase};
 use crate::process::{Runner, Step};
@@ -149,34 +150,26 @@ fn languages_ports(
     languages: &[Language],
 ) -> Result<Vec<Action>, Failure> {
     let ported = |language| languages.contains(&language);
-    let variable = |name: &'static str| runner.variable(name).ok_or(Failure::Variable(name));
     let mut ports = Vec::new();
     if ported(Language::Swift) {
         ports.extend(swift_ports(sequential, references));
     }
     if ported(Language::Kotlin) {
-        let jdk = variable(kotlin::JDK)?;
-        ports.push(Action::run(Phase::Prepare, kotlin::ports(metadata)));
-        ports.extend(checks(kotlin::JVM.language, references, &|example| {
-            kotlin::port(example, &jdk, sequential)
-        }));
+        let jdk = runner.required(kotlin::JDK)?;
+        let build = kotlin::ports(metadata);
+        ports.extend(jvm_ports(build, &kotlin::JVM, &jdk, sequential, references));
     }
     if ported(Language::Kmp) {
-        let [sdk, jdk] = kmp::VARIABLES.map(variable);
         // Gradle finds the Android SDK through the environment the ports run in.
-        sdk?;
-        let jdk = jdk?;
-        ports.push(Action::run(Phase::Prepare, kmp::ports(&jdk)));
-        ports.extend(checks(kmp::JVM.language, references, &|example| {
-            kmp::port(example, &jdk, sequential)
-        }));
+        runner.require_all(&kmp::VARIABLES)?;
+        let jdk = runner.required(kotlin::JDK)?;
+        let build = kmp::ports(&jdk);
+        ports.extend(jvm_ports(build, &kmp::JVM, &jdk, sequential, references));
     }
     if ported(Language::Java) {
-        let jdk = variable(kotlin::JDK)?;
-        ports.push(Action::run(Phase::Prepare, java::ports(metadata)));
-        ports.extend(checks(java::JVM.language, references, &|example| {
-            java::port(example, &jdk, sequential)
-        }));
+        let jdk = runner.required(kotlin::JDK)?;
+        let build = java::ports(metadata);
+        ports.extend(jvm_ports(build, &java::JVM, &jdk, sequential, references));
     }
     if ported(Language::Web) {
         ports.extend(Action::runs(Phase::Prepare, web::copy(sequential)));
@@ -194,11 +187,11 @@ fn languages_ports(
         }));
     }
     if ported(Language::Capi) {
-        let llvm = variable(capi::VARIABLE)?;
+        let llvm = runner.required(capi::VARIABLE)?;
         for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
             ports.push(Action::create(
                 Phase::Prepare,
-                capi::ports_directory(package, sequential),
+                capi::package_directory(package, sequential),
             ));
             ports.extend(references.iter().map(|reference| {
                 Action::run(
@@ -218,6 +211,24 @@ fn languages_ports(
         }));
     }
     Ok(ports)
+}
+
+/// The actions that build the ports of the JVM package `jvm` with `build`
+/// and run the port of every example of `references` on the `java` of the
+/// JDK at `jdk`, which loads eranos-uniffi's library from `sequential`'s
+/// target directory, since the ports' directory holds no library of its own.
+fn jvm_ports(
+    build: Step,
+    jvm: &Jvm,
+    jdk: &str,
+    sequential: &Metadata,
+    references: &[Reference],
+) -> Vec<Action> {
+    let mut ports = vec![Action::run(Phase::Prepare, build)];
+    ports.extend(checks(jvm.language, references, &|example| {
+        jvm::port(jvm, example, jdk, sequential)
+    }));
+    ports
 }
 
 /// The actions that copy the Swift package into `sequential`'s target
@@ -282,7 +293,7 @@ pub(crate) fn cleared(sequential: &Metadata, languages: &[Language]) -> Vec<Path
     if ported(Language::Capi) {
         directories.extend(
             [capi::C_PACKAGE, capi::CPP_PACKAGE]
-                .map(|package| capi::ports_directory(package, sequential)),
+                .map(|package| capi::package_directory(package, sequential)),
         );
     }
     if ported(Language::Python) {

@@ -57,20 +57,23 @@ pub(crate) fn node() -> Step {
 /// which the generator reads and the package loads.
 #[must_use]
 pub(crate) fn library() -> Vec<Step> {
-    vec![
-        target(),
-        Step::cargo(
-            &[
-                "build",
-                "--package",
-                "eranos-web",
-                "--target",
-                TARGET,
-                "--lib",
-            ],
-            "the WebAssembly library",
-        ),
-    ]
+    vec![target(), wasm_build(&[], "the WebAssembly library")]
+}
+
+/// The step that builds eranos-web's library for WebAssembly, with
+/// `options` besides the package, the target, and `--lib`, reported as
+/// `name`.
+fn wasm_build(options: &[&str], name: &str) -> Step {
+    let mut arguments = vec![
+        "build",
+        "--package",
+        "eranos-web",
+        "--target",
+        TARGET,
+        "--lib",
+    ];
+    arguments.extend(options);
+    Step::cargo(&arguments, name)
 }
 
 /// The step that installs the package's dependencies exactly as its lock
@@ -100,18 +103,22 @@ pub(crate) fn generated_sources() -> PathBuf {
 /// of its own.
 #[must_use]
 pub(crate) fn generator() -> Step {
-    Step::new(
-        &[
-            "build",
-            "wasm2",
-            "--config",
-            "ubrn.config.yaml",
-            "--no-wasm-build",
-        ],
-        "the generated TypeScript",
-        "uniffi-bindgen-react-native",
-    )
-    .in_directory(PROJECT)
+    generation(&[], "the generated TypeScript").in_directory(PROJECT)
+}
+
+/// The step that generates TypeScript with the generator's command-line
+/// tool from the library cargo built, as the settings in its directory say,
+/// with `options` besides, reported as `name`.
+fn generation(options: &[&str], name: &str) -> Step {
+    let mut arguments = vec![
+        "build",
+        "wasm2",
+        "--config",
+        "ubrn.config.yaml",
+        "--no-wasm-build",
+    ];
+    arguments.extend(options);
+    Step::new(&arguments, name, "uniffi-bindgen-react-native")
 }
 
 /// A check the gates run as a script of the package's `package.json`.
@@ -200,17 +207,8 @@ pub(crate) fn copied_directories(sequential: &Metadata) -> Vec<PathBuf> {
 /// count up, into `sequential`'s target directory.
 #[must_use]
 pub(crate) fn sequential_library(sequential: &Metadata) -> Step {
-    Step::cargo(
-        &[
-            "build",
-            "--package",
-            "eranos-web",
-            "--target",
-            TARGET,
-            "--lib",
-            "--features",
-            "sequential-ids",
-        ],
+    wasm_build(
+        &["--features", "sequential-ids"],
         "the WebAssembly library, with identifiers that count up",
     )
     .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
@@ -266,19 +264,9 @@ pub(crate) fn configuration() -> String {
 /// directory.
 #[must_use]
 pub(crate) fn copied_generator(sequential: &Metadata) -> Step {
-    Step::new(
-        &[
-            "build",
-            "wasm2",
-            "--config",
-            "ubrn.config.yaml",
-            "--no-wasm-build",
-        ],
-        "the copy's generated TypeScript",
-        "uniffi-bindgen-react-native",
-    )
-    .in_directory(&copied_package(sequential).to_string_lossy())
-    .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
+    generation(&[], "the copy's generated TypeScript")
+        .in_directory(&copied_package(sequential).to_string_lossy())
+        .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
 }
 
 /// The step that runs the TypeScript port of `example` in the copy, on Node
@@ -334,30 +322,11 @@ pub(crate) fn release(metadata: &Metadata) -> Vec<Action> {
         Phase::Package,
         vec![
             target(),
-            Step::cargo(
-                &[
-                    "build",
-                    "--release",
-                    "--package",
-                    "eranos-web",
-                    "--target",
-                    TARGET,
-                    "--lib",
-                ],
-                "the WebAssembly library, in release",
-            ),
+            wasm_build(&["--release"], "the WebAssembly library, in release"),
             install(),
-            Step::new(
-                &[
-                    "build",
-                    "wasm2",
-                    "--config",
-                    "ubrn.config.yaml",
-                    "--no-wasm-build",
-                    "--release",
-                ],
+            generation(
+                &["--release"],
                 "the generated TypeScript, from the release library",
-                "uniffi-bindgen-react-native",
             )
             .in_directory(PROJECT),
             npm("build", "the TypeScript package"),

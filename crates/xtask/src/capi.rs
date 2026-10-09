@@ -153,9 +153,7 @@ pub(crate) const CPP_PACKAGE: Package = Package {
 ///
 /// [`Failure::Variable`] when [`VARIABLE`] is not set.
 pub(crate) fn actions(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
-    let llvm = runner
-        .variable(VARIABLE)
-        .ok_or(Failure::Variable(VARIABLE))?;
+    let llvm = runner.required(VARIABLE)?;
     let mut actions = vec![Action::run(Phase::Prepare, library())];
     for package in [C_PACKAGE, CPP_PACKAGE] {
         for name in ["generated", "build"] {
@@ -292,10 +290,11 @@ pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<St
     ]
 }
 
-/// Where [`measured_tests`] builds `package`'s tests: a directory of their
-/// own in `metadata`'s target directory, beside the library they load.
+/// A directory of `package`'s own in `metadata`'s target directory, beside
+/// the library its programs load: where [`measured_tests`] builds its tests
+/// and [`port_build`] its ports.
 #[must_use]
-pub(crate) fn measured_directory(package: Package, metadata: &Metadata) -> PathBuf {
+pub(crate) fn package_directory(package: Package, metadata: &Metadata) -> PathBuf {
     PathBuf::from(format!(
         "{}/{}",
         metadata.target_directory, package.language
@@ -313,7 +312,7 @@ pub(crate) fn measured_tests(package: Package, llvm: &str, metadata: &Metadata) 
     let libraries = format!("{}/debug", metadata.target_directory);
     let library = format!("{libraries}/{DLL_PREFIX}eranos_capi{DLL_SUFFIX}");
     let search = format!("-Wl,-rpath,{libraries}");
-    let program = format!("{}/tests", measured_directory(package, metadata).display());
+    let program = format!("{}/tests", package_directory(package, metadata).display());
     let mut arguments = package.dialect.to_vec();
     arguments.extend([
         "-g",
@@ -342,16 +341,6 @@ pub(crate) fn measured_tests(package: Package, llvm: &str, metadata: &Metadata) 
     ]
 }
 
-/// Where the ports of `package` are built: a directory of their own in
-/// `sequential`'s target directory, beside the library they link.
-#[must_use]
-pub(crate) fn ports_directory(package: Package, sequential: &Metadata) -> PathBuf {
-    PathBuf::from(format!(
-        "{}/{}",
-        sequential.target_directory, package.language
-    ))
-}
-
 /// The step that builds the port of `example` in `package`'s language, its
 /// program and the report module, with LLVM's compiler at `llvm`, under the
 /// sanitizers as the tests are, on the headers that the package's gates
@@ -369,7 +358,7 @@ pub(crate) fn port_build(
     let program = format!("examples/{example}.{}", package.language);
     let output = format!(
         "{}/{example}",
-        ports_directory(package, sequential).display()
+        package_directory(package, sequential).display()
     );
     let mut arguments = sanitised(package);
     arguments.extend([
@@ -399,7 +388,7 @@ pub(crate) fn port(package: Package, example: &str, sequential: &Metadata) -> St
     crate::ports::port(
         package.name,
         example,
-        &ports_directory(package, sequential).to_string_lossy(),
+        &package_directory(package, sequential).to_string_lossy(),
     )
     .with_variable("ASAN_OPTIONS", "detect_leaks=1")
 }

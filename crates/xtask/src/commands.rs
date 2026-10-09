@@ -69,11 +69,9 @@ pub(crate) fn format(runner: &mut impl Runner, languages: &[Language]) -> Result
     let mut formats = Vec::new();
     for language in languages {
         formats.extend(match language {
-            Language::Capi => capi::formats(&variable(runner, capi::VARIABLE)?),
+            Language::Capi => capi::formats(&runner.required(capi::VARIABLE)?),
             Language::Java => {
-                for name in java::VARIABLES {
-                    variable(runner, name)?;
-                }
+                runner.require_all(&java::VARIABLES)?;
                 java::formats()
             }
             Language::Kmp => kmp::formats(),
@@ -257,15 +255,6 @@ fn runnable(runner: &impl Runner, languages: &[Language]) -> Result<Vec<Language
         return Err(Failure::Apple);
     }
     Ok(ports::runnable(languages, apple))
-}
-
-/// The value of the environment variable `name`.
-///
-/// # Errors
-///
-/// [`Failure::Variable`] when it is not set.
-fn variable(runner: &impl Runner, name: &'static str) -> Result<String, Failure> {
-    runner.variable(name).ok_or(Failure::Variable(name))
 }
 
 #[cfg(test)]

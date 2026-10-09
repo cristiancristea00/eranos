@@ -2,7 +2,6 @@
 //! for every Apple platform, the generated Swift in the package, and the
 //! package's build, tests, linters, and documentation.
 
-use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::path::{Path, PathBuf};
 
 use crate::gates::Metadata;
@@ -187,6 +186,14 @@ fn libraries_in(metadata: &Metadata, profile: Profile) -> Vec<Step> {
             "lipo",
         ));
     }
+    steps.extend(header_copies(metadata, profile));
+    steps
+}
+
+/// The steps that copy the C header and the module map generated from
+/// `metadata`'s host library into the headers directory of the libraries in
+/// `profile`, which every `XCFramework` of them carries.
+fn header_copies(metadata: &Metadata, profile: Profile) -> Vec<Step> {
     let generated = format!("{}/uniffi/swift", metadata.target_directory);
     let headers = format!("{}/headers", apple(metadata, profile));
     let copy = |from: &str, to: &str, name: &str| {
@@ -196,22 +203,19 @@ fn libraries_in(metadata: &Metadata, profile: Profile) -> Vec<Step> {
             "cp",
         )
     };
-    steps.push(Step::new(
-        &["-p", &headers],
-        "the headers directory",
-        "mkdir",
-    ));
-    steps.push(copy(
-        "EranosGeneratedFFI.h",
-        "EranosGeneratedFFI.h",
-        "the C header",
-    ));
-    steps.push(copy(
-        "EranosGeneratedFFI.modulemap",
-        "module.modulemap",
-        "the module map",
-    ));
-    steps
+    vec![
+        Step::new(&["-p", &headers], "the headers directory", "mkdir"),
+        copy(
+            "EranosGeneratedFFI.h",
+            "EranosGeneratedFFI.h",
+            "the C header",
+        ),
+        copy(
+            "EranosGeneratedFFI.modulemap",
+            "module.modulemap",
+            "the module map",
+        ),
+    ]
 }
 
 /// The steps that make the `XCFramework` of every library, copy the generated
@@ -220,19 +224,8 @@ fn libraries_in(metadata: &Metadata, profile: Profile) -> Vec<Step> {
 #[must_use]
 pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
     let output = format!("{PACKAGE}/EranosFFI.xcframework");
-    let sources = format!("{PACKAGE}/Sources/EranosGenerated");
-    let generated = format!(
-        "{}/uniffi/swift/EranosGenerated.swift",
-        metadata.target_directory
-    );
     let mut steps = vec![framework(metadata, Profile::Debug, &output)];
-    steps.extend(process::generated_copy(
-        "Swift",
-        &generated,
-        &sources,
-        "the generated module's directory",
-        &[],
-    ));
+    steps.extend(generated_module(metadata, PACKAGE));
     steps.extend([
         Step::new(
             &["package", "--package-path", PACKAGE, "clean"],
@@ -256,12 +249,50 @@ fn framework(metadata: &Metadata, profile: Profile, output: &str) -> Step {
         .iter()
         .map(|library| joined_library(metadata, library, profile))
         .collect();
+    xcframework(&libraries, &headers, output, "the XCFramework")
+}
+
+/// The step that makes the `XCFramework` at `output` of `libraries`, each
+/// with the headers in `headers`, reported as `name`.
+fn xcframework(libraries: &[String], headers: &str, output: &str, name: &str) -> Step {
     let mut arguments = vec!["-create-xcframework"];
-    for library in &libraries {
-        arguments.extend(["-library", library, "-headers", &headers]);
+    for library in libraries {
+        arguments.extend(["-library", library, "-headers", headers]);
     }
     arguments.extend(["-output", output]);
-    Step::new(&arguments, "the XCFramework", "xcodebuild")
+    Step::new(&arguments, name, "xcodebuild")
+}
+
+/// The step that copies the package's manifests, sources, and tests into
+/// `destination`, reported as `name`.
+fn package_sources(destination: &str, name: &str) -> Step {
+    Step::new(
+        &[
+            "-R",
+            &format!("{PACKAGE}/Package.swift"),
+            &format!("{PACKAGE}/Package.resolved"),
+            &format!("{PACKAGE}/Sources"),
+            &format!("{PACKAGE}/Tests"),
+            destination,
+        ],
+        name,
+        "cp",
+    )
+}
+
+/// The steps that copy the Swift generated from `metadata`'s host library
+/// into the generated module of the package at `package`.
+fn generated_module(metadata: &Metadata, package: &str) -> Vec<Step> {
+    process::generated_copy(
+        "Swift",
+        &format!(
+            "{}/uniffi/swift/EranosGenerated.swift",
+            metadata.target_directory
+        ),
+        &format!("{package}/Sources/EranosGenerated"),
+        "the generated module's directory",
+        &[],
+    )
 }
 
 /// The actions that build the Swift package an app consumes into its
@@ -284,32 +315,12 @@ pub(crate) fn release(metadata: &Metadata) -> Vec<Action> {
         vec![
             Step::new(&["-p", &package], "the Swift package's directory", "mkdir"),
             framework(metadata, Profile::Release, &framework_path),
-            Step::new(
-                &[
-                    "-R",
-                    &format!("{PACKAGE}/Package.swift"),
-                    &format!("{PACKAGE}/Package.resolved"),
-                    &format!("{PACKAGE}/Sources"),
-                    &format!("{PACKAGE}/Tests"),
-                    &package,
-                ],
-                "the Swift package's sources",
-                "cp",
-            ),
+            package_sources(&package, "the Swift package's sources"),
         ],
     ));
     actions.extend(Action::runs(
         Phase::Package,
-        process::generated_copy(
-            "Swift",
-            &format!(
-                "{}/uniffi/swift/EranosGenerated.swift",
-                metadata.target_directory
-            ),
-            &format!("{package}/Sources/EranosGenerated"),
-            "the generated module's directory",
-            &[],
-        ),
+        generated_module(metadata, &package),
     ));
     actions
 }
@@ -433,70 +444,19 @@ pub(crate) fn copied_directories(metadata: &Metadata) -> Vec<PathBuf> {
 pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
     let package = copied_package(metadata).to_string_lossy().into_owned();
     let headers = format!("{}/headers", apple(metadata, Profile::Debug));
-    let generated = format!("{}/uniffi/swift", metadata.target_directory);
-    let sources = format!("{package}/Sources/EranosGenerated");
-    let library = format!(
-        "{}/debug/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}",
-        metadata.target_directory
-    );
-    let framework = format!("{package}/EranosFFI.xcframework");
+    let library = crate::gates::host_library_file(metadata, Profile::Debug);
     let mut steps = vec![
-        Step::new(
-            &["-p", &package, &headers],
-            "the package's copy and its headers",
-            "mkdir",
-        ),
-        Step::new(
-            &[
-                "-R",
-                &format!("{PACKAGE}/Package.swift"),
-                &format!("{PACKAGE}/Package.resolved"),
-                &format!("{PACKAGE}/Sources"),
-                &format!("{PACKAGE}/Tests"),
-                &package,
-            ],
-            "the Swift package",
-            "cp",
-        ),
+        Step::new(&["-p", &package], "the package's copy", "mkdir"),
+        package_sources(&package, "the Swift package"),
     ];
-    steps.extend(process::generated_copy(
-        "Swift",
-        &format!("{generated}/EranosGenerated.swift"),
-        &sources,
-        "the generated module's directory",
-        &[],
+    steps.extend(generated_module(metadata, &package));
+    steps.extend(header_copies(metadata, Profile::Debug));
+    steps.push(xcframework(
+        &[library],
+        &headers,
+        &format!("{package}/EranosFFI.xcframework"),
+        "the XCFramework of the copy's library",
     ));
-    steps.extend([
-        Step::new(
-            &[
-                &format!("{generated}/EranosGeneratedFFI.h"),
-                &format!("{headers}/EranosGeneratedFFI.h"),
-            ],
-            "the C header",
-            "cp",
-        ),
-        Step::new(
-            &[
-                &format!("{generated}/EranosGeneratedFFI.modulemap"),
-                &format!("{headers}/module.modulemap"),
-            ],
-            "the module map",
-            "cp",
-        ),
-        Step::new(
-            &[
-                "-create-xcframework",
-                "-library",
-                &library,
-                "-headers",
-                &headers,
-                "-output",
-                &framework,
-            ],
-            "the XCFramework of the copy's library",
-            "xcodebuild",
-        ),
-    ]);
     steps
 }
 

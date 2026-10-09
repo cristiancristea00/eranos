@@ -600,7 +600,7 @@ fn every_package_is_built_in_release_where_an_app_takes_it() {
         lines(&web::release(&metadata)),
         [
             "rustup target add wasm32-unknown-unknown",
-            "cargo build --release --package eranos-web --target wasm32-unknown-unknown --lib",
+            "cargo build --package eranos-web --target wasm32-unknown-unknown --lib --release",
             "cd bindings/typescript && npm ci",
             "cd bindings/typescript && uniffi-bindgen-react-native build wasm2 --config ubrn.config.yaml --no-wasm-build --release",
             "cd bindings/typescript && npm run build",

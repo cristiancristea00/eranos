@@ -14,6 +14,10 @@ use crate::process::{self, Profile, Runner, Step, WORKSPACE};
 /// The Kotlin project, from the workspace root.
 const PROJECT: &str = "bindings/kotlin";
 
+/// The files ktlint checks and formats: the layer, its tests, the examples,
+/// and the build scripts, without the generated sources and Gradle's output.
+const KOTLIN_FILES: [&str; 4] = ["**/*.kt", "**/*.kts", "!generated/**", "!**/build/**"];
+
 /// The Kotlin ports: gathered by the examples' `ports` task, each a `MainKt`
 /// whose library JNA loads.
 pub(crate) const JVM: Jvm = Jvm {
@@ -53,12 +57,7 @@ pub(crate) const VARIABLES: [&str; 2] = ["ANDROID_HOME", JDK];
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn actions(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
-    if let Some(name) = VARIABLES
-        .into_iter()
-        .find(|name| runner.variable(name).is_none())
-    {
-        return Err(Failure::Variable(name));
-    }
+    runner.require_all(&VARIABLES)?;
     let mut actions = Action::runs(Phase::Prepare, libraries());
     actions.push(Action::clear(Phase::Prepare, generated_sources()));
     actions.extend(Action::runs(Phase::Prepare, sources(metadata)));
@@ -149,21 +148,7 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Action> {
                 "the Kotlin tests and their coverage",
             ),
         ),
-        Action::run(
-            Phase::Lint,
-            Step::new(
-                &[
-                    "--relative",
-                    "**/*.kt",
-                    "**/*.kts",
-                    "!generated/**",
-                    "!**/build/**",
-                ],
-                "ktlint",
-                "ktlint",
-            )
-            .in_directory(PROJECT),
-        ),
+        Action::run(Phase::Lint, jvm::ktlint(PROJECT, &KOTLIN_FILES, "ktlint")),
         Action::run(
             Phase::Lint,
             gradle(&[":eranos:detekt", ":examples:detekt"], "detekt"),
@@ -196,14 +181,6 @@ pub(crate) fn ports(metadata: &Metadata) -> Step {
     gradle(metadata, &[":examples:ports"], "the Kotlin ports")
 }
 
-/// The step that runs the Kotlin port of `example` on the `java` of the JDK
-/// at `jdk`, JNA loading the host library from `sequential`'s target
-/// directory.
-#[must_use]
-pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    jvm::port(&JVM, example, jdk, sequential)
-}
-
 /// The step that runs the package's tests again, whatever Gradle holds of
 /// an earlier run, against the host library in `metadata`'s target
 /// directory: the instrumented one, whose coverage the run writes.
@@ -218,19 +195,7 @@ pub(crate) fn tests(metadata: &Metadata) -> Step {
 pub(crate) fn formats() -> Vec<Action> {
     vec![Action::run(
         Phase::Format,
-        Step::new(
-            &[
-                "--format",
-                "--relative",
-                "**/*.kt",
-                "**/*.kts",
-                "!generated/**",
-                "!**/build/**",
-            ],
-            "the Kotlin format, applied",
-            "ktlint",
-        )
-        .in_directory(PROJECT),
+        jvm::ktlint_format(PROJECT, &KOTLIN_FILES, "the Kotlin format, applied"),
     )]
 }
 
@@ -245,12 +210,7 @@ pub(crate) fn formats() -> Vec<Action> {
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
-    if let Some(name) = VARIABLES
-        .into_iter()
-        .find(|name| runner.variable(name).is_none())
-    {
-        return Err(Failure::Variable(name));
-    }
+    runner.require_all(&VARIABLES)?;
     let packaged = crate::gates::packaged(metadata, "kotlin");
     let package = packaged.to_string_lossy().into_owned();
     let mut actions = vec![Action::clear(Phase::Package, packaged)];
