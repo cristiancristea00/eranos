@@ -394,6 +394,13 @@ fn the_ports_of_one_language_read_its_variables_and_build_its_libraries() {
     let mut kmp = Recorder::new();
     run(&mut kmp, &metadata, &references, &[Language::Kmp]).unwrap();
     assert_eq!(kmp.steps[0], library(&sequential()));
+    let mut without_jdk = Recorder::new();
+    without_jdk.variables.retain(|&name| kotlin::JDK != name);
+    let refused = run(&mut without_jdk, &metadata, &references, &[Language::Kmp]);
+    assert!(
+        matches!(refused, Err(Failure::Variable("JAVA_HOME"))),
+        "{refused:?}"
+    );
     assert_eq!(web.cleared, web::copied_directories(&sequential()));
 }
 

@@ -46,12 +46,10 @@ pub(crate) const APPLE_TARGETS: [&str; 4] =
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn actions(runner: &impl Runner) -> Result<Vec<Action>, Failure> {
+    let [sdk, jdk] = VARIABLES.map(|name| runner.required(name));
     // Gradle finds the Android SDK through the environment the gates run in.
-    runner.require_all(&VARIABLES)?;
-    Ok(checks(
-        &runner.required(JDK)?,
-        runner.builds_apple_platforms(),
-    ))
+    sdk?;
+    Ok(checks(&jdk?, runner.builds_apple_platforms()))
 }
 
 /// The actions that run the layer's tests on the JVM, build the Android
@@ -141,9 +139,10 @@ pub(crate) fn formats() -> Vec<Action> {
 ///
 /// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
 pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
+    let [sdk, jdk] = VARIABLES.map(|name| runner.required(name));
     // Gradle finds the Android SDK through the environment the packages build in.
-    runner.require_all(&VARIABLES)?;
-    let jdk = runner.required(JDK)?;
+    sdk?;
+    let jdk = jdk?;
     let packaged = crate::gates::packaged(metadata, "kmp");
     let package = packaged.to_string_lossy().into_owned();
     Ok(vec![

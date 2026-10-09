@@ -160,9 +160,10 @@ fn languages_ports(
         ports.extend(jvm_ports(build, &kotlin::JVM, &jdk, sequential, references));
     }
     if ported(Language::Kmp) {
+        let [sdk, jdk] = kmp::VARIABLES.map(|name| runner.required(name));
         // Gradle finds the Android SDK through the environment the ports run in.
-        runner.require_all(&kmp::VARIABLES)?;
-        let jdk = runner.required(kotlin::JDK)?;
+        sdk?;
+        let jdk = jdk?;
         let build = kmp::ports(&jdk);
         ports.extend(jvm_ports(build, &kmp::JVM, &jdk, sequential, references));
     }
