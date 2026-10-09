@@ -273,13 +273,13 @@ static inline void eranosExpenseSetSplit(EranosExpense *const expense, EranosExp
 /// @param date The day it was bought
 static inline void eranosExpenseSetDate(EranosExpense *const expense, EranosCalendarDate const date) { EranosExpense_set_date(expense, date); }
 
-/// The tip on top of the amount: the no-tip rule, which eranosTipRuleCreateNone() makes, for an expense without one.
+/// The tip on top of the amount: the no-tip rule, which eranosTipRuleNone() makes, for an expense without one.
 ///
 /// @param expense The expense
 /// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosTipRule *eranosExpenseTip(EranosExpense const *const expense) { return EranosExpense_tip(expense); }
 
-/// Sets the tip on top of the amount: the no-tip rule, which eranosTipRuleCreateNone() makes, for an expense without one.
+/// Sets the tip on top of the amount: the no-tip rule, which eranosTipRuleNone() makes, for an expense without one.
 ///
 /// @param expense The expense
 /// @param tip The tip on top of the amount
@@ -382,12 +382,12 @@ static inline void eranosExpenseClearNote(EranosExpense *const expense) { Eranos
 /// The identifiers of every member the expense names, payers and participants, each once and in the order of their identifiers.
 ///
 /// @param expense The expense
-/// @param participants Receives the participants on success, which the caller destroys, and nullptr on failure
+/// @param members Receives the members on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ID for an
 ///   identifier that is not one
-[[nodiscard]] static inline EranosError *eranosExpenseParticipants(EranosExpense const *const expense, EranosTextList **const participants) {
+[[nodiscard]] static inline EranosError *eranosExpenseMembers(EranosExpense const *const expense, EranosTextList **const members) {
     EranosExpense_participants_result const result = EranosExpense_participants(expense);
-    *participants = result.is_ok ? result.ok : nullptr;
+    *members = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -807,19 +807,19 @@ static inline void eranosDiscountValueDestroy(EranosDiscountValue *const discoun
 /// A tip on top of an expense's amount.
 typedef struct EranosTipRule EranosTipRule;
 
-/// A new tip of its required fields; every other field starts absent, empty, or at its default.
+/// A new tip of its required fields; every other field starts absent, empty, or at its default: the distribution in proportion to each share,
+/// ERANOS_TIP_DISTRIBUTION_PROPORTIONAL.
 ///
 /// @param value How the tip is expressed
-/// @param distribution How the tip is shared among the participants
 /// @return The tip, which the caller destroys
-[[nodiscard]] static inline EranosTipRule *eranosTipRuleCreate(EranosTipValue const *const value, EranosTipDistribution const distribution) {
-    return EranosTipRule_create(value, distribution);
+[[nodiscard]] static inline EranosTipRule *eranosTipRuleCreate(EranosTipValue const *const value) {
+    return EranosTipRule_create(value, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
 }
 
 /// The no-tip rule, which an expense without a tip has: 0 % of the amount, shared proportionally.
 ///
 /// @return The tip, which the caller destroys
-[[nodiscard]] static inline EranosTipRule *eranosTipRuleCreateNone(void) { return EranosTipRule_none(); }
+[[nodiscard]] static inline EranosTipRule *eranosTipRuleNone(void) { return EranosTipRule_none(); }
 
 /// How the tip is expressed.
 ///

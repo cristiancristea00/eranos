@@ -147,7 +147,7 @@ using Split = std::variant<EqualSplit, PartsSplit, PercentagesSplit, AmountsSpli
 ///
 /// @param split The split
 /// @return The members, or an error of the kind ErrorKind::ID for an identifier that is not one
-[[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(Split const &split) noexcept;
+[[nodiscard]] std::expected<std::vector<MemberId>, Error> members(Split const &split) noexcept;
 
 namespace detail {
 
@@ -170,7 +170,7 @@ namespace detail {
 
 } // namespace detail
 
-inline std::expected<std::vector<MemberId>, Error> participants(Split const &split) noexcept {
+inline std::expected<std::vector<MemberId>, Error> members(Split const &split) noexcept {
     return detail::toDetail(split)
         .and_then([](std::unique_ptr<detail::EranosSplit> const &converted) noexcept { return detail::expectedOf(converted->participants()); })
         .transform([](std::unique_ptr<detail::EranosTextList> const &members) noexcept { return detail::identifiers<MemberId>(*members); });

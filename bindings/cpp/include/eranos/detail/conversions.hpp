@@ -578,9 +578,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline Discount fromDetail(EranosDiscount const &value) noexcept {
-    Discount result(detail::fromDetail(*value.value()));
-    result.scope = detail::fromDetail(value.scope());
-    return result;
+    return Discount(detail::fromDetail(*value.value()), detail::fromDetail(value.scope()));
 }
 
 /// The generated record of @p value.
@@ -644,7 +642,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline TipRule fromDetail(EranosTipRule const &value) noexcept {
-    return {detail::fromDetail(*value.value()), detail::fromDetail(value.distribution())};
+    return TipRule(detail::fromDetail(*value.value()), detail::fromDetail(value.distribution()));
 }
 
 /// The generated record of @p value.

@@ -165,7 +165,8 @@ pub mod ffi {
             Box::new(EranosCurrencyDetails(self.0.currency.clone()))
         }
 
-        /// The amount written `text` in the currency `currency`: "12.50", "12.5", or "-3".
+        /// The amount written `text` in `currency`, whose details come from the library, as for
+        /// `create`: "12.50", "12.5", or "-3".
         ///
         /// # Errors
         ///
@@ -173,9 +174,9 @@ pub mod ffi {
         /// `InvalidText` for text that is not UTF-8.
         pub fn parse(
             text: &DiplomatStr,
-            currency: &DiplomatStr,
+            currency: &EranosCurrencyDetails,
         ) -> Result<Box<Self>, Box<EranosError>> {
-            eranos_bindings::money_parse(&crate::text(text)?, &crate::text(currency)?)
+            eranos_bindings::money_parse(&crate::text(text)?, &currency.0.code)
                 .map(|money| Box::new(Self(money)))
                 .map_err(crate::failed)
         }
@@ -189,7 +190,7 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `Money` for a value that is NaN or infinite, or an amount
         /// out of range.
-        pub fn create_from_double(
+        pub fn from_double(
             value: f64,
             currency: &EranosCurrencyDetails,
         ) -> Result<Box<Self>, Box<EranosError>> {

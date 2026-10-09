@@ -212,7 +212,8 @@ static void addDiscountedItem(EranosExpenseItemList *const items, char const *co
     int32_t basisPoints = 0;
     must(eranosPercentageParse("10", &basisPoints));
     EranosTipValue *const value = eranosTipValueCreatePercentage(basisPoints);
-    EranosTipRule *const tip = eranosTipRuleCreate(value, distribution);
+    EranosTipRule *const tip = eranosTipRuleCreate(value);
+    eranosTipRuleSetDistribution(tip, distribution);
     eranosExpenseSetTip(expense, tip);
     eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(value);

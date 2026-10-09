@@ -45,7 +45,7 @@ static void addComparisonRow(Table *const table, ComparisonRow const *const row)
     int32_t basisPoints = 0;
     must(eranosPercentageParse("10", &basisPoints));
     EranosTipValue *const value = eranosTipValueCreatePercentage(basisPoints);
-    EranosTipRule *const tip = eranosTipRuleCreate(value, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
+    EranosTipRule *const tip = eranosTipRuleCreate(value);
     eranosExpenseSetTip(expense, tip);
     eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(value);

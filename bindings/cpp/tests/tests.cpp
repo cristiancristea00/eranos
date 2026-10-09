@@ -740,16 +740,15 @@ void anArchivedMemberJoinsNoNewExpense(Check &check) noexcept {
 void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) noexcept {
     Flat flat;
     Split const split = EqualSplit{{flat.bob, flat.ana}};
-    check.that(participants(split) == std::vector<MemberId>{flat.bob, flat.ana}, "a split's participants, in the order it lists them");
+    check.that(members(split) == std::vector<MemberId>{flat.bob, flat.ana}, "a split's members, in the order it lists them");
     auto dinner = flat.expense("Dinner", flat.ana, {flat.bob});
     dinner.tip = TipRule(PercentageTipValue{Percentage{1'000}}, TipDistribution::EQUAL);
-    check.that(participants(dinner) == std::vector<MemberId>{flat.ana, flat.bob},
-               "the payer and the participants, in the order of their identifiers");
+    check.that(members(dinner) == std::vector<MemberId>{flat.ana, flat.bob}, "the payer and the participants, in the order of their identifiers");
     check.that(tipAmount(dinner) == flat.euros(300) && total(dinner) == flat.euros(3'300), "a tip of 10 % on 30.00 EUR");
     check.that("owes 12.00 EUR" == toString(Balance{OwesBalance{flat.euros(1'200)}}), "a balance a member owes");
     check.that("settled" == toString(Balance{SettledBalance{}}), "a settled balance");
     check.that("gets back 12.00 EUR" == toString(Balance{GetsBackBalance{flat.euros(1'200)}}), "a balance owed to a member");
-    auto const unknown = refusal(participants(Split{EqualSplit{{MemberId(" ana")}}}));
+    auto const unknown = refusal(members(Split{EqualSplit{{MemberId(" ana")}}}));
     check.that(isFailure(unknown, ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "an identifier that is not one");
     check.that(participants(ExpenseSplit{WholeExpenseSplit{EqualSplit{{flat.bob, flat.ana, flat.bob}}}}) == std::vector<MemberId>{flat.ana, flat.bob},
                "who shares a split's cost, each once, in the order of their identifiers");

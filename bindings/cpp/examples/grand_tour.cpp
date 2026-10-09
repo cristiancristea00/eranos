@@ -473,7 +473,7 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
             auto const shares = must(group.expenseShares(expense.id));
             rows.push_back({
                 .name = expense.name,
-                .payer = names(group, must(participants(expense.payers))),
+                .payer = names(group, must(members(expense.payers))),
                 .original = must(total(expense)).toString(),
                 .rate = rateOf(expense.cost).toString(),
                 .converted = shares.has_value() ? shares->total.toString() : zero,
@@ -711,7 +711,7 @@ void validation(ExpenseGroup &group) noexcept {
     auto const *const itemised = std::get_if<ItemisedExpenseSplit>(&expense.split);
     auto const split =
         nullptr == itemised ? divided(std::get<WholeExpenseSplit>(expense.split).split) : std::format("{} items", itemised->items.size());
-    auto const count = must(participants(expense.payers)).size();
+    auto const count = must(members(expense.payers)).size();
     auto const payers = 1 == count ? std::string() : std::format(", {} payers", count);
     std::string tip;
     if (0 != must(tipAmount(expense)).minorUnits) {
@@ -754,7 +754,7 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) noexcept {
     for (auto const &item : itemised->items) {
         rows.push_back({
             .name = item.name,
-            .sharedBy = names(group, must(participants(item.split))),
+            .sharedBy = names(group, must(members(item.split))),
             .quantity = item.quantity.toString(),
             .unitPrice = item.unitPrice.toString(),
             .lineTotal = must(lineTotal(item)).toString(),
@@ -903,7 +903,7 @@ void printFado(ExpenseGroup const &group, Expense const &fado) noexcept {
     check(eur("15.00") == shareOf(group, added.train, people.eva).share, "Eva's ticket is 15.00 EUR");
     check(eur("30.00") == shareOf(group, added.museum, people.bob).paid, "Bob paid 30.00 EUR of the museum");
     check(eur("15.00") == shareOf(group, added.museum, people.dan).share, "Dan's quarter of the museum is 15.00 EUR");
-    check(4 == must(participants(must(group.expense(added.museum)).value())).size(), "the museum names four members");
+    check(4 == must(members(must(group.expense(added.museum)).value())).size(), "the museum names four members");
     check(eur("59.40") == must(total(fadoExpense)), "the fado night comes to 59.40 EUR");
     check(eur("5.40") == must(tipAmount(fadoExpense)), "its tip is 5.40 EUR");
     check(eur("21.45") == shareOf(group, added.fado, people.carol).share, "Carol's part of the fado night is 21.45 EUR");

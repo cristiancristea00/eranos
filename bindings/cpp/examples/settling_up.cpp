@@ -296,7 +296,7 @@ void run() noexcept {
     for (auto const &expense : group.expenses()) {
         expenses.push_back({
             .name = expense.name,
-            .payer = names(group, must(participants(expense.payers))),
+            .payer = names(group, must(members(expense.payers))),
             .participants = names(group, must(participants(expense.split))),
             .amount = must(total(expense)).toString(),
         });

@@ -137,9 +137,13 @@ Id addMember(EranosExpenseGroup *const group, char const *const firstName) {
     return id;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the amount's text, then its currency's code, as an amount is written.
 EranosMoney *amountOf(char const *const text, char const *const currency) {
+    EranosCurrencyDetails *details = nullptr;
+    must(eranosCurrencyDetailsOf(currency, &details));
     EranosMoney *money = nullptr;
-    must(eranosMoneyParse(text, currency, &money));
+    must(eranosMoneyParse(text, details, &money));
+    eranosCurrencyDetailsDestroy(details);
     return money;
 }
 
@@ -319,7 +323,7 @@ static void addAll(Members *const members, EranosTextList const *const list) {
 Members splitMembers(EranosSplit const *const split) {
     Members members = {.count = 0};
     EranosTextList *list = nullptr;
-    must(eranosSplitParticipants(split, &list));
+    must(eranosSplitMembers(split, &list));
     addAll(&members, list);
     eranosTextListDestroy(list);
     return members;

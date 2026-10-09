@@ -1283,7 +1283,8 @@ static void addItem(EranosExpenseItemList *const items, char const *const name, 
 
 /// Gives @p expense a tip of @p value, shared by @p distribution; destroys @p value.
 static void tipWith(EranosExpense *const expense, EranosTipValue *const value, EranosTipDistribution const distribution) {
-    EranosTipRule *const tip = eranosTipRuleCreate(value, distribution);
+    EranosTipRule *const tip = eranosTipRuleCreate(value);
+    eranosTipRuleSetDistribution(tip, distribution);
     eranosExpenseSetTip(expense, tip);
     eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(value);
@@ -1492,7 +1493,7 @@ static void checkExpenses(EranosExpenseGroup const *const group, People const *c
     EranosExpense *museum = nullptr;
     must(eranosExpenseGroupExpense(group, expenses->museum.text, &museum));
     EranosTextList *involved = nullptr;
-    must(eranosExpenseParticipants(museum, &involved));
+    must(eranosExpenseMembers(museum, &involved));
     check(4 == eranosTextListLength(involved), "the museum names four members");
     eranosTextListDestroy(involved);
     eranosExpenseDestroy(museum);
@@ -2289,9 +2290,13 @@ static void currencies(void) {
 }
 
 /// The message of the refusal of the amount @p text of @p currency.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the amount's text, then its currency's code, as an amount is written.
 [[nodiscard]] static Line amountRefusal(char const *const text, char const *const currency) {
+    EranosCurrencyDetails *details = nullptr;
+    must(eranosCurrencyDetailsOf(currency, &details));
     EranosMoney *money = nullptr;
-    EranosError *const refused = eranosMoneyParse(text, currency, &money);
+    EranosError *const refused = eranosMoneyParse(text, details, &money);
+    eranosCurrencyDetailsDestroy(details);
     check(nullptr != refused && nullptr == money, "the amount is refused");
     return messageLine(refused);
 }
@@ -2315,11 +2320,11 @@ static void amounts(void) {
     must(eranosCurrencyDetailsOf("EUR", &euro));
     // The double nearest 1.005 lies just below it; its shortest form, 1.005, is what rounds.
     EranosMoney *fromDouble = nullptr;
-    must(eranosMoneyCreateFromDouble(1.005, euro, &fromDouble));
+    must(eranosMoneyFromDouble(1.005, euro, &fromDouble));
     int64_t const fromDoubleUnits = eranosMoneyMinorUnits(fromDouble);
     Line const fromDoubleLine = moneyLine(fromDouble);
     EranosMoney *notANumber = nullptr;
-    EranosError *const notFinite = eranosMoneyCreateFromDouble(NAN, euro, &notANumber);
+    EranosError *const notFinite = eranosMoneyFromDouble(NAN, euro, &notANumber);
     check(isFailure(notFinite, ERANOS_ERROR_KIND_MONEY, ERANOS_FAILURE_MONEY_NOT_FINITE) && nullptr == notANumber, "NaN is no amount");
     Line const notFiniteLine = messageLine(notFinite);
     eranosCurrencyDetailsDestroy(euro);

@@ -88,7 +88,7 @@ void printEntries(ExpenseGroup const &group) noexcept {
         auto const shares = must(group.expenseShares(expense.id));
         rows.push_back({
             .name = expense.name,
-            .payer = names(group, must(participants(expense.payers))),
+            .payer = names(group, must(members(expense.payers))),
             .original = must(total(expense)).toString(),
             .rate = rateOf(expense.cost).toString(),
             .converted = shares.has_value() ? shares->total.toString() : zero.toString(),

@@ -210,7 +210,7 @@ void run() noexcept {
     for (auto const &item : receipt(ana, bob, carol)) {
         lines.push_back({
             .name = item.name,
-            .participants = names(group, must(participants(item.split))),
+            .participants = names(group, must(members(item.split))),
             .quantity = item.quantity.toString(),
             .unitPrice = item.unitPrice.toString(),
             .lineTotal = must(lineTotal(item)).toString(),

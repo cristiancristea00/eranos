@@ -105,13 +105,13 @@ namespace detail {
 } // namespace detail
 
 inline std::expected<Money, Error> Money::parse(std::string_view const text, CurrencyCode const &currency) noexcept {
-    return detail::expectedOf(detail::EranosMoney::parse(text, currency.code())).transform([](auto const &amount) noexcept {
+    return detail::expectedOf(detail::EranosMoney::parse(text, detail::toDetail(currency))).transform([](auto const &amount) noexcept {
         return detail::fromDetail(*amount);
     });
 }
 
 inline std::expected<Money, Error> Money::fromDouble(double const value, CurrencyCode const &currency) noexcept {
-    return detail::expectedOf(detail::EranosMoney::create_from_double(value, detail::toDetail(currency))).transform([](auto const &amount) noexcept {
+    return detail::expectedOf(detail::EranosMoney::from_double(value, detail::toDetail(currency))).transform([](auto const &amount) noexcept {
         return detail::fromDetail(*amount);
     });
 }

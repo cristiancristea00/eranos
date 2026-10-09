@@ -74,10 +74,12 @@ using DiscountValue = std::variant<PercentageDiscountValue, FixedDiscountValue>;
 
 /// A discount off a line of an itemised bill.
 struct Discount final {
-    /// The record of its required fields; the scope starts at its default, the line, DiscountScope::LINE.
+    /// The record of its fields; the scope starts at the line, DiscountScope::LINE, unless it is given another.
     ///
     /// @param value How the discount is expressed.
-    inline constexpr explicit Discount(DiscountValue value) noexcept : value(std::move(value)) {}
+    /// @param scope What the discount is taken off.
+    inline constexpr explicit Discount(DiscountValue value, DiscountScope const scope = DiscountScope::LINE) noexcept
+        : value(std::move(value)), scope(scope) {}
 
     /// How the discount is expressed.
     DiscountValue value;
@@ -157,18 +159,19 @@ using TipValue = std::variant<PercentageTipValue, FixedTipValue>;
 
 /// A tip on top of an expense's amount.
 struct TipRule final {
-    /// The record of its fields.
+    /// The record of its fields; the distribution starts in proportion to each share, TipDistribution::PROPORTIONAL, unless it is given another.
     ///
     /// @param value How the tip is expressed.
     /// @param distribution How the tip is shared among the participants.
-    inline constexpr TipRule(TipValue value, TipDistribution const distribution) noexcept : value(std::move(value)), distribution(distribution) {}
+    inline constexpr explicit TipRule(TipValue value, TipDistribution const distribution = TipDistribution::PROPORTIONAL) noexcept
+        : value(std::move(value)), distribution(distribution) {}
 
     /// The no-tip rule, which an expense without a tip has: 0 % of the amount, shared proportionally.
     ///
     /// @return The rule
     [[nodiscard]] static inline constexpr TipRule none() noexcept {
         // The library's rule, written out so that the function is constexpr; a test holds the two equal.
-        return {PercentageTipValue{Percentage{0}}, TipDistribution::PROPORTIONAL};
+        return TipRule(PercentageTipValue{Percentage{0}}, TipDistribution::PROPORTIONAL);
     }
 
     /// How the tip is expressed.
@@ -349,7 +352,7 @@ struct Expense final {
 ///
 /// @param expense The expense
 /// @return The members, or an error of the kind ErrorKind::ID for an identifier that is not one
-[[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) noexcept;
+[[nodiscard]] std::expected<std::vector<MemberId>, Error> members(Expense const &expense) noexcept;
 
 /// Every member who shares the cost of a split, each once and in the order of their identifiers.
 ///
@@ -426,7 +429,7 @@ inline std::expected<Money, Error> total(Expense const &expense) noexcept {
         .transform([](std::unique_ptr<detail::EranosMoney> const &amount) noexcept { return detail::fromDetail(*amount); });
 }
 
-inline std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) noexcept {
+inline std::expected<std::vector<MemberId>, Error> members(Expense const &expense) noexcept {
     return detail::toDetail(expense)
         .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) noexcept { return detail::expectedOf(converted->participants()); })
         .transform([](std::unique_ptr<detail::EranosTextList> const &members) noexcept { return detail::identifiers<MemberId>(*members); });

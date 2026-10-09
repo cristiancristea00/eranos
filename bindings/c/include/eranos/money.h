@@ -60,15 +60,16 @@ typedef struct EranosMoney EranosMoney;
 /// @return A copy of the currency details, which the caller destroys
 [[nodiscard]] static inline EranosCurrencyDetails *eranosMoneyCurrency(EranosMoney const *const money) { return EranosMoney_currency(money); }
 
-/// The amount written `text` in the currency `currency`: "12.50", "12.5", or "-3".
+/// The amount written @p text in @p currency, whose details come from the library, as for eranosMoneyCreate(): "12.50", "12.5", or "-3".
 ///
 /// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
-/// @param currency The currency, as an ISO 4217 code, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param currency The currency, with what ISO 4217 says of it, which the amount copies
 /// @param money Receives the money on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for text that
 ///   is not an amount of the currency, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosMoneyParse(char const *const text, char const *const currency, EranosMoney **const money) {
-    EranosMoney_parse_result const result = EranosMoney_parse(eranosDetailView(text), eranosDetailView(currency));
+[[nodiscard]] static inline EranosError *eranosMoneyParse(char const *const text, EranosCurrencyDetails const *const currency,
+                                                          EranosMoney **const money) {
+    EranosMoney_parse_result const result = EranosMoney_parse(eranosDetailView(text), currency);
     *money = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -82,9 +83,9 @@ typedef struct EranosMoney EranosMoney;
 /// @param money Receives the money on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a value
 ///   that is NaN or infinite, or an amount out of range
-[[nodiscard]] static inline EranosError *eranosMoneyCreateFromDouble(double const value, EranosCurrencyDetails const *const currency,
-                                                                     EranosMoney **const money) {
-    EranosMoney_create_from_double_result const result = EranosMoney_create_from_double(value, currency);
+[[nodiscard]] static inline EranosError *eranosMoneyFromDouble(double const value, EranosCurrencyDetails const *const currency,
+                                                               EranosMoney **const money) {
+    EranosMoney_from_double_result const result = EranosMoney_from_double(value, currency);
     *money = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }

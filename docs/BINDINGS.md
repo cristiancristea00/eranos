@@ -919,6 +919,18 @@ for functions, parameters, and fields (`eranosExpenseGroupAddExpense`,
 (`ERANOS_SETTLEMENT_STRATEGY_DIRECT`), which alias Diplomat's so that a
 `switch` over an enum takes them; no name carries an affix, and every
 comparison puts its constant first (`nullptr != value`, `0 < count`).
+A function that makes an object from its fields ends in `Create`, with
+the kind of a variant after it (`eranosCostCreateLocal`) and `WithId`
+for the twin that takes an identifier; one that reads a value from text
+or a double ends in `Parse` or `FromDouble`, whatever it makes
+(`eranosMoneyParse`, `eranosMoneyFromDouble`, `eranosPercentageFromDouble`);
+a value the library names is named after it (`eranosTipRuleNone`,
+`eranosIdentifierUncategorised`); and every function that makes an amount
+takes its currency's details, never a code. A split's and an expense's
+members are `eranosSplitMembers` and `eranosExpenseMembers`, as Rust
+names them, and the members an equal split lists are
+`eranosSplitEqualMembers`, beside the other kinds' `eranosSplitPartsShares`
+and their siblings.
 
 The package is C23: its headers need GCC 13 or later (`-std=c2x`, or
 `-std=c23` from GCC 14) or Clang 19 or later, and MSVC's C compiler cannot
@@ -947,7 +959,7 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   (`eranosMemberCreateWithId(id, firstName, &member)`); the `id` getter
   writes it unconditionally, and `eranosIdentifierGenerate` writes a new
   one.
-- An expense starts at the no-tip rule, which `eranosTipRuleCreateNone`
+- An expense starts at the no-tip rule, which `eranosTipRuleNone`
   makes, and in the built-in category, whose identifier
   `eranosIdentifierUncategorised` writes; its tip and category getters
   always give one, and setting these values is how a caller removes an
@@ -967,7 +979,9 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   (`eranosDiscountValueCreateFixed(amount)`), and a scope,
   `ERANOS_DISCOUNT_SCOPE_LINE` or `ERANOS_DISCOUNT_SCOPE_UNIT`;
   `eranosDiscountCreate(value)` starts it at the line, and
-  `eranosDiscountSetScope` changes it.
+  `eranosDiscountSetScope` changes it, as `eranosTipRuleCreate(value)`
+  starts a tip's distribution in proportion to each share and
+  `eranosTipRuleSetDistribution` changes it.
   `eranosExpenseItemLineTotalBeforeDiscount` and
   `eranosExpenseItemDiscountAmount` give the line total before the discount
   and what the discount takes off, as the library computes them, so no port
@@ -989,8 +1003,8 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   the amount alone and cannot fail.
 - A double becomes a value through the library's conversion
   ([§ 2](#2-what-every-binding-shares)):
-  `eranosMoneyCreateFromDouble(value, currency, &money)`, which takes the
-  currency's details as `eranosMoneyCreate` does,
+  `eranosMoneyFromDouble(value, currency, &money)`, which takes the
+  currency's details as `eranosMoneyCreate` and `eranosMoneyParse` do,
   `eranosPercentageFromDouble(value, &basisPoints)`,
   `eranosPartsFromDouble(value, &hundredths)`,
   `eranosQuantityFromDouble(value, &tenThousandths)`, and
@@ -1078,7 +1092,11 @@ Core Guidelines with the naming rule above:
   holds its `value`, a `DiscountValue`, the `std::variant` of
   `PercentageDiscountValue` and `FixedDiscountValue`, and its `scope`, a
   `DiscountScope`, which its `explicit` constructor starts at
-  `DiscountScope::LINE`. The free `lineTotalBeforeDiscount(item)` and
+  `DiscountScope::LINE` unless it is given another, as `TipRule(value)`
+  starts its distribution at `TipDistribution::PROPORTIONAL`. The free
+  `members(split)` and `members(expense)` list a split's and an
+  expense's members, and `participants(split)` the members who share an
+  expense split's cost, as Rust names them. The free `lineTotalBeforeDiscount(item)` and
   `discountAmount(item)` return the line total before the discount and
   what the discount takes off, as the library computes them, and each of
   the three totals refuses a discount the line cannot take.
