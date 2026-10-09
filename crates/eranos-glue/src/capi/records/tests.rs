@@ -155,7 +155,7 @@ fn a_taken_record_has_every_accessor_in_field_order() {
     );
     assert_eq!(
         docs(&methods, "create"),
-        "An expense of its required fields; every other field starts absent, empty, or at its default.\n\n# Errors\n\n[`EranosError`] of the kind `InvalidText` for text that is not UTF-8."
+        "A new `EranosExpense` from its required fields; every other field starts absent, empty, or at its default.\n\n# Errors\n\n[`EranosError`] of the kind `InvalidText` for text that is not UTF-8."
     );
     assert_eq!(
         docs(&methods, "id"),
@@ -558,7 +558,10 @@ fn an_enum_with_data_has_constructors_a_kind_and_getters() {
             },
         ],
     );
-    assert_eq!(docs(&balance, "kind"), "Which kind of balance it is.");
+    assert_eq!(
+        docs(&balance, "kind"),
+        "Which kind of `EranosBalance` it is."
+    );
 }
 
 /// A getter of a field that some variants hold is absent in the others and
@@ -704,7 +707,7 @@ fn a_field_name_of_two_types_gives_a_getter_per_variant() {
     assert_eq!(
         kinds.first().unwrap().to_token_stream().to_string(),
         quote! {
-            #[doc = "The kinds of balance."]
+            #[doc = "The kinds of `EranosBalance`."]
             #[derive(Debug)]
             pub enum EranosBalanceKind {
                 #[doc = "The others owe the member."]

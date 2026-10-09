@@ -26,7 +26,7 @@ use quote::{format_ident, quote};
 use crate::calls::{Access, Call, Kind, Parameter};
 use crate::capi::crossing::{Answer, Crossing, parameter_crossing};
 use crate::capi::items::Core;
-use crate::capi::{INVALID_TEXT, Named, article, doc, eranos, list, words};
+use crate::capi::{INVALID_TEXT, Named, doc, eranos, list};
 use crate::docs::foreign;
 
 /// The failure of a read's synchronous form on wasm, where it cannot wait
@@ -652,7 +652,7 @@ fn holding(answer: &Answer) -> Holding {
             let list = list(element);
             Holding {
                 answer: quote!(Vec<eranos_bindings::#element>),
-                returns: format!("a list of {} records", words(element)),
+                returns: format!("an `{list}`"),
                 value: quote! {
                     #[doc = "A copy of the list the call returned, if it succeeded."]
                     #[must_use]
@@ -699,7 +699,6 @@ fn holding(answer: &Answer) -> Holding {
 /// a lookup may find none, and the record itself otherwise.
 fn copied(record: &Ident, lookup: bool) -> Holding {
     let object = eranos(record);
-    let words = words(record);
     let found = lookup.then(|| quote!(.and_then(Option::as_ref)));
     let value = |copy: String| {
         quote! {
@@ -717,17 +716,17 @@ fn copied(record: &Ident, lookup: bool) -> Holding {
     if lookup {
         Holding {
             answer: quote!(Option<eranos_bindings::#record>),
-            returns: format!("{} it may not find", article(&words)),
+            returns: format!("an `{object}` it may not find"),
             value: value(format!(
-                "A copy of the {words} the call found, if it succeeded and found one."
+                "A copy of the `{object}` the call found, if it succeeded and found one."
             )),
         }
     } else {
         Holding {
             answer: quote!(eranos_bindings::#record),
-            returns: article(&words),
+            returns: format!("an `{object}`"),
             value: value(format!(
-                "A copy of the {words} the call returned, if it succeeded."
+                "A copy of the `{object}` the call returned, if it succeeded."
             )),
         }
     }

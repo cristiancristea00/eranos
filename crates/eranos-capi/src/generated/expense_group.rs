@@ -48,8 +48,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a list of category records, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosCategoryList`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosCategoryListOutcome(
@@ -82,8 +82,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a category, which its callback receives and
-    /// destroys.
+    /// The outcome of an asynchronous call that returns an `EranosCategory`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosCategoryOutcome(pub(crate) Result<eranos_bindings::Category, crate::Failure>);
@@ -104,7 +104,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the category the call returned, if it succeeded.
+        /// A copy of the `EranosCategory` the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosCategory>> {
             self.0
@@ -114,8 +114,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns currency details, which its callback
-    /// receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosCurrencyDetails`, which its
+    /// callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosCurrencyDetailsOutcome(
@@ -138,7 +138,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the currency details the call returned, if it succeeded.
+        /// A copy of the `EranosCurrencyDetails` the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosCurrencyDetails>> {
             self.0
@@ -2771,8 +2771,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a list of expense records, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosExpenseList`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosExpenseListOutcome(
@@ -2805,8 +2805,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns an expense, which its callback receives and
-    /// destroys.
+    /// The outcome of an asynchronous call that returns an `EranosExpense`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosExpenseOutcome(pub(crate) Result<eranos_bindings::Expense, crate::Failure>);
@@ -2827,7 +2827,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the expense the call returned, if it succeeded.
+        /// A copy of the `EranosExpense` the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosExpense>> {
             self.0
@@ -2837,8 +2837,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a category it may not find, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosCategory` it may not find, which
+    /// its callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosFoundCategoryOutcome(
@@ -2861,7 +2861,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the category the call found, if it succeeded and found one.
+        /// A copy of the `EranosCategory` the call found, if it succeeded and found one.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosCategory>> {
             self.0
@@ -2872,8 +2872,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns an expense it may not find, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosExpense` it may not find, which
+    /// its callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosFoundExpenseOutcome(
@@ -2896,7 +2896,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the expense the call found, if it succeeded and found one.
+        /// A copy of the `EranosExpense` the call found, if it succeeded and found one.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosExpense>> {
             self.0
@@ -2907,8 +2907,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns expense shares it may not find, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosExpenseShares` it may not find,
+    /// which its callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosFoundExpenseSharesOutcome(
@@ -2931,7 +2931,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the expense shares the call found, if it succeeded and found one.
+        /// A copy of the `EranosExpenseShares` the call found, if it succeeded and found one.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosExpenseShares>> {
             self.0
@@ -2974,8 +2974,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a member it may not find, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosMember` it may not find, which
+    /// its callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosFoundMemberOutcome(
@@ -2998,7 +2998,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the member the call found, if it succeeded and found one.
+        /// A copy of the `EranosMember` the call found, if it succeeded and found one.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosMember>> {
             self.0
@@ -3009,8 +3009,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns money it may not find, which its callback
-    /// receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosMoney` it may not find, which its
+    /// callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosFoundMoneyOutcome(
@@ -3033,7 +3033,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the money the call found, if it succeeded and found one.
+        /// A copy of the `EranosMoney` the call found, if it succeeded and found one.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosMoney>> {
             self.0
@@ -3044,8 +3044,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a transfer it may not find, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosTransfer` it may not find, which
+    /// its callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosFoundTransferOutcome(
@@ -3068,7 +3068,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the transfer the call found, if it succeeded and found one.
+        /// A copy of the `EranosTransfer` the call found, if it succeeded and found one.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosTransfer>> {
             self.0
@@ -3079,8 +3079,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a list of member records, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosMemberList`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosMemberListOutcome(
@@ -3113,8 +3113,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a member, which its callback receives and
-    /// destroys.
+    /// The outcome of an asynchronous call that returns an `EranosMember`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosMemberOutcome(pub(crate) Result<eranos_bindings::Member, crate::Failure>);
@@ -3135,7 +3135,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the member the call returned, if it succeeded.
+        /// A copy of the `EranosMember` the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosMember>> {
             self.0
@@ -3173,8 +3173,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a settlement plan, which its callback
-    /// receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosSettlementPlan`, which its
+    /// callback receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosSettlementPlanOutcome(
@@ -3197,7 +3197,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the settlement plan the call returned, if it succeeded.
+        /// A copy of the `EranosSettlementPlan` the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosSettlementPlan>> {
             self.0
@@ -3207,8 +3207,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a summary, which its callback receives and
-    /// destroys.
+    /// The outcome of an asynchronous call that returns an `EranosSummary`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosSummaryOutcome(pub(crate) Result<eranos_bindings::Summary, crate::Failure>);
@@ -3229,7 +3229,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the summary the call returned, if it succeeded.
+        /// A copy of the `EranosSummary` the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosSummary>> {
             self.0
@@ -3267,8 +3267,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a list of transfer records, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns an `EranosTransferList`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosTransferListOutcome(
@@ -3301,8 +3301,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a transfer, which its callback receives and
-    /// destroys.
+    /// The outcome of an asynchronous call that returns an `EranosTransfer`, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosTransferOutcome(pub(crate) Result<eranos_bindings::Transfer, crate::Failure>);
@@ -3323,7 +3323,7 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the transfer the call returned, if it succeeded.
+        /// A copy of the `EranosTransfer` the call returned, if it succeeded.
         #[must_use]
         pub fn value(&self) -> Option<Box<EranosTransfer>> {
             self.0

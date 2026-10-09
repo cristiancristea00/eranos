@@ -404,22 +404,14 @@ fn a_single_import_has_no_braces() {
     );
 }
 
-/// Names follow the C API's rules: the core's type after `Eranos`, a list
-/// after its element, and prose in words with their article, which a plural
-/// or an uncountable noun goes without.
+/// Names follow the C API's rules: the core's type after `Eranos`, and a
+/// list after its element; a field's documentation reads inside a sentence
+/// or at its start.
 #[test]
 fn names_and_prose_follow_the_c_api() {
     let name = format_ident!("MemberAmount");
     assert_eq!(eranos(&name), "EranosMemberAmount");
     assert_eq!(list(&name), "EranosMemberAmountList");
-    assert_eq!(words(&name), "member amount");
-    assert_eq!(article("member amount"), "a member amount");
-    assert_eq!(article("expense"), "an expense");
-    assert_eq!(article("expense shares"), "expense shares");
-    assert_eq!(article("money"), "money");
-    assert_eq!(article("address"), "an address");
-    assert_eq!(article("status"), "a status");
-    assert!(plural("member parts") && !plural("member") && !plural("money"));
     assert_eq!(inside("The amount."), "the amount.");
     assert_eq!(inside("IBAN of the account."), "IBAN of the account.");
     assert_eq!(inside("A"), "A");

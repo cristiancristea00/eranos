@@ -21,10 +21,7 @@ use quote::{ToTokens, format_ident, quote};
 
 use crate::capi::crossing::{Crossing, Parsed, Plan, Value, parsed};
 use crate::capi::items::{Core, Field, Mirrored, Shape, Variant};
-use crate::capi::{
-    INVALID_TEXT, Named, article, capitalised, doc, doc_with_errors, eranos, inside, list, plural,
-    words,
-};
+use crate::capi::{INVALID_TEXT, Named, capitalised, doc, doc_with_errors, eranos, inside, list};
 
 /// A field of a record that starts at a value of its own when the record is
 /// created without it.
@@ -203,11 +200,9 @@ fn create(item: &Mirrored, fields: &[Typed<'_>]) -> TokenStream {
     let fallible = required
         .iter()
         .any(|typed| Crossing::Text == typed.value.crossing);
-    let words = words(name);
-    let possessive = if plural(&words) { "their" } else { "its" };
     let summary = format!(
-        "{} of {possessive} required fields; every other field starts absent, empty, or at its default.",
-        capitalised(&article(&words))
+        "A new `{}` from its required fields; every other field starts absent, empty, or at its default.",
+        eranos(name)
     );
     constructor(
         &format_ident!("create"),
@@ -512,7 +507,7 @@ fn data_enum(item: &Mirrored, variants: &[Variant], core: &Core) -> syn::Result<
         let variant = &variant.name;
         quote!(#line #variant)
     });
-    let kinds_summary = doc(&[&format!("The kinds of {}.", words(name))]);
+    let kinds_summary = doc(&[&format!("The kinds of `{object}`.")]);
     let crossings = variants
         .iter()
         .map(|variant| {
@@ -548,7 +543,7 @@ fn data_enum(item: &Mirrored, variants: &[Variant], core: &Core) -> syn::Result<
         let variant = &variant.name;
         quote!(#pattern => #kind::#variant)
     });
-    let which = doc(&[&format!("Which kind of {} it is.", words(name))]);
+    let which = doc(&[&format!("Which kind of `{object}` it is.")]);
     let getters = getters(variants, &crossings)
         .iter()
         .map(|getter| variant_getter(item, variants, getter))
@@ -947,7 +942,7 @@ fn listed(items: &[String]) -> String {
 /// `create` and `push`, when a call takes one, `taken`.
 fn list_of(element: &Ident, taken: bool) -> Named {
     let (object, list) = (eranos(element), list(element));
-    let summary = doc(&[&format!("A list of {} records.", words(element))]);
+    let summary = doc(&[&format!("A list of `{object}` records.")]);
     let (opaque, create) = if taken {
         (
             quote!(#[diplomat::opaque_mut]),

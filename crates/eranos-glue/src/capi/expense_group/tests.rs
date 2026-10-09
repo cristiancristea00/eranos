@@ -782,7 +782,7 @@ fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
     assert!(
         named["EranosFoundExpenseOutcome"]
             .to_string()
-            .contains("an asynchronous call that returns an expense it may not find")
+            .contains("an asynchronous call that returns an `EranosExpense` it may not find")
     );
 }
 

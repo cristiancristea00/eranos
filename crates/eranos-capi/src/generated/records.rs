@@ -42,7 +42,7 @@ pub mod ffi {
             }))
         }
 
-        /// Which kind of balance it is.
+        /// Which kind of `EranosBalance` it is.
         #[must_use]
         pub const fn kind(&self) -> EranosBalanceKind {
             match &self.0 {
@@ -72,7 +72,7 @@ pub mod ffi {
         }
     }
 
-    /// The kinds of balance.
+    /// The kinds of `EranosBalance`.
     #[derive(Debug)]
     pub enum EranosBalanceKind {
         /// The member owes the others `amount`.
@@ -89,8 +89,8 @@ pub mod ffi {
     pub struct EranosCategory(pub(crate) eranos_bindings::Category);
 
     impl EranosCategory {
-        /// A category of its required fields; every other field starts absent, empty, or at its
-        /// default.
+        /// A new `EranosCategory` from its required fields; every other field starts absent, empty,
+        /// or at its default.
         ///
         /// # Errors
         ///
@@ -133,7 +133,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of category records.
+    /// A list of `EranosCategory` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosCategoryList(pub(crate) Vec<eranos_bindings::Category>);
@@ -178,7 +178,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of category total records.
+    /// A list of `EranosCategoryTotal` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosCategoryTotalList(pub(crate) Vec<eranos_bindings::CategoryTotal>);
@@ -235,7 +235,7 @@ pub mod ffi {
             })))
         }
 
-        /// Which kind of cost it is.
+        /// Which kind of `EranosCost` it is.
         #[must_use]
         pub const fn kind(&self) -> EranosCostKind {
             match &self.0 {
@@ -267,7 +267,7 @@ pub mod ffi {
         }
     }
 
-    /// The kinds of cost.
+    /// The kinds of `EranosCost`.
     #[derive(Debug)]
     pub enum EranosCostKind {
         /// An amount in the group currency.
@@ -317,7 +317,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of currency details records.
+    /// A list of `EranosCurrencyDetails` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosCurrencyDetailsList(pub(crate) Vec<eranos_bindings::CurrencyDetails>);
@@ -356,8 +356,8 @@ pub mod ffi {
     pub struct EranosCurrencyRate(pub(crate) eranos_bindings::CurrencyRate);
 
     impl EranosCurrencyRate {
-        /// A currency rate of its required fields; every other field starts absent, empty, or at
-        /// its default.
+        /// A new `EranosCurrencyRate` from its required fields; every other field starts absent,
+        /// empty, or at its default.
         ///
         /// # Errors
         ///
@@ -403,7 +403,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of currency rate records.
+    /// A list of `EranosCurrencyRate` records.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
     pub struct EranosCurrencyRateList(pub(crate) Vec<eranos_bindings::CurrencyRate>);
@@ -447,8 +447,8 @@ pub mod ffi {
     pub struct EranosDiscount(pub(crate) eranos_bindings::Discount);
 
     impl EranosDiscount {
-        /// A discount of its required fields; every other field starts absent, empty, or at its
-        /// default.
+        /// A new `EranosDiscount` from its required fields; every other field starts absent, empty,
+        /// or at its default.
         #[must_use]
         pub fn create(value: &EranosDiscountValue, scope: EranosDiscountScope) -> Box<Self> {
             Box::new(Self(eranos_bindings::Discount {
@@ -512,7 +512,7 @@ pub mod ffi {
             }))
         }
 
-        /// Which kind of discount value it is.
+        /// Which kind of `EranosDiscountValue` it is.
         #[must_use]
         pub const fn kind(&self) -> EranosDiscountValueKind {
             match &self.0 {
@@ -546,7 +546,7 @@ pub mod ffi {
         }
     }
 
-    /// The kinds of discount value.
+    /// The kinds of `EranosDiscountValue`.
     #[derive(Debug)]
     pub enum EranosDiscountValueKind {
         /// A percentage of what the discount reduces, at most 100 %.
@@ -561,8 +561,8 @@ pub mod ffi {
     pub struct EranosExpense(pub(crate) eranos_bindings::Expense);
 
     impl EranosExpense {
-        /// An expense of its required fields; every other field starts absent, empty, or at its
-        /// default.
+        /// A new `EranosExpense` from its required fields; every other field starts absent, empty,
+        /// or at its default.
         ///
         /// # Errors
         ///
@@ -772,8 +772,8 @@ pub mod ffi {
     pub struct EranosExpenseItem(pub(crate) eranos_bindings::ExpenseItem);
 
     impl EranosExpenseItem {
-        /// An expense item of its required fields; every other field starts absent, empty, or at
-        /// its default.
+        /// A new `EranosExpenseItem` from its required fields; every other field starts absent,
+        /// empty, or at its default.
         ///
         /// # Errors
         ///
@@ -902,7 +902,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of expense item records.
+    /// A list of `EranosExpenseItem` records.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
     pub struct EranosExpenseItemList(pub(crate) Vec<eranos_bindings::ExpenseItem>);
@@ -940,7 +940,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of expense records.
+    /// A list of `EranosExpense` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosExpenseList(pub(crate) Vec<eranos_bindings::Expense>);
@@ -1014,7 +1014,7 @@ pub mod ffi {
             }))
         }
 
-        /// Which kind of expense split it is.
+        /// Which kind of `EranosExpenseSplit` it is.
         #[must_use]
         pub const fn kind(&self) -> EranosExpenseSplitKind {
             match &self.0 {
@@ -1059,7 +1059,7 @@ pub mod ffi {
         }
     }
 
-    /// The kinds of expense split.
+    /// The kinds of `EranosExpenseSplit`.
     #[derive(Debug)]
     pub enum EranosExpenseSplitKind {
         /// The whole amount is divided by one split.
@@ -1103,8 +1103,8 @@ pub mod ffi {
     pub struct EranosMember(pub(crate) eranos_bindings::Member);
 
     impl EranosMember {
-        /// A member of its required fields; every other field starts absent, empty, or at its
-        /// default.
+        /// A new `EranosMember` from its required fields; every other field starts absent, empty,
+        /// or at its default.
         ///
         /// # Errors
         ///
@@ -1242,8 +1242,8 @@ pub mod ffi {
     pub struct EranosMemberAmount(pub(crate) eranos_bindings::MemberAmount);
 
     impl EranosMemberAmount {
-        /// A member amount of its required fields; every other field starts absent, empty, or at
-        /// its default.
+        /// A new `EranosMemberAmount` from its required fields; every other field starts absent,
+        /// empty, or at its default.
         ///
         /// # Errors
         ///
@@ -1285,7 +1285,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of member amount records.
+    /// A list of `EranosMemberAmount` records.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
     pub struct EranosMemberAmountList(pub(crate) Vec<eranos_bindings::MemberAmount>);
@@ -1341,7 +1341,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of member category totals records.
+    /// A list of `EranosMemberCategoryTotals` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosMemberCategoryTotalsList(
@@ -1370,7 +1370,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of member records.
+    /// A list of `EranosMember` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosMemberList(pub(crate) Vec<eranos_bindings::Member>);
@@ -1403,8 +1403,8 @@ pub mod ffi {
     pub struct EranosMemberParts(pub(crate) eranos_bindings::MemberParts);
 
     impl EranosMemberParts {
-        /// Member parts of their required fields; every other field starts absent, empty, or at its
-        /// default.
+        /// A new `EranosMemberParts` from its required fields; every other field starts absent,
+        /// empty, or at its default.
         ///
         /// # Errors
         ///
@@ -1446,7 +1446,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of member parts records.
+    /// A list of `EranosMemberParts` records.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
     pub struct EranosMemberPartsList(pub(crate) Vec<eranos_bindings::MemberParts>);
@@ -1490,8 +1490,8 @@ pub mod ffi {
     pub struct EranosMemberPercentage(pub(crate) eranos_bindings::MemberPercentage);
 
     impl EranosMemberPercentage {
-        /// A member percentage of its required fields; every other field starts absent, empty, or
-        /// at its default.
+        /// A new `EranosMemberPercentage` from its required fields; every other field starts
+        /// absent, empty, or at its default.
         ///
         /// # Errors
         ///
@@ -1533,7 +1533,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of member percentage records.
+    /// A list of `EranosMemberPercentage` records.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
     pub struct EranosMemberPercentageList(pub(crate) Vec<eranos_bindings::MemberPercentage>);
@@ -1595,7 +1595,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of member share records.
+    /// A list of `EranosMemberShare` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosMemberShareList(pub(crate) Vec<eranos_bindings::MemberShare>);
@@ -1670,7 +1670,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of member summary records.
+    /// A list of `EranosMemberSummary` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosMemberSummaryList(pub(crate) Vec<eranos_bindings::MemberSummary>);
@@ -1703,8 +1703,8 @@ pub mod ffi {
     pub struct EranosNewExpenseGroup(pub(crate) eranos_bindings::NewExpenseGroup);
 
     impl EranosNewExpenseGroup {
-        /// A new expense group of its required fields; every other field starts absent, empty, or
-        /// at its default.
+        /// A new `EranosNewExpenseGroup` from its required fields; every other field starts absent,
+        /// empty, or at its default.
         ///
         /// # Errors
         ///
@@ -1839,8 +1839,8 @@ pub mod ffi {
     pub struct EranosPaymentAccount(pub(crate) eranos_bindings::PaymentAccount);
 
     impl EranosPaymentAccount {
-        /// A payment account of its required fields; every other field starts absent, empty, or at
-        /// its default.
+        /// A new `EranosPaymentAccount` from its required fields; every other field starts absent,
+        /// empty, or at its default.
         ///
         /// # Errors
         ///
@@ -1921,7 +1921,7 @@ pub mod ffi {
             )))
         }
 
-        /// Which kind of payment account details it is.
+        /// Which kind of `EranosPaymentAccountDetails` it is.
         #[must_use]
         pub const fn kind(&self) -> EranosPaymentAccountDetailsKind {
             match &self.0 {
@@ -1968,7 +1968,7 @@ pub mod ffi {
         }
     }
 
-    /// The kinds of payment account details.
+    /// The kinds of `EranosPaymentAccountDetails`.
     #[derive(Debug)]
     pub enum EranosPaymentAccountDetailsKind {
         /// A bank account.
@@ -1977,7 +1977,7 @@ pub mod ffi {
         Username,
     }
 
-    /// A list of payment account records.
+    /// A list of `EranosPaymentAccount` records.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
     pub struct EranosPaymentAccountList(pub(crate) Vec<eranos_bindings::PaymentAccount>);
@@ -2015,7 +2015,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of payment records.
+    /// A list of `EranosPayment` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosPaymentList(pub(crate) Vec<eranos_bindings::Payment>);
@@ -2145,7 +2145,7 @@ pub mod ffi {
             }))
         }
 
-        /// Which kind of split it is.
+        /// Which kind of `EranosSplit` it is.
         #[must_use]
         pub const fn kind(&self) -> EranosSplitKind {
             match &self.0 {
@@ -2220,7 +2220,7 @@ pub mod ffi {
         }
     }
 
-    /// The kinds of split.
+    /// The kinds of `EranosSplit`.
     #[derive(Debug)]
     pub enum EranosSplitKind {
         /// Every member pays the same.
@@ -2330,8 +2330,8 @@ pub mod ffi {
     pub struct EranosTipRule(pub(crate) eranos_bindings::TipRule);
 
     impl EranosTipRule {
-        /// A tip rule of its required fields; every other field starts absent, empty, or at its
-        /// default.
+        /// A new `EranosTipRule` from its required fields; every other field starts absent, empty,
+        /// or at its default.
         #[must_use]
         pub fn create(value: &EranosTipValue, distribution: EranosTipDistribution) -> Box<Self> {
             Box::new(Self(eranos_bindings::TipRule {
@@ -2390,7 +2390,7 @@ pub mod ffi {
             }))
         }
 
-        /// Which kind of tip value it is.
+        /// Which kind of `EranosTipValue` it is.
         #[must_use]
         pub const fn kind(&self) -> EranosTipValueKind {
             match &self.0 {
@@ -2420,7 +2420,7 @@ pub mod ffi {
         }
     }
 
-    /// The kinds of tip value.
+    /// The kinds of `EranosTipValue`.
     #[derive(Debug)]
     pub enum EranosTipValueKind {
         /// A percentage of the expense's amount.
@@ -2435,8 +2435,8 @@ pub mod ffi {
     pub struct EranosTransfer(pub(crate) eranos_bindings::Transfer);
 
     impl EranosTransfer {
-        /// A transfer of its required fields; every other field starts absent, empty, or at its
-        /// default.
+        /// A new `EranosTransfer` from its required fields; every other field starts absent, empty,
+        /// or at its default.
         ///
         /// # Errors
         ///
@@ -2563,7 +2563,7 @@ pub mod ffi {
         }
     }
 
-    /// A list of transfer records.
+    /// A list of `EranosTransfer` records.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosTransferList(pub(crate) Vec<eranos_bindings::Transfer>);
