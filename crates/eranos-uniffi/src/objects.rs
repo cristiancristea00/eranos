@@ -14,10 +14,12 @@ use eranos_bindings::{
 ///
 /// Every group call comes in two forms. The synchronous one waits for the
 /// group's lock where a thread can sleep, and on wasm, whose one thread must
-/// not, fails with `ExpenseGroupFailure::Busy` while another call holds it. The
-/// asynchronous one, named with `_async`, waits for the lock, runs the call,
-/// and stops with `EranosError::Cancelled` when its `Cancellation` is
-/// cancelled first. Reads share the lock and changes take it alone.
+/// not, fails with `ExpenseGroupFailure::Busy` while another call holds it;
+/// so a call that cannot fail answers its value itself outside wasm, and a
+/// `Result` on wasm. The asynchronous one, named with `_async`, waits for the
+/// lock, runs the call, and stops with `EranosError::Cancelled` when its
+/// `Cancellation` is cancelled first. Reads share the lock and changes take
+/// it alone.
 #[derive(Debug, uniffi::Object)]
 pub(crate) struct ExpenseGroup {
     handle: ExpenseGroupHandle,

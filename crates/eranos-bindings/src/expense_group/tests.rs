@@ -230,33 +230,33 @@ fn a_new_group_takes_what_it_starts_with() {
         ..new_group()
     })
     .unwrap();
-    assert_eq!(named.id(), Ok("flat-12".to_owned()));
+    assert_eq!(named.id(), "flat-12".to_owned());
     let generated = new_group();
     let handle = ExpenseGroupHandle::new(&generated).unwrap();
-    assert_eq!(handle.id(), Ok(generated.id));
+    assert_eq!(handle.id(), generated.id);
     assert_eq!(
         handle.currency(),
-        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+        CurrencyDetails::from_library(CurrencyCode::EUR)
     );
-    assert_eq!(handle.name(), Ok("Flat".to_owned()));
-    assert_eq!(handle.note(), Ok(Some("Rent".to_owned())));
-    assert_eq!(handle.language(), Ok(Some("pt-PT".to_owned())));
+    assert_eq!(handle.name(), "Flat".to_owned());
+    assert_eq!(handle.note(), Some("Rent".to_owned()));
+    assert_eq!(handle.language(), Some("pt-PT".to_owned()));
     let plain = ExpenseGroupHandle::new(&NewExpenseGroup {
         note: None,
         language: None,
         ..new_group()
     })
     .unwrap();
-    assert_eq!(plain.note(), Ok(None));
-    assert_eq!(plain.language(), Ok(None));
+    assert_eq!(plain.note(), None);
+    assert_eq!(plain.language(), None);
     let blank = ExpenseGroupHandle::new(&NewExpenseGroup {
         note: Some(" ".to_owned()),
         language: Some(" ".to_owned()),
         ..new_group()
     })
     .unwrap();
-    assert_eq!(blank.language(), Ok(None));
-    assert_eq!(blank.note(), Ok(None));
+    assert_eq!(blank.language(), None);
+    assert_eq!(blank.note(), None);
 
     let refusals = [
         NewExpenseGroup {
@@ -310,14 +310,17 @@ fn every_read_answers_alike_in_both_forms() {
     let flat = flat();
     let handle = &flat.handle;
     let (ana, dinner, food) = (&flat.ana, &flat.dinner, &flat.food);
-    assert_eq!(block_on(handle.id_async(None)), handle.id());
-    assert_eq!(block_on(handle.categories_async(None)), handle.categories());
+    assert_eq!(block_on(handle.id_async(None)), Ok(handle.id()));
+    assert_eq!(
+        block_on(handle.categories_async(None)),
+        Ok(handle.categories())
+    );
     assert_eq!(
         block_on(handle.category_async(food.clone(), None)),
         handle.category(food)
     );
-    assert_eq!(block_on(handle.currency_async(None)), handle.currency());
-    assert_eq!(block_on(handle.expenses_async(None)), handle.expenses());
+    assert_eq!(block_on(handle.currency_async(None)), Ok(handle.currency()));
+    assert_eq!(block_on(handle.expenses_async(None)), Ok(handle.expenses()));
     assert_eq!(
         block_on(handle.expense_async(dinner.clone(), None)),
         handle.expense(dinner)
@@ -326,8 +329,8 @@ fn every_read_answers_alike_in_both_forms() {
         block_on(handle.expense_shares_async(dinner.clone(), None)),
         handle.expense_shares(dinner)
     );
-    assert_eq!(block_on(handle.summary_async(None)), handle.summary());
-    assert_eq!(block_on(handle.members_async(None)), handle.members());
+    assert_eq!(block_on(handle.summary_async(None)), Ok(handle.summary()));
+    assert_eq!(block_on(handle.members_async(None)), Ok(handle.members()));
     assert_eq!(
         block_on(handle.member_async(ana.clone(), None)),
         handle.member(ana)
@@ -336,7 +339,7 @@ fn every_read_answers_alike_in_both_forms() {
         block_on(handle.is_archived_async(ana.clone(), None)),
         handle.is_archived(ana)
     );
-    assert_eq!(block_on(handle.name_async(None)), handle.name());
+    assert_eq!(block_on(handle.name_async(None)), Ok(handle.name()));
     for strategy in [
         SettlementStrategy::Adaptive,
         SettlementStrategy::Direct,
@@ -349,7 +352,10 @@ fn every_read_answers_alike_in_both_forms() {
         );
     }
     let repayment = &flat.repayment;
-    assert_eq!(block_on(handle.transfers_async(None)), handle.transfers());
+    assert_eq!(
+        block_on(handle.transfers_async(None)),
+        Ok(handle.transfers())
+    );
     assert_eq!(
         block_on(handle.transfer_async(repayment.clone(), None)),
         handle.transfer(repayment)
@@ -358,13 +364,13 @@ fn every_read_answers_alike_in_both_forms() {
         block_on(handle.transfer_amount_async(repayment.clone(), None)),
         handle.transfer_amount(repayment)
     );
-    assert_eq!(block_on(handle.note_async(None)), handle.note());
-    assert_eq!(block_on(handle.language_async(None)), handle.language());
-    assert_eq!(block_on(handle.save_async(None)), handle.save());
+    assert_eq!(block_on(handle.note_async(None)), Ok(handle.note()));
+    assert_eq!(block_on(handle.language_async(None)), Ok(handle.language()));
+    assert_eq!(block_on(handle.save_async(None)), Ok(handle.save()));
     let reader = handle.read().unwrap();
     let async_reader = block_on(handle.read_async(None)).unwrap();
     assert_eq!(async_reader.save(), reader.save());
-    assert_eq!(reader.save(), handle.save());
+    assert_eq!(reader.save(), Ok(handle.save()));
 }
 
 /// A category change's two forms would change the group differently.
@@ -391,10 +397,7 @@ fn categories_change_alike_in_both_forms() {
     );
     assert_eq!(handle.remove_category(&travel), Ok(trips));
     assert_eq!(block_on(handle.remove_category_async(rent, None)), Ok(home));
-    assert_eq!(
-        handle.categories().map(|categories| categories.len()),
-        Ok(2)
-    );
+    assert_eq!(handle.categories().len(), 2);
 }
 
 /// A member change's two forms would change the group differently, and a
@@ -482,7 +485,7 @@ fn expenses_change_alike_in_both_forms() {
         block_on(handle.remove_expense_async(supper, None)),
         Ok(late_supper)
     );
-    assert_eq!(handle.expenses().map(|expenses| expenses.len()), Ok(1));
+    assert_eq!(handle.expenses().len(), 1);
 }
 
 /// A transfer change's two forms would change the group differently.
@@ -519,7 +522,7 @@ fn transfers_change_alike_in_both_forms() {
         block_on(handle.remove_transfer_async(second, None)),
         Ok(larger_second)
     );
-    assert_eq!(handle.transfers().map(|transfers| transfers.len()), Ok(1));
+    assert_eq!(handle.transfers().len(), 1);
 }
 
 /// A change of the name, the note, or the language would take
@@ -529,29 +532,29 @@ fn transfers_change_alike_in_both_forms() {
 fn the_name_description_and_language_change_alike_in_both_forms() {
     let handle = flat().handle;
     handle.set_name("Home").unwrap();
-    assert_eq!(handle.name(), Ok("Home".to_owned()));
+    assert_eq!(handle.name(), "Home".to_owned());
     block_on(handle.set_name_async("House".to_owned(), None)).unwrap();
-    assert_eq!(handle.name(), Ok("House".to_owned()));
+    assert_eq!(handle.name(), "House".to_owned());
 
-    handle.set_note(Some("Bills")).unwrap();
-    assert_eq!(handle.note(), Ok(Some("Bills".to_owned())));
+    handle.set_note(Some("Bills"));
+    assert_eq!(handle.note(), Some("Bills".to_owned()));
     block_on(handle.set_note_async(None, None)).unwrap();
-    assert_eq!(handle.note(), Ok(None));
+    assert_eq!(handle.note(), None);
     block_on(handle.set_note_async(Some("Rent".to_owned()), None)).unwrap();
-    assert_eq!(handle.note(), Ok(Some("Rent".to_owned())));
-    handle.set_note(Some(" ")).unwrap();
-    assert_eq!(handle.note(), Ok(None));
+    assert_eq!(handle.note(), Some("Rent".to_owned()));
+    handle.set_note(Some(" "));
+    assert_eq!(handle.note(), None);
 
     handle.set_language(Some("ro")).unwrap();
-    assert_eq!(handle.language(), Ok(Some("ro".to_owned())));
+    assert_eq!(handle.language(), Some("ro".to_owned()));
     block_on(handle.set_language_async(None, None)).unwrap();
-    assert_eq!(handle.language(), Ok(None));
+    assert_eq!(handle.language(), None);
     handle.set_language(Some("ro")).unwrap();
     handle.set_language(Some(" ")).unwrap();
-    assert_eq!(handle.language(), Ok(None));
+    assert_eq!(handle.language(), None);
     block_on(handle.set_language_async(Some("ro".to_owned()), None)).unwrap();
     block_on(handle.set_language_async(Some(" ".to_owned()), None)).unwrap();
-    assert_eq!(handle.language(), Ok(None));
+    assert_eq!(handle.language(), None);
 }
 
 /// The currency change's two forms would change the group differently, or
@@ -562,17 +565,14 @@ fn the_currency_changes_alike_in_both_forms() {
     handle.change_currency("RON", &[rate("EUR", "5")]).unwrap();
     assert_eq!(
         handle.currency(),
-        Ok(CurrencyDetails::from_library(CurrencyCode::RON))
+        CurrencyDetails::from_library(CurrencyCode::RON)
     );
     block_on(handle.change_currency_async("EUR".to_owned(), Vec::new(), None)).unwrap();
     assert_eq!(
         handle.currency(),
-        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+        CurrencyDetails::from_library(CurrencyCode::EUR)
     );
-    assert_eq!(
-        handle.summary().map(|summary| summary.total_spent),
-        Ok(euros(3_000))
-    );
+    assert_eq!(handle.summary().total_spent, euros(3_000));
 
     let refusals = [
         block_on(handle.change_currency_async("XYZ".to_owned(), Vec::new(), None)).unwrap_err(),
@@ -596,7 +596,7 @@ fn the_currency_changes_alike_in_both_forms() {
     );
     assert_eq!(
         handle.currency(),
-        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+        CurrencyDetails::from_library(CurrencyCode::EUR)
     );
 }
 
@@ -629,15 +629,15 @@ fn a_settlement_too_large_to_compute_is_refused_in_both_forms() {
 #[test]
 fn a_saved_group_loads_alike_in_both_forms() {
     let flat = flat();
-    let json = flat.handle.save().unwrap();
+    let json = flat.handle.save();
     assert_eq!(
-        ExpenseGroupHandle::load(&json).and_then(|group| group.save()),
+        ExpenseGroupHandle::load(&json).map(|group| group.save()),
         Ok(json.clone())
     );
     let loading = ExpenseGroupHandle::load_async(json.clone(), None);
     assert_send_and_static(&loading);
     assert_eq!(
-        block_on(loading).and_then(|group| group.save()),
+        block_on(loading).map(|group| group.save()),
         Ok(json.clone())
     );
 
@@ -684,7 +684,7 @@ fn every_clone_of_a_handle_shares_one_group() {
     let handle = flat().handle;
     let other = handle.clone();
     other.set_name("Home").unwrap();
-    assert_eq!(handle.name(), Ok("Home".to_owned()));
+    assert_eq!(handle.name(), "Home".to_owned());
 }
 
 /// On wasm a synchronous call tries the lock instead of waiting for it. A
@@ -740,7 +740,7 @@ fn trying_the_lock_is_busy_while_an_async_call_holds_it() {
     assert_eq!(changing.as_mut().poll(&mut context), Poll::Ready(Ok(())));
     assert_eq!(
         busy.currency(),
-        Ok(CurrencyDetails::from_library(CurrencyCode::RON))
+        CurrencyDetails::from_library(CurrencyCode::RON)
     );
 }
 
@@ -761,7 +761,7 @@ fn a_synchronous_call_waits_for_a_change_in_progress() {
     assert_eq!(changing.as_mut().poll(&mut context), Poll::Ready(Ok(())));
     assert_eq!(
         receiver.recv(),
-        Ok(Ok(CurrencyDetails::from_library(CurrencyCode::RON)))
+        Ok(CurrencyDetails::from_library(CurrencyCode::RON))
     );
     reading.join().unwrap().unwrap();
 }
@@ -799,10 +799,10 @@ fn a_change_cancelled_while_it_waits_changes_nothing() {
     );
     drop(reader);
     assert!(handle.try_write_lock().is_ok());
-    assert_eq!(handle.members().map(|members| members.len()), Ok(2));
+    assert_eq!(handle.members().len(), 2);
     assert_eq!(
         handle.currency(),
-        Ok(CurrencyDetails::from_library(CurrencyCode::EUR))
+        CurrencyDetails::from_library(CurrencyCode::EUR)
     );
 }
 

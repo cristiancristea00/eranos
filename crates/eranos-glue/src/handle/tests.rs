@@ -75,6 +75,17 @@ fn text(tokens: impl ToTokens) -> String {
 /// borrows would break every binding at once.
 #[test]
 fn every_call_writes_both_forms_on_the_group_handle() {
+    let items = written();
+    assert_eq!(3, items.len());
+    assert_eq!(
+        text(&items[0]),
+        text(syn::parse2::<syn::Item>(expected_group_handle()).unwrap())
+    );
+}
+
+/// The group handle's forms of [`trait_item`]'s calls, as the test above
+/// expects them.
+fn expected_group_handle() -> TokenStream {
     let (name, language, note, settlement) = (
         docs("The group's name."),
         docs("Sets the language."),
@@ -97,9 +108,17 @@ fn every_call_writes_both_forms_on_the_group_handle() {
         settlement.synchronous(Access::Read, false),
         settlement.asynchronous(false),
     );
-    let expected: TokenStream = quote! {
+    let (name_unfailing_doc, description_unfailing_doc) = (name.unfailing(), note.unfailing());
+    quote! {
         impl ExpenseGroupHandle {
+            #[doc = #name_unfailing_doc]
+            #[must_use]
+            #[cfg(not(target_family = "wasm"))]
+            pub fn name(&self) -> String {
+                self.reading_unfailing(operations::name)
+            }
             #[doc = #name_doc]
+            #[cfg(target_family = "wasm")]
             pub fn name(&self) -> ::std::result::Result<String, EranosError> {
                 self.reading(|group| ::std::result::Result::Ok(operations::name(group)))
             }
@@ -126,7 +145,13 @@ fn every_call_writes_both_forms_on_the_group_handle() {
                    + 'static {
                 self.writing_async(cancellation, move |group| operations::set_language(group, language.as_deref()))
             }
+            #[doc = #description_unfailing_doc]
+            #[cfg(not(target_family = "wasm"))]
+            pub fn set_note(&self, note: &str) {
+                self.writing_unfailing(|group| operations::set_note(group, note))
+            }
             #[doc = #description_doc]
+            #[cfg(target_family = "wasm")]
             pub fn set_note(&self, note: &str) -> ::std::result::Result<(), EranosError> {
                 self.writing(|group| { operations::set_note(group, note); ::std::result::Result::Ok(()) })
             }
@@ -158,13 +183,7 @@ fn every_call_writes_both_forms_on_the_group_handle() {
                 bodies::settlement(self.shared.clone(), strategy, cancellation)
             }
         }
-    };
-    let items = written();
-    assert_eq!(3, items.len());
-    assert_eq!(
-        text(&items[0]),
-        text(syn::parse2::<syn::Item>(expected).unwrap())
-    );
+    }
 }
 
 /// Every read's form on the read handle runs under the lock the handle

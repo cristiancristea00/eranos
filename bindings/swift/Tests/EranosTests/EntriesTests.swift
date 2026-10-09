@@ -247,7 +247,7 @@ func onlyADiscountTheLineCanTakeIsTakenOff() throws {
 func anExpenseStartsWithoutATipInUncategorisedAndReadsBackSo() throws {
     let flat = try Flat()
     #expect("00000000-0000-0000-0000-000000000000" == Category.ID.uncategorised.rawValue)
-    #expect(try Category.ID.uncategorised == flat.group.categories().first?.id)
+    #expect(Category.ID.uncategorised == flat.group.categories().first?.id)
     #expect(try TipRule.noTip == TipRule(value: .percentage(Percentage(basisPoints: 0)), distribution: .proportional))
     let bread = flat.expense("Bread", paidBy: flat.ana, sharedBy: [flat.ana, flat.bob])
     #expect(TipRule.noTip == bread.tip)
@@ -393,7 +393,7 @@ func everyEntryKeepsTheIdentifierTheAppGivesIt() throws {
     #expect(throws: EranosError.expenseGroup(.duplicateCategory(travel), detail: "a category with this identifier already exists")) {
         try group.add(Category(id: travel, name: "Trips"))
     }
-    let builtIn = try #require(try group.categories().first?.id)
+    let builtIn = try #require(group.categories().first?.id)
     #expect(throws: EranosError.expenseGroup(.duplicateCategory(builtIn), detail: "a category with this identifier already exists")) {
         try group.add(Category(id: builtIn, name: "Other"))
     }

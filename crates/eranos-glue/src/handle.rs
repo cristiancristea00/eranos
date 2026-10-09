@@ -4,8 +4,14 @@
 //!
 //! The code names `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, and
 //! `operations` as the module that lists the calls imports them, and calls
-//! the handles' `reading`, `writing`, `reading_async`, and `writing_async`
-//! and the group handle's `shared`, which that module can reach.
+//! the handles' `reading`, `writing`, `reading_unfailing`,
+//! `writing_unfailing`, `reading_async`, and `writing_async` and the group
+//! handle's `shared`, which that module can reach.
+//!
+//! The synchronous form of a call that cannot fail is written twice: outside
+//! wasm it waits for the lock and returns the call's answer itself, and on
+//! wasm, whose one thread must not wait, it tries the lock and returns a
+//! `Result`, as every other form does.
 
 use proc_macro2::{Punct, Spacing, TokenStream};
 use quote::{ToTokens, format_ident, quote, quote_spanned};
@@ -55,7 +61,9 @@ fn operation(call: &Call, arguments: &[TokenStream]) -> TokenStream {
 }
 
 /// The group handle's synchronous form of `call`, which takes its lock for
-/// the call.
+/// the call: one form, or, for a call that cannot fail, its form outside
+/// wasm, which answers the call's value itself, and its form on wasm, which
+/// tries the lock and answers a `Result`.
 fn synchronous(call: &Call) -> TokenStream {
     let doc = call.docs.synchronous(call.access, call.infallible);
     let lock = match call.access {
@@ -69,8 +77,36 @@ fn synchronous(call: &Call) -> TokenStream {
         .collect();
     let operation = operation(call, &arguments);
     let signature = signature(call);
+    if !call.infallible {
+        return quote_spanned! { call.span =>
+            #[doc = #doc]
+            #signature {
+                self.#lock(|group| #operation)
+            }
+        };
+    }
+    let unfailing_doc = call.docs.unfailing();
+    let unfailing_lock = match call.access {
+        Access::Read => quote!(reading_unfailing),
+        Access::Write => quote!(writing_unfailing),
+    };
+    let unfailing_signature = unfailing_signature(call);
+    let name = &call.name;
+    let must_use = (!call.answers_nothing()).then(|| quote!(#[must_use]));
+    let unfailing_operation = if call.parameters.is_empty() {
+        quote_spanned! { call.span => operations::#name }
+    } else {
+        quote_spanned! { call.span => |group| operations::#name(group #(, #arguments)*) }
+    };
     quote_spanned! { call.span =>
+        #[doc = #unfailing_doc]
+        #must_use
+        #[cfg(not(target_family = "wasm"))]
+        #unfailing_signature {
+            self.#unfailing_lock(#unfailing_operation)
+        }
         #[doc = #doc]
+        #[cfg(target_family = "wasm")]
         #signature {
             self.#lock(|group| #operation)
         }
@@ -141,6 +177,23 @@ fn reader(call: &Call) -> TokenStream {
         #signature {
             self.reading(|group| #operation)
         }
+    }
+}
+
+/// `call`'s signature outside wasm for a call that cannot fail, public:
+/// the trait's, answering the value itself, or nothing.
+fn unfailing_signature(call: &Call) -> TokenStream {
+    let method = &call.name;
+    let parameters = call.parameters.iter().map(|parameter| {
+        let name = &parameter.name;
+        let written = &parameter.written;
+        quote!(#name: #written)
+    });
+    if call.answers_nothing() {
+        quote_spanned! { call.span => pub fn #method(&self #(, #parameters)*) }
+    } else {
+        let answer = &call.answer;
+        quote_spanned! { call.span => pub fn #method(&self #(, #parameters)*) -> #answer }
     }
 }
 

@@ -69,15 +69,15 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
     let (handle, ana, dinner) = (&flat.handle, &flat.ana, &flat.dinner);
     handle.archive_member(&flat.bob).unwrap();
     let reader = handle.read().unwrap();
-    assert_eq!(reader.id(), handle.id());
-    assert_eq!(reader.categories(), handle.categories());
+    assert_eq!(reader.id(), Ok(handle.id()));
+    assert_eq!(reader.categories(), Ok(handle.categories()));
     assert_eq!(reader.category(&flat.food), handle.category(&flat.food));
-    assert_eq!(reader.currency(), handle.currency());
-    assert_eq!(reader.expenses(), handle.expenses());
+    assert_eq!(reader.currency(), Ok(handle.currency()));
+    assert_eq!(reader.expenses(), Ok(handle.expenses()));
     assert_eq!(reader.expense(dinner), handle.expense(dinner));
     assert_eq!(reader.expense_shares(dinner), handle.expense_shares(dinner));
-    assert_eq!(reader.summary(), handle.summary());
-    assert_eq!(reader.members(), handle.members());
+    assert_eq!(reader.summary(), Ok(handle.summary()));
+    assert_eq!(reader.members(), Ok(handle.members()));
     assert_eq!(reader.member(ana), handle.member(ana));
     assert_eq!(reader.is_archived(ana), handle.is_archived(ana));
     assert_eq!(
@@ -88,7 +88,7 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
         ],
         [Ok(Some(false)), Ok(Some(true)), Ok(None)]
     );
-    assert_eq!(reader.name(), handle.name());
+    assert_eq!(reader.name(), Ok(handle.name()));
     for strategy in [
         SettlementStrategy::Adaptive,
         SettlementStrategy::Direct,
@@ -98,15 +98,15 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
         assert_eq!(reader.settlement(strategy), handle.settlement(strategy));
     }
     let repayment = &flat.repayment;
-    assert_eq!(reader.transfers(), handle.transfers());
+    assert_eq!(reader.transfers(), Ok(handle.transfers()));
     assert_eq!(reader.transfer(repayment), handle.transfer(repayment));
     assert_eq!(
         reader.transfer_amount(repayment),
         handle.transfer_amount(repayment)
     );
-    assert_eq!(reader.note(), handle.note());
-    assert_eq!(reader.language(), handle.language());
-    assert_eq!(reader.save(), handle.save());
+    assert_eq!(reader.note(), Ok(handle.note()));
+    assert_eq!(reader.language(), Ok(handle.language()));
+    assert_eq!(reader.save(), Ok(handle.save()));
     assert!(matches!(
         reader.member(" nobody"),
         Err(EranosError::Id {
@@ -195,5 +195,5 @@ fn a_change_waits_for_every_open_handle() {
             ..
         }))
     ));
-    assert_eq!(handle.name(), Ok("Home".to_owned()));
+    assert_eq!(handle.name(), "Home".to_owned());
 }

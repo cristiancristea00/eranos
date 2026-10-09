@@ -198,9 +198,14 @@ flowchart TD
   and has every group call in two forms: a synchronous one, which waits for
   the lock where a thread can sleep and, on wasm, whose one thread must not,
   fails with `ExpenseGroupFailure::Busy` while another call holds it; and an
-  asynchronous one, a `Send + 'static` future that waits for the lock. Only
-  the two functions that take a synchronous call's lock depend on the
-  target, and the trying form wasm uses is tested on the host.
+  asynchronous one, a `Send + 'static` future that waits for the lock. A
+  call the trait marks `#[infallible]` has nothing to fail with outside
+  wasm, so its synchronous form answers its value itself there, and a
+  `Result` on wasm; the glue writes the two forms under `cfg`, and so does
+  the UniFFI glue, whose layers for the other targets take the value
+  without a throw. Only the functions that take a synchronous call's lock
+  depend on the target, and the trying form wasm uses is tested on the
+  host.
   `ExpenseGroupHandle::read` returns an `ExpenseGroupReader`, which holds
   the shared lock until it is released or dropped, so the reads of one
   report see no change in between; `release` frees the lock at once, for
@@ -290,7 +295,9 @@ thread too, where an app calls the asynchronous form instead, and on the
 thread of Python's event loop, where a coroutine awaits the `_async` form
 instead. On wasm,
 whose one thread must not wait, the TypeScript package's synchronous form
-fails with `ExpenseGroupFailure::Busy` while another call holds the lock. The C
+fails with `ExpenseGroupFailure::Busy` while another call holds the lock;
+everywhere else a read that cannot fail, such as the group's name or its
+summary, is a plain value, in Swift a property. The C
 and C++ packages run every asynchronous call on the group's worker thread,
 in the order of the calls, and report its outcome there, to a callback or
 through a `std::future`; a load runs on a thread of its own. Kotlin
@@ -424,9 +431,9 @@ that always return a member, and `EranosFoundFlagOutcome` for whether a
 member is archived, absent for an unknown one; the call's synchronous form
 gives a `DiplomatOption<bool>`, since Diplomat refuses an `Option`
 of a value inside a `Result`. The synchronous form of a call that the core
-marks as one that cannot fail returns its answer itself, and a `Result`
-only for the text it checks: the core refuses such a call only as busy, on
-wasm, for which the bridge is not built. A call that takes optional text
+marks as one that cannot fail returns its answer itself, as the core's does
+outside wasm, and a `Result` only for the text it checks. A call that takes
+optional text
 has a twin of each form that passes none, since C passes no absent text,
 named `clear_` for its `set_`: `clear_note` returns nothing, and
 `clear_language` a `Result`, as `set_language` does, since the core marks
@@ -542,11 +549,15 @@ Swift API Design Guidelines:
   `expense_item_line_total_before_discount`,
   `expense_item_discount_amount`, and `expense_item_line_total`, so the
   layer never multiplies a unit price or takes a discount itself.
-- Every call throws `EranosError` as a typed throw, with the core's case per
-  module and a failure enum per module whose payloads are typed
-  (`ExpenseGroupFailure.memberInUse(member:expenses:transfers:)`); a failure the
-  generated code reports that is not the library's, such as a defect in the
-  bindings, is `unexpected`.
+- Every call that can fail throws `EranosError` as a typed throw, with the
+  core's case per module and a failure enum per module whose payloads are
+  typed (`ExpenseGroupFailure.memberInUse(member:expenses:transfers:)`); a
+  failure the generated code reports that is not the library's, such as a
+  defect in the bindings, is `unexpected`. A synchronous read that cannot
+  fail throws nothing: the group's `id`, `name`, `currency`, `note`,
+  `language`, and `summary` are properties, and `members()`,
+  `categories()`, `expenses()`, `transfers()`, and `save()` plain methods,
+  as is `changeNote(to:)`.
 - Every group call is one name overloaded by `async`: asynchronous code
   picks the form that waits for the lock without blocking a thread of the
   pool, and cancelling its task cancels the call. `ExpenseGroup.withRead`
@@ -1154,7 +1165,8 @@ reads its annotations without checking its code, and Ruff leaves it out:
   group that is not JSON raises `InvalidJsonError`, with the line and
   column. A call the program should not make raises the standard error for
   it: `RuntimeError` for a call on a closed `ExpenseGroup` or a read
-  through a released `ExpenseGroupReader`.
+  through a released `ExpenseGroupReader`. A synchronous read that cannot
+  fail, such as `name` or `summary`, raises nothing of the library's.
 - Every group call blocks, and its twin, whose name ends in `_async`, is a
   coroutine that waits for the lock without blocking the event loop;
   cancelling its task drops the library's call, which leaves the group as

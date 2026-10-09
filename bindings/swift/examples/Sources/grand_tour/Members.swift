@@ -9,20 +9,20 @@ func theGroup() throws(EranosError) -> ExpenseGroup {
     let group = try ExpenseGroup(name: "Lisbon", currency: CurrencyCode(code: "EUR"), note: "A week by the Atlantic", language: Language("pt-pt"))
     let blank = Result { () throws(EranosError) in try group.rename(to: "   ") }
     try group.rename(to: "Lisbon and Porto")
-    try group.changeNote(to: "A week by the Atlantic, with a day in Porto")
+    group.changeNote(to: "A week by the Atlantic, with a day in Porto")
     printTable(
         [
-            DetailRow(detail: "Name", value: try group.name()),
-            DetailRow(detail: "Currency", value: "\(try group.currency())"),
-            DetailRow(detail: "Language", value: try group.language()?.description ?? ""),
-            DetailRow(detail: "Description", value: try group.note() ?? "")
+            DetailRow(detail: "Name", value: group.name),
+            DetailRow(detail: "Currency", value: "\(group.currency)"),
+            DetailRow(detail: "Language", value: group.language?.description ?? ""),
+            DetailRow(detail: "Description", value: group.note ?? "")
         ],
         numbersFrom: 2
     )
     print("""
         The group started as Lisbon and was renamed when a day in Porto joined the plan.
-        Every total is kept in its currency, \(try group.currency()). The language is a BCP 47 tag the apps
-        show the group in, stored in canonical form: pt-pt became \(try group.language()?.description ?? ""). A blank name is
+        Every total is kept in its currency, \(group.currency). The language is a BCP 47 tag the apps
+        show the group in, stored in canonical form: pt-pt became \(group.language?.description ?? ""). A blank name is
         refused:
           error: \(message(blank))
         """)
@@ -30,8 +30,8 @@ func theGroup() throws(EranosError) -> ExpenseGroup {
     guard case .failure(.expenseGroup(.emptyName, _)) = blank else {
         preconditionFailure("a blank name is refused")
     }
-    expect("Lisbon and Porto", try group.name(), "the group is renamed")
-    expect("pt-PT", try group.language()?.description, "the tag is stored in canonical form")
+    expect("Lisbon and Porto", group.name, "the group is renamed")
+    expect("pt-PT", group.language?.description, "the tag is stored in canonical form")
     return group
 }
 
@@ -47,7 +47,7 @@ func describe(_ account: PaymentAccount) -> String {
 
 func printMembers(_ group: ExpenseGroup) throws(EranosError) {
     printTable(
-        try group.members().map { member in
+        group.members().map { member in
             MemberRow(
                 name: [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
                 email: member.email?.description ?? "",
@@ -150,7 +150,7 @@ func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
         Every group has the built-in Uncategorised; this one adds Food, Lodging, under the
         identifier lodging that the app gives it, and Transport, then renames Transport, which
         keeps its identifier. In identifier order, where lodging follows the generated ones:
-          \(try group.categories().map(\.name).joined(separator: ", "))
+          \(group.categories().map(\.name).joined(separator: ", "))
         Names are compared caselessly, and the built-in category keeps its name:
         """)
     printTable(
@@ -169,6 +169,6 @@ func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
     }
     expect("Getting around", try group.category(withID: transport)?.name, "Transport is renamed")
     expect("lodging", lodging.rawValue, "Lodging keeps the app's identifier")
-    expect([.uncategorised, food, transport, lodging], try group.categories().map(\.id), "lodging follows the generated identifiers")
+    expect([.uncategorised, food, transport, lodging], group.categories().map(\.id), "lodging follows the generated identifiers")
     return Categories(food: food, lodging: lodging, transport: transport)
 }

@@ -3,11 +3,8 @@ internal import EranosGenerated
 // The group's totals and its settlements.
 public extension ExpenseGroup {
     /// The group's totals.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func summary() throws(EranosError) -> Summary {
-        try converting { Summary(try handle.summary()) }
+    var summary: Summary {
+        Summary(handle.summary())
     }
 
     /// The group's totals.

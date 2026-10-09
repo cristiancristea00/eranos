@@ -134,7 +134,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the identifier
      */
     public ExpenseGroupId id() {
-        return Converting.callUnfailing(() -> new ExpenseGroupId(handle.id()));
+        return new ExpenseGroupId(handle.id());
     }
 
     /**
@@ -158,7 +158,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the text
      */
     public String name() {
-        return Converting.callUnfailing(() -> handle.name());
+        return handle.name();
     }
 
     /**
@@ -212,7 +212,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the currency
      */
     public CurrencyCode currency() {
-        return Converting.callUnfailing(() -> CurrencyCode.converted(handle.currency()));
+        return CurrencyCode.converted(handle.currency());
     }
 
     /**
@@ -276,7 +276,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the note, if the group has one
      */
     public Optional<String> note() {
-        return Converting.callUnfailing(() -> Optional.ofNullable(handle.note()));
+        return Optional.ofNullable(handle.note());
     }
 
     /**
@@ -301,7 +301,7 @@ public final class ExpenseGroup implements AutoCloseable {
      */
     public void setNote(String note) {
         Objects.requireNonNull(note, "note");
-        Converting.runUnfailing(() -> handle.setNote(note));
+        handle.setNote(note);
     }
 
     /**
@@ -325,7 +325,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * blocking it.
      */
     public void clearNote() {
-        Converting.runUnfailing(() -> handle.setNote(null));
+        handle.setNote(null);
     }
 
     /**
@@ -349,8 +349,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the language, if the group has one
      */
     public Optional<Language> language() {
-        return Converting.callUnfailing(
-                () -> Optional.ofNullable(handle.language()).map(Language::known));
+        return Optional.ofNullable(handle.language()).map(Language::known);
     }
 
     /**
@@ -423,7 +422,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the text
      */
     public String save() {
-        return Converting.callUnfailing(() -> handle.save());
+        return handle.save();
     }
 
     /**
@@ -450,8 +449,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the members
      */
     public List<Member> members() {
-        return Converting.callUnfailing(
-                () -> handle.members().stream().map(Member::converted).toList());
+        return handle.members().stream().map(Member::converted).toList();
     }
 
     /**
@@ -724,8 +722,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the categories
      */
     public List<Category> categories() {
-        return Converting.callUnfailing(
-                () -> handle.categories().stream().map(Category::converted).toList());
+        return handle.categories().stream().map(Category::converted).toList();
     }
 
     /**
@@ -901,8 +898,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the expenses
      */
     public List<Expense> expenses() {
-        return Converting.callUnfailing(
-                () -> handle.expenses().stream().map(Expense::converted).toList());
+        return handle.expenses().stream().map(Expense::converted).toList();
     }
 
     /**
@@ -1108,8 +1104,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the transfers
      */
     public List<Transfer> transfers() {
-        return Converting.callUnfailing(
-                () -> handle.transfers().stream().map(Transfer::converted).toList());
+        return handle.transfers().stream().map(Transfer::converted).toList();
     }
 
     /**
@@ -1315,7 +1310,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the totals
      */
     public Summary summary() {
-        return Converting.callUnfailing(() -> Summary.converted(handle.summary()));
+        return Summary.converted(handle.summary());
     }
 
     /**

@@ -45,7 +45,7 @@ func main() throws(EranosError) {
     section("1. The saved form")
     // Account details would be in clear text: store this in the platform's secure storage (Keychain, Keystore, or an encrypted
     // database).
-    let saved = try group.save()
+    let saved = group.save()
     print(saved)
     print("""
         Amounts are minor units with their currency, dates are YYYY-MM-DD, and the
@@ -59,8 +59,8 @@ func main() throws(EranosError) {
         Loading replays every entry through the same checks as adding it, then rebuilds
         the totals. The loaded group equals the saved one, and so do its balances:
         """)
-    let before = try group.summary()
-    let after = try loaded.summary()
+    let before = group.summary
+    let after = loaded.summary
     printTable(
         try [ana, bob].map { member throws(EranosError) in
             ComparisonRow(
@@ -91,7 +91,7 @@ func main() throws(EranosError) {
         print("  error: \(error.detail)")
     }
 
-    let resaved = try loaded.save()
+    let resaved = loaded.save()
     precondition(saved == resaved)
     precondition(before == after)
     precondition(1 == plan.payments.count)

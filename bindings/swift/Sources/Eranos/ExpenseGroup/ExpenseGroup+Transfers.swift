@@ -3,11 +3,8 @@ internal import EranosGenerated
 // The group's transfers.
 public extension ExpenseGroup {
     /// Every transfer, in identifier order, which is creation order for generated identifiers.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func transfers() throws(EranosError) -> [Transfer] {
-        try converting { try handle.transfers().map(Transfer.init) }
+    func transfers() -> [Transfer] {
+        handle.transfers().map(Transfer.init)
     }
 
     /// Every transfer, in identifier order, which is creation order for generated identifiers.

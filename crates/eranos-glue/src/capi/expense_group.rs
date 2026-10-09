@@ -6,8 +6,8 @@
 //! lookup, which may find nothing, has an outcome of its own, apart from
 //! that of a call that always returns a record of its type, so that only
 //! the lookup's holds an `Option`. The group's synchronous form of a call
-//! that cannot fail returns its answer itself, which `crate::waited` takes
-//! out of the core's `Result`, and a `Result` only for text it checks. A
+//! that cannot fail returns its answer itself, as the core's form does
+//! outside wasm, and a `Result` only for text it checks. A
 //! synchronous form hands a lookup's flag over as a `DiplomatOption`, since
 //! Diplomat refuses an `Option` of a value inside a `Result`.
 //!
@@ -172,9 +172,9 @@ struct Delivery {
 /// core's form on `receiver`, the group's handle or the read handle, which
 /// fails as `own` says besides the call's refusal, or, for the group's
 /// handle and a call that cannot fail, fails for nothing of its own and
-/// returns what the call answers, which `crate::waited` takes out of the
-/// core's `Result`. A form that takes text returns a `Result` all the same,
-/// for text that is not UTF-8.
+/// returns what the call answers, as the core's form does outside wasm. A
+/// form that takes text returns a `Result` all the same, for text that is
+/// not UTF-8.
 fn synchronous(
     call: &Call,
     answer: &Answer,
@@ -200,7 +200,7 @@ fn synchronous(
     } = if own.is_some() {
         refusable(answer, &invocation)
     } else {
-        waited(answer, &quote!(crate::waited(#invocation)))
+        waited(answer, &invocation)
     };
     let documentation = synchronous_doc(call, answer, form, own);
     let write = write.map(|write| quote!(, #write));

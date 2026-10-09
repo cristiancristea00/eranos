@@ -119,7 +119,7 @@ func edits(_ group: ExpenseGroup, _ people: People, _ categories: Categories, _ 
     print("The balances after the edits:")
     try printBalances(group)
 
-    let before = try group.summary()
+    let before = group.summary
     let taxi = Expense(
         name: "Taxi",
         cost: .local(try eur("30.00")),
@@ -160,7 +160,7 @@ func edits(_ group: ExpenseGroup, _ people: People, _ categories: Categories, _ 
     guard case .failure(.expenseGroup(.missingExchangeRate(leu), _)) = unrated else {
         preconditionFailure("an amount in RON needs a rate")
     }
-    expect(before, try group.summary(), "a refused change leaves the totals")
+    expect(before, group.summary, "a refused change leaves the totals")
 }
 
 func comingsAndGoings(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
@@ -181,9 +181,9 @@ func comingsAndGoings(_ group: ExpenseGroup, _ people: People) throws(EranosErro
         early and was archived: his history and his balance stay, but a new expense
         cannot include him, and he cannot be removed while entries reference him.
         """)
-    let summary = try group.summary()
+    let summary = group.summary
     var rows: [StatusRow] = []
-    for member in try group.members() {
+    for member in group.members() {
         guard let totals = totals(of: member.id, in: summary) else {
             continue
         }

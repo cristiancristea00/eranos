@@ -38,10 +38,12 @@ pub struct NewExpenseGroup {
 /// the call: it waits for the lock where a thread can sleep, and on wasm, whose
 /// one thread must not, it fails with
 /// [`ExpenseGroupFailure::Busy`](crate::ExpenseGroupFailure::Busy) instead when another call
-/// holds the lock. The asynchronous one, named with `_async`, returns a `Send +
-/// 'static` future that waits for the lock, runs the call, and stops with
-/// [`EranosError::Cancelled`] when its [`Cancellation`] is cancelled first.
-/// Reads share the lock and changes take it alone, as [`SharedExpenseGroup`] says.
+/// holds the lock; so a call that cannot fail answers its value itself
+/// outside wasm, and a `Result` on wasm. The asynchronous one, named with
+/// `_async`, returns a `Send + 'static` future that waits for the lock, runs
+/// the call, and stops with [`EranosError::Cancelled`] when its
+/// [`Cancellation`] is cancelled first. Reads share the lock and changes take
+/// it alone, as [`SharedExpenseGroup`] says.
 #[derive(Debug, Clone)]
 pub struct ExpenseGroupHandle {
     pub(crate) shared: SharedExpenseGroup,
@@ -148,6 +150,20 @@ impl ExpenseGroupHandle {
         write: impl FnOnce(&mut ExpenseGroup) -> Result<T, EranosError>,
     ) -> Result<T, EranosError> {
         self.write_lock().and_then(|mut group| write(&mut group))
+    }
+
+    /// Runs `read` under the shared lock of a synchronous call that cannot
+    /// fail, waited for where a thread can sleep.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn reading_unfailing<T>(&self, read: impl FnOnce(&ExpenseGroup) -> T) -> T {
+        read(&self.shared.read_blocking())
+    }
+
+    /// Runs `write` under the exclusive lock of a synchronous call that
+    /// cannot fail, waited for where a thread can sleep.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn writing_unfailing<T>(&self, write: impl FnOnce(&mut ExpenseGroup) -> T) -> T {
+        write(&mut self.shared.write_blocking())
     }
 
     /// A future that runs `read` under the shared lock once it has it.

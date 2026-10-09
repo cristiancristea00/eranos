@@ -10,7 +10,7 @@ import Testing
 @Test
 func theSummaryAndTheSettlementKeepEveryNumber() throws {
     let flat = try Flat()
-    let summary = try flat.group.summary()
+    let summary = flat.group.summary
     #expect(summary.totalSpent == flat.euros(3_000))
     let ana = try #require(summary.members.first { $0.member == flat.ana })
     #expect(ana.paid == flat.euros(3_000))
@@ -38,7 +38,7 @@ func theSummaryAndTheSettlementKeepEveryNumber() throws {
     #expect(payment.receiver == flat.ana)
     #expect(payment.amount == flat.euros(500))
     try flat.group.add(Transfer(sender: payment.sender, receiver: payment.receiver, cost: .local(payment.amount), date: flat.day))
-    let settled = try flat.group.summary()
+    let settled = flat.group.summary
     #expect(settled.members.map(\.balance) == [.settled, .settled])
     #expect("settled" == Balance.settled.description)
 }

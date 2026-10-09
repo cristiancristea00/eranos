@@ -3,11 +3,8 @@ internal import EranosGenerated
 // The group's expenses.
 public extension ExpenseGroup {
     /// Every expense, in identifier order, which is creation order for generated identifiers.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func expenses() throws(EranosError) -> [Expense] {
-        try converting { try handle.expenses().map(Expense.init) }
+    func expenses() -> [Expense] {
+        handle.expenses().map(Expense.init)
     }
 
     /// Every expense, in identifier order, which is creation order for generated identifiers.

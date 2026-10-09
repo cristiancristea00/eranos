@@ -93,9 +93,9 @@ func spend(_ group: ExpenseGroup, _ name: String, _ amount: String, _ payer: Mem
 }
 
 func printBalances(_ group: ExpenseGroup) throws(EranosError) {
-    let summary = try group.summary()
+    let summary = group.summary
     printTable(
-        try group.members().compactMap { member in
+        group.members().compactMap { member in
             totals(of: member.id, in: summary).map { totals in
                 BalanceRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
             }
@@ -192,7 +192,7 @@ func festival() throws(EranosError) -> Int {
             )
         )
     }
-    let open = try group.summary().members.count { member in 0 != member.net.minorUnits }
+    let open = group.summary.members.count { member in 0 != member.net.minorUnits }
     let adaptive = try group.settlement(by: .adaptive)
     let greedy = try group.settlement(by: .greedy)
     print("""
@@ -264,7 +264,7 @@ func main() throws(EranosError) {
     precondition(Counts(adaptive: 4, minimum: 4, greedy: 5, direct: 7) == counts)
     // Greedy settles the festival's 21 balances in 19 payments.
     precondition(19 == festivalPayments)
-    let summary = try group.summary()
+    let summary = group.summary
     for member in [ana, bob, carol, dan, eva, filip] {
         precondition(Balance.settled == totals(of: member, in: summary)?.balance)
     }

@@ -45,17 +45,17 @@ struct PaymentRow: TableRow {
 func main() throws(EranosError) {
     let euro = try CurrencyCode(code: "EUR")
     let group = try ExpenseGroup(name: "Weekend in Sinaia", currency: euro)
-    title(try group.name())
+    title(group.name)
     print("""
-        Three friends rent a cabin and buy groceries. The group keeps its books in \(try group.currency()), so
-        every total, balance, and payment below is in \(try group.currency()).
+        Three friends rent a cabin and buy groceries. The group keeps its books in \(group.currency), so
+        every total, balance, and payment below is in \(group.currency).
         """)
 
     section("1. Members")
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
     let carol = try group.add(Member(firstName: "Carol"))
-    print("\(try group.members().count) people joined the group: \(try names(group, [ana, bob, carol])).")
+    print("\(group.members().count) people joined the group: \(try names(group, [ana, bob, carol])).")
 
     section("2. Expenses")
     print("""
@@ -79,13 +79,13 @@ func main() throws(EranosError) {
     )
 
     section("3. Who paid and who consumed")
-    let summary = try group.summary()
+    let summary = group.summary
     print("""
         The group spent \(summary.totalSpent) in total. A member's share of an expense is what they consumed,
         and their balance is what they paid minus what they consumed.
         """)
     printTable(
-        try group.members().compactMap { member in
+        group.members().compactMap { member in
             totals(of: member.id, in: summary).map { totals in
                 MemberRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
             }

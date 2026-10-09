@@ -74,6 +74,15 @@ impl Docs {
         &self.details
     }
 
+    /// The documentation of the synchronous form outside wasm of a call that
+    /// cannot fail: the call's own, with no `# Errors` section.
+    pub(crate) fn unfailing(&self) -> String {
+        std::iter::once(self.summary.clone())
+            .chain(self.details.iter().cloned())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
+
     /// The documentation of the synchronous form, which fails as the call's
     /// operation does, unless it is `infallible`, and on wasm when the lock
     /// its `access` takes is taken.

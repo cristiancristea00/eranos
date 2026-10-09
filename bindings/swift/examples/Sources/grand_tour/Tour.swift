@@ -87,10 +87,10 @@ func rate(of cost: Cost) throws(EranosError) -> ExchangeRate {
 }
 
 func printBalances(_ group: ExpenseGroup) throws(EranosError) {
-    let summary = try group.summary()
-    let zero = Money(minorUnits: 0, currency: try group.currency())
+    let summary = group.summary
+    let zero = Money(minorUnits: 0, currency: group.currency)
     printTable(
-        try group.members().map { member in
+        group.members().map { member in
             // The summary lists the members with a total; every total of the others is zero.
             guard let totals = totals(of: member.id, in: summary) else {
                 return BalanceRow(name: member.firstName, paid: zero, consumed: zero, sent: zero, received: zero, balance: .settled)
@@ -109,9 +109,9 @@ func printBalances(_ group: ExpenseGroup) throws(EranosError) {
 }
 
 func printCategories(_ group: ExpenseGroup) throws(EranosError) {
-    let expenses = try group.expenses()
+    let expenses = group.expenses()
     printTable(
-        try group.summary().categoryTotals.map { total throws(EranosError) in
+        try group.summary.categoryTotals.map { total throws(EranosError) in
             CategoryRow(
                 name: try group.category(withID: total.category)?.name ?? "?",
                 expenses: expenses.filter { expense in expense.category == total.category }.count,
@@ -124,7 +124,7 @@ func printCategories(_ group: ExpenseGroup) throws(EranosError) {
 
 /// Every expense and transfer in a currency `shown` accepts, as entered and in the group currency.
 func printEntries(_ group: ExpenseGroup, _ shown: (CurrencyCode) -> Bool) throws(EranosError) {
-    let zero = Money(minorUnits: 0, currency: try group.currency())
+    let zero = Money(minorUnits: 0, currency: group.currency)
     let expenses = try group.expenses().filter { expense in shown(expense.cost.amount.currency) }.map { expense throws(EranosError) in
         EntryRow(
             name: expense.name,

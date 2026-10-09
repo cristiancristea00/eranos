@@ -42,20 +42,29 @@ fn the_objects_forward_every_form_to_the_core() {
                 /// Sets the language.
                 #[write]
                 fn set_language(&self, language: Option<&str>) -> Result<(), EranosError>;
+                /// The group's name.
+                #[read]
+                #[infallible]
+                fn name(&self) -> Result<String, EranosError>;
             }
         })
         .unwrap(),
     )
     .unwrap();
-    let (category, language) = (
+    let (category, language, name) = (
         docs("The category with the identifier `id`."),
         docs("Sets the language."),
+        docs("The group's name."),
     );
     let category_doc = foreign(&category.synchronous(Access::Read, false));
     let category_future = foreign(&category.asynchronous(false));
     let category_read = foreign(&category.reader(false));
     let language_doc = foreign(&language.synchronous(Access::Write, false));
     let language_future = foreign(&language.asynchronous(false));
+    let name_unfailing_doc = foreign(&name.unfailing());
+    let name_doc = foreign(&name.synchronous(Access::Read, true));
+    let name_future = foreign(&name.asynchronous(true));
+    let name_read = foreign(&name.reader(true));
     assert!(!category_doc.contains("]("));
     let expected: TokenStream = quote! {
         #[::uniffi::export]
@@ -90,6 +99,32 @@ fn the_objects_forward_every_form_to_the_core() {
             ) -> ::std::result::Result<(), EranosError> {
                 self.handle.set_language_async(language, shared(cancellation)).await
             }
+
+            #[doc = #name_future]
+            pub(crate) async fn name_async(
+                &self,
+                cancellation: ::std::option::Option<::std::sync::Arc<Cancellation>>,
+            ) -> ::std::result::Result<String, EranosError> {
+                self.handle.name_async(shared(cancellation)).await
+            }
+        }
+
+        #[cfg(not(target_family = "wasm"))]
+        #[::uniffi::export]
+        impl ExpenseGroup {
+            #[doc = #name_unfailing_doc]
+            pub(crate) fn name(&self) -> String {
+                self.handle.name()
+            }
+        }
+
+        #[cfg(target_family = "wasm")]
+        #[::uniffi::export]
+        impl ExpenseGroup {
+            #[doc = #name_doc]
+            pub(crate) fn name(&self) -> ::std::result::Result<String, EranosError> {
+                self.handle.name()
+            }
         }
 
         #[::uniffi::export]
@@ -97,6 +132,11 @@ fn the_objects_forward_every_form_to_the_core() {
             #[doc = #category_read]
             pub(crate) fn category(&self, id: &str) -> ::std::result::Result<Option<Category>, EranosError> {
                 self.reader.category(id)
+            }
+
+            #[doc = #name_read]
+            pub(crate) fn name(&self) -> ::std::result::Result<String, EranosError> {
+                self.reader.name()
             }
         }
     };

@@ -72,7 +72,7 @@ func outcome<Value>(_ make: () throws(EranosError) -> Value, _ shown: (Value) ->
 
 func printMembers(_ group: ExpenseGroup) throws(EranosError) {
     printTable(
-        try group.members().map { member in
+        group.members().map { member in
             MemberRow(
                 name: [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
                 email: member.email?.description ?? "",
@@ -85,9 +85,9 @@ func printMembers(_ group: ExpenseGroup) throws(EranosError) {
 }
 
 func printBalances(_ group: ExpenseGroup) throws(EranosError) {
-    let summary = try group.summary()
+    let summary = group.summary
     var rows: [BalanceRow] = []
-    for member in try group.members() {
+    for member in group.members() {
         guard let totals = totals(of: member.id, in: summary) else {
             continue
         }
@@ -207,7 +207,7 @@ func movingOut(_ group: ExpenseGroup, _ flatmates: Flatmates) throws(EranosError
         preconditionFailure("the rent references Bob")
     }
     let owed = try Money(parsing: "450.00", in: euro)
-    let summary = try group.summary()
+    let summary = group.summary
     precondition(Balance.owes(owed) == totals(of: bob, in: summary)?.balance)
     let stored = try group.expense(withID: rent)
     precondition(nil != stored)

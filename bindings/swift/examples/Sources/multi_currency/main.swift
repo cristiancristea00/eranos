@@ -45,7 +45,7 @@ func name(_ group: ExpenseGroup, _ member: Member.ID) throws(EranosError) -> Str
 
 /// Every expense and transfer, as entered and in the group currency.
 func printEntries(_ group: ExpenseGroup) throws(EranosError) {
-    let zero = Money(minorUnits: 0, currency: try group.currency())
+    let zero = Money(minorUnits: 0, currency: group.currency)
     let expenses = try group.expenses().map { expense throws(EranosError) in
         EntryRow(
             name: expense.name,
@@ -78,9 +78,9 @@ func rate(of cost: Cost) throws(EranosError) -> ExchangeRate {
 }
 
 func printBalances(_ group: ExpenseGroup) throws(EranosError) {
-    let summary = try group.summary()
+    let summary = group.summary
     printTable(
-        try group.members().compactMap { member in
+        group.members().compactMap { member in
             totals(of: member.id, in: summary).map { totals in
                 BalanceRow(
                     name: member.firstName,
@@ -128,7 +128,7 @@ func expenses(_ group: ExpenseGroup, _ ana: Member.ID, _ bob: Member.ID) throws(
     )
     try printEntries(group)
     print("""
-        The rate says how many \(try group.currency()) one unit of the entry's currency is worth: 400.00 RON at
+        The rate says how many \(group.currency) one unit of the entry's currency is worth: 400.00 RON at
         0.2 is 80.00 EUR. The ferry was paid in the group currency, a local cost at 1.
         """)
 }
@@ -146,7 +146,7 @@ func repayment(_ group: ExpenseGroup, _ ana: Member.ID, _ bob: Member.ID) throws
     )
     print("""
         Ana pays Bob 100.00 RON in cash, which at 0.2 is exactly the 20.00 EUR she owed.
-        Transfers move balances but are not spending, so the total stays at \(try group.summary().totalSpent):
+        Transfers move balances but are not spending, so the total stays at \(group.summary.totalSpent):
         """)
     try printBalances(group)
 }
@@ -160,7 +160,7 @@ func newCurrency(_ group: ExpenseGroup) throws(EranosError) {
         """)
     try group.changeCurrency(to: leu, rates: [euro: try ExchangeRate(parsing: "5"), forint: try ExchangeRate(parsing: "0.0125")])
     try printEntries(group)
-    print("In \(try group.currency()), the trip cost \(try group.summary().totalSpent), and everyone is still settled:")
+    print("In \(group.currency), the trip cost \(group.summary.totalSpent), and everyone is still settled:")
     try printBalances(group)
 }
 
@@ -169,10 +169,10 @@ func main() throws(EranosError) {
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
 
-    print("\(try group.name()): expenses in several currencies")
+    print("\(group.name): expenses in several currencies")
     print("════════════════════════════════════════════════")
     print("""
-        Ana and Bob drive from Romania to Hungary. The group keeps its books in \(try group.currency()); an
+        Ana and Bob drive from Romania to Hungary. The group keeps its books in \(group.currency); an
         expense in another currency carries the exchange rate used when it was entered,
         and is converted once, rounding half away from zero to the cent.
         """)
@@ -180,22 +180,22 @@ func main() throws(EranosError) {
 
     section("2. Balances")
     print("""
-        The group spent \(try group.summary().totalSpent). Bob paid 120.00 of it but consumed half, so he gets back the
+        The group spent \(group.summary.totalSpent). Bob paid 120.00 of it but consumed half, so he gets back the
         difference:
         """)
     try printBalances(group)
     let owed = try Money(parsing: "20.00", in: euro)
-    let afterExpenses = try group.summary()
+    let afterExpenses = group.summary
     precondition(Balance.getsBack(owed) == totals(of: bob, in: afterExpenses)?.balance)
 
     try repayment(group, ana, bob)
-    let afterRepayment = try group.summary()
+    let afterRepayment = group.summary
     precondition(Balance.settled == totals(of: bob, in: afterRepayment)?.balance)
 
     try newCurrency(group)
     // 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
     let spent = try Money(parsing: "1000.00", in: leu)
-    let afterChange = try group.summary()
+    let afterChange = group.summary
     precondition(spent == afterChange.totalSpent)
     precondition(Balance.settled == totals(of: bob, in: afterChange)?.balance)
 }

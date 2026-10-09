@@ -4,11 +4,8 @@ internal import EranosGenerated
 public extension ExpenseGroup {
     /// Every category: the built-in one first, then the others in identifier order, which is
     /// creation order for generated identifiers.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func categories() throws(EranosError) -> [Category] {
-        try converting { try handle.categories().map(Category.init) }
+    func categories() -> [Category] {
+        handle.categories().map(Category.init)
     }
 
     /// Every category: the built-in one first, then the others in identifier order, which is

@@ -157,7 +157,7 @@ fn the_group_has_every_form_of_every_call_in_order() {
 /// `DiplomatWrite`, hands a record or a list over in an opaque object, and a
 /// lookup's flag in a `DiplomatOption`, which Diplomat lets a `Result` hold.
 /// The group's form of a call that cannot fail returns that answer itself,
-/// which `crate::waited` takes out of the core's `Result`.
+/// as the core's form answers it outside wasm.
 #[test]
 fn a_synchronous_form_lends_the_core_its_parameters() {
     let named = named();
@@ -175,17 +175,17 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
             quote! {
                 #[must_use]
                 pub fn expenses(&self) -> Box<EranosExpenseList> {
-                    Box::new(EranosExpenseList(crate::waited(self.handle.expenses())))
+                    Box::new(EranosExpenseList(self.handle.expenses()))
                 }
             },
             quote! {
                 pub fn name(&self, write: &mut DiplomatWrite) {
-                    crate::write_text(write, &crate::waited(self.handle.name()));
+                    crate::write_text(write, &self.handle.name());
                 }
             },
             quote! {
                 pub fn note(&self, write: &mut DiplomatWrite) -> Option<()> {
-                    crate::write_optional(write, crate::waited(self.handle.note()).as_deref())
+                    crate::write_optional(write, self.handle.note().as_deref())
                 }
             },
             quote! {
@@ -199,25 +199,25 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
             quote! {
                 #[must_use]
                 pub fn is_open(&self) -> bool {
-                    crate::waited(self.handle.is_open())
+                    self.handle.is_open()
                 }
             },
             quote! {
                 #[must_use]
                 pub fn latest_expense(&self) -> Option<Box<EranosExpense>> {
-                    crate::waited(self.handle.latest_expense()).map(|value| Box::new(EranosExpense(value)))
+                    self.handle.latest_expense().map(|value| Box::new(EranosExpense(value)))
                 }
             },
             quote! {
                 #[must_use]
                 pub fn is_latest_itemised(&self) -> DiplomatOption<bool> {
-                    DiplomatOption::from(crate::waited(self.handle.is_latest_itemised()))
+                    DiplomatOption::from(self.handle.is_latest_itemised())
                 }
             },
             quote! {
                 #[must_use]
                 pub fn summary(&self) -> Box<EranosSummary> {
-                    Box::new(EranosSummary(crate::waited(self.handle.summary())))
+                    Box::new(EranosSummary(self.handle.summary()))
                 }
             },
             quote! {
@@ -265,12 +265,12 @@ fn a_form_that_cannot_fail_but_takes_text_checks_it() {
         &[
             quote! {
                 pub fn has_expense_named(&self, name: &DiplomatStr) -> Result<bool, Box<EranosError>> {
-                    Ok(crate::waited(self.handle.has_expense_named(&crate::text(name)?)))
+                    Ok(self.handle.has_expense_named(&crate::text(name)?))
                 }
             },
             quote! {
                 pub fn set_note(&self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
-                    crate::waited(self.handle.set_note(&crate::text(note)?));
+                    self.handle.set_note(&crate::text(note)?);
                     Ok(())
                 }
             },

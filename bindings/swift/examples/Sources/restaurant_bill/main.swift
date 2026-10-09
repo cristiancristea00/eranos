@@ -120,7 +120,7 @@ func secondRound(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(
 /// How `expense` would divide if it were added to `group`, computed on a copy loaded from the group's saved form, so
 /// the group itself is unchanged.
 func preview(_ group: ExpenseGroup, _ expense: Expense) throws(EranosError) -> ExpenseShares? {
-    let copy = try ExpenseGroup.load(try group.save())
+    let copy = try ExpenseGroup.load(group.save())
     return try copy.shares(of: try copy.add(expense))
 }
 
@@ -180,7 +180,7 @@ func main() throws(EranosError) {
     let carol = try group.add(Member(firstName: "Carol"))
     let day = try CalendarDate(year: 2026, month: 9, day: 23)
 
-    title("\(try group.name()): an itemised bill")
+    title("\(group.name): an itemised bill")
     print("""
         Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,
         every line of the receipt is split among the people who had it.

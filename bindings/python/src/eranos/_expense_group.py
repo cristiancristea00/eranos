@@ -248,15 +248,13 @@ class ExpenseGroup:
             The identifier.
 
         """
-        with library_errors():
-            return ExpenseGroupId(self._generated().id())
+        return ExpenseGroupId(self._generated().id())
 
     async def id_async(self) -> ExpenseGroupId:
         """
         Read the group's identifier.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what id refuses.
 
         Returns:
             The identifier.
@@ -275,15 +273,13 @@ class ExpenseGroup:
             The categories.
 
         """
-        with library_errors():
-            return tuple(category_of(category) for category in self._generated().categories())
+        return tuple(category_of(category) for category in self._generated().categories())
 
     async def categories_async(self) -> tuple[Category, ...]:
         """
         List every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what categories refuses.
 
         Returns:
             The categories.
@@ -439,15 +435,13 @@ class ExpenseGroup:
             The currency.
 
         """
-        with library_errors():
-            return currency_of(self._generated().currency())
+        return currency_of(self._generated().currency())
 
     async def currency_async(self) -> CurrencyCode:
         """
         Read the group currency, which every total is in.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what currency refuses.
 
         Returns:
             The currency.
@@ -497,15 +491,13 @@ class ExpenseGroup:
             The expenses.
 
         """
-        with library_errors():
-            return tuple(expense_of(expense) for expense in self._generated().expenses())
+        return tuple(expense_of(expense) for expense in self._generated().expenses())
 
     async def expenses_async(self) -> tuple[Expense, ...]:
         """
         List every expense, in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what expenses refuses.
 
         Returns:
             The expenses.
@@ -694,15 +686,13 @@ class ExpenseGroup:
             The totals.
 
         """
-        with library_errors():
-            return summary_of(self._generated().summary())
+        return summary_of(self._generated().summary())
 
     async def summary_async(self) -> Summary:
         """
         Add up the group's totals.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what summary refuses.
 
         Returns:
             The totals.
@@ -721,15 +711,13 @@ class ExpenseGroup:
             The members.
 
         """
-        with library_errors():
-            return tuple(member_of(member) for member in self._generated().members())
+        return tuple(member_of(member) for member in self._generated().members())
 
     async def members_async(self) -> tuple[Member, ...]:
         """
         List every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what members refuses.
 
         Returns:
             The members.
@@ -974,15 +962,13 @@ class ExpenseGroup:
             The name.
 
         """
-        with library_errors():
-            return self._generated().name()
+        return self._generated().name()
 
     async def name_async(self) -> str:
         """
         Read the group's name.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what name refuses.
 
         Returns:
             The name.
@@ -1062,15 +1048,13 @@ class ExpenseGroup:
             The transfers.
 
         """
-        with library_errors():
-            return tuple(transfer_of(transfer) for transfer in self._generated().transfers())
+        return tuple(transfer_of(transfer) for transfer in self._generated().transfers())
 
     async def transfers_async(self) -> tuple[Transfer, ...]:
         """
         List every transfer, in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what transfers refuses.
 
         Returns:
             The transfers.
@@ -1258,15 +1242,13 @@ class ExpenseGroup:
             The note, or none.
 
         """
-        with library_errors():
-            return self._generated().note()
+        return self._generated().note()
 
     async def note_async(self) -> str | None:
         """
         Read the group's note, if it has one.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what note refuses.
 
         Returns:
             The note, or none.
@@ -1285,15 +1267,13 @@ class ExpenseGroup:
             note: The note, or none.
 
         """
-        with library_errors():
-            self._generated().set_note(note)
+        self._generated().set_note(note)
 
     async def set_note_async(self, note: str | None) -> None:
         """
         Set the group's note, trimmed; none or blank text clears it.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what set_note refuses.
 
         Args:
             note: The note, or none.
@@ -1312,15 +1292,13 @@ class ExpenseGroup:
             The language, or none.
 
         """
-        with library_errors():
-            return optional(self._generated().language(), Language)
+        return optional(self._generated().language(), Language)
 
     async def language_async(self) -> Language | None:
         """
         Read the language the apps show the group in, if it has one.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what language refuses.
 
         Returns:
             The language, or none.
@@ -1366,15 +1344,13 @@ class ExpenseGroup:
             The saved group.
 
         """
-        with library_errors():
-            return self._generated().save()
+        return self._generated().save()
 
     async def save_async(self) -> str:
         """
         Save the group as JSON, which ExpenseGroup.load reads back.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
-        It refuses what save refuses.
 
         Returns:
             The saved group.

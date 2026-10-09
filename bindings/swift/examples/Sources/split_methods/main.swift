@@ -201,10 +201,10 @@ func mistakes(_ group: ExpenseGroup, _ family: Family) throws(EranosError) {
 
 func printTotals(_ group: ExpenseGroup) throws(EranosError) {
     section("7. The holiday in total")
-    let summary = try group.summary()
+    let summary = group.summary
     print("\(summary.totalSpent) spent over five expenses:")
     printTable(
-        try group.members().compactMap { member in
+        group.members().compactMap { member in
             totals(of: member.id, in: summary).map { totals in
                 TotalRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: "\(totals.balance)")
             }

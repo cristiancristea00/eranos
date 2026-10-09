@@ -67,11 +67,11 @@ pub(crate) fn failed(error: eranos_bindings::EranosError) -> Box<error::ffi::Era
     Box::new(Failure::Library(error).into())
 }
 
-/// The value of `result`, which the synchronous form of a group call that
-/// cannot fail returns: the binding core's synchronous call waits for the
-/// lock, and is refused, as busy, only on wasm, where a call cannot wait.
-/// This crate is never built for wasm, since its worker thread drives the
-/// asynchronous calls with `block_on`, which is not compiled for wasm.
+/// The value of `result`, which the group handle's `read` returns: the
+/// binding core's synchronous call waits for the lock, and is refused, as
+/// busy, only on wasm, where a call cannot wait. This crate is never built
+/// for wasm, since its worker thread drives the asynchronous calls with
+/// `block_on`, which is not compiled for wasm.
 #[expect(
     clippy::expect_used,
     reason = "a call that cannot fail is refused only as busy, on wasm, for which this crate is never built"

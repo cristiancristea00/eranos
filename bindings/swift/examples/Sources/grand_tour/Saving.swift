@@ -21,7 +21,7 @@ func refusal(_ text: String) -> EranosError {
 
 func savingAndLoading(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) {
     section("12. Saving and loading")
-    let saved = try group.save()
+    let saved = group.save()
     print("""
         The group saves to \(saved.utf8.count) bytes of JSON: its details and entries, never the totals.
         Ana's accounts are saved in clear text, as the library holds them:
@@ -63,7 +63,7 @@ func savingAndLoading(_ group: ExpenseGroup, _ people: People, _ categories: Cat
     }
     printTable(rows, numbersFrom: 2)
 
-    expect(saved, try loaded.save(), "the loaded group saves as the saved one")
-    expect(try group.summary(), try loaded.summary(), "the loaded group's totals")
+    expect(saved, loaded.save(), "the loaded group saves as the saved one")
+    expect(group.summary, loaded.summary, "the loaded group's totals")
     precondition([.unsupportedFormat(format: 5), .emptyName, .duplicateCategoryName(categories.food)] == failures, "the replay refuses every change")
 }

@@ -3,11 +3,8 @@ internal import EranosGenerated
 // The group's own details: its identifier, name, currency, note, language, and saved form.
 public extension ExpenseGroup {
     /// The group's identifier.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func id() throws(EranosError) -> ExpenseGroup.ID {
-        try converting { ExpenseGroup.ID(rawValue: try handle.id()) }
+    var id: ExpenseGroup.ID {
+        ExpenseGroup.ID(rawValue: handle.id())
     }
 
     /// The group's identifier.
@@ -23,11 +20,8 @@ public extension ExpenseGroup {
     }
 
     /// The group's name.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func name() throws(EranosError) -> String {
-        try converting { try handle.name() }
+    var name: String {
+        handle.name()
     }
 
     /// The group's name.
@@ -65,11 +59,8 @@ public extension ExpenseGroup {
     }
 
     /// The group currency, which every total is in.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func currency() throws(EranosError) -> CurrencyCode {
-        try converting { CurrencyCode(try handle.currency()) }
+    var currency: CurrencyCode {
+        CurrencyCode(handle.currency())
     }
 
     /// The group currency, which every total is in.
@@ -111,11 +102,8 @@ public extension ExpenseGroup {
     }
 
     /// The group's note.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func note() throws(EranosError) -> String? {
-        try converting { try handle.note() }
+    var note: String? {
+        handle.note()
     }
 
     /// The group's note.
@@ -131,11 +119,8 @@ public extension ExpenseGroup {
     }
 
     /// Sets the group's note, trimmed; nil or blank text clears it.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func changeNote(to note: String?) throws(EranosError) {
-        try converting { try handle.setNote(note: note) }
+    func changeNote(to note: String?) {
+        handle.setNote(note: note)
     }
 
     /// Sets the group's note, trimmed; nil or blank text clears it.
@@ -151,11 +136,8 @@ public extension ExpenseGroup {
     }
 
     /// The language the apps show the group in.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func language() throws(EranosError) -> Language? {
-        try converting { try handle.language().map { Language(known: $0) } }
+    var language: Language? {
+        handle.language().map { Language(known: $0) }
     }
 
     /// The language the apps show the group in.
@@ -191,11 +173,8 @@ public extension ExpenseGroup {
     }
 
     /// The group in its saved form, as JSON, which `ExpenseGroup.load(_:)` reads back.
-    ///
-    /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
-    ///   call holds the lock.
-    func save() throws(EranosError) -> String {
-        try converting { try handle.save() }
+    func save() -> String {
+        handle.save()
     }
 
     /// The group in its saved form, as JSON, which `ExpenseGroup.load(_:)` reads back.

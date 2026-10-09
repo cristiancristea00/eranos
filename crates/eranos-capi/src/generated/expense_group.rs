@@ -212,7 +212,7 @@ pub mod ffi {
 
         /// The group's identifier. Writes it into `write`.
         pub fn id(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &crate::waited(self.handle.id()));
+            crate::write_text(write, &self.handle.id());
         }
 
         /// The asynchronous form of `id`: it runs on the group's worker thread, in the order of the
@@ -244,7 +244,7 @@ pub mod ffi {
         /// creation order for generated identifiers.
         #[must_use]
         pub fn categories(&self) -> Box<EranosCategoryList> {
-            Box::new(EranosCategoryList(crate::waited(self.handle.categories())))
+            Box::new(EranosCategoryList(self.handle.categories()))
         }
 
         /// The asynchronous form of `categories`: it runs on the group's worker thread, in the
@@ -454,7 +454,7 @@ pub mod ffi {
         /// The group currency, with what ISO 4217 says of it.
         #[must_use]
         pub fn currency(&self) -> Box<EranosCurrencyDetails> {
-            Box::new(EranosCurrencyDetails(crate::waited(self.handle.currency())))
+            Box::new(EranosCurrencyDetails(self.handle.currency()))
         }
 
         /// The asynchronous form of `currency`: it runs on the group's worker thread, in the order
@@ -532,7 +532,7 @@ pub mod ffi {
         /// Every expense, in identifier order, which is creation order for generated identifiers.
         #[must_use]
         pub fn expenses(&self) -> Box<EranosExpenseList> {
-            Box::new(EranosExpenseList(crate::waited(self.handle.expenses())))
+            Box::new(EranosExpenseList(self.handle.expenses()))
         }
 
         /// The asynchronous form of `expenses`: it runs on the group's worker thread, in the order
@@ -788,7 +788,7 @@ pub mod ffi {
         /// The group's totals.
         #[must_use]
         pub fn summary(&self) -> Box<EranosSummary> {
-            Box::new(EranosSummary(crate::waited(self.handle.summary())))
+            Box::new(EranosSummary(self.handle.summary()))
         }
 
         /// The asynchronous form of `summary`: it runs on the group's worker thread, in the order
@@ -820,7 +820,7 @@ pub mod ffi {
         /// generated identifiers.
         #[must_use]
         pub fn members(&self) -> Box<EranosMemberList> {
-            Box::new(EranosMemberList(crate::waited(self.handle.members())))
+            Box::new(EranosMemberList(self.handle.members()))
         }
 
         /// The asynchronous form of `members`: it runs on the group's worker thread, in the order
@@ -1156,7 +1156,7 @@ pub mod ffi {
 
         /// The group's name. Writes it into `write`.
         pub fn name(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &crate::waited(self.handle.name()));
+            crate::write_text(write, &self.handle.name());
         }
 
         /// The asynchronous form of `name`: it runs on the group's worker thread, in the order of
@@ -1270,7 +1270,7 @@ pub mod ffi {
         /// Every transfer, in identifier order, which is creation order for generated identifiers.
         #[must_use]
         pub fn transfers(&self) -> Box<EranosTransferList> {
-            Box::new(EranosTransferList(crate::waited(self.handle.transfers())))
+            Box::new(EranosTransferList(self.handle.transfers()))
         }
 
         /// The asynchronous form of `transfers`: it runs on the group's worker thread, in the order
@@ -1529,7 +1529,7 @@ pub mod ffi {
 
         /// The group's note. Writes it into `write` when there is one, and nothing otherwise.
         pub fn note(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, crate::waited(self.handle.note()).as_deref())
+            crate::write_optional(write, self.handle.note().as_deref())
         }
 
         /// The asynchronous form of `note`: it runs on the group's worker thread, in the order of
@@ -1563,13 +1563,13 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_note(&self, note: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            crate::waited(self.handle.set_note(Some(&crate::text(note)?)));
+            self.handle.set_note(Some(&crate::text(note)?));
             Ok(())
         }
 
         /// The form of `set_note` that passes no `note`.
         pub fn clear_note(&self) {
-            crate::waited(self.handle.set_note(None));
+            self.handle.set_note(None);
         }
 
         /// The asynchronous form of `set_note`: it runs on the group's worker thread, in the order
@@ -1627,7 +1627,7 @@ pub mod ffi {
         /// The language the apps show the group in, as a BCP 47 tag. Writes it into `write` when
         /// there is one, and nothing otherwise.
         pub fn language(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, crate::waited(self.handle.language()).as_deref())
+            crate::write_optional(write, self.handle.language().as_deref())
         }
 
         /// The asynchronous form of `language`: it runs on the group's worker thread, in the order
@@ -1733,7 +1733,7 @@ pub mod ffi {
 
         /// The JSON of the group's saved form. Writes it into `write`.
         pub fn save(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &crate::waited(self.handle.save()));
+            crate::write_text(write, &self.handle.save());
         }
 
         /// The asynchronous form of `save`: it runs on the group's worker thread, in the order of

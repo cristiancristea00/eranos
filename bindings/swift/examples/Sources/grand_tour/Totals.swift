@@ -5,7 +5,7 @@ import Report
 
 func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) {
     section("8. The summary")
-    let summary = try group.summary()
+    let summary = group.summary
     print("""
         The group spent \(summary.totalSpent) in all. For each member, what they paid, what they
         consumed, the transfers they sent and received, and what is left:
@@ -14,9 +14,9 @@ func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) 
     print("The spending per category:")
     try printCategories(group)
     print("And each member's consumption per category:")
-    let zero = Money(minorUnits: 0, currency: try group.currency())
+    let zero = Money(minorUnits: 0, currency: group.currency)
     printTable(
-        try group.members().map { member in
+        group.members().map { member in
             let totals = summary.memberCategoryTotals.first { totals in totals.member == member.id }?.totals ?? []
             let total = { (category: Category.ID) in totals.first { total in total.category == category }?.total ?? zero }
             return MemberCategoryRow(
@@ -66,8 +66,8 @@ func removingACategory(_ group: ExpenseGroup, _ categories: Categories) throws(E
     }
     let transport = try group.category(withID: categories.transport)
     precondition(nil == transport, "Transport is removed")
-    expect(try eur("248.50"), try group.summary().categoryTotals.first { total in Category.ID.uncategorised == total.category }?.total, "the uncategorised spending")
-    let moved = try group.expenses().allSatisfy { expense in expense.category != categories.transport }
+    expect(try eur("248.50"), group.summary.categoryTotals.first { total in Category.ID.uncategorised == total.category }?.total, "the uncategorised spending")
+    let moved = group.expenses().allSatisfy { expense in expense.category != categories.transport }
     precondition(moved, "no expense is in Transport")
 }
 
@@ -87,15 +87,15 @@ func newCurrency(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     print("""
         Each entry keeps its currency and converts at the new rate. At 5 every share
         converts exactly, so each balance is five times what it was. The trip cost
-        \(try group.summary().totalSpent):
+        \(group.summary.totalSpent):
         """)
     try printBalances(group)
 
     guard case .failure(.expenseGroup(.missingExchangeRate(euro), _)) = missing else {
         preconditionFailure("the amounts in EUR need a rate")
     }
-    let summary = try group.summary()
-    expect(leu, try group.currency(), "the new currency")
+    let summary = group.summary
+    expect(leu, group.currency, "the new currency")
     expect(try ron("6114.50"), summary.totalSpent, "the total spent in RON")
     expect(Balance.getsBack(try ron("62.75")), totals(of: people.dan, in: summary)?.balance, "Dan's balance in RON")
     expect(Balance.owes(try ron("213.00")), totals(of: people.eva, in: summary)?.balance, "Eva's balance in RON")
@@ -154,7 +154,7 @@ func settlingUp(_ group: ExpenseGroup) throws(EranosError) {
     let greedy = try group.settlement(by: .greedy)
     precondition(greedy.payments.isEmpty, "nothing is left to pay")
     precondition(4 == plan.payments.count, "the minimum plan has four payments")
-    for totals in try group.summary().members {
+    for totals in group.summary.members {
         precondition(Balance.settled == totals.balance, "every balance is settled")
     }
 }

@@ -19,6 +19,11 @@ use crate::docs::foreign;
 /// The exported methods of the objects: each call's synchronous and
 /// asynchronous forms on `ExpenseGroup`, and each read's form on `ExpenseGroupReader`,
 /// with the core's documentation in the form a foreign binding shows.
+///
+/// The synchronous form of a call that cannot fail is exported twice, in a
+/// block of its own for each target, since `uniffi` reads an attribute on a
+/// method before `cfg` strips it: outside wasm it answers the value itself,
+/// as the core's form does, and on wasm a `Result`.
 pub(crate) fn objects(calls: &Calls) -> TokenStream {
     let group = calls.calls.iter().map(|call| {
         let (method, answer, error) = (&call.name, &call.answer, &call.error);
@@ -33,11 +38,16 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
             quote!(#name: #owned)
         });
         let names = call.parameters.iter().map(|parameter| &parameter.name);
-        quote! {
-            #[doc = #doc]
-            pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
-                self.handle.#method(#(#lent),*)
+        let synchronous = (!call.infallible).then(|| {
+            quote! {
+                #[doc = #doc]
+                pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
+                    self.handle.#method(#(#lent),*)
+                }
             }
+        });
+        quote! {
+            #synchronous
 
             #[doc = #asynchronous_doc]
             pub(crate) async fn #asynchronous(
@@ -49,6 +59,7 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
             }
         }
     });
+    let unfailing_blocks = unfailing_blocks(calls);
     let reads = calls
         .calls
         .iter()
@@ -71,11 +82,62 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
             #(#group)*
         }
 
+        #unfailing_blocks
+
         #[::uniffi::export]
         impl ExpenseGroupReader {
             #(#reads)*
         }
     }
+}
+
+/// The two export blocks of the synchronous forms of the calls that cannot
+/// fail, one for each target, or none when no call is one.
+fn unfailing_blocks(calls: &Calls) -> Option<TokenStream> {
+    let unfailing: Vec<&Call> = calls.calls.iter().filter(|call| call.infallible).collect();
+    let outside_wasm = unfailing.iter().map(|call| {
+        let method = &call.name;
+        let doc = foreign(&call.docs.unfailing());
+        let parameters = foreign_parameters(call);
+        let lent = call.parameters.iter().map(Parameter::lent);
+        let answer = (!call.answers_nothing()).then(|| {
+            let answer = &call.answer;
+            quote!(-> #answer)
+        });
+        quote! {
+            #[doc = #doc]
+            pub(crate) fn #method(&self #(, #parameters)*) #answer {
+                self.handle.#method(#(#lent),*)
+            }
+        }
+    });
+    let on_wasm = unfailing.iter().map(|call| {
+        let (method, answer, error) = (&call.name, &call.answer, &call.error);
+        let doc = foreign(&call.docs.synchronous(call.access, call.infallible));
+        let parameters = foreign_parameters(call);
+        let lent = call.parameters.iter().map(Parameter::lent);
+        quote! {
+            #[doc = #doc]
+            pub(crate) fn #method(&self #(, #parameters)*) -> ::std::result::Result<#answer, #error> {
+                self.handle.#method(#(#lent),*)
+            }
+        }
+    });
+    (!unfailing.is_empty()).then(|| {
+        quote! {
+            #[cfg(not(target_family = "wasm"))]
+            #[::uniffi::export]
+            impl ExpenseGroup {
+                #(#outside_wasm)*
+            }
+
+            #[cfg(target_family = "wasm")]
+            #[::uniffi::export]
+            impl ExpenseGroup {
+                #(#on_wasm)*
+            }
+        }
+    })
 }
 
 /// `call`'s parameters as a foreign binding's synchronous form takes them.
