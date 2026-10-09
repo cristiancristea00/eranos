@@ -1,35 +1,17 @@
 //! What every binding of eranos exposes, in plain Rust: the records and
 //! enums of values and entries, one error and its flat form for a binding
 //! without enums that hold data, the group handle with a synchronous and an
-//! asynchronous form of every group call, the read handle, cancellation, the
-//! value helpers, and the saved form.
+//! asynchronous form of every group call, the read and write handles,
+//! cancellation, the value helpers, and the saved form.
 //!
-//! The glue crates (built with `uniffi` for Swift, Kotlin, Java, Python,
-//! Kotlin Multiplatform, and the web, and with `diplomat` for C and C++)
-//! mirror these types and forward
-//! every call here, converting nothing and deciding nothing, so everything
-//! that can be wrong is in this crate, where Rust tests reach it. Values
-//! cross as records of text and integers: identifiers as their text, which
-//! for a generated one is a UUID v7 in lowercase hyphenated form, a
-//! currency a caller names on its own as its ISO 4217 code, and one the
-//! library answers with, in an amount or as the group currency, as its
-//! [`CurrencyDetails`], exchange rates as decimals, amounts as 64-bit minor
-//! units with their currency's details, percentages in basis points, parts
-//! in hundredths, quantities in ten-thousandths, a phone number in E.164
-//! form with its international form, and an IBAN with its country code. Every value is checked by the
-//! library's own rules on its way in, so a bad one is a typed
-//! [`EranosError`], and a record whose derived text is not the library's,
-//! such as an amount whose currency details are not the library's for its
-//! code, is refused with [`EranosError::MismatchedRecord`]. The text the
-//! library derives comes from the library alone, so the helpers that write
-//! a value from its record cannot fail, and each value an entry holds as
-//! numbers has a helper that checks it beside the one that writes it. Every
-//! entry and every new group carries the identifier the app gives it: its
-//! own, or one [`identifier_generate`] returns.
-//!
-//! The types stay within what `uniffi` 0.31 can mirror: records, enums with
-//! data, one error enum, and objects; no methods on records, and no
-//! optional list, which is an empty one instead.
+//! The glue crates, `eranos-uniffi`, `eranos-web`, and `eranos-capi`, mirror
+//! these types and forward every call here, converting nothing and deciding
+//! nothing, so everything that can be wrong is in this crate, where Rust
+//! tests reach it. Values cross as records of text and integers, which the
+//! library's rules check on their way in, and the types stay within what
+//! `uniffi` 0.31 can mirror: records, enums with data, one error enum, and
+//! objects, with no methods on records and no optional list. What crosses,
+//! and how each value is written, is in docs/BINDINGS.md § 2.
 #![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 

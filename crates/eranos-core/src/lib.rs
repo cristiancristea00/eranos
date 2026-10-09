@@ -61,9 +61,8 @@ const MAX_LENGTH: usize = 64;
 /// clock before it takes its own lock, and when a thread is paused between
 /// the two across a second boundary, its stale reading pushes the context's
 /// timestamp almost a second ahead, so the identifiers generated once the
-/// clock catches up sort before the earlier ones (uuid 1.26.1). Reading the
-/// clock under this lock keeps every identifier eranos generates in creation
-/// order. It guards no data, so a thread that panicked while holding it
+/// clock catches up sort before the earlier ones. Reading the clock under
+/// this lock keeps every identifier eranos generates in creation order. It guards no data, so a thread that panicked while holding it
 /// leaves nothing to recover.
 #[cfg(not(feature = "sequential-ids"))]
 static GENERATION: Mutex<()> = Mutex::new(());

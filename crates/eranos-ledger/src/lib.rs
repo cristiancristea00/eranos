@@ -532,7 +532,7 @@ impl Delta {
         let recipient = self.members.entry(pair.to).or_default();
         recipient.net -= amount;
         recipient.received += amount;
-        // Paying someone back is, pairwise, the recipient now owing it back.
+        // Pairwise, a transfer is a debt of the recipient to the sender.
         self.add_debt(pair.reversed(), amount);
     }
 
