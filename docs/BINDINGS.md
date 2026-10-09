@@ -131,7 +131,8 @@ flowchart TD
   without looking its currency up. Days, months, years, hours, minutes,
   basis points, and hundredths are 32-bit signed integers, which every
   target language has: Kotlin's unsigned types are invisible from Java, and
-  JavaScript has one number type. Minor units and quantities are 64-bit
+  JavaScript has one number type; the library bounds basis points and
+  hundredths to `i32::MAX`, so no ratio an app reads back is clamped. Minor units and quantities are 64-bit
   signed integers (a `bigint` in TypeScript): a quantity of four decimal
   places, 0.452 as 4 520, holds up to `i64::MAX` ten-thousandths, the
   library's own limit, so every quantity it holds crosses. A currency's

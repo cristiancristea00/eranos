@@ -298,15 +298,16 @@ fn percentages_must_add_up_to_exactly_100() {
         })
     );
     // Totals beyond 32 bits are reported exactly.
-    let huge = Percentage::from_basis_points(u32::MAX);
+    let huge = Percentage::MAX;
     assert_eq!(
         Split::percentages([
             MemberPercentage::new(ana(), huge),
-            MemberPercentage::new(bob(), huge)
+            MemberPercentage::new(bob(), huge),
+            MemberPercentage::new(carol(), huge)
         ])
         .validate(euros(1_000)),
         Err(ExpenseError::PercentagesDoNotAddUp {
-            total_basis_points: 8_589_934_590
+            total_basis_points: 6_442_450_941
         })
     );
 }
@@ -577,7 +578,7 @@ proptest! {
     /// than one unit away from their exact share.
     #[test]
     fn divisions_are_exact_and_within_one_unit(
-        hundredths in prop::collection::vec(1..=u32::MAX, 1..=12),
+        hundredths in prop::collection::vec(1..=Parts::MAX.hundredths(), 1..=12),
         total in any::<i64>(),
         rotation in any::<u64>(),
     ) {

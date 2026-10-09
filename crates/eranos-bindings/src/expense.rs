@@ -592,8 +592,8 @@ fn items_of(items: &[ExpenseItem]) -> Result<Vec<library::ExpenseItem>, EranosEr
 }
 
 /// A count the library holds as an unsigned integer, as the bindings carry
-/// it; every count here is far below `i32::MAX`, so the fallback never
-/// applies.
+/// it; the library bounds basis points and hundredths to `i32::MAX`, so
+/// the fallback never applies.
 fn count(number: u32) -> i32 {
     i32::try_from(number).unwrap_or(i32::MAX)
 }

@@ -421,7 +421,9 @@ fn percentages_and_parts_format_any_number_as_the_library_writes_them() {
         let unsigned = u32::try_from(number).unwrap();
         assert_eq!(
             percentage_format(number),
-            library::Percentage::from_basis_points(unsigned).to_string()
+            library::Percentage::from_basis_points(unsigned)
+                .unwrap()
+                .to_string()
         );
         if 0 < number {
             assert_eq!(

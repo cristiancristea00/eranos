@@ -216,7 +216,8 @@ fn a_discount_above_what_it_reduces_is_refused() {
     );
     // A basis point above 100 %, off the line and off each unit.
     for scope in [DiscountScope::Line, DiscountScope::Unit] {
-        let above = Discount::percentage(Percentage::from_basis_points(10_001)).scoped(scope);
+        let above =
+            Discount::percentage(Percentage::from_basis_points(10_001).unwrap()).scoped(scope);
         assert_eq!(
             line_total(euros(900), quantity("1"), above),
             Err(ExpenseError::DiscountAboveHundredPercent),

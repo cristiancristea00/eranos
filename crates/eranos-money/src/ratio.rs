@@ -11,7 +11,13 @@ use crate::error::MoneyError;
 /// stored in hundredths.
 const PLACES: u8 = 2;
 
-/// A percentage with two decimal places, stored as basis points (1 % = 100).
+/// The largest number of basis points or hundredths: the largest value the
+/// bindings' 32-bit signed integers carry, so no ratio is clamped on its way
+/// to an app.
+const BOUND: u32 = i32::MAX.unsigned_abs();
+
+/// A percentage with two decimal places, stored as basis points (1 % = 100),
+/// up to [`MAX`](Self::MAX).
 ///
 /// The text form is the percentage without trailing zeros and with a `%`
 /// sign, such as `33.33%` or `12.5%`.
@@ -24,14 +30,14 @@ const PLACES: u8 = 2;
 /// let third = Percentage::parse("33.33")?;
 /// assert_eq!(third.basis_points(), 3333);
 /// assert_eq!(third.to_string(), "33.33%");
-/// assert_eq!(Percentage::parse("12.5%")?, Percentage::from_basis_points(1250));
+/// assert_eq!(Percentage::parse("12.5%")?, Percentage::from_basis_points(1250)?);
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
-    serde(transparent)
+    serde(try_from = "u32", into = "u32")
 )]
 pub struct Percentage(u32);
 
@@ -42,10 +48,21 @@ impl Percentage {
     /// 100 %: the total a percentage split must reach.
     pub const HUNDRED: Self = Self(10_000);
 
+    /// The largest percentage, 21 474 836.47 %: `i32::MAX` basis points, the
+    /// largest number the bindings' 32-bit signed integers carry.
+    pub const MAX: Self = Self(BOUND);
+
     /// Returns the percentage with `basis_points` hundredths of a per cent.
-    #[must_use]
-    pub const fn from_basis_points(basis_points: u32) -> Self {
-        Self(basis_points)
+    ///
+    /// # Errors
+    ///
+    /// [`MoneyError::InvalidPercentage`] when `basis_points` is above
+    /// [`MAX`](Self::MAX).
+    pub const fn from_basis_points(basis_points: u32) -> Result<Self, MoneyError> {
+        if BOUND < basis_points {
+            return Err(MoneyError::InvalidPercentage);
+        }
+        Ok(Self(basis_points))
     }
 
     /// Parses a non-negative decimal with at most two decimal places and an
@@ -54,13 +71,13 @@ impl Percentage {
     /// # Errors
     ///
     /// [`MoneyError::InvalidPercentage`] for anything else, including values
-    /// that do not fit in 32-bit basis points.
+    /// above [`MAX`](Self::MAX).
     pub fn parse(text: &str) -> Result<Self, MoneyError> {
         let text = text.trim();
         let number = text.strip_suffix('%').map_or(text, str::trim_end);
         parse_hundredths(number)
-            .map(Self)
             .ok_or(MoneyError::InvalidPercentage)
+            .and_then(Self::from_basis_points)
     }
 
     /// Converts the double `value`, a number of per cent, into a
@@ -76,7 +93,7 @@ impl Percentage {
     ///
     /// - [`MoneyError::NotFinite`] when `value` is NaN or infinite.
     /// - [`MoneyError::InvalidPercentage`] when the rounded value is
-    ///   negative or does not fit in 32-bit basis points.
+    ///   negative or above [`MAX`](Self::MAX).
     ///
     /// # Examples
     ///
@@ -144,13 +161,18 @@ impl Parts {
     /// One part.
     pub const ONE: Self = Self(100);
 
+    /// The most parts, 21 474 836.47: `i32::MAX` hundredths, the largest
+    /// number the bindings' 32-bit signed integers carry.
+    pub const MAX: Self = Self(BOUND);
+
     /// Returns `hundredths / 100` parts.
     ///
     /// # Errors
     ///
-    /// [`MoneyError::InvalidParts`] when `hundredths` is zero.
+    /// [`MoneyError::InvalidParts`] when `hundredths` is zero or above
+    /// [`MAX`](Self::MAX).
     pub const fn from_hundredths(hundredths: u32) -> Result<Self, MoneyError> {
-        if 0 == hundredths {
+        if 0 == hundredths || BOUND < hundredths {
             return Err(MoneyError::InvalidParts);
         }
         Ok(Self(hundredths))
@@ -160,8 +182,8 @@ impl Parts {
     ///
     /// # Errors
     ///
-    /// [`MoneyError::InvalidParts`] when `parts` is zero or above
-    /// `u32::MAX / 100`.
+    /// [`MoneyError::InvalidParts`] when `parts` is zero or above the whole
+    /// parts of [`MAX`](Self::MAX), 21 474 836.
     pub const fn from_whole(parts: u32) -> Result<Self, MoneyError> {
         match parts.checked_mul(100) {
             Some(hundredths) => Self::from_hundredths(hundredths),
@@ -228,6 +250,20 @@ impl FromStr for Parts {
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)
+    }
+}
+
+impl TryFrom<u32> for Percentage {
+    type Error = MoneyError;
+
+    fn try_from(basis_points: u32) -> Result<Self, Self::Error> {
+        Self::from_basis_points(basis_points)
+    }
+}
+
+impl From<Percentage> for u32 {
+    fn from(percentage: Percentage) -> Self {
+        percentage.0
     }
 }
 

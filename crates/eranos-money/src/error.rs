@@ -35,11 +35,11 @@ pub enum MoneyError {
     #[error("invalid exchange rate: expected a positive number with at most 18 decimal places")]
     InvalidExchangeRate,
     /// A number of parts that is not a positive decimal number with at most
-    /// two decimal places.
+    /// two decimal places, or is above [`Parts::MAX`](crate::Parts::MAX).
     #[error("invalid parts: expected a positive number with at most 2 decimal places")]
     InvalidParts,
     /// A percentage that is not a decimal number with at most two decimal
-    /// places.
+    /// places, or is above [`Percentage::MAX`](crate::Percentage::MAX).
     #[error("invalid percentage: expected a number with at most 2 decimal places")]
     InvalidPercentage,
     /// A quantity that is not a positive decimal number with at most four

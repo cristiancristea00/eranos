@@ -119,7 +119,7 @@ impl SplitRecipe {
                 Split::percentages(chosen.iter().zip(points).map(|(weighted, points)| {
                     MemberPercentage::new(
                         weighted.member,
-                        Percentage::from_basis_points(u32::try_from(points).unwrap()),
+                        Percentage::from_basis_points(u32::try_from(points).unwrap()).unwrap(),
                     )
                 }))
             }),
@@ -169,13 +169,14 @@ struct DiscountRecipe {
 }
 
 impl DiscountRecipe {
-    const fn discount(self) -> Discount {
+    fn discount(self) -> Discount {
         let scope = if self.unit {
             DiscountScope::Unit
         } else {
             DiscountScope::Line
         };
-        Discount::percentage(Percentage::from_basis_points(self.basis_points)).scoped(scope)
+        Discount::percentage(Percentage::from_basis_points(self.basis_points).unwrap())
+            .scoped(scope)
     }
 }
 
@@ -323,7 +324,7 @@ impl ExpenseRecipe {
             let tip = if recipe.fixed {
                 TipRule::fixed(money(i64::from(recipe.value)))
             } else {
-                TipRule::percentage(Percentage::from_basis_points(recipe.value))
+                TipRule::percentage(Percentage::from_basis_points(recipe.value).unwrap())
             };
             let distribution = if recipe.equal {
                 TipDistribution::Equal

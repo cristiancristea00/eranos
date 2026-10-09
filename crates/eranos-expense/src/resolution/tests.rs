@@ -589,7 +589,7 @@ fn random_expense(
             TipDistribution::Proportional
         };
         builder = builder.tip(
-            TipRule::percentage(Percentage::from_basis_points(basis_points))
+            TipRule::percentage(Percentage::from_basis_points(basis_points).unwrap())
                 .distributed(distribution),
         );
     }

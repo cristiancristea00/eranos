@@ -393,7 +393,9 @@ fn a_discount_the_line_cannot_take_is_refused() {
     // A basis point above 100 %.
     assert_eq!(
         lemonade()
-            .discount(Discount::percentage(Percentage::from_basis_points(10_001)))
+            .discount(Discount::percentage(
+                Percentage::from_basis_points(10_001).unwrap()
+            ))
             .build(),
         Err(ExpenseError::DiscountAboveHundredPercent)
     );
@@ -574,7 +576,7 @@ proptest! {
         // A fixed discount is a share of what it reduces, so it fits.
         let discount = percentage.map_or_else(
             || Discount::fixed(euros(reduced * i64::from(fixed_share) / 10_000)),
-            |basis_points| Discount::percentage(Percentage::from_basis_points(basis_points)),
+            |basis_points| Discount::percentage(Percentage::from_basis_points(basis_points).unwrap()),
         );
         let item = ExpenseItem::builder("Cheese", euros(unit_price), [ana()])
             .quantity(quantity)

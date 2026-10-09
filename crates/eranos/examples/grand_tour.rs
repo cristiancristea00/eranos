@@ -1677,7 +1677,7 @@ fn ratios() -> Result<(), Box<dyn Error>> {
             },
             ValueRow {
                 input: "333 basis points",
-                result: Percentage::from_basis_points(333).to_string(),
+                result: Percentage::from_basis_points(333)?.to_string(),
             },
             ValueRow {
                 input: "33.333%",

@@ -72,40 +72,56 @@ fn malformed_percentages_are_rejected() {
     }
 }
 
-/// A percentage too large for 32-bit basis points would wrap around to a
-/// small one.
+/// A percentage above what the bindings' 32-bit signed integers carry would
+/// reach an app clamped or wrapped around to a small one.
 #[test]
-fn percentages_beyond_u32_basis_points_are_rejected() {
-    // The largest percentage that fits.
-    assert_eq!(percentage("42949672.95").basis_points(), u32::MAX);
-    // One basis point more.
-    for text in ["42949672.96", "42949673", "99999999999"] {
+fn percentages_beyond_the_bindings_integers_are_rejected() {
+    // The largest percentage that fits, parsed and built.
+    assert_eq!(percentage("21474836.47"), Percentage::MAX);
+    assert_eq!(
+        Percentage::MAX.basis_points(),
+        u32::try_from(i32::MAX).unwrap()
+    );
+    assert_eq!(
+        Percentage::from_basis_points(2_147_483_647),
+        Ok(Percentage::MAX)
+    );
+    // One basis point more, and beyond.
+    for text in ["21474836.48", "42949672.95", "99999999999"] {
         assert_eq!(
             Percentage::parse(text),
             Err(MoneyError::InvalidPercentage),
             "{text}"
         );
     }
+    for basis_points in [2_147_483_648, u32::MAX] {
+        assert_eq!(
+            Percentage::from_basis_points(basis_points),
+            Err(MoneyError::InvalidPercentage)
+        );
+        assert_eq!(
+            Percentage::try_from(basis_points),
+            Err(MoneyError::InvalidPercentage)
+        );
+    }
+    assert_eq!(u32::from(Percentage::MAX), 2_147_483_647);
 }
 
 /// Percentages would be shown with noise such as `12.50%` or lose decimals.
 #[test]
 fn percentage_display_drops_trailing_zeros() {
     // Two, one, and no decimals.
-    assert_eq!(Percentage::from_basis_points(3_333).to_string(), "33.33%");
-    assert_eq!(Percentage::from_basis_points(1_250).to_string(), "12.5%");
-    assert_eq!(Percentage::from_basis_points(1_200).to_string(), "12%");
+    assert_eq!(percentage("33.33").to_string(), "33.33%");
+    assert_eq!(percentage("12.5").to_string(), "12.5%");
+    assert_eq!(percentage("12").to_string(), "12%");
     // Small percentages keep their leading zeros.
-    assert_eq!(Percentage::from_basis_points(5).to_string(), "0.05%");
-    assert_eq!(Percentage::from_basis_points(10).to_string(), "0.1%");
-    assert_eq!(Percentage::from_basis_points(105).to_string(), "1.05%");
+    assert_eq!(percentage("0.05").to_string(), "0.05%");
+    assert_eq!(percentage("0.1").to_string(), "0.1%");
+    assert_eq!(percentage("1.05").to_string(), "1.05%");
     // The bounds.
     assert_eq!(Percentage::ZERO.to_string(), "0%");
     assert_eq!(Percentage::HUNDRED.to_string(), "100%");
-    assert_eq!(
-        Percentage::from_basis_points(u32::MAX).to_string(),
-        "42949672.95%"
-    );
+    assert_eq!(Percentage::MAX.to_string(), "21474836.47%");
 }
 
 /// The bindings, which write a percentage from the basis points of their
@@ -114,10 +130,22 @@ fn percentage_display_drops_trailing_zeros() {
 #[test]
 fn the_percentage_writer_writes_any_basis_points_as_the_text_form_does() {
     // As the text form writes every percentage.
-    for basis_points in [0, 5, 10, 105, 1_200, 1_250, 3_333, 10_000, u32::MAX] {
+    for basis_points in [
+        0,
+        5,
+        10,
+        105,
+        1_200,
+        1_250,
+        3_333,
+        10_000,
+        Percentage::MAX.basis_points(),
+    ] {
         assert_eq!(
             format_basis_points(i64::from(basis_points)).to_string(),
-            Percentage::from_basis_points(basis_points).to_string()
+            Percentage::from_basis_points(basis_points)
+                .unwrap()
+                .to_string()
         );
     }
     // A negative number, which no percentage holds, after a minus sign.
@@ -229,12 +257,17 @@ fn malformed_parts_are_rejected() {
             "{text:?}"
         );
     }
-    // More than 32-bit hundredths hold.
+    // More than the bindings' 32-bit signed integers hold.
+    assert_eq!(Parts::parse("21474836.47"), Ok(Parts::MAX));
+    assert_eq!(Parts::parse("21474836.48"), Err(MoneyError::InvalidParts));
     assert_eq!(
-        Parts::parse("42949672.95").map(Parts::hundredths),
-        Ok(u32::MAX)
+        Parts::from_hundredths(2_147_483_648),
+        Err(MoneyError::InvalidParts)
     );
-    assert_eq!(Parts::parse("42949672.96"), Err(MoneyError::InvalidParts));
+    assert_eq!(
+        Parts::from_hundredths(u32::MAX),
+        Err(MoneyError::InvalidParts)
+    );
 }
 
 /// Whole parts such as "a couple counts as 2" would be stored off by a
@@ -246,10 +279,10 @@ fn whole_parts_are_scaled_to_hundredths() {
     assert_eq!(Parts::from_whole(1), Ok(Parts::ONE));
     // The largest count that fits, and one more.
     assert_eq!(
-        Parts::from_whole(42_949_672).map(Parts::hundredths),
-        Ok(4_294_967_200)
+        Parts::from_whole(21_474_836).map(Parts::hundredths),
+        Ok(2_147_483_600)
     );
-    assert_eq!(Parts::from_whole(42_949_673), Err(MoneyError::InvalidParts));
+    assert_eq!(Parts::from_whole(21_474_837), Err(MoneyError::InvalidParts));
     assert_eq!(Parts::from_whole(u32::MAX), Err(MoneyError::InvalidParts));
 }
 
@@ -271,7 +304,7 @@ fn parts_display_drops_trailing_zeros() {
 #[test]
 fn the_parts_writer_writes_any_hundredths_as_the_text_form_does() {
     // As the text form writes every number of parts.
-    for hundredths in [1, 25, 100, 150, 205, 200, u32::MAX] {
+    for hundredths in [1, 25, 100, 150, 205, 200, Parts::MAX.hundredths()] {
         assert_eq!(
             format_hundredths(i64::from(hundredths)).to_string(),
             Parts::from_hundredths(hundredths).unwrap().to_string()
@@ -323,6 +356,7 @@ fn parts_convert_to_and_from_hundredths() {
     // From hundredths.
     assert_eq!(Parts::try_from(150), Ok(parts("1.5")));
     assert_eq!(Parts::try_from(0), Err(MoneyError::InvalidParts));
+    assert_eq!(Parts::try_from(u32::MAX), Err(MoneyError::InvalidParts));
     // Into hundredths.
     assert_eq!(u32::from(parts("1.5")), 150);
     // Ordering follows the value.
@@ -343,29 +377,36 @@ fn ratios_serialise_as_integers() {
     assert_eq!(serde_json::to_string(&parts("1.5")).unwrap(), "150");
     assert_eq!(serde_json::from_str::<Parts>("150").unwrap(), parts("1.5"));
     assert!(serde_json::from_str::<Parts>("0").is_err());
+    // Neither above what the bindings' integers carry.
+    assert!(serde_json::from_str::<Percentage>("2147483648").is_err());
+    assert!(serde_json::from_str::<Parts>("2147483648").is_err());
+    assert_eq!(
+        serde_json::from_str::<Percentage>("2147483647").unwrap(),
+        Percentage::MAX
+    );
 }
 
 proptest! {
     /// A saved or shown percentage would read back as a different one.
     #[test]
-    fn percentage_display_then_parse_round_trips(basis_points in any::<u32>()) {
-        let ratio = Percentage::from_basis_points(basis_points);
+    fn percentage_display_then_parse_round_trips(basis_points in 0..=Percentage::MAX.basis_points()) {
+        let ratio = Percentage::from_basis_points(basis_points).unwrap();
         prop_assert_eq!(Percentage::parse(&ratio.to_string()), Ok(ratio));
     }
 
     /// The bindings would write a valid percentage otherwise than the
     /// library does.
     #[test]
-    fn the_percentage_writer_writes_every_percentage_as_its_text_form(basis_points in any::<u32>()) {
+    fn the_percentage_writer_writes_every_percentage_as_its_text_form(basis_points in 0..=Percentage::MAX.basis_points()) {
         prop_assert_eq!(
             format_basis_points(i64::from(basis_points)).to_string(),
-            Percentage::from_basis_points(basis_points).to_string()
+            Percentage::from_basis_points(basis_points).unwrap().to_string()
         );
     }
 
     /// The bindings would write valid parts otherwise than the library does.
     #[test]
-    fn the_parts_writer_writes_all_parts_as_their_text_form(hundredths in 1..=u32::MAX) {
+    fn the_parts_writer_writes_all_parts_as_their_text_form(hundredths in 1..=Parts::MAX.hundredths()) {
         prop_assert_eq!(
             format_hundredths(i64::from(hundredths)).to_string(),
             Parts::from_hundredths(hundredths).unwrap().to_string()
@@ -374,7 +415,7 @@ proptest! {
 
     /// Saved or shown parts would read back as different parts.
     #[test]
-    fn parts_display_then_parse_round_trips(hundredths in 1..=u32::MAX) {
+    fn parts_display_then_parse_round_trips(hundredths in 1..=Parts::MAX.hundredths()) {
         let ratio = Parts::from_hundredths(hundredths).unwrap();
         prop_assert_eq!(Parts::parse(&ratio.to_string()), Ok(ratio));
     }

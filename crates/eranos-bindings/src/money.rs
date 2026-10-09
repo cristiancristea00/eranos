@@ -205,7 +205,7 @@ pub(crate) fn exchange_rate(text: &str) -> Result<library::ExchangeRate, EranosE
 /// for a negative number.
 pub(crate) fn percentage(basis_points: i32) -> Result<library::Percentage, EranosError> {
     let basis_points = u32::try_from(basis_points).map_err(|_| MoneyError::InvalidPercentage)?;
-    Ok(library::Percentage::from_basis_points(basis_points))
+    Ok(library::Percentage::from_basis_points(basis_points)?)
 }
 
 /// The parts of `hundredths`.

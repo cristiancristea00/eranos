@@ -177,7 +177,7 @@ fn a_tip_out_of_range_is_rejected() {
     );
     // The largest percentage of the largest amount.
     assert_eq!(
-        TipRule::percentage(Percentage::from_basis_points(u32::MAX)).amount_on(euros(i64::MAX)),
+        TipRule::percentage(Percentage::MAX).amount_on(euros(i64::MAX)),
         Err(ExpenseError::Overflow)
     );
     // 100 % of the largest amount fits.
