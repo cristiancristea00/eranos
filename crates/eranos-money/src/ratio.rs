@@ -251,7 +251,9 @@ eranos_core::deserialise_through!(Parts, u32, Self::from_hundredths);
 /// Parses `digits[.d[d]]` into hundredths; `None` for anything else or when
 /// the value does not fit in a `u32`.
 fn parse_hundredths(text: &str) -> Option<u32> {
-    decimal::parse_fixed(text, PLACES).and_then(|hundredths| u32::try_from(hundredths).ok())
+    decimal::parse_fixed(text, PLACES)
+        .ok()
+        .and_then(|hundredths| u32::try_from(hundredths).ok())
 }
 
 /// Formats `basis_points` as a percentage: the number of per cent without

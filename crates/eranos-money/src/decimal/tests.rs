@@ -2,8 +2,8 @@
 //! parts, a quantity, or a rate through `rounded`, so every binding gets the
 //! same cents from the same double. These tests pin the text it rounds,
 //! std's shortest decimal form, and the rule it rounds by, half away from
-//! zero on the digits of that text, and the fixed-point text that
-//! percentages, parts, and quantities are read from and written in.
+//! zero on the digits of that text, and the fixed-point text that amounts,
+//! rates, percentages, parts, and quantities are read from and written in.
 
 use std::fmt;
 
@@ -14,23 +14,36 @@ fn written(units: i64, places: u8) -> String {
     fmt::from_fn(|formatter| write_fixed(formatter, units, places, "")).to_string()
 }
 
-/// A fixed-point reader that padded a short fraction at the wrong end, or
-/// accepted a digit beyond its places, would read 1.5 parts as 1.05 or
-/// round a fifth decimal of a quantity away unseen.
+/// A fixed-point reader that padded a short fraction at the wrong end,
+/// accepted a digit beyond its places, or gave the wrong reason for a
+/// refusal would read 1.5 parts as 1.05, round a fifth decimal of a
+/// quantity away unseen, or report an amount with too many decimals as one
+/// that is not a number.
 #[test]
 fn fixed_point_text_reads_as_units_of_its_places() {
-    assert_eq!(parse_fixed("1.5", 2), Some(150));
-    assert_eq!(parse_fixed("1.05", 2), Some(105));
-    assert_eq!(parse_fixed("0.452", 4), Some(4_520));
-    assert_eq!(parse_fixed("12", 4), Some(120_000));
-    assert_eq!(parse_fixed("007", 0), Some(7));
-    // More decimals than the places, and text that is not digits.
-    for text in ["1.234", "1.", ".5", ".", "", "-1", "+1", "1e2", " 1"] {
-        assert_eq!(parse_fixed(text, 2), None, "{text:?}");
+    assert_eq!(parse_fixed("1.5", 2), Ok(150));
+    assert_eq!(parse_fixed("1.05", 2), Ok(105));
+    assert_eq!(parse_fixed("0.452", 4), Ok(4_520));
+    assert_eq!(parse_fixed("12", 4), Ok(120_000));
+    assert_eq!(parse_fixed("007", 0), Ok(7));
+    // Text that is not digits, checked before the places.
+    for text in [
+        "1.", ".5", ".", "", "-1", "+1", "1e2", " 1", "1.2.3", "1.23x",
+    ] {
+        assert_eq!(
+            parse_fixed(text, 2),
+            Err(FixedRefusal::NotDecimal),
+            "{text:?}"
+        );
     }
+    // More decimals than the places.
+    assert_eq!(parse_fixed("1.234", 2), Err(FixedRefusal::TooManyPlaces));
     // The largest value, and one more.
-    assert_eq!(parse_fixed("18446744073709551615", 0), Some(u64::MAX));
-    assert_eq!(parse_fixed("1844674407370955.1616", 4), None);
+    assert_eq!(parse_fixed("18446744073709551615", 0), Ok(u64::MAX));
+    assert_eq!(
+        parse_fixed("1844674407370955.1616", 4),
+        Err(FixedRefusal::TooLarge)
+    );
 }
 
 /// A writer that kept trailing zeros or dropped leading ones would show

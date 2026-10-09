@@ -81,7 +81,7 @@ impl Quantity {
     /// for a quantity whose ten-thousandths are above `i64::MAX`.
     pub fn parse(text: &str) -> Result<Self, MoneyError> {
         let ten_thousandths =
-            decimal::parse_fixed(text.trim(), PLACES).ok_or(MoneyError::InvalidQuantity)?;
+            decimal::parse_fixed(text.trim(), PLACES).map_err(|_| MoneyError::InvalidQuantity)?;
         Self::from_ten_thousandths(ten_thousandths)
     }
 

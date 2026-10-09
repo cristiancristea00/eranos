@@ -74,19 +74,12 @@ impl ExchangeRate {
     /// places, or has more significant digits than fit in 64 bits.
     pub fn parse(text: &str) -> Result<Self, MoneyError> {
         let text = text.trim();
-        let (whole, fraction) = text.split_once('.').unwrap_or((text, ""));
-        let is_digits = |part: &str| part.bytes().all(|byte| byte.is_ascii_digit());
-        if whole.is_empty() || !is_digits(whole) || !is_digits(fraction) || text.ends_with('.') {
-            return Err(MoneyError::InvalidExchangeRate);
-        }
-        let scale = u8::try_from(fraction.len()).map_err(|_| MoneyError::InvalidExchangeRate)?;
-        let mantissa = whole
-            .bytes()
-            .chain(fraction.bytes())
-            .try_fold(0_u64, |value, digit| {
-                value.checked_mul(10)?.checked_add(u64::from(digit - b'0'))
-            })
-            .ok_or(MoneyError::InvalidExchangeRate)?;
+        let places = text
+            .split_once('.')
+            .map_or(0, |(_, fraction)| fraction.len());
+        let scale = u8::try_from(places).map_err(|_| MoneyError::InvalidExchangeRate)?;
+        let mantissa =
+            decimal::parse_fixed(text, scale).map_err(|_| MoneyError::InvalidExchangeRate)?;
         Self::from_decimal(mantissa, scale)
     }
 

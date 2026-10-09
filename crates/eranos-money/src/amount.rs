@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::decimal;
+use crate::decimal::{self, FixedRefusal};
 use crate::error::MoneyError;
 use crate::{Cost, CurrencyCode, ExchangeRate};
 
@@ -80,36 +80,21 @@ impl Money {
         let (negative, unsigned) = text
             .strip_prefix('-')
             .map_or((false, text), |rest| (true, rest));
-        let (whole, fraction) = match unsigned.split_once('.') {
-            Some((whole, fraction)) => (whole, Some(fraction)),
-            None => (unsigned, None),
-        };
-        let is_digits =
-            |part: &str| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit());
-        if !is_digits(whole) || fraction.is_some_and(|fraction| !is_digits(fraction)) {
-            return Err(MoneyError::InvalidAmount);
-        }
-        let fraction = fraction.unwrap_or("");
         let allowed = currency.decimal_places();
-        if fraction.len() > usize::from(allowed) {
-            return Err(MoneyError::TooManyDecimals { allowed, currency });
+        let magnitude =
+            decimal::parse_fixed(unsigned, allowed).map_err(|refusal| match refusal {
+                FixedRefusal::NotDecimal => MoneyError::InvalidAmount,
+                FixedRefusal::TooManyPlaces => MoneyError::TooManyDecimals { allowed, currency },
+                FixedRefusal::TooLarge => MoneyError::Overflow,
+            })?;
+        // Subtracted from zero rather than negated: the most negative
+        // amount's magnitude is above `i64::MAX`.
+        let minor_units = if negative {
+            0_i64.checked_sub_unsigned(magnitude)
+        } else {
+            i64::try_from(magnitude).ok()
         }
-        // Right-pad the fraction to the currency's decimal places: "12.3" EUR
-        // is 1230 minor units.
-        let padding = usize::from(allowed) - fraction.len();
-        let mut digits = whole
-            .bytes()
-            .chain(fraction.bytes())
-            .chain(std::iter::repeat_n(b'0', padding));
-        // Accumulated in i128 and narrowed once, so the most negative amount,
-        // whose magnitude exceeds i64::MAX, still parses.
-        let magnitude = digits
-            .try_fold(0_i128, |value, digit| {
-                value.checked_mul(10)?.checked_add(i128::from(digit - b'0'))
-            })
-            .ok_or(MoneyError::Overflow)?;
-        let signed = if negative { -magnitude } else { magnitude };
-        let minor_units = i64::try_from(signed).map_err(|_| MoneyError::Overflow)?;
+        .ok_or(MoneyError::Overflow)?;
         Ok(Self::from_minor_units(minor_units, currency))
     }
 
